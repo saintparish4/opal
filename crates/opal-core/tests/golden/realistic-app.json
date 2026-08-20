@@ -1,0 +1,152 @@
+{
+  "version": 1,
+  "entry": "src/index.js",
+  "modules": [
+    {
+      "path": "node_modules/@scope/widget/esm/index.mjs",
+      "content_hash": "348fccbb31bb300cbcb119a63b4ecce21fa1fba3bac0fd5babaa47e1054834a4",
+      "source": "javascript",
+      "system": "esm",
+      "dependencies": [
+        {
+          "specifier": "./inner.mjs",
+          "kind": "static-import",
+          "target": "module",
+          "id": 1
+        }
+      ]
+    },
+    {
+      "path": "node_modules/@scope/widget/esm/inner.mjs",
+      "content_hash": "fc4208f181a4eebc5846a80c821690daba178c5b9bddd301454187c4dd4613d3",
+      "source": "javascript",
+      "system": "esm",
+      "dependencies": []
+    },
+    {
+      "path": "src/data.json",
+      "content_hash": "f6b4ad2247c70c8727ff68a79c3d93881f46e9636861bf02dc030b022fdee6aa",
+      "source": "json",
+      "system": "not-applicable",
+      "dependencies": []
+    },
+    {
+      "path": "src/helper.js",
+      "content_hash": "7b0c6eea1c6f05ebad34cb2e0a3afa41a4b23499b8393c63e966d9c4b009d722",
+      "source": "javascript",
+      "system": "esm",
+      "dependencies": [
+        {
+          "specifier": "./util.js",
+          "kind": "static-import",
+          "target": "module",
+          "id": 8
+        }
+      ]
+    },
+    {
+      "path": "src/index.js",
+      "content_hash": "5ebd1597e61121f83bfd9eb788fed230c0beb00df5bbfbbf4cf24d6c9ea6cbd5",
+      "source": "javascript",
+      "system": "esm",
+      "dependencies": [
+        {
+          "specifier": "./util.js",
+          "kind": "static-import",
+          "target": "module",
+          "id": 8
+        },
+        {
+          "specifier": "node:path",
+          "kind": "static-import",
+          "target": "builtin",
+          "name": "path"
+        },
+        {
+          "specifier": "@scope/widget",
+          "kind": "static-import",
+          "target": "module",
+          "id": 0
+        },
+        {
+          "specifier": "not-installed",
+          "kind": "static-import",
+          "target": "unresolved",
+          "reason": "package \"not-installed\" is not installed under the project root"
+        },
+        {
+          "specifier": "./typed.js",
+          "kind": "static-import",
+          "target": "module",
+          "id": 7
+        },
+        {
+          "specifier": "./reexport.js",
+          "kind": "export-from",
+          "target": "module",
+          "id": 6
+        },
+        {
+          "specifier": "./lazy.js",
+          "kind": "dynamic-import",
+          "target": "module",
+          "id": 5
+        }
+      ]
+    },
+    {
+      "path": "src/lazy.js",
+      "content_hash": "df187925dd139cf0266b15ee6bbb67acd12b375d661c323d6733791df2b550d3",
+      "source": "javascript",
+      "system": "esm",
+      "dependencies": []
+    },
+    {
+      "path": "src/reexport.js",
+      "content_hash": "932872a225c8c8014edd212f6c5870427a00258ed20c7e383bfb617d101dff9b",
+      "source": "javascript",
+      "system": "esm",
+      "dependencies": []
+    },
+    {
+      "path": "src/typed.ts",
+      "content_hash": "1037e932efcbb7a4a70e7170237ab18f27d9121920bb4c44252024ab6823a94f",
+      "source": "typescript",
+      "system": "esm",
+      "dependencies": [
+        {
+          "specifier": "./helper.js",
+          "kind": "static-import",
+          "target": "module",
+          "id": 3
+        }
+      ]
+    },
+    {
+      "path": "src/util.js",
+      "content_hash": "995cddb4028cb8b6a13133247deda87219c315adb60b5b322049d0d7530655f6",
+      "source": "javascript",
+      "system": "esm",
+      "dependencies": [
+        {
+          "specifier": "./data.json",
+          "kind": "static-import",
+          "target": "module",
+          "id": 2
+        },
+        {
+          "specifier": "./helper",
+          "kind": "static-import",
+          "target": "module",
+          "id": 3
+        }
+      ]
+    }
+  ],
+  "diagnostics": [
+    {
+      "module": "src/index.js",
+      "message": "cannot resolve \"not-installed\": package \"not-installed\" is not installed under the project root"
+    }
+  ]
+}

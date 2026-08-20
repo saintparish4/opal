@@ -1,0 +1,30 @@
+[package]
+name = "opal-core"
+description = "Shared module graph engine: content hashing, CAS, resolution, memoization."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+blake3.workspace = true
+oxc_allocator.workspace = true
+oxc_ast.workspace = true
+oxc_ast_visit.workspace = true
+oxc_parser.workspace = true
+oxc_span.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+proptest.workspace = true
+tempfile.workspace = true
+
+# Dev helper for tests/cas-crash-safety.rs: a process that can be SIGKILLed
+# partway through a CAS write. Declared explicitly rather than left to Cargo's
+# src/bin autodiscovery, because the test reaches it through
+# CARGO_BIN_EXE_cas-crash-probe and that link should not rest on a convention.
+[[bin]]
+name = "cas-crash-probe"
+path = "src/bin/cas-crash-probe.rs"

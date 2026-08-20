@@ -1,6 +1,25 @@
-[package]
-name = "opal"
+[workspace]
+resolver = "3"
+members = [ "crates/opal-core", "crates/opal-cli" ] # TODO: add more crates
+
+[workspace.package]
 version = "0.1.0"
 edition = "2024"
+license = "MIT"
+repository = "https://github.com/saintparish4/opal"
 
-[dependencies]
+[workspace.dependencies]
+opal-core = { path = "crates/opal-core" }
+
+blake3 = "1.8.6"
+oxc_allocator = "0.145.0"
+oxc_ast = "0.145.0"
+oxc_ast_visit = "0.145.0"
+oxc_parser = "0.145.0"
+oxc_span = "0.145.0"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = { version = "1.0", features = ["preserve_order"] }
+thiserror = "2"
+clap = { version = "4", features = ["derive"] }
+proptest = "1"
+tempfile = "3"
