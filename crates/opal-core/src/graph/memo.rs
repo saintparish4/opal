@@ -24,6 +24,9 @@ use crate::fault::FaultPoint;
 use crate::hash::{ContentHash, HashBuilder};
 use crate::path::NormalizedPath;
 
+/// Record written to its temp file; the rename has not run.
+pub const FAULT_BEFORE_RENAME: FaultPoint = FaultPoint::new("memo-before-rename");
+
 /// Bumped when the record shape changes; old records then miss rather than
 /// being misread.
 pub const MEMO_FORMAT_VERSION: u32 = 1;
@@ -236,7 +239,7 @@ impl GraphCache {
         let encoded =
             serde_json::to_vec(&record).expect("memo records contain only serializable values");
         let path = self.record_path(key);
-        write_atomic(&path, &encoded, Some(FaultPoint::MemoBeforeRename))
+        write_atomic(&path, &encoded, Some(FAULT_BEFORE_RENAME))
             .map_err(|source| MemoError::io(path, source))?;
         Ok(output)
     }

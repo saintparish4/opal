@@ -9,7 +9,7 @@ use std::io::{BufRead, BufReader};
 use std::path::Path;
 use std::process::{Child, Command, Stdio};
 
-use opal_core::cas::Cas;
+use opal_core::cas::{Cas, FAULT_BEFORE_RENAME, FAULT_MID_WRITE};
 use opal_core::fault::{FAULT_ENV, FaultPoint, READY_MARKER};
 use opal_core::hash::ContentHash;
 
@@ -97,7 +97,7 @@ fn open(fixture: &Fixture) -> Cas {
 #[test]
 fn test_kill_before_rename_leaves_no_object() {
     let fixture = fixture(1);
-    kill_at(&fixture, FaultPoint::CasBeforeRename);
+    kill_at(&fixture, FAULT_BEFORE_RENAME);
 
     let cas = open(&fixture);
     assert!(
@@ -115,7 +115,7 @@ fn test_kill_before_rename_leaves_no_object() {
 #[test]
 fn test_kill_mid_write_leaves_no_object() {
     let fixture = fixture(2);
-    kill_at(&fixture, FaultPoint::CasMidWrite);
+    kill_at(&fixture, FAULT_MID_WRITE);
 
     let cas = open(&fixture);
     assert!(!cas.contains(&fixture.expected));
@@ -126,7 +126,7 @@ fn test_kill_mid_write_leaves_no_object() {
 #[test]
 fn test_rerunning_after_a_kill_converges_to_a_verified_store() {
     let fixture = fixture(3);
-    kill_at(&fixture, FaultPoint::CasBeforeRename);
+    kill_at(&fixture, FAULT_BEFORE_RENAME);
 
     let stored = run_to_completion(&fixture);
     assert_eq!(stored, fixture.expected);
@@ -148,9 +148,9 @@ fn test_repeated_kills_never_produce_a_mismatched_entry() {
     // still pass a full audit.
     for trial in 0..6 {
         let point = if trial % 2 == 0 {
-            FaultPoint::CasMidWrite
+            FAULT_MID_WRITE
         } else {
-            FaultPoint::CasBeforeRename
+            FAULT_BEFORE_RENAME
         };
         kill_at(&fixture, point);
 
@@ -177,7 +177,7 @@ fn test_gc_sweeps_the_orphans_a_kill_left_behind() {
     use opal_core::cas::gc::{self, GcOptions};
 
     let fixture = fixture(5);
-    kill_at(&fixture, FaultPoint::CasBeforeRename);
+    kill_at(&fixture, FAULT_BEFORE_RENAME);
     let stored = run_to_completion(&fixture);
 
     let cas = open(&fixture);

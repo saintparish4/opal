@@ -20,14 +20,14 @@ use crate::fault::{self, FaultPoint};
 /// SIGKILL — that is what leaves the orphan temp files `opal cache gc` sweeps,
 /// and leaving them is the whole point: an orphan is inert garbage, where a
 /// partially written object at its final path would be corruption.
-pub(crate) struct TempFile {
+pub struct TempFile {
     path: PathBuf,
     file: Option<File>,
     persisted: bool,
 }
 
 impl TempFile {
-    pub(crate) fn create(dir: &Path, prefix: &str) -> io::Result<Self> {
+    pub fn create(dir: &Path, prefix: &str) -> io::Result<Self> {
         fs::create_dir_all(dir)?;
         let path = dir.join(unique_name(prefix));
         let file = File::options().create_new(true).write(true).open(&path)?;
@@ -38,18 +38,18 @@ impl TempFile {
         })
     }
 
-    pub(crate) fn path(&self) -> &Path {
+    pub fn path(&self) -> &Path {
         &self.path
     }
 
-    pub(crate) fn file_mut(&mut self) -> &mut File {
+    pub fn file_mut(&mut self) -> &mut File {
         self.file
             .as_mut()
             .expect("temp file handle is taken only by sync_and_close")
     }
 
     /// Flushes to the filesystem and closes the handle.
-    pub(crate) fn sync_and_close(&mut self) -> io::Result<()> {
+    pub fn sync_and_close(&mut self) -> io::Result<()> {
         match self.file.take() {
             Some(file) => file.sync_all(),
             None => Ok(()),
@@ -60,7 +60,7 @@ impl TempFile {
     ///
     /// `target` must be on the same filesystem as the temp directory, or the
     /// rename fails with `EXDEV` — loudly, which is the right outcome.
-    pub(crate) fn persist(mut self, target: &Path) -> io::Result<()> {
+    pub fn persist(mut self, target: &Path) -> io::Result<()> {
         if let Some(parent) = target.parent() {
             fs::create_dir_all(parent)?;
         }
@@ -87,7 +87,7 @@ impl Drop for TempFile {
 
 /// Writes `bytes` to `path` atomically, through a temp file in the same
 /// directory (so the rename cannot cross a filesystem boundary).
-pub(crate) fn write_atomic(
+pub fn write_atomic(
     path: &Path,
     bytes: &[u8],
     before_rename: Option<FaultPoint>,
@@ -105,7 +105,7 @@ pub(crate) fn write_atomic(
 }
 
 /// fsyncs a directory so a rename into it is durable.
-pub(crate) fn sync_dir(dir: &Path) -> io::Result<()> {
+pub fn sync_dir(dir: &Path) -> io::Result<()> {
     #[cfg(unix)]
     {
         File::open(dir)?.sync_all()

@@ -1,0 +1,31 @@
+[package]
+name = "opal-pm"
+description = "Package manager: registry, resolution, lockfile, and the node_modules linker."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+opal-core.workspace = true
+flate2.workspace = true
+libc.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sha1.workspace = true
+sha2.workspace = true
+tar.workspace = true
+thiserror.workspace = true
+ureq.workspace = true
+
+[dev-dependencies]
+# Self dev-dependency: enables the `fixtures` feature for this crate's own
+# tests without shipping it in a release build.
+opal-pm = { path = ".", features = ["fixtures"] }
+proptest.workspace = true
+tempfile.workspace = true
+
+[features]
+# Test-only: a registry built out of files, shared by opal-pm's and opal-cli's
+# integration suites.
+fixtures = []

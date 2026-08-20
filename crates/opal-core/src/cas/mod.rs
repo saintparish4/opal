@@ -30,6 +30,11 @@ use crate::atomic::{TempFile, write_atomic};
 use crate::fault::{self, FaultPoint};
 use crate::hash::{ContentHash, ContentHasher, HASH_HEX_LEN};
 
+/// Bytes are on disk, the hash is not yet known.
+pub const FAULT_MID_WRITE: FaultPoint = FaultPoint::new("cas-mid-write");
+/// Temp file written, fsynced, and hash-verified; the rename has not run.
+pub const FAULT_BEFORE_RENAME: FaultPoint = FaultPoint::new("cas-before-rename");
+
 /// Bumped when the on-disk layout changes in a way older builds misread.
 pub const LAYOUT_VERSION: u32 = 1;
 
@@ -160,7 +165,7 @@ impl Cas {
                 .map_err(|source| CasError::io(temp.path(), source))?;
             if !wrote_a_chunk {
                 wrote_a_chunk = true;
-                fault::checkpoint(FaultPoint::CasMidWrite);
+                fault::checkpoint(FAULT_MID_WRITE);
             }
         }
 
@@ -188,7 +193,7 @@ impl Cas {
         }
 
         set_read_only(temp.path()).map_err(|source| CasError::io(temp.path(), source))?;
-        fault::checkpoint(FaultPoint::CasBeforeRename);
+        fault::checkpoint(FAULT_BEFORE_RENAME);
         temp.persist(&target)
             .map_err(|source| CasError::io(&target, source))?;
         Ok(hash)

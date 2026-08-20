@@ -1,10 +1,14 @@
 //! Deterministic fault injection for the crash-safety suite.
 //!
 //! exit criteria require proving that a process killed mid-CAS-write
-//! never leaves a corrupt entry. Killing on a timer is a coin flip; instead each
-//! risky write path calls [`checkpoint`], and when `OPAL_INTERNAL_FAULT_INJECT`
-//! names that point the process announces itself on stderr and parks, so the
-//! test can deliver a real SIGKILL at exactly the interesting instant.
+//! never leaves a corrupt entry; Phase 1 extends the same technique across the
+//! whole install pipeline. Killing on a timer is a coin flip; instead each risky
+//! write path calls [`checkpoint`], and when `OPAL_INTERNAL_FAULT_INJECT` names
+//! that point the process announces itself on stderr and parks, so the test can
+//! deliver a real SIGKILL at exactly the interesting instant.
+//!
+//! A fault point is just a name, so a tool can delcare its own without this
+//! module — or `opal-core` at all — knowing anything about that tool
 //!
 //! This is compiled unconditionally rather than behind a feature. The cost is
 //! one `OnceLock` read per write (not per byte), which is invisible next to the
@@ -23,40 +27,29 @@ pub const FAULT_ENV: &str = "OPAL_INTERNAL_FAULT_INJECT";
 /// process is parked and it is safe to kill.
 pub const READY_MARKER: &str = "opal-fault-reached";
 
-/// Points in a write path where a kill is interesting.
+/// A named point in a write path where a kill is interesting.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub enum FaultPoint {
-    /// Temp file partially written: bytes on disk, hash not yet known.
-    CasMidWrite,
-    /// Temp file written, fsynced, and hash-verified; rename not yet issued.
-    CasBeforeRename,
-    /// Memo record written to its temp file; rename not yet issued.
-    MemoBeforeRename,
-}
+pub struct FaultPoint(&'static str);
 
 impl FaultPoint {
-    pub fn name(self) -> &'static str {
-        match self {
-            Self::CasMidWrite => "cas-mid-write",
-            Self::CasBeforeRename => "cas-before-rename",
-            Self::MemoBeforeRename => "memo-before-rename",
-        }
+    pub const fn new(name: &'static str) -> Self {
+        Self(name)
     }
 
-    pub fn parse(name: &str) -> Option<Self> {
-        [
-            Self::CasMidWrite,
-            Self::CasBeforeRename,
-            Self::MemoBeforeRename,
-        ]
-        .into_iter()
-        .find(|point| point.name() == name)
+    pub fn name(self) -> &'static str {
+        self.0
+    }
+}
+
+impl std::fmt::Display for FaultPoint {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.0)
     }
 }
 
 /// Parks the process if it was configured to fail at `point`.
-pub(crate) fn checkpoint(point: FaultPoint) {
-    if configured() == Some(point) {
+pub fn checkpoint(point: FaultPoint) {
+    if configured().is_some_and(|configured| configured == point.name()) {
         let mut stderr = std::io::stderr();
         let _ = writeln!(stderr, "{READY_MARKER} {}", point.name());
         let _ = stderr.flush();
@@ -66,36 +59,33 @@ pub(crate) fn checkpoint(point: FaultPoint) {
     }
 }
 
-fn configured() -> Option<FaultPoint> {
-    static CONFIGURED: OnceLock<Option<FaultPoint>> = OnceLock::new();
-    *CONFIGURED.get_or_init(|| {
-        std::env::var(FAULT_ENV)
-            .ok()
-            .and_then(|value| FaultPoint::parse(value.trim()))
-    })
+fn configured() -> Option<&'static str> {
+    static CONFIGURED: OnceLock<Option<String>> = OnceLock::new();
+    CONFIGURED
+        .get_or_init(|| {
+            std::env::var(FAULT_ENV)
+                .ok()
+                .map(|value| value.trim().to_string())
+        })
+        .as_deref()
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
+    const PROBE: FaultPoint = FaultPoint::new("test-probe");
+
     #[test]
-    fn test_fault_point_names_round_trip() {
-        for point in [
-            FaultPoint::CasMidWrite,
-            FaultPoint::CasBeforeRename,
-            FaultPoint::MemoBeforeRename,
-        ] {
-            assert_eq!(FaultPoint::parse(point.name()), Some(point));
-        }
-        assert_eq!(FaultPoint::parse("nonsense"), None);
+    fn test_point_carries_its_name() {
+        assert_eq!(PROBE.name(), "test-probe");
+        assert_eq!(PROBE.to_string(), "test-probe");
     }
 
     #[test]
     fn test_checkpoint_is_inert_when_unconfigured() {
         // The test process sets no fault env var, so every checkpoint returns.
-        checkpoint(FaultPoint::CasMidWrite);
-        checkpoint(FaultPoint::CasBeforeRename);
-        checkpoint(FaultPoint::MemoBeforeRename);
+        checkpoint(PROBE);
+        checkpoint(crate::cas::FAULT_MID_WRITE);
     }
 }

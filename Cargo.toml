@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = [ "crates/opal-core", "crates/opal-cli" ] # TODO: add more crates
+members = [ "crates/opal-core", "crates/opal-cli", "crates/opal-pm" ] # TODO: add more crates
 
 [workspace.package]
 version = "0.1.0"
@@ -10,6 +10,7 @@ repository = "https://github.com/saintparish4/opal"
 
 [workspace.dependencies]
 opal-core = { path = "crates/opal-core" }
+opal-pm = { path = "crates/opal-pm" }
 
 blake3 = "1.8.6"
 oxc_allocator = "0.145.0"
@@ -23,3 +24,18 @@ thiserror = "2"
 clap = { version = "4", features = ["derive"] }
 proptest = "1"
 tempfile = "3"
+
+# npm tarballs are gzipped tar: one crate per concern, neither worth
+# hand-rolling. The tarball traversal guard is ours (opal-pm).
+flate2 = "1.1.9"
+tar = "0.4.46"
+# dist.integrity is sha512; packages published before 2017 carry only a sha1
+# shasum. Cryptographic primitives are never hand-rolled.
+sha2 = "0.11.0"
+sha1 = "0.11.0"
+# Blocking HTTP with rustls: no async runtime to thread through the install
+# pipeline, and no OpenSSL system dependency for the single static binary.
+ureq = "3.4.0"
+# std has no advisory file locking; this is one extern function (flock), not
+# worth a wrapper crate like fs2/fd-lock for.
+libc = "0.2.189"

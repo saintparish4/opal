@@ -664,7 +664,7 @@ fn is_builtin(specifier: &str) -> bool {
 }
 
 /// `@scope/pkg/sub` -> (`@scope/pkg`, `./sub`); `pkg` -> (`pkg`, `.`).
-fn split_bare_specifier(specifier: &str) -> (String, String) {
+pub fn split_bare_specifier(specifier: &str) -> (String, String) {
     let mut parts = specifier.splitn(if specifier.starts_with('@') { 3 } else { 2 }, '/');
     let mut package = parts.next().unwrap_or_default().to_string();
     if specifier.starts_with('@')

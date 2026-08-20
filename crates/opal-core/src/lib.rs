@@ -1,7 +1,7 @@
 //! The shared module graph engine every Opal tool consumes
 //!
 
-mod atomic;
+pub mod atomic;
 pub mod cache;
 pub mod cas;
 pub mod fault;
