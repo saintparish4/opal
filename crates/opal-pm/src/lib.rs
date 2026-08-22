@@ -4,12 +4,12 @@
 // pub mod gc;
 // pub mod install;
 pub mod integrity;
-// pub mod link;
-// pub mod lockfile;
+pub mod link;
+pub mod lockfile;
 pub mod locks;
 pub mod manifest;
 pub mod package;
 // pub mod projects;
 pub mod registry;
-// pub mod resolve;
+pub mod resolve;
 pub mod semver;
