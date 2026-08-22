@@ -16,6 +16,10 @@ REPO="saintparish4/opal"
 BIN_NAME="opal"
 INSTALL_DIR="${OPAL_INSTALL_DIR:-$HOME/.opal/bin}"
 VERSION="${OPAL_VERSION:-latest}"
+# Set by main(), read by the EXIT trap; declared here (rather than left to
+# spring into existence on first assignment) so `rm -rf "$tmp"` is always
+# defined under `set -u`, even if the script dies before main() gets to it.
+tmp=""
 
 log() { printf 'opal: %s\n' "$1"; }
 die() {
@@ -78,11 +82,14 @@ add_to_path() {
 }
 
 main() {
-  local asset archive checksums tmp expected actual
+  local asset archive expected actual
 
   asset="$(detect_asset)"
   archive="${BIN_NAME}-${asset}.tar.gz"
 
+  # Script-scoped, not local: the EXIT trap fires after main() returns, once
+  # bash has already discarded any local variables, so a local tmp here would
+  # be unbound by the time the trap tries to read it.
   tmp="$(mktemp -d)"
   trap 'rm -rf "$tmp"' EXIT
 
