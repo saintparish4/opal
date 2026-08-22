@@ -1,6 +1,6 @@
 pub mod diagnose;
-// #[cfg(feature = "fixtures")]
-// pub mod fixtures;
+#[cfg(feature = "fixtures")]
+pub mod fixtures;
 pub mod gc;
 pub mod install;
 pub mod integrity;

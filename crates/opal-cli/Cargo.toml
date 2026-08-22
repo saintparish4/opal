@@ -8,11 +8,19 @@ repository.workspace = true
 
 [dependencies]
 opal-core.workspace = true
+opal-pm.workspace = true
 clap.workspace = true
 
 [dev-dependencies]
+opal-pm = { workspace = true, features = ["fixtures"] }
+serde_json.workspace = true
 tempfile.workspace = true
 
+# tests/install-crash-safety.rs drives the real binary, so it has to live in the
+# package that declares it: CARGO_BIN_EXE_opal is only set for this package's
+# integration tests. Declared explicitly rather than left to autodiscovery,
+# because that link should not rest on a convention.
 [[bin]]
 name = "opal"
 path = "src/main.rs"
+

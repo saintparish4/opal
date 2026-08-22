@@ -526,6 +526,8 @@ version = "0.1.0"
 dependencies = [
  "clap",
  "opal-core",
+ "opal-pm",
+ "serde_json",
  "tempfile",
 ]
 
