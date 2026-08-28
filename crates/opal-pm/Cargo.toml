@@ -29,3 +29,13 @@ tempfile.workspace = true
 # Test-only: a registry built out of files, shared by opal-pm's and opal-cli's
 # integration suites.
 fixtures = []
+
+# `harness = false` because this drives real I/O end to end — libtest's sampling
+# model fits microbenchmarks, not an install. `test = false` so `cargo test`
+# does not run the whole benchmark suite as if it were a test. Declared with an
+# explicit path rather than left to autodiscovery, matching the bin targets.
+[[bench]]
+name = "install-pipeline"
+path = "benches/install-pipeline/main.rs"
+harness = false
+test = false

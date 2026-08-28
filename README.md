@@ -294,15 +294,24 @@ Opal ships as a single self-contained native binary — no runtime dependency on
 3. Each binary is packaged as a `.tar.gz` archive.
 4. A `SHA256SUMS` file is generated across all artifacts.
 5. Artifacts publish to GitHub Releases — the single canonical source of truth. Any future downstream package manager (Homebrew, Scoop, WinGet, npm wrapper, Docker) must fetch from here, never build independently.
-6. The install script and installer endpoint (`opal.dev`, domain TBD) are updated to point at the new release.
+6. The install script and installer endpoint are updated to point at the new release, once a branded domain exists to host it under.
 
 A release ships all four targets or none — partial releases create version skew between platforms.
 
-**End-user install** is a curl-based script that detects OS/arch and places the binary at `~/.opal/bin/opal`, added to `PATH`:
+**End-user install** is a curl-based script that detects OS/arch and places the binary at `~/.opal/bin/opal`, added to `PATH`. There's no branded install domain yet — `opal.dev` turned out to already be a live, unrelated site, so the final domain is still undecided. Until one exists, the same script is reachable straight off `master`, and has already been self-tested end to end: a real tagged release, a real CI-built binary, real checksum verification.
 
-```bash
-curl -fsSL https://opal.dev/install.sh | bash
-```
+> **Not live under a branded domain, and experimental** — Opal is pre-1.0, the install pipeline itself is only days old, and `opal install` has [known gaps](#known-gaps-from-real-world-validation) found by real-world testing. **Run at your own risk.**
+>
+> Safer: try it in an isolated shell first, so nothing touches your real `PATH` or shell config until you've checked it works:
+> ```bash
+> env -i HOME="$HOME" PATH="/usr/bin:/bin" bash --noprofile --norc
+> curl -fsSL https://raw.githubusercontent.com/saintparish4/opal/master/install.sh | bash
+> ```
+>
+> Or straight into your current shell, once you're comfortable with it:
+> ```bash
+> curl -fsSL https://raw.githubusercontent.com/saintparish4/opal/master/install.sh | bash
+> ```
 
 **Hard constraint**: `cargo install opal` must never be presented as the primary install path for end users (requires a Rust toolchain) — it's contributor-only, for building Opal itself from source.
 

@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 # Installs opal into ~/.opal/bin and adds it to PATH.
 #
-#   curl -fsSL https://opal.dev/install.sh | bash
+# No branded install domain yet, so run it straight off the repo:
+#   curl -fsSL https://raw.githubusercontent.com/saintparish4/opal/master/install.sh | bash
 #
 # Pin a version instead of the latest release:
-#   OPAL_VERSION=v0.1.0 curl -fsSL https://opal.dev/install.sh | bash
+#   OPAL_VERSION=v0.1.0 curl -fsSL https://raw.githubusercontent.com/saintparish4/opal/master/install.sh | bash
 #
 # v1 targets macOS, Linux, and WSL2 only (WSL2 reports as Linux via uname,
 # so the linux-x64/linux-arm64 assets cover it directly). Native Windows is
