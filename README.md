@@ -212,23 +212,31 @@ Phases are sequential — each is a prerequisite for the next, and each has its 
 cargo test --workspace --all-features
 ```
 
-163 tests currently pass, organized by **risk category** rather than a unit/integration/e2e pyramid — the question is where the system actually breaks, and what a bug looks like when it does:
+256 tests currently pass, organized by **risk category** rather than a unit/integration/e2e pyramid — the question is where the system actually breaks, and what a bug looks like when it does:
 
 | Suite | Count | Covers |
 |---|---|---|
 | `opal-core` unit | 51 | Hashing, path abstraction, CAS layout, graph construction, resolver internals |
-| `opal-pm` unit | 53 | Semver parsing/matching, manifests, registry client, integrity verification, tarball ingestion, lockfile, linker planning, locks, GC bookkeeping |
-| `tests/cache-invalidation.rs` (`opal-core`) | 13 | The invalidation matrix: content change, add/remove, direct and transitive dependency change — asserting the right hits *and* misses. Includes the "never mtime" invariant as a direct test |
-| `tests/graph-resolution.rs` (`opal-core`) | 12 | Resolution against fixture trees, plus a golden/snapshot test of resolved graph output (`tests/golden/`) |
+| `opal-pm` unit | 93 | Semver parsing/matching, manifests, registry client and retry policy, integrity verification, tarball ingestion and its ceilings, lockfile, linker planning, platform matching, locks, GC bookkeeping |
+| `tests/cache-invalidation.rs` (`opal-core`) | 16 | The invalidation matrix: content change, add/remove, direct and transitive dependency change — asserting the right hits *and* misses. Includes the "never mtime" invariant as a direct test, and memo-record pruning |
+| `tests/graph-resolution.rs` (`opal-core`) | 15 | Resolution against fixture trees, plus a golden/snapshot test of resolved graph output (`tests/golden/`) |
 | `tests/cas-crash-safety.rs` (`opal-core`) | 6 | Atomic CAS writes under fault injection — a killed write leaves orphaned temp files, never a corrupt entry |
-| `tests/install-pipeline.rs` (`opal-cli`) | 22 | The full install pipeline end to end, incl. `test_node_can_require_the_installed_tree` and `test_the_module_graph_resolves_against_the_installed_tree` — the Phase 0 ↔ Phase 1 contract |
+| `tests/install-pipeline.rs` (`opal-pm`) | 39 | The full install pipeline end to end, incl. `test_node_can_require_the_installed_tree` and `test_the_module_graph_resolves_against_the_installed_tree` — the Phase 0 ↔ Phase 1 contract |
+| `tests/packument-cache.rs` (`opal-pm`) | 8 | When the registry client reaches the wire and when it does not: freshness, revalidation, `--offline`, and never answering one registry from another's cache |
+| `tests/resolution-properties.rs` (`opal-pm`) | 10 | `proptest` over generated registries: every resolved edge satisfies the range that asked for it, every root resolves to a version its own spec allows, and the layout places everything the resolution keeps |
+| `tests/semver-properties.rs` (`opal-pm`) | 12 | `proptest` over the range algebra in isolation |
 | `tests/install-crash-safety.rs` (`opal-cli`) | 6 | SIGKILL at each of seven pipeline stages converges on re-run; a killed lockfile rewrite leaves the previous lockfile byte-identical; two racing installs serialize instead of interleaving; `opal cache gc` blocks on an in-flight install rather than racing it |
+| `tests/npm-compatibility.rs` (`opal-cli`) | 15 | Real packages from the public registry, curated by the edge case each exercises. `#[ignore]` by default; install and execute run as separate CI jobs |
 
 Cache invalidation is the highest-risk area in this architecture: a bug there does not crash, it silently serves stale output. Any change to CAS key derivation, integrity verification, or invalidation logic must add or update the invalidation-matrix tests.
 
 `--all-features` turns on the `fixtures` module both `install-pipeline.rs` and `install-crash-safety.rs` build against — a file-backed registry so those suites run offline, without hitting the real npm registry.
 
-Planned as later phases land: property-based semver range solving (`proptest`, already a workspace dependency but not yet exercised against `opal-pm::semver`), a curated npm compatibility suite gating install and execute as separate CI jobs (`test_node_can_require_the_installed_tree` is its seed), `cargo-fuzz` on every parser of untrusted input (`opal.lock`, packument JSON, and tarball entries are the three boundaries now ready for it), a V8 embedding-boundary suite, and a benchmark suite. **There is no benchmark harness yet** — no performance claims are published until one exists, since speed work is justified by measurement, not intuition. The install pipeline's sequential download loop is the first thing that benchmark should attack.
+Fuzzing lives in `fuzz/`, its own workspace so that `cargo fuzz`'s sanitizer flags never reach an ordinary build. Four targets cover the inputs that are not trusted — registry JSON, tarball bytes, `package.json`, and `opal.lock` — and standing them up found three bugs in the lockfile round trip, one of which let a dependency write lines into the lockfile of every project installing it. See `fuzz/README.md`.
+
+Benchmarks live in `benches/install-pipeline`, which times four scenarios separately (`cold`, `resolve`, `link`, `noop`) because collapsing them into one number is how a ten-minute install can look ordinary. Per the testing strategy it tracks numbers and never gates CI on them.
+
+Still to come as later phases land: a V8 embedding-boundary suite, and overlapping the tarball downloads — the last remaining round-trip stall, and the only one the metadata cache did not remove.
 
 CI (GitHub Actions) runs fmt, clippy, test, and build on `ubuntu-latest` and `macos-latest` for every push and PR against `master`. Native Windows is out of scope for v1 — see [Deployment](#deployment).
 
@@ -278,26 +286,30 @@ The architectural bet is one resolver shared by every tool. A tool that implemen
 - **Lifecycle scripts** (`preinstall`/`install`/`postinstall`) do not run. A package needing `node-gyp` installs but does not build — native addons are best-effort per the PRD.
 - **Peer auto-install.** Peers are recorded and classified, never fetched.
 - **`opal add` / `remove` / `update` / `why` / `outdated` / `audit` / `publish`** are not implemented, and deliberately absent from the CLI rather than stubbed.
-- **Parallel downloads.** Installs fetch sequentially; this is the single biggest number in the exit-criteria output and needs the benchmark suite first.
-- **Git, `file:`, and alias specifiers** are reported as unsupported, never guessed at — v1 is the public registry only.
+- **Parallel downloads.** Installs fetch sequentially. With metadata now cached across runs, a re-resolve makes no round trips at all, but a cold install is still roughly half round-trip stall — all of it tarballs, and the only stall left in the pipeline.
+- **Git and `file:` specifiers** are reported as unsupported, never guessed at — v1 resolves the public registry only. `npm:` aliases *are* supported, since they resolve there too.
+- **Lifecycle scripts still do not run**, so a deprecation notice is the only thing a package gets to say during an install.
 - **Collector starvation.** The cache flock isn't fair, so a continuous stream of installs can keep `opal cache gc` waiting indefinitely. Nothing is lost when it does, since collection isn't on any critical path.
-- **Memo record pruning.** `opal cache gc` prunes package pointers for deleted projects but not the `opal-core` memo record (and the graph object it keeps alive) their resolution left behind — never wrong, since records are content-keyed, but it grows monotonically across deleted projects.
 
-### Known gaps from real-world validation
+### Fixed since v0.1.0
 
-Not deliberate scope decisions like the list above — found by installing a real `create-next-app` outside the fixture suite, with no regression test yet. Full detail and how they were found in `base/directive/p1.md`.
+Every gap the `create-next-app` validation found is closed, each with the regression test it should have had. Full detail in `base/optimization-plan.md`.
 
-- **No `os`/`cpu` filtering on `optionalDependencies`.** Every platform variant of a native optional (e.g. `@next/swc-*`) resolves and downloads, not just the one matching the host — unlike npm, which reads those manifest fields to skip the rest. Measured at 714M for `node_modules/@next/` on Linux, where npm installs a single ~40-80M binary.
-- **Extensionless entry files resolve as empty.** `opal graph` against a file with no extension — the shape of most npm bin scripts (`node_modules/<pkg>/dist/bin/*`, shebang-only) — reports it as one module with zero edges. The file is never parsed; that reads as a clean pass but isn't one.
+- **`os`/`cpu` filtering.** Platform variants of a native optional are recorded in `opal.lock` and skipped at install time — `esbuild` declares 25 of them totalling 256 MB, and one 9.8 MB binary is installed. A mismatched package nothing declared optional is `EBADPLATFORM`, matching npm.
+- **Root versions are pinned.** A transitive dependency's higher major no longer displaces the version the project asked for — that was a silent wrong-version install, the worst failure mode the testing strategy names.
+- **`--production` and `--frozen-lockfile` work together.** `opal.lock` stays dev-complete and byte-identical, so the ordinary CI invocation no longer fails against a valid lockfile.
+- **Metadata is cached across runs.** A re-resolve against a warm store went from 7.6s to 0.36s on a 74-package tree, and makes no round trips at all.
+- **Extensionless shebang scripts are walked.** `opal graph` against `typescript/bin/tsc` reported one module and zero edges; it now reports three modules and ten edges.
+- **`diagnose` stopped giving advice that cannot work.** A dependency's own devDependency reads as a note, not an error telling you to run a command that cannot fix it.
 
 ## Deployment
 
 Opal ships as a single self-contained native binary — no runtime dependency on a separate install step or interpreter.
 
-**v0.1.0 release targets**: `opal-linux-x64`, `opal-linux-arm64`, `opal-macos-x64`, `opal-macos-arm64`. Native Windows is out of scope for v1 (see platform support note below) — no `windows-x64` artifact until v2.
+**Release targets**: `opal-linux-x64`, `opal-linux-arm64`, `opal-macos-x64`, `opal-macos-arm64`. Native Windows is out of scope for v1 (see platform support note below) — no `windows-x64` artifact until v2.
 
 **Release process**:
-1. Tag a release (e.g. `v0.1.0`).
+1. Tag a release (e.g. `v0.2.0`).
 2. CI (GitHub Actions) builds all four platform targets in release mode, from the same matrix run.
 3. Each binary is packaged as a `.tar.gz` archive.
 4. A `SHA256SUMS` file is generated across all artifacts.

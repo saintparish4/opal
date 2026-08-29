@@ -5,7 +5,7 @@
 #   curl -fsSL https://raw.githubusercontent.com/saintparish4/opal/master/install.sh | bash
 #
 # Pin a version instead of the latest release:
-#   OPAL_VERSION=v0.1.0 curl -fsSL https://raw.githubusercontent.com/saintparish4/opal/master/install.sh | bash
+#   OPAL_VERSION=v0.2.0 curl -fsSL https://raw.githubusercontent.com/saintparish4/opal/master/install.sh | bash
 #
 # v1 targets macOS, Linux, and WSL2 only (WSL2 reports as Linux via uname,
 # so the linux-x64/linux-arm64 assets cover it directly). Native Windows is
