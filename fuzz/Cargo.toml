@@ -1,0 +1,48 @@
+[package]
+name = "opal-fuzz"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+# Its own workspace on purpose. `cargo fuzz` builds with sanitizer flags on a
+# nightly toolchain, and pulling that into the main workspace would put those
+# flags on every ordinary `cargo build`.
+[workspace]
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+opal-core = { path = "../crates/opal-core" }
+opal-pm = { path = "../crates/opal-pm" }
+serde_json = "1"
+tempfile = "3"
+
+[[bin]]
+name = "lockfile"
+path = "fuzz_targets/lockfile.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "packument"
+path = "fuzz_targets/packument.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "tarball"
+path = "fuzz_targets/tarball.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "manifest"
+path = "fuzz_targets/manifest.rs"
+test = false
+doc = false
+bench = false

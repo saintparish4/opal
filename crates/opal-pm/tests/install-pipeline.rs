@@ -442,6 +442,101 @@ fn test_the_pipeline_reports_each_stage_once_and_every_package() {
 }
 
 #[test]
+fn test_an_alias_installs_two_majors_side_by_side() {
+    // The shape `@isaacs/cliui@8.0.2` has, and the reason aliases exist: one
+    // package depending on two majors of another at the same time.
+    let mut sandbox = Sandbox::new();
+    sandbox
+        .registry
+        .publish(Package::new("width", "4.2.3").file("index.js", "module.exports = 4;\n"))
+        .publish(Package::new("width", "5.1.2").file("index.js", "module.exports = 5;\n"))
+        .publish(
+            Package::new("cliui", "1.0.0")
+                .dependency("width", "^5.0.0")
+                .alias("width-cjs", "width", "^4.2.0")
+                .file(
+                    "index.js",
+                    "module.exports = require('width') + require('width-cjs');\n",
+                ),
+        );
+    sandbox.project(serde_json::json!({ "dependencies": { "cliui": "^1.0.0" } }));
+
+    let report = sandbox.install().expect("install");
+
+    assert!(sandbox.installed("node_modules/width"));
+    assert!(sandbox.installed("node_modules/width-cjs"));
+    let aliased = std::fs::read_to_string(sandbox.path("node_modules/width-cjs/package.json"))
+        .expect("the alias directory holds the aliased package");
+    assert!(
+        aliased.contains("\"name\": \"width\"") && aliased.contains("\"version\": \"4.2.3\""),
+        "the directory is a name, the contents are the package: {aliased}"
+    );
+    assert_eq!(report.packages, 3);
+
+    // And the lockfile says which package the name resolves to.
+    assert!(
+        sandbox
+            .lockfile()
+            .contains("dep cliui 1.0.0 width-cjs width 4.2.3 - npm:width@^4.2.0\n"),
+        "{}",
+        sandbox.lockfile()
+    );
+
+    // Reused from the lockfile, the alias still lands in the same place.
+    std::fs::remove_dir_all(sandbox.path("node_modules")).expect("clear");
+    let second = sandbox.install().expect("second install");
+    assert!(!second.resolved);
+    assert!(sandbox.installed("node_modules/width-cjs"));
+}
+
+#[test]
+fn test_an_alias_at_the_project_root_installs_under_its_own_name() {
+    let mut sandbox = Sandbox::new();
+    sandbox
+        .registry
+        .publish(Package::new("real", "2.0.0").file("index.js", "module.exports = 'real';\n"));
+    sandbox.project(serde_json::json!({
+        "dependencies": { "renamed": "npm:real@^2.0.0" }
+    }));
+
+    sandbox.install().expect("install");
+
+    assert!(sandbox.installed("node_modules/renamed"));
+    assert!(!sandbox.path("node_modules/real").exists());
+    assert!(
+        sandbox
+            .lockfile()
+            .contains("require dependency renamed real 2.0.0 npm:real@^2.0.0\n"),
+        "{}",
+        sandbox.lockfile()
+    );
+}
+
+#[test]
+fn test_a_required_package_for_another_platform_fails_the_install() {
+    let mut sandbox = Sandbox::new();
+    sandbox
+        .registry
+        .publish(Package::new("mac-only", "1.0.0").platform(&["darwin"], &[]));
+    sandbox.project(serde_json::json!({
+        "dependencies": { "mac-only": "^1.0.0" }
+    }));
+
+    let error = sandbox
+        .install_with(&InstallOptions {
+            platform: Platform::new("linux", "x64"),
+            ..InstallOptions::default()
+        })
+        .expect_err("a required dependency this host cannot run is EBADPLATFORM");
+
+    assert!(
+        matches!(error, InstallError::UnsupportedPlatform { .. }),
+        "{error}"
+    );
+    assert!(error.to_string().contains("requires os darwin"));
+}
+
+#[test]
 fn test_a_root_pin_survives_a_higher_transitive_version() {
     let mut sandbox = Sandbox::new();
     sandbox
@@ -490,7 +585,7 @@ fn test_a_dist_tag_root_survives_a_higher_transitive_version() {
     assert!(
         sandbox
             .lockfile()
-            .contains("require dependency shared 1.0.0 latest\n")
+            .contains("require dependency shared - 1.0.0 latest\n")
     );
 
     // And again from the lockfile, without the registry to ask.
@@ -688,6 +783,13 @@ fn test_a_cpu_constraint_is_checked_independently_of_os() {
     assert!(report.platform_skipped[0].1.contains("cpu arm64"));
 }
 
+/// The header this build writes. Spelled from the constant so a version bump
+/// cannot quietly turn a downgrade test into a no-op — which is exactly what
+/// happened when v3 landed.
+fn current_header() -> String {
+    format!("opal-lock {}", lockfile::LOCKFILE_VERSION)
+}
+
 #[test]
 fn test_an_older_lockfile_is_re_resolved() {
     let mut sandbox = Sandbox::new();
@@ -695,14 +797,18 @@ fn test_an_older_lockfile_is_re_resolved() {
     sandbox.project(serde_json::json!({ "dependencies": { "a": "^1.0.0" } }));
 
     sandbox.install().expect("install");
-    let v1 = sandbox.lockfile().replace("opal-lock 2", "opal-lock 1");
+    let v1 = sandbox.lockfile().replace(&current_header(), "opal-lock 1");
     std::fs::write(sandbox.path("opal.lock"), &v1).expect("downgrade the lockfile");
 
     let report = sandbox.install().expect("install over a v1 lockfile");
 
     assert!(report.lockfile_upgraded);
     assert!(report.resolved);
-    assert!(sandbox.lockfile().starts_with("opal-lock 2\n"));
+    assert!(
+        sandbox
+            .lockfile()
+            .starts_with(&format!("{}\n", current_header()))
+    );
     assert!(sandbox.installed("node_modules/a"));
 }
 
@@ -713,7 +819,7 @@ fn test_an_older_lockfile_is_not_rewritten_under_frozen_lockfile() {
     sandbox.project(serde_json::json!({ "dependencies": { "a": "^1.0.0" } }));
 
     sandbox.install().expect("install");
-    let v1 = sandbox.lockfile().replace("opal-lock 2", "opal-lock 1");
+    let v1 = sandbox.lockfile().replace(&current_header(), "opal-lock 1");
     std::fs::write(sandbox.path("opal.lock"), &v1).expect("downgrade the lockfile");
 
     let error = sandbox
@@ -734,7 +840,9 @@ fn test_a_newer_lockfile_is_never_overwritten() {
     sandbox.project(serde_json::json!({ "dependencies": { "a": "^1.0.0" } }));
 
     sandbox.install().expect("install");
-    let future = sandbox.lockfile().replace("opal-lock 2", "opal-lock 99");
+    let future = sandbox
+        .lockfile()
+        .replace(&current_header(), "opal-lock 99");
     std::fs::write(sandbox.path("opal.lock"), &future).expect("write a future lockfile");
 
     let error = sandbox.install().expect_err("a future lockfile is fatal");

@@ -65,8 +65,23 @@ pub enum Spec {
     /// A dist-tag: `"latest"`, `"next"`. Resolved against the packument, not
     /// against version ordering.
     Tag(String),
-    /// `git+https://…`, `file:../x`, `npm:alias@^1`. PRD §3 scopes v1 to the
-    /// public registry, so these are reported rather than guessed at.
+    /// `npm:string-width@^4.2.0` — install *that* package under *this* name.
+    ///
+    /// Which is how a package depends on two majors of one dependency at once:
+    /// `@isaacs/cliui` takes `string-width@^5` and `string-width-cjs`, an alias
+    /// for `string-width@^4`. Unlike `git:` and `file:`, an alias resolves
+    /// entirely against the public registry — it is a naming indirection, not
+    /// another source — so v1's registry-only scope does not exclude it.
+    Alias {
+        package: String,
+        range: Range,
+        /// The specifier as written. Kept because the lockfile records
+        /// specifiers verbatim and compares them against the manifest: a
+        /// reconstructed `npm:x@*` would not match a declared `npm:x`.
+        raw: String,
+    },
+    /// `git+https://…`, `file:../x`. PRD §3 scopes v1 to the public registry,
+    /// so these are reported rather than guessed at.
     Unsupported(String),
 }
 
@@ -75,6 +90,11 @@ impl Spec {
         let trimmed = text.trim();
         if let Ok(range) = Range::parse(trimmed) {
             return Self::Range(range);
+        }
+        if let Some(alias) = trimmed.strip_prefix("npm:")
+            && let Some(spec) = parse_alias(alias, trimmed)
+        {
+            return spec;
         }
         let is_tag = !trimmed.is_empty()
             && trimmed
@@ -93,9 +113,34 @@ impl fmt::Display for Spec {
         match self {
             Self::Range(range) => f.write_str(range.as_str()),
             Self::Tag(tag) => f.write_str(tag),
+            Self::Alias { raw, .. } => f.write_str(raw),
             Self::Unsupported(text) => f.write_str(text),
         }
     }
+}
+
+/// `string-width@^4.2.0`, or `@scope/pkg@^1`, or just a name.
+///
+/// The version separator is the *last* `@`, and a leading one is a scope
+/// rather than a separator — `@scope/pkg` has no range and every character of
+/// it is the name.
+fn parse_alias(alias: &str, raw: &str) -> Option<Spec> {
+    let separator = alias.rfind('@').filter(|index| *index > 0);
+    let (package, range) = match separator {
+        Some(index) => (&alias[..index], &alias[index + 1..]),
+        None => (alias, "*"),
+    };
+    if package.is_empty() {
+        return None;
+    }
+    // An alias to a dist-tag (`npm:foo@latest`) resolves through the packument
+    // rather than through version ordering, and nothing here does both yet, so
+    // it stays unsupported rather than being silently read as a range.
+    Some(Spec::Alias {
+        package: package.to_string(),
+        range: Range::parse(range).ok()?,
+        raw: raw.to_string(),
+    })
 }
 
 #[derive(Clone, Debug)]

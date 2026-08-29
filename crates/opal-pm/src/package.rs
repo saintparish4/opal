@@ -29,6 +29,49 @@ pub const FAULT_BEFORE_VERIFY: FaultPoint = FaultPoint::new("pm-before-verify");
 /// known before anything is written. Above it, streaming wins: the peak
 /// cost of buffering stops being worth one avoided fsync.
 const BUFFERED_ENTRY_BYTES: u64 = 8 * 1024 * 1024;
+
+/// Which ceiling a tarball ran into.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum Ceiling {
+    EntryBytes,
+    UnpackedBytes,
+    Entries,
+}
+
+impl std::fmt::Display for Ceiling {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(match self {
+            Self::EntryBytes => "single-file byte",
+            Self::UnpackedBytes => "total unpacked byte",
+            Self::Entries => "file count",
+        })
+    }
+}
+
+/// Ceilings on what one tarball may unpack to.
+///
+/// A gzip stream can describe far more output than it costs to download, so
+/// without these an install is a disk-filling primitive that anyone who can
+/// publish a package holds. The defaults sit where no real package reaches
+/// them — the largest things on npm are native toolchains in the low hundreds
+/// of megabytes — and a package that does hit one fails loudly rather than
+/// filling the store on the way to failing anyway.
+#[derive(Clone, Copy, Debug)]
+pub struct Limits {
+    pub entry_bytes: u64,
+    pub unpacked_bytes: u64,
+    pub entries: usize,
+}
+
+impl Default for Limits {
+    fn default() -> Self {
+        Self {
+            entry_bytes: 512 * 1024 * 1024,
+            unpacked_bytes: 1024 * 1024 * 1024,
+            entries: 200_000,
+        }
+    }
+}
 /// Some of the tarball's files are in the CAS, the index is not yet written.
 pub const FAULT_MID_EXTRACT: FaultPoint = FaultPoint::new("pm-mid-extract");
 
@@ -56,6 +99,13 @@ pub enum PackageError {
     },
     #[error("{name}@{version}: tarball contains no files")]
     Empty { name: String, version: Version },
+    #[error("{name}@{version}: tarball exceeds the {what} limit of {limit}")]
+    TooLarge {
+        name: String,
+        version: Version,
+        what: Ceiling,
+        limit: u64,
+    },
     #[error("package index {hash} is unreadable: {source}")]
     Index {
         hash: ContentHash,
@@ -114,6 +164,7 @@ pub struct PackageStore {
     cas: Cas,
     root: PathBuf,
     pointers: PathBuf,
+    limits: Limits,
 }
 
 impl PackageStore {
@@ -125,7 +176,17 @@ impl PackageStore {
             cas,
             root,
             pointers,
+            limits: Limits::default(),
         })
+    }
+
+    /// Tightens what a tarball is allowed to unpack to. The defaults are sized
+    /// for the real registry; a test wanting to reach one does not have to
+    /// build half a gigabyte to get there.
+    #[must_use]
+    pub fn with_limits(mut self, limits: Limits) -> Self {
+        self.limits = limits;
+        self
     }
 
     pub fn cas(&self) -> &Cas {
@@ -246,6 +307,14 @@ impl PackageStore {
         })?;
 
         let mut files = BTreeMap::new();
+        let mut unpacked: u64 = 0;
+        let too_large = |what: Ceiling, limit: u64| PackageError::TooLarge {
+            name: name.to_string(),
+            version: version.clone(),
+            what,
+            limit,
+        };
+
         for entry in entries {
             let mut entry = entry.map_err(|source| PackageError::Tarball {
                 name: name.to_string(),
@@ -263,6 +332,23 @@ impl PackageStore {
             let Some(path) = entry.path().ok().and_then(|path| strip_package_root(&path)) else {
                 continue;
             };
+
+            // Checked before reading a byte of it: the header's declared size
+            // is what the reader will hand over, so refusing here costs
+            // nothing and refusing later costs the whole write.
+            if size > self.limits.entry_bytes {
+                return Err(too_large(Ceiling::EntryBytes, self.limits.entry_bytes));
+            }
+            unpacked = unpacked.saturating_add(size);
+            if unpacked > self.limits.unpacked_bytes {
+                return Err(too_large(
+                    Ceiling::UnpackedBytes,
+                    self.limits.unpacked_bytes,
+                ));
+            }
+            if files.len() >= self.limits.entries {
+                return Err(too_large(Ceiling::Entries, self.limits.entries as u64));
+            }
 
             // Buffered rather than streamed, so the CAS can check whether it
             // already holds these bytes before writing any. Duplicate files are
@@ -400,6 +486,98 @@ mod tests {
                 .read(&index.file("index.js").unwrap().hash)
                 .unwrap(),
             b"module.exports = 1;\n"
+        );
+    }
+
+    /// A header claiming far more than it carries. A gzip stream can describe
+    /// gigabytes for a few kilobytes on the wire, which is the whole shape of
+    /// the attack — so the refusal has to come off the header, before a byte
+    /// of it is written anywhere.
+    fn lying_tarball(declared: u64) -> Vec<u8> {
+        let mut encoder = flate2::write::GzEncoder::new(Vec::new(), flate2::Compression::default());
+        {
+            let mut builder = tar::Builder::new(&mut encoder);
+            let mut header = tar::Header::new_gnu();
+            header.set_size(declared);
+            header.set_mode(0o644);
+            header.set_cksum();
+            builder
+                .append_data(&mut header, "package/bomb.bin", std::io::empty())
+                .unwrap();
+            builder.finish().unwrap();
+        }
+        encoder.finish().unwrap()
+    }
+
+    #[test]
+    fn test_an_entry_larger_than_the_ceiling_is_refused() {
+        let (_directory, store) = store();
+        let store = store.with_limits(Limits {
+            entry_bytes: 1024,
+            ..Limits::default()
+        });
+        let bytes = lying_tarball(4096);
+        let integrity = Integrity::of(crate::integrity::Algorithm::Sha512, &bytes);
+
+        let error = store
+            .ingest("bomb", &Version::new(1, 0, 0), &integrity, &bytes)
+            .expect_err("a file bigger than the ceiling is not a package");
+
+        assert!(matches!(error, PackageError::TooLarge { .. }), "{error}");
+        // Nothing was written on the way to refusing.
+        assert_eq!(store.lookup(&integrity).unwrap(), None);
+    }
+
+    #[test]
+    fn test_entries_that_only_add_up_to_too_much_are_refused() {
+        let (_directory, store) = store();
+        // Each file is individually fine; three of them are not.
+        let store = store.with_limits(Limits {
+            unpacked_bytes: 20,
+            ..Limits::default()
+        });
+        let bytes = tarball(&[
+            ("package/a", b"0123456789", 0o644),
+            ("package/b", b"0123456789", 0o644),
+            ("package/c", b"0123456789", 0o644),
+        ]);
+        let integrity = Integrity::of(crate::integrity::Algorithm::Sha512, &bytes);
+
+        let error = store
+            .ingest("bomb", &Version::new(1, 0, 0), &integrity, &bytes)
+            .expect_err("the total is what fills a disk");
+        assert!(matches!(error, PackageError::TooLarge { .. }), "{error}");
+    }
+
+    #[test]
+    fn test_a_tarball_of_too_many_files_is_refused() {
+        let (_directory, store) = store();
+        let store = store.with_limits(Limits {
+            entries: 2,
+            ..Limits::default()
+        });
+        let bytes = tarball(&[
+            ("package/a", b"x", 0o644),
+            ("package/b", b"x", 0o644),
+            ("package/c", b"x", 0o644),
+        ]);
+        let integrity = Integrity::of(crate::integrity::Algorithm::Sha512, &bytes);
+
+        let error = store
+            .ingest("bomb", &Version::new(1, 0, 0), &integrity, &bytes)
+            .expect_err("one object per entry is the cost being bounded");
+        assert!(matches!(error, PackageError::TooLarge { .. }), "{error}");
+    }
+
+    #[test]
+    fn test_an_ordinary_package_is_nowhere_near_the_ceilings() {
+        let (_directory, store) = store();
+        let bytes = tarball(&[("package/index.js", b"module.exports = 1;\n", 0o644)]);
+        let integrity = Integrity::of(crate::integrity::Algorithm::Sha512, &bytes);
+        assert!(
+            store
+                .ingest("demo", &Version::new(1, 0, 0), &integrity, &bytes)
+                .is_ok()
         );
     }
 

@@ -43,6 +43,12 @@ impl Project {
         self
     }
 
+    /// Deletes the whole project, standing in for a checkout that was thrown
+    /// away while its cache records live on.
+    pub fn remove_root(&self) {
+        std::fs::remove_dir_all(self.directory.path()).expect("remove project");
+    }
+
     pub fn remove(&self, relative: &str) -> &Self {
         fs::remove_file(self.native(relative)).expect("remove fixture");
         self

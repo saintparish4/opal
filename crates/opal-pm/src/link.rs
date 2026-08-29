@@ -150,6 +150,10 @@ pub struct Plan {
     /// Reported rather than printed: `opal-pm` is a library and has no
     /// business knowing about a terminal.
     pub platform_skipped: Vec<(PackageId, String)>,
+    /// The same, but reached through a dependency that does not tolerate
+    /// absence. npm calls this `EBADPLATFORM` and refuses the install, because
+    /// skipping it silently produces a tree that cannot run.
+    pub platform_rejected: Vec<(PackageId, String)>,
 }
 
 /// Places every resolved package this host can run, hoisting as far as each
@@ -157,17 +161,20 @@ pub struct Plan {
 pub fn plan(resolution: &Resolution, options: &PlanOptions) -> Plan {
     let root = NormalizedPath::new(".");
     let mut plan = Plan::default();
-    let mut visited: BTreeSet<(NormalizedPath, PackageId)> = BTreeSet::new();
-    let mut queue: VecDeque<(NormalizedPath, PackageId)> = resolution
+    let mut visited: BTreeSet<(NormalizedPath, String, PackageId)> = BTreeSet::new();
+    // (owner directory, name to place it under, package). The name is not
+    // `id.name`: an alias installs `string-width` into `string-width-cjs/`,
+    // and the directory is what a `require` actually finds.
+    let mut queue: VecDeque<(NormalizedPath, String, PackageId, bool)> = resolution
         .roots_for(options.include_development)
         .into_iter()
-        .map(|id| (root.clone(), id))
+        .map(|entry| (root.clone(), entry.name, entry.id, entry.optional))
         .collect();
 
-    while let Some((owner, id)) = queue.pop_front() {
+    while let Some((owner, name, id, optional)) = queue.pop_front() {
         // A package's dependencies are expanded once per placement, which also
         // terminates dependency cycles.
-        if !visited.insert((owner.clone(), id.clone())) {
+        if !visited.insert((owner.clone(), name.clone(), id.clone())) {
             continue;
         }
 
@@ -178,17 +185,21 @@ pub fn plan(resolution: &Resolution, options: &PlanOptions) -> Plan {
             && !options.platform.supports(&package.os, &package.cpu)
         {
             let reason = options.platform.rejection(&package.os, &package.cpu);
-            if !plan
-                .platform_skipped
-                .iter()
-                .any(|(skipped, _)| *skipped == id)
-            {
-                plan.platform_skipped.push((id.clone(), reason));
+            // Optional means "absent is expected"; required means the tree
+            // cannot work without it, and saying so beats linking a tree that
+            // fails at run time.
+            let into = if optional {
+                &mut plan.platform_skipped
+            } else {
+                &mut plan.platform_rejected
+            };
+            if !into.iter().any(|(seen, _)| *seen == id) {
+                into.push((id.clone(), reason));
             }
             continue;
         }
 
-        let directory = placement(&owner, &id, &plan.layout);
+        let directory = placement(&owner, &name, &id, &plan.layout);
         plan.layout.insert(directory.clone(), id.clone());
 
         let Some(package) = package else {
@@ -197,19 +208,27 @@ pub fn plan(resolution: &Resolution, options: &PlanOptions) -> Plan {
         for edge in &package.dependencies {
             queue.push_back((
                 directory.clone(),
-                PackageId::new(edge.name.clone(), edge.version.clone()),
+                edge.name.clone(),
+                edge.id(),
+                edge.optional,
             ));
         }
     }
     plan.platform_skipped.sort();
+    plan.platform_rejected.sort();
     plan
 }
 
 /// The shallowest directory whose `node_modules` slot for this name is free, or
 /// already holds this exact version.
-fn placement(owner: &NormalizedPath, id: &PackageId, layout: &Layout) -> NormalizedPath {
+fn placement(
+    owner: &NormalizedPath,
+    name: &str,
+    id: &PackageId,
+    layout: &Layout,
+) -> NormalizedPath {
     for candidate in owning_directories(owner) {
-        let slot = slot_for(&candidate, &id.name);
+        let slot = slot_for(&candidate, name);
         match layout.get(&slot) {
             None => return slot,
             Some(existing) if existing == id => return slot,
@@ -217,7 +236,7 @@ fn placement(owner: &NormalizedPath, id: &PackageId, layout: &Layout) -> Normali
             Some(_) => {}
         }
     }
-    slot_for(owner, &id.name)
+    slot_for(owner, name)
 }
 
 fn slot_for(directory: &NormalizedPath, name: &str) -> NormalizedPath {
@@ -608,8 +627,10 @@ mod tests {
                 .iter()
                 .map(|(name, version)| ResolvedEdge {
                     name: (*name).to_string(),
+                    package: (*name).to_string(),
                     spec: "*".to_string(),
                     version: Version::new(version.0, version.1, version.2),
+                    optional: false,
                 })
                 .collect(),
             os: Vec::new(),
@@ -668,6 +689,7 @@ mod tests {
                 .map(|(class, name, version)| RequirementRecord {
                     class: *class,
                     name: (*name).to_string(),
+                    package: (*name).to_string(),
                     spec: "*".to_string(),
                     version: Some(version.clone()),
                 })
@@ -804,7 +826,9 @@ mod tests {
     }
 
     #[test]
-    fn test_a_package_this_host_cannot_run_is_left_out_with_its_subtree() {
+    fn test_a_required_package_this_host_cannot_run_is_rejected_not_skipped() {
+        // npm's EBADPLATFORM: nothing declared this optional, so a tree
+        // without it is not a tree that works.
         let plan = plan(
             &resolution(
                 &["a", "native"],
@@ -820,10 +844,77 @@ mod tests {
             &linux(),
         );
         assert_eq!(paths(&plan.layout), vec!["node_modules/a = a@1.0.0"]);
-        assert_eq!(plan.platform_skipped.len(), 1);
+        assert!(plan.platform_skipped.is_empty());
+        assert_eq!(plan.platform_rejected.len(), 1);
         assert_eq!(
-            plan.platform_skipped[0].1,
+            plan.platform_rejected[0].1,
             "requires os darwin (host is linux)"
+        );
+    }
+
+    #[test]
+    fn test_an_optional_package_this_host_cannot_run_is_skipped_with_its_subtree() {
+        let plan = plan(
+            &classified_resolution(
+                &[
+                    (DependencyClass::Runtime, "a"),
+                    (DependencyClass::Optional, "native"),
+                ],
+                vec![
+                    package("a", (1, 0, 0), &[]),
+                    only_on(
+                        package("native", (1, 0, 0), &[("helper", (1, 0, 0))]),
+                        "darwin",
+                    ),
+                    package("helper", (1, 0, 0), &[]),
+                ],
+            ),
+            &linux(),
+        );
+        assert_eq!(paths(&plan.layout), vec!["node_modules/a = a@1.0.0"]);
+        assert!(plan.platform_rejected.is_empty());
+        assert_eq!(plan.platform_skipped.len(), 1);
+    }
+
+    #[test]
+    fn test_an_alias_is_placed_under_the_name_that_required_it() {
+        // `@isaacs/cliui` takes string-width@^5 and string-width-cjs, an alias
+        // for string-width@^4, so both majors sit in the tree under different
+        // names and neither displaces the other.
+        let mut dependent = package("cliui", (1, 0, 0), &[]);
+        dependent.dependencies = vec![
+            ResolvedEdge {
+                name: "string-width".to_string(),
+                package: "string-width".to_string(),
+                spec: "^5.0.0".to_string(),
+                version: Version::new(5, 1, 2),
+                optional: false,
+            },
+            ResolvedEdge {
+                name: "string-width-cjs".to_string(),
+                package: "string-width".to_string(),
+                spec: "npm:string-width@^4.2.0".to_string(),
+                version: Version::new(4, 2, 3),
+                optional: false,
+            },
+        ];
+        let layout = layout_of(&resolution(
+            &["cliui"],
+            vec![
+                dependent,
+                package("string-width", (5, 1, 2), &[]),
+                package("string-width", (4, 2, 3), &[]),
+            ],
+        ));
+
+        assert_eq!(
+            layout.get(&NormalizedPath::new("node_modules/string-width")),
+            Some(&PackageId::new("string-width", Version::new(5, 1, 2)))
+        );
+        assert_eq!(
+            layout.get(&NormalizedPath::new("node_modules/string-width-cjs")),
+            Some(&PackageId::new("string-width", Version::new(4, 2, 3))),
+            "the alias is a directory name, not a different package"
         );
     }
 

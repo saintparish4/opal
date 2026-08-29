@@ -57,9 +57,24 @@ impl fmt::Display for PackageId {
 /// One resolved edge: what was asked for, and what it resolved to.
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct ResolvedEdge {
+    /// The name this is required under, which an alias makes different from
+    /// the package's own name — `string-width-cjs` for `string-width`. It is
+    /// the directory the linker places it in.
     pub name: String,
+    /// The package actually installed. Equal to `name` unless aliased.
+    pub package: String,
     pub spec: String,
     pub version: Version,
+    /// Whether the dependent tolerates this being absent. Carried so the
+    /// planner can tell npm's two platform outcomes apart: a mismatched
+    /// optional is skipped, a mismatched requirement is an error.
+    pub optional: bool,
+}
+
+impl ResolvedEdge {
+    pub fn id(&self) -> PackageId {
+        PackageId::new(self.package.clone(), self.version.clone())
+    }
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
@@ -81,7 +96,11 @@ pub struct ResolvedPackage {
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct RequirementRecord {
     pub class: DependencyClass,
+    /// The name the project requires, which an alias makes different from the
+    /// package installed under it.
     pub name: String,
+    /// The package actually installed. Equal to `name` unless aliased.
+    pub package: String,
     pub spec: String,
     /// What this requirement resolved to, or `None` for an optional that was
     /// skipped. Recorded rather than re-derived: the layout is planned from
@@ -89,6 +108,14 @@ pub struct RequirementRecord {
     /// order picks a transitive dependency's higher major over the version the
     /// project actually asked for.
     pub version: Option<Version>,
+}
+
+/// A root-level placement: the package, and the name the project calls it.
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug)]
+pub struct Root {
+    pub name: String,
+    pub id: PackageId,
+    pub optional: bool,
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
@@ -105,22 +132,28 @@ impl Resolution {
         self.packages.get(id)
     }
 
-    /// Root-level edges, resolved.
-    pub fn roots(&self) -> Vec<PackageId> {
+    /// Root-level edges, resolved, each with the name it is required under.
+    pub fn roots(&self) -> Vec<Root> {
         self.roots_for(true)
     }
 
     /// Root-level edges, with the project's own `devDependencies` dropped when
     /// they are not being installed. A dev package that another root also
     /// depends on is still reached, through that root.
-    pub fn roots_for(&self, include_development: bool) -> Vec<PackageId> {
-        let mut roots: Vec<PackageId> = self
+    pub fn roots_for(&self, include_development: bool) -> Vec<Root> {
+        let mut roots: Vec<Root> = self
             .requirements
             .iter()
             .filter(|requirement| {
                 include_development || requirement.class != DependencyClass::Development
             })
-            .filter_map(|requirement| self.root_of(requirement))
+            .filter_map(|requirement| {
+                Some(Root {
+                    name: requirement.name.clone(),
+                    id: self.root_of(requirement)?,
+                    optional: requirement.class.tolerates_absence(),
+                })
+            })
             .collect();
         roots.sort();
         roots.dedup();
@@ -129,7 +162,7 @@ impl Resolution {
 
     fn root_of(&self, requirement: &RequirementRecord) -> Option<PackageId> {
         if let Some(version) = &requirement.version {
-            return Some(PackageId::new(requirement.name.clone(), version.clone()));
+            return Some(PackageId::new(requirement.package.clone(), version.clone()));
         }
         // No recorded version: a resolution built by hand, or one parsed from a
         // lockfile written before the field existed. The spec still narrows it
@@ -139,13 +172,13 @@ impl Resolution {
         let versions = self
             .packages
             .keys()
-            .filter(|id| id.name == requirement.name)
+            .filter(|id| id.name == requirement.package)
             .map(|id| &id.version);
         match Range::parse(&requirement.spec) {
             Ok(range) => range.max_satisfying(versions),
             Err(_) => versions.max(),
         }
-        .map(|version| PackageId::new(requirement.name.clone(), version.clone()))
+        .map(|version| PackageId::new(requirement.package.clone(), version.clone()))
     }
 }
 
@@ -196,9 +229,28 @@ struct Resolver<'a> {
 /// One unit of work: resolve `name @ spec`, requested by `parent`.
 struct Request {
     parent: Option<PackageId>,
+    /// What the dependent calls it.
     name: String,
+    /// What to actually fetch. Differs from `name` only for an alias.
+    package: String,
     spec: Spec,
     optional: bool,
+}
+
+impl Request {
+    fn new(parent: Option<PackageId>, name: String, spec: Spec, optional: bool) -> Self {
+        let package = match &spec {
+            Spec::Alias { package, .. } => package.clone(),
+            _ => name.clone(),
+        };
+        Self {
+            parent,
+            name,
+            package,
+            spec,
+            optional,
+        }
+    }
 }
 
 impl<'a> Resolver<'a> {
@@ -211,18 +263,20 @@ impl<'a> Resolver<'a> {
         let mut requirements = Vec::new();
 
         for requirement in root.installable(options.include_development) {
+            let request = Request::new(
+                None,
+                requirement.name.clone(),
+                requirement.spec.clone(),
+                requirement.class.tolerates_absence(),
+            );
             requirements.push(RequirementRecord {
                 class: requirement.class,
                 name: requirement.name.clone(),
+                package: request.package.clone(),
                 spec: requirement.spec.to_string(),
                 version: None,
             });
-            queue.push_back(Request {
-                parent: None,
-                name: requirement.name.clone(),
-                spec: requirement.spec.clone(),
-                optional: requirement.class.tolerates_absence(),
-            });
+            queue.push_back(request);
         }
         requirements
             .sort_by(|left, right| (left.class, &left.name).cmp(&(right.class, &right.name)));
@@ -231,7 +285,7 @@ impl<'a> Resolver<'a> {
             let Some(version) = self.select(&request)? else {
                 continue;
             };
-            let id = PackageId::new(request.name.clone(), version);
+            let id = PackageId::new(request.package.clone(), version);
 
             if request.parent.is_none() {
                 self.root_versions.insert(
@@ -242,9 +296,11 @@ impl<'a> Resolver<'a> {
 
             if let Some(parent) = &request.parent {
                 let edge = ResolvedEdge {
-                    name: id.name.clone(),
+                    name: request.name.clone(),
+                    package: id.name.clone(),
                     spec: request.spec.to_string(),
                     version: id.version.clone(),
+                    optional: request.optional,
                 };
                 let package = self
                     .packages
@@ -264,12 +320,12 @@ impl<'a> Resolver<'a> {
                 continue;
             }
             for requirement in self.dependencies_of(&id)? {
-                queue.push_back(Request {
-                    parent: Some(id.clone()),
-                    optional: requirement.class.tolerates_absence(),
-                    name: requirement.name,
-                    spec: requirement.spec,
-                });
+                queue.push_back(Request::new(
+                    Some(id.clone()),
+                    requirement.name,
+                    requirement.spec,
+                    requirement.class.tolerates_absence(),
+                ));
             }
         }
 
@@ -279,6 +335,9 @@ impl<'a> Resolver<'a> {
                 .get(&(requirement.name.clone(), requirement.spec.clone()))
                 .cloned();
         }
+        requirements.dedup_by(|left, right| {
+            (&left.class, &left.name, &left.spec) == (&right.class, &right.name, &right.spec)
+        });
 
         Ok(Resolution {
             requirements,
@@ -291,6 +350,9 @@ impl<'a> Resolver<'a> {
     fn select(&mut self, request: &Request) -> Result<Option<Version>, ResolveError> {
         let range = match &request.spec {
             Spec::Range(range) => Some(range.clone()),
+            // An alias narrows the *target*, so from here it is an ordinary
+            // range against an ordinary packument — only the name differs.
+            Spec::Alias { range, .. } => Some(range.clone()),
             Spec::Tag(_) => None,
             Spec::Unsupported(spec) => {
                 if request.optional {
@@ -310,13 +372,13 @@ impl<'a> Resolver<'a> {
         // Reuse before fetching: an already-selected version that satisfies the
         // range keeps the tree flat and the install small.
         if let Some(range) = &range
-            && let Some(versions) = self.selected.get(&request.name)
+            && let Some(versions) = self.selected.get(&request.package)
             && let Some(reused) = range.max_satisfying(versions.iter())
         {
             return Ok(Some(reused.clone()));
         }
 
-        let packument = match self.registry.packument(&request.name) {
+        let packument = match self.registry.packument(&request.package) {
             Ok(packument) => packument,
             Err(RegistryError::NotFound(name)) if request.optional => {
                 self.skipped.push((name, "not in the registry".to_string()));
@@ -345,7 +407,7 @@ impl<'a> Resolver<'a> {
             });
         };
 
-        let id = PackageId::new(request.name.clone(), version.clone());
+        let id = PackageId::new(request.package.clone(), version.clone());
         self.packages.entry(id.clone()).or_insert_with(|| {
             let metadata = packument
                 .version(&version)
@@ -360,7 +422,7 @@ impl<'a> Resolver<'a> {
             }
         });
         self.selected
-            .entry(request.name.clone())
+            .entry(request.package.clone())
             .or_default()
             .insert(version.clone());
         Ok(Some(version))
@@ -401,6 +463,7 @@ pub fn requirements_match(resolution: &Resolution, manifest: &Manifest) -> bool 
             )
         })
         .collect();
+    declared.dedup_by(|left, right| left == right);
     declared.sort_by(|left, right| (left.0, left.1).cmp(&(right.0, right.1)));
 
     let recorded: Vec<(DependencyClass, &str, String)> = resolution

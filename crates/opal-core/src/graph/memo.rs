@@ -34,8 +34,9 @@ pub const FAULT_BEFORE_RENAME: FaultPoint = FaultPoint::new("memo-before-rename"
 /// that re-resolving these inputs produces this graph, so a change to what the
 /// resolver does with the same bytes invalidates every record ever written —
 /// v2 taught it to walk extensionless shebang scripts, which turns files that
-/// previously had no edges into files that have them.
-pub const MEMO_FORMAT_VERSION: u32 = 2;
+/// previously had no edges into files that have them. v3 added the project
+/// root to the record, which is a shape change rather than a behaviour one.
+pub const MEMO_FORMAT_VERSION: u32 = 3;
 
 #[derive(Debug, thiserror::Error)]
 pub enum MemoError {
@@ -82,6 +83,12 @@ impl MemoKey {
 struct MemoRecord {
     version: u32,
     entry: NormalizedPath,
+    /// The project this was resolved against. Not part of the key — two
+    /// checkouts of one project deliberately share a record, and a hit is
+    /// validated by re-hashing the trace rather than by matching a path — so
+    /// this is a hint for collection, not an identity. It answers the only
+    /// question a sweep has: is there still a tree this could describe?
+    root: NormalizedPath,
     trace: ResolveTrace,
     output: ContentHash,
 }
@@ -230,6 +237,7 @@ impl GraphCache {
         &self,
         key: MemoKey,
         entry: &NormalizedPath,
+        root: &NormalizedPath,
         resolution: &Resolution,
     ) -> Result<ContentHash, MemoError> {
         let snapshot = serde_json::to_vec(&resolution.graph.to_snapshot())
@@ -239,6 +247,7 @@ impl GraphCache {
         let record = MemoRecord {
             version: MEMO_FORMAT_VERSION,
             entry: entry.clone(),
+            root: root.clone(),
             trace: resolution.trace.clone(),
             output,
         };
@@ -248,6 +257,59 @@ impl GraphCache {
         write_atomic(&path, &encoded, Some(FAULT_BEFORE_RENAME))
             .map_err(|source| MemoError::io(path, source))?;
         Ok(output)
+    }
+
+    /// Removes records that can never produce a hit again.
+    ///
+    /// Records are content-keyed, so a dead one is never *wrong* — it is simply
+    /// never consulted, while still marking the graph object it points at as
+    /// live. That is the leak: delete a project and its record, and the
+    /// snapshot it pins, stay resident forever. Four kinds can go:
+    ///
+    /// - written by an older build, so the version check would miss anyway;
+    /// - unparseable, so the lookup would miss anyway;
+    /// - pointing at a graph object no longer in the store;
+    /// - describing a project root that is no longer a directory.
+    ///
+    /// The last one is a hint rather than a proof — another checkout with
+    /// identical contents could still hit this record — so the cost of being
+    /// wrong is one re-resolution, not a wrong answer.
+    ///
+    /// Runs before the mark phase, so anything it drops stops marking in the
+    /// same pass rather than the next one.
+    pub fn prune_records(&self, dry_run: bool) -> Result<usize, MemoError> {
+        let mut pruned = 0;
+        for shard in read_dir(&self.records)? {
+            if !shard.is_dir() {
+                continue;
+            }
+            for record in read_dir(&shard)? {
+                if !self.is_dead(&record) {
+                    continue;
+                }
+                if !dry_run {
+                    // A record that cannot be removed is not a reason to fail a
+                    // collection; it is the same garbage it was before.
+                    if fs::remove_file(&record).is_err() {
+                        continue;
+                    }
+                }
+                pruned += 1;
+            }
+        }
+        Ok(pruned)
+    }
+
+    fn is_dead(&self, path: &Path) -> bool {
+        let Ok(text) = fs::read_to_string(path) else {
+            return true;
+        };
+        let Ok(record) = serde_json::from_str::<MemoRecord>(&text) else {
+            return true;
+        };
+        record.version != MEMO_FORMAT_VERSION
+            || !self.cas.contains(&record.output)
+            || !record.root.as_path().is_dir()
     }
 
     /// Graph objects still referenced by a record — the mark set for GC.
@@ -336,7 +398,7 @@ pub fn resolve_cached(
 
     let resolution = resolver::resolve(root, entry, options)?;
     let output = cache
-        .store(key, entry, &resolution)
+        .store(key, entry, root, &resolution)
         .map_err(GraphError::Memo)?;
     Ok(CachedResolution {
         graph: resolution.graph,

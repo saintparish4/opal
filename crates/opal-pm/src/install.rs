@@ -48,6 +48,15 @@ pub enum InstallError {
     Projects(#[from] ProjectError),
     #[error("opal.lock does not match package.json, and --frozen-lockfile was requested")]
     LockfileOutdated,
+    #[error(
+        "{}",
+        rejected
+            .iter()
+            .map(|(id, reason)| format!("{id} {reason}"))
+            .collect::<Vec<_>>()
+            .join("; ")
+    )]
+    UnsupportedPlatform { rejected: Vec<(PackageId, String)> },
 }
 
 #[derive(Clone, Debug)]
@@ -177,6 +186,15 @@ pub fn install(
     progress.stage(Stage::Fetching {
         packages: report.packages,
     });
+    // A dependency the host cannot run, that nothing declared optional, is
+    // npm's EBADPLATFORM: linking it produces a tree that fails at run time
+    // instead of an install that fails now.
+    if !plan.platform_rejected.is_empty() {
+        return Err(InstallError::UnsupportedPlatform {
+            rejected: plan.platform_rejected,
+        });
+    }
+
     let fetched = fetch_all(
         registry,
         store,
@@ -193,12 +211,11 @@ pub fn install(
     report.skipped = resolution.skipped.clone();
     report.platform_skipped = plan.platform_skipped;
 
-    // Only after a resolve: every packument this reads is one the resolve just
-    // put in the client's own cache, so it costs lookups rather than requests.
-    // On a lockfile-reuse run there is nothing to read it from.
-    if report.resolved {
-        report.deprecated = deprecations(registry, &plan.layout);
-    }
+    // Reads whatever metadata is already local and asks for nothing. After a
+    // resolve that is every packument it just fetched; on a lockfile-reuse run
+    // it is whatever the on-disk cache still holds, which is why this survives
+    // an install the lockfile answered entirely.
+    report.deprecated = deprecations(registry, &plan.layout);
 
     progress.finished();
     Ok(report)
@@ -211,9 +228,9 @@ fn deprecations(registry: &dyn Registry, layout: &Layout) -> Vec<(PackageId, Str
         if found.iter().any(|(seen, _)| seen == id) {
             continue;
         }
-        // A package whose metadata cannot be re-read is not a reason to fail an
-        // install that has already succeeded.
-        let Ok(packument) = registry.packument(&id.name) else {
+        // Absent metadata is not a reason to fail an install that has already
+        // succeeded — it just means there is nothing to say about it.
+        let Some(packument) = registry.cached_packument(&id.name) else {
             continue;
         };
         if let Some(message) = packument

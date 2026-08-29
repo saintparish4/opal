@@ -117,6 +117,12 @@ enum CacheCommand {
     },
 }
 
+/// Registry metadata untouched for this long is dropped by `opal cache gc`.
+/// Long enough that a project returned to after a fortnight still resolves
+/// offline; short enough that the directory does not track every package ever
+/// looked at.
+const PACKUMENT_MAX_AGE: std::time::Duration = std::time::Duration::from_secs(30 * 24 * 60 * 60);
+
 type Failure = Box<dyn std::error::Error>;
 
 fn main() -> ExitCode {
@@ -319,6 +325,16 @@ fn collect(
         dry_run,
         ..GcOptions::default()
     };
+
+    // Pruned before the mark, so a record dropped here stops pinning its graph
+    // object in the same pass rather than the next one.
+    let records_pruned = cache.prune_records(dry_run)?;
+    let packuments_pruned = PackumentCache::new(root.path().join("packuments")).prune(
+        PACKUMENT_MAX_AGE,
+        std::time::SystemTime::now(),
+        dry_run,
+    );
+
     let memo_live: BTreeSet<_> = cache.live_outputs()?;
     let outcome = package_gc::collect(&store, &projects, extra_projects, &memo_live, &options)?;
     let (marks, sweep) = (outcome.marks, outcome.sweep);
@@ -340,6 +356,10 @@ fn collect(
         sweep.bytes_reclaimed as f64 / (1024.0 * 1024.0)
     );
     println!("pointers: {} pruned", outcome.pointers_pruned);
+    println!(
+        "records:  {records_pruned} graph, {packuments_pruned} metadata {}",
+        if dry_run { "collectable" } else { "pruned" }
+    );
     println!(
         "temp files: {} swept, {} still in flight",
         sweep.temp_files_removed, sweep.temp_files_kept

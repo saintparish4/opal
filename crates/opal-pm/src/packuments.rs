@@ -126,6 +126,49 @@ impl PackumentCache {
         let path = self.record_path(base, name);
         let _ = write_atomic(&path, &record.render(), None);
     }
+
+    /// Drops records older than `keep`, and anything unreadable.
+    ///
+    /// This directory is bounded only by the number of packages ever resolved
+    /// on the machine, so without a sweep it is the same monotonic leak memo
+    /// records are. Nothing is lost by dropping one: the worst case is a fetch
+    /// that would have been a cache hit.
+    ///
+    /// The age comes from the record's own `fetched` field, not from the
+    /// file's mtime. That is the same distinction the record's own
+    /// documentation draws, and it matters here too: a record copied or
+    /// restored from a backup would carry a fresh mtime and a truthful
+    /// `fetched`.
+    pub fn prune(&self, keep: Duration, now: SystemTime, dry_run: bool) -> usize {
+        let mut pruned = 0;
+        let Ok(shards) = std::fs::read_dir(&self.root) else {
+            return 0;
+        };
+        for shard in shards.flatten() {
+            let Ok(records) = std::fs::read_dir(shard.path()) else {
+                continue;
+            };
+            for record in records.flatten() {
+                let path = record.path();
+                let expired = match std::fs::read(&path).ok().as_deref().and_then(Record::parse) {
+                    Some(record) => now
+                        .duration_since(record.fetched)
+                        .is_ok_and(|age| age > keep),
+                    // Unreadable is garbage by definition: nothing will ever
+                    // serve from it.
+                    None => true,
+                };
+                if !expired {
+                    continue;
+                }
+                if !dry_run && std::fs::remove_file(&path).is_err() {
+                    continue;
+                }
+                pruned += 1;
+            }
+        }
+        pruned
+    }
 }
 
 #[cfg(test)]
@@ -184,6 +227,41 @@ mod tests {
         assert!(!stored.is_fresh(stale));
         // A clock that went backwards is not freshness.
         assert!(!stored.is_fresh(stored.fetched - Duration::from_secs(1)));
+    }
+
+    #[test]
+    fn test_pruning_drops_old_records_and_keeps_recent_ones() {
+        let directory = tempfile::tempdir().unwrap();
+        let cache = PackumentCache::new(directory.path());
+        let now = UNIX_EPOCH + Duration::from_secs(2_000_000_000);
+
+        let mut old = record("{}");
+        old.fetched = now - Duration::from_secs(60 * 60 * 24 * 30);
+        cache.put("https://registry.example", "ancient", &old);
+
+        let mut recent = record("{}");
+        recent.fetched = now - Duration::from_secs(60);
+        cache.put("https://registry.example", "recent", &recent);
+
+        let keep = Duration::from_secs(60 * 60 * 24 * 7);
+        assert_eq!(cache.prune(keep, now, true), 1, "dry run counts, keeps");
+        assert!(cache.get("https://registry.example", "ancient").is_some());
+
+        assert_eq!(cache.prune(keep, now, false), 1);
+        assert!(cache.get("https://registry.example", "ancient").is_none());
+        assert!(cache.get("https://registry.example", "recent").is_some());
+    }
+
+    #[test]
+    fn test_pruning_drops_a_record_it_cannot_read() {
+        let directory = tempfile::tempdir().unwrap();
+        let cache = PackumentCache::new(directory.path());
+        let path = cache.record_path("https://registry.example", "x");
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        std::fs::write(&path, b"not a record").unwrap();
+
+        assert_eq!(cache.prune(Duration::MAX, SystemTime::now(), false), 1);
+        assert!(!path.exists());
     }
 
     #[test]

@@ -6,12 +6,13 @@
 //! dependency moved.
 //!
 //! ```text
-//! opal-lock 2
-//! require dependency express 4.18.2 ^4.18.2
-//! require optionalDependency fsevents - ^2.3.0
+//! opal-lock 3
+//! require dependency express - 4.18.2 ^4.18.2
+//! require optionalDependency fsevents - - ^2.3.0
 //! pkg accepts 1.3.8 sha512-… - - https://registry.npmjs.org/accepts/-/accepts-1.3.8.tgz
 //! pkg fsevents 2.3.3 sha512-… darwin x64,arm64 https://registry.npmjs.org/…
-//! dep express 4.18.2 accepts 1.3.8 ^1.3.8
+//! dep express 4.18.2 accepts - 1.3.8 - ^1.3.8
+//! dep @isaacs/cliui 8.0.2 string-width-cjs string-width 4.2.3 - npm:string-width@^4.2.0
 //! skip fsevents no version satisfies ^2.3.0
 //! ```
 //!
@@ -24,6 +25,13 @@
 //! of each dependency chain has to be guessed from version order, and without
 //! the second, platform filtering would have to happen during resolution and
 //! the file would stop being portable across platforms.
+//!
+//! **v3** added the aliased package name to `require` and `dep`, and whether an
+//! edge was optional to `dep`. `npm:string-width@^4.2.0` installs one package
+//! under another's name, so the name and the package stop being the same fact;
+//! and the optional flag is what lets the planner tell npm's two platform
+//! outcomes apart — a mismatched optional is skipped, a mismatched requirement
+//! is `EBADPLATFORM`.
 
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
@@ -37,9 +45,11 @@ use crate::resolve::{PackageId, RequirementRecord, Resolution, ResolvedEdge, Res
 use crate::semver::Version;
 
 pub const LOCKFILE_NAME: &str = "opal.lock";
-pub const LOCKFILE_VERSION: u32 = 2;
+pub const LOCKFILE_VERSION: u32 = 3;
 /// Stands in for a field with nothing in it, so every line keeps its shape.
 const EMPTY: &str = "-";
+/// Marks a `dep` edge its dependent tolerates the absence of.
+const OPTIONAL: &str = "optional";
 
 /// The new lockfile is written and fsynced; the rename over the old one has not
 /// happened yet.
@@ -61,6 +71,8 @@ pub enum LockfileError {
     },
     #[error("{path}: lockfile version {found}, this build writes v{LOCKFILE_VERSION}")]
     Version { path: PathBuf, found: String },
+    #[error("{field} {value:?} contains a line break, which opal.lock cannot represent")]
+    Unrepresentable { field: &'static str, value: String },
 }
 
 impl LockfileError {
@@ -103,52 +115,82 @@ pub fn read(path: &Path) -> Result<Option<Resolution>, LockfileError> {
 pub fn write(path: &Path, resolution: &Resolution) -> Result<(), LockfileError> {
     write_atomic(
         path,
-        render(resolution).as_bytes(),
+        render(resolution)?.as_bytes(),
         Some(FAULT_BEFORE_RENAME),
     )
     .map_err(|source| LockfileError::io(path, source))
 }
 
-pub fn render(resolution: &Resolution) -> String {
+/// Refuses a value the format cannot hold.
+///
+/// One line per fact means a value containing a line break does not merely
+/// round-trip badly — it *writes another fact*. `Range::parse(">=1\n<2")`
+/// succeeds and keeps the newline, so a dependency's `package.json` could put
+/// arbitrary lines into the lockfile of every project that installs it, and
+/// `--frozen-lockfile` exists precisely to trust that file. No legitimate
+/// specifier contains one (`Spec::parse` already trims the ends), so this
+/// fails the write rather than escaping into a format that has no escaping.
+fn representable<'a>(field: &'static str, value: &'a str) -> Result<&'a str, LockfileError> {
+    if value.contains(['\n', '\r']) {
+        return Err(LockfileError::Unrepresentable {
+            field,
+            value: value.to_string(),
+        });
+    }
+    Ok(value)
+}
+
+pub fn render(resolution: &Resolution) -> Result<String, LockfileError> {
     let mut out = format!("opal-lock {LOCKFILE_VERSION}\n");
 
     for requirement in &resolution.requirements {
         out.push_str(&format!(
-            "require {} {} {} {}\n",
+            "require {} {} {} {} {}\n",
             class_name(requirement.class),
-            requirement.name,
+            representable("package name", &requirement.name)?,
+            aliased(&requirement.name, &requirement.package),
             requirement
                 .version
                 .as_ref()
                 .map_or_else(|| EMPTY.to_string(), ToString::to_string),
-            requirement.spec
+            representable("specifier", &requirement.spec)?
         ));
     }
     for package in resolution.packages.values() {
         out.push_str(&format!(
             "pkg {} {} {} {} {} {}\n",
-            package.id.name,
+            representable("package name", &package.id.name)?,
             package.id.version,
             package.integrity,
-            render_list(&package.os),
-            render_list(&package.cpu),
-            package.tarball
+            representable("os constraint", &render_list(&package.os))?,
+            representable("cpu constraint", &render_list(&package.cpu))?,
+            representable("tarball URL", &package.tarball)?
         ));
     }
     for package in resolution.packages.values() {
         for edge in &package.dependencies {
             out.push_str(&format!(
-                "dep {} {} {} {} {}\n",
-                package.id.name, package.id.version, edge.name, edge.version, edge.spec
+                "dep {} {} {} {} {} {} {}\n",
+                representable("package name", &package.id.name)?,
+                package.id.version,
+                representable("package name", &edge.name)?,
+                aliased(&edge.name, &edge.package),
+                edge.version,
+                if edge.optional { OPTIONAL } else { EMPTY },
+                representable("specifier", &edge.spec)?
             ));
         }
     }
     let mut skipped = resolution.skipped.clone();
     skipped.sort();
     for (name, reason) in skipped {
-        out.push_str(&format!("skip {name} {reason}\n"));
+        out.push_str(&format!(
+            "skip {} {}\n",
+            representable("package name", &name)?,
+            representable("skip reason", &reason)?
+        ));
     }
-    out
+    Ok(out)
 }
 
 pub fn parse(path: &Path, text: &str) -> Result<Resolution, LockfileError> {
@@ -181,6 +223,10 @@ pub fn parse(path: &Path, text: &str) -> Result<Resolution, LockfileError> {
 
     for (index, line) in lines {
         let number = index + 1;
+        // `str::lines` strips one trailing `\r`; a value that itself ends in
+        // one would otherwise lose a character per round trip, so take them
+        // all and make parsing idempotent.
+        let line = line.trim_end_matches('\r');
         if line.trim().is_empty() {
             continue;
         }
@@ -190,9 +236,13 @@ pub fn parse(path: &Path, text: &str) -> Result<Resolution, LockfileError> {
 
         match kind {
             "require" => {
-                let [class, name, version, spec] = split_n::<4>(rest).ok_or_else(|| {
-                    malformed(number, "expected: require <class> <name> <version> <spec>")
-                })?;
+                let [class, name, package, version, spec] =
+                    split_n::<5>(rest).ok_or_else(|| {
+                        malformed(
+                            number,
+                            "expected: require <class> <name> <package> <version> <spec>",
+                        )
+                    })?;
                 let version = match version {
                     EMPTY => None,
                     text => Some(
@@ -204,6 +254,7 @@ pub fn parse(path: &Path, text: &str) -> Result<Resolution, LockfileError> {
                     class: parse_class(class)
                         .ok_or_else(|| malformed(number, "unknown dependency class"))?,
                     name: name.to_string(),
+                    package: unaliased(name, package),
                     spec: spec.to_string(),
                     version,
                 });
@@ -234,13 +285,21 @@ pub fn parse(path: &Path, text: &str) -> Result<Resolution, LockfileError> {
                 );
             }
             "dep" => {
-                let [name, version, dep_name, dep_version, spec] =
-                    split_n::<5>(rest).ok_or_else(|| {
-                        malformed(
-                            number,
-                            "expected: dep <name> <version> <dep-name> <dep-version> <spec>",
-                        )
-                    })?;
+                let [
+                    name,
+                    version,
+                    dep_name,
+                    dep_package,
+                    dep_version,
+                    optional,
+                    spec,
+                ] = split_n::<7>(rest).ok_or_else(|| {
+                    malformed(
+                        number,
+                        "expected: dep <name> <version> <dep-name> <dep-package> \
+                             <dep-version> <optional> <spec>",
+                    )
+                })?;
                 let parent = PackageId::new(
                     name,
                     Version::parse(version)
@@ -248,9 +307,11 @@ pub fn parse(path: &Path, text: &str) -> Result<Resolution, LockfileError> {
                 );
                 let edge = ResolvedEdge {
                     name: dep_name.to_string(),
+                    package: unaliased(dep_name, dep_package),
                     spec: spec.to_string(),
                     version: Version::parse(dep_version)
                         .map_err(|error| malformed(number, &error.to_string()))?,
+                    optional: optional == OPTIONAL,
                 };
                 edges.push((parent, edge));
             }
@@ -270,6 +331,21 @@ pub fn parse(path: &Path, text: &str) -> Result<Resolution, LockfileError> {
             malformed(0, &format!("dep line references unknown package {parent}"))
         })?;
         package.dependencies.push(edge);
+    }
+
+    // Parsing is a canonicalizer, not a transcription. `render` sorts, so a
+    // parse that kept file order would make `parse(render(x)) != x` for any
+    // hand-edited or hand-written lockfile — and a format whose parse is not a
+    // fixed point of its render cannot be compared, diffed, or reasoned about.
+    // The orders here are the ones `resolve` and `render` produce.
+    resolution
+        .requirements
+        .sort_by(|left, right| (left.class, &left.name).cmp(&(right.class, &right.name)));
+    resolution.skipped.sort();
+    for package in resolution.packages.values_mut() {
+        package
+            .dependencies
+            .sort_by(|left, right| (&left.name, &left.spec).cmp(&(&right.name, &right.spec)));
     }
     Ok(resolution)
 }
@@ -303,6 +379,16 @@ fn class_name(class: DependencyClass) -> &'static str {
     }
 }
 
+/// The package installed under a name, or `-` when they are the same — which
+/// they are for everything except an alias.
+fn aliased(name: &str, package: &str) -> String {
+    if name == package {
+        EMPTY.to_string()
+    } else {
+        package.to_string()
+    }
+}
+
 /// Comma-separated, or `-` when there is nothing to constrain. npm's values
 /// never contain a comma or a space, so no escaping is needed.
 fn render_list(items: &[String]) -> String {
@@ -310,6 +396,14 @@ fn render_list(items: &[String]) -> String {
         EMPTY.to_string()
     } else {
         items.join(",")
+    }
+}
+
+fn unaliased(name: &str, package: &str) -> String {
+    if package == EMPTY {
+        name.to_string()
+    } else {
+        package.to_string()
     }
 }
 
@@ -350,8 +444,10 @@ mod tests {
                 integrity: Integrity::of(Algorithm::Sha512, b"express"),
                 dependencies: vec![ResolvedEdge {
                     name: "accepts".to_string(),
+                    package: "accepts".to_string(),
                     spec: ">=1.3.0 <2".to_string(),
                     version: Version::new(1, 3, 8),
+                    optional: false,
                 }],
                 os: Vec::new(),
                 cpu: Vec::new(),
@@ -375,12 +471,14 @@ mod tests {
                 RequirementRecord {
                     class: DependencyClass::Runtime,
                     name: "express".to_string(),
+                    package: "express".to_string(),
                     spec: "^4.18.2".to_string(),
                     version: Some(Version::new(4, 18, 2)),
                 },
                 RequirementRecord {
                     class: DependencyClass::Optional,
                     name: "fsevents".to_string(),
+                    package: "fsevents".to_string(),
                     spec: "^2.3.0".to_string(),
                     version: None,
                 },
@@ -393,14 +491,14 @@ mod tests {
     #[test]
     fn test_round_trips() {
         let resolution = sample();
-        let text = render(&resolution);
+        let text = render(&resolution).expect("renderable");
         let parsed = parse(Path::new("opal.lock"), &text).unwrap();
         assert_eq!(parsed, resolution);
     }
 
     #[test]
     fn test_render_is_stable_and_sorted() {
-        let text = render(&sample());
+        let text = render(&sample()).expect("renderable");
         let kinds: Vec<&str> = text
             .lines()
             .skip(1)
@@ -414,18 +512,77 @@ mod tests {
         // were resolved in.
         assert!(text.contains("\npkg accepts 1.3.8 "));
         assert!(text.contains(" darwin,!win32 x64,arm64 "));
-        assert_eq!(render(&sample()), text);
+        assert_eq!(render(&sample()).unwrap(), text);
     }
 
     #[test]
     fn test_ranges_containing_spaces_survive() {
-        let text = render(&sample());
-        assert!(text.contains("dep express 4.18.2 accepts 1.3.8 >=1.3.0 <2\n"));
+        let text = render(&sample()).expect("renderable");
+        assert!(text.contains("dep express 4.18.2 accepts - 1.3.8 - >=1.3.0 <2\n"));
         let parsed = parse(Path::new("opal.lock"), &text).unwrap();
         let express = parsed
             .package(&PackageId::new("express", Version::new(4, 18, 2)))
             .unwrap();
         assert_eq!(express.dependencies[0].spec, ">=1.3.0 <2");
+    }
+
+    #[test]
+    fn test_a_line_break_in_a_value_is_refused_rather_than_written() {
+        // `Range::parse(">=1\n<2")` succeeds and keeps the newline, so without
+        // this a dependency's own package.json could append lines to the
+        // lockfile of every project that installs it — and `--frozen-lockfile`
+        // exists to trust that file.
+        let mut resolution = sample();
+        resolution.requirements[0].spec =
+            ">=1\npkg backdoor 1.0.0 sha512-Zm9vYmFy - - http://attacker.invalid/x.tgz".to_string();
+
+        let error = render(&resolution).expect_err("a second fact is not a specifier");
+        assert!(
+            matches!(error, LockfileError::Unrepresentable { .. }),
+            "{error}"
+        );
+    }
+
+    #[test]
+    fn test_a_carriage_return_is_refused_rather_than_silently_trimmed() {
+        // Found by `cargo fuzz run lockfile`: `str::lines` strips one trailing
+        // `\r`, so a value ending in one lost a character on every write.
+        // Refusing it beats the trimming that hid it.
+        let mut resolution = sample();
+        resolution.skipped = vec![("demo".to_string(), "no version satisfies ^1\r".to_string())];
+
+        let error = render(&resolution).expect_err("a value the format mangles is not writable");
+        assert!(
+            matches!(error, LockfileError::Unrepresentable { .. }),
+            "{error}"
+        );
+    }
+
+    #[test]
+    fn test_a_lockfile_with_windows_line_endings_parses() {
+        // Nothing opal writes looks like this, but a checkout with
+        // `core.autocrlf` on does, and refusing to read it would be refusing to
+        // read a file this build wrote.
+        let text = render(&sample()).expect("renderable").replace('\n', "\r\n");
+        let parsed = parse(Path::new("opal.lock"), &text).expect("CRLF parses");
+        assert_eq!(parsed, sample());
+    }
+
+    #[test]
+    fn test_parsing_canonicalises_order() {
+        // Found by `cargo fuzz run lockfile`: render sorts and parse did not,
+        // so a lockfile whose lines arrived in another order parsed into a
+        // resolution that did not survive being written back out.
+        let text = "opal-lock 3\nskip zeta gone\nskip alpha gone\n";
+        let parsed = parse(Path::new("opal.lock"), text).expect("parses");
+        let again = parse(
+            Path::new("opal.lock"),
+            &render(&parsed).expect("renderable"),
+        )
+        .expect("parses");
+
+        assert_eq!(parsed, again);
+        assert_eq!(parsed.skipped[0].0, "alpha");
     }
 
     #[test]
@@ -447,8 +604,8 @@ mod tests {
 
     #[test]
     fn test_a_requirement_without_a_resolution_round_trips() {
-        let text = render(&sample());
-        assert!(text.contains("require optionalDependency fsevents - ^2.3.0\n"));
+        let text = render(&sample()).expect("renderable");
+        assert!(text.contains("require optionalDependency fsevents - - ^2.3.0\n"));
         let parsed = parse(Path::new("opal.lock"), &text).unwrap();
         assert_eq!(parsed.requirements[1].version, None);
         assert_eq!(parsed.requirements[0].version, Some(Version::new(4, 18, 2)));
@@ -456,7 +613,7 @@ mod tests {
 
     #[test]
     fn test_platform_constraints_round_trip() {
-        let parsed = parse(Path::new("opal.lock"), &render(&sample())).unwrap();
+        let parsed = parse(Path::new("opal.lock"), &render(&sample()).unwrap()).unwrap();
         let accepts = parsed
             .package(&PackageId::new("accepts", Version::new(1, 3, 8)))
             .unwrap();
@@ -472,11 +629,11 @@ mod tests {
     #[test]
     fn test_rejects_malformed_lines() {
         for text in [
-            "opal-lock 2\npkg only-a-name\n",
-            "opal-lock 2\nnonsense a b\n",
-            "opal-lock 2\ndep ghost 1.0.0 x 1.0.0 ^1\n",
-            "opal-lock 2\nrequire dependency a ^1\n",
-            "opal-lock 2\nrequire dependency a not-a-version ^1\n",
+            "opal-lock 3\npkg only-a-name\n",
+            "opal-lock 3\nnonsense a b\n",
+            "opal-lock 3\ndep ghost 1.0.0 x - 1.0.0 - ^1\n",
+            "opal-lock 3\nrequire dependency a ^1\n",
+            "opal-lock 3\nrequire dependency a - not-a-version ^1\n",
         ] {
             assert!(parse(Path::new("opal.lock"), text).is_err(), "{text:?}");
         }

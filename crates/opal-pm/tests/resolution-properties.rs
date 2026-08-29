@@ -306,8 +306,12 @@ proptest! {
                 prop_assert!(resolution.package(&id).is_some(), "{id} is named but not resolved");
             }
         }
-        for id in resolution.roots() {
-            prop_assert!(resolution.package(&id).is_some(), "root {id} is not resolved");
+        for root in resolution.roots() {
+            prop_assert!(
+                resolution.package(&root.id).is_some(),
+                "root {} is not resolved",
+                root.id
+            );
         }
     }
 
@@ -356,17 +360,17 @@ proptest! {
             );
         }
 
-        for id in resolution.roots() {
+        for root in resolution.roots() {
             let allowed = resolution
                 .requirements
                 .iter()
-                .filter(|requirement| requirement.name == id.name)
+                .filter(|requirement| requirement.name == root.name)
                 .any(|requirement| {
                     Range::parse(&requirement.spec)
                         .expect("every generated spec is a range")
-                        .satisfies(&id.version)
+                        .satisfies(&root.id.version)
                 });
-            prop_assert!(allowed, "{id} is a root no root requirement allows");
+            prop_assert!(allowed, "{} is a root no root requirement allows", root.id);
         }
     }
 

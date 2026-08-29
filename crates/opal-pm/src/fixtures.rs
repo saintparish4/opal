@@ -61,6 +61,14 @@ impl Package {
         self
     }
 
+    /// `"string-width-cjs": "npm:string-width@^4.2.0"` — install that package
+    /// under this name.
+    pub fn alias(mut self, name: &str, target: &str, range: &str) -> Self {
+        self.dependencies
+            .insert(name.to_string(), format!("npm:{target}@{range}"));
+        self
+    }
+
     pub fn optional_dependency(mut self, name: &str, spec: &str) -> Self {
         self.optional_dependencies
             .insert(name.to_string(), spec.to_string());

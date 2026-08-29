@@ -284,3 +284,45 @@ fn test_live_outputs_keep_graphs_through_gc() {
     let (_, status) = resolve(&cache, &project, "index.js");
     assert_eq!(status, CacheStatus::Hit);
 }
+
+#[test]
+fn test_pruning_drops_records_that_can_never_hit_again() {
+    let project = app();
+    let (_directory, cache) = cache();
+
+    resolve(&cache, &project, "index.js");
+    assert_eq!(cache.prune_records(false).expect("prune"), 0);
+    assert_eq!(cache.live_outputs().expect("live").len(), 1);
+
+    // A record whose project is gone pins a graph nothing can reach.
+    project.remove_root();
+    assert_eq!(
+        cache.prune_records(true).expect("dry run"),
+        1,
+        "a dry run counts without removing"
+    );
+    assert_eq!(cache.live_outputs().expect("live").len(), 1);
+
+    assert_eq!(cache.prune_records(false).expect("prune"), 1);
+    assert!(
+        cache.live_outputs().expect("live").is_empty(),
+        "the snapshot it pinned is collectable in this same pass"
+    );
+}
+
+#[test]
+fn test_pruning_leaves_a_live_record_alone() {
+    let project = app();
+    let (_directory, cache) = cache();
+
+    let (_, cold) = resolve(&cache, &project, "index.js");
+    assert_eq!(cold, CacheStatus::Miss(MissReason::NoRecord));
+
+    assert_eq!(cache.prune_records(false).expect("prune"), 0);
+    let (_, warm) = resolve(&cache, &project, "index.js");
+    assert_eq!(
+        warm,
+        CacheStatus::Hit,
+        "pruning must not evict a live record"
+    );
+}

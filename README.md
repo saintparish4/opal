@@ -84,7 +84,9 @@ opal install [--root <ROOT>] [--cache-dir <CACHE_DIR>] [--registry <URL>] [--pro
 | `--offline` | Resolve from cached registry metadata only; never reach the network |
 | `--prefer-offline` | Use cached registry metadata however old it is, and fetch only what is missing |
 
-Packages declaring an `os` or `cpu` this host cannot run are recorded in `opal.lock` and skipped at install time, so one committed lockfile installs the right native binary on every platform.
+Packages declaring an `os` or `cpu` this host cannot run are recorded in `opal.lock` and skipped at install time, so one committed lockfile installs the right native binary on every platform. A platform-mismatched package that nothing declared optional is `EBADPLATFORM`, matching npm — skipping it silently would produce a tree that cannot run.
+
+`npm:` alias specifiers (`"string-width-cjs": "npm:string-width@^4.2.0"`) install one package under another's name, which is how a package depends on two majors of one dependency at once. `git:` and `file:` specifiers remain unsupported in v1: unlike an alias, they resolve somewhere other than the public registry.
 
 Progress is reported on stderr as each stage begins — a spinner while resolving and linking, a bar advancing per package while fetching — with the summary on stdout. When stderr is not a terminal, the same stages print as plain lines, so a CI log stays readable and nothing redraws over it.
 

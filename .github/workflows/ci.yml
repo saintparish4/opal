@@ -46,3 +46,40 @@ jobs:
 
       - name: Build
         run: cargo build --workspace --verbose
+
+  # `testing_strategy.md` §5 requires these gated separately: an install
+  # failure is a registry/resolution bug and a run failure is a
+  # runtime/resolver bug, and conflating them into one red check hides which
+  # of the two happened. Both reach the public registry, which is why they are
+  # `#[ignore]` in the ordinary suite and run explicitly here.
+  compatibility-install:
+    name: npm compatibility (install)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install Rust toolchain
+        run: rustup show
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+      - name: Install
+        run: cargo test -p opal-cli --test npm-compatibility -- --ignored test_install
+
+  compatibility-execute:
+    name: npm compatibility (execute)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install Rust toolchain
+        run: rustup show
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+      # The installed tree has to run, not merely exist, so this job needs a
+      # Node to run it with.
+      - name: Install Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Execute
+        run: cargo test -p opal-cli --test npm-compatibility -- --ignored test_execute

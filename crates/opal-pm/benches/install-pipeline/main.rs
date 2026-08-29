@@ -265,7 +265,7 @@ impl Sandbox {
     /// without it.
     fn registry(&self, workload: &Workload, options: &Options, rtt: Duration) -> Client {
         let counters = Rc::new(Counters::default());
-        let transport = MeteredTransport::new(HttpTransport, rtt, Rc::clone(&counters));
+        let transport = MeteredTransport::new(HttpTransport::new(), rtt, Rc::clone(&counters));
         let mut registry =
             NpmRegistry::with_transport(workload.registry_url(), Box::new(transport));
         if options.packument_cache {

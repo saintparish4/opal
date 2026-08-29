@@ -89,9 +89,39 @@ pub trait Transport {
     fn get(&self, request: &Request<'_>) -> Result<Fetched, RegistryError>;
 }
 
+/// How long to wait for a connection, and for a server to start answering.
+///
+/// Deliberately not a deadline on the whole call: a 10 MB native binary over a
+/// slow link is a legitimate slow request, and capping total time would fail it
+/// for being large. What these bound is the case with no progress at all — a
+/// host that accepts a connection and then says nothing.
+pub const CONNECT_TIMEOUT: Duration = Duration::from_secs(30);
+pub const RESPONSE_TIMEOUT: Duration = Duration::from_secs(30);
+
 /// `https://` through `ureq`, `file://` straight off the disk.
-#[derive(Clone, Copy, Debug, Default)]
-pub struct HttpTransport;
+pub struct HttpTransport {
+    agent: ureq::Agent,
+}
+
+impl Default for HttpTransport {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl HttpTransport {
+    pub fn new() -> Self {
+        // One agent, not one per request: it holds the connection pool, and an
+        // install is hundreds of requests to the same host.
+        let config = ureq::Agent::config_builder()
+            .timeout_connect(Some(CONNECT_TIMEOUT))
+            .timeout_recv_response(Some(RESPONSE_TIMEOUT))
+            .build();
+        Self {
+            agent: ureq::Agent::new_with_config(config),
+        }
+    }
+}
 
 impl Transport for HttpTransport {
     fn get(&self, request: &Request<'_>) -> Result<Fetched, RegistryError> {
@@ -102,8 +132,74 @@ impl Transport for HttpTransport {
                 etag: None,
                 max_age: None,
             })),
-            None => read_http(request),
+            None => read_http(&self.agent, request),
         }
+    }
+}
+
+/// How many times to try, and how long to wait between attempts.
+#[derive(Clone, Copy, Debug)]
+pub struct RetryPolicy {
+    /// Total attempts, including the first. One means no retrying.
+    pub attempts: u32,
+    /// Doubled after each failure.
+    pub backoff: Duration,
+}
+
+impl Default for RetryPolicy {
+    fn default() -> Self {
+        Self {
+            attempts: 3,
+            backoff: Duration::from_millis(250),
+        }
+    }
+}
+
+/// Retries what is worth retrying.
+///
+/// An install is hundreds of sequential requests, so it is hundreds of chances
+/// for one transient failure to end the whole run. A decorator rather than
+/// something baked into the HTTP layer, so a test can drive it without a
+/// network and the benchmark can leave it out of a measurement.
+pub struct RetryingTransport<T> {
+    inner: T,
+    policy: RetryPolicy,
+}
+
+impl<T> RetryingTransport<T> {
+    pub fn new(inner: T, policy: RetryPolicy) -> Self {
+        Self { inner, policy }
+    }
+}
+
+/// Whether trying again could plausibly give a different answer. A 4xx is the
+/// server describing the request, and repeating it repeats the answer.
+fn is_transient(error: &RegistryError) -> bool {
+    match error {
+        RegistryError::Transport { .. } => true,
+        RegistryError::Status { status, .. } => *status >= 500 || *status == 429,
+        _ => false,
+    }
+}
+
+impl<T: Transport> Transport for RetryingTransport<T> {
+    fn get(&self, request: &Request<'_>) -> Result<Fetched, RegistryError> {
+        let mut backoff = self.policy.backoff;
+        for _ in 1..self.policy.attempts.max(1) {
+            match self.inner.get(request) {
+                Err(error) if is_transient(&error) => {
+                    if !backoff.is_zero() {
+                        std::thread::sleep(backoff);
+                    }
+                    backoff *= 2;
+                }
+                outcome => return outcome,
+            }
+        }
+        // The last attempt's result stands, whatever it is: retrying past the
+        // budget would be unbounded, and reporting an earlier attempt's error
+        // would describe a request that is not the one that finally failed.
+        self.inner.get(request)
     }
 }
 
@@ -208,6 +304,16 @@ impl Packument {
 pub trait Registry {
     fn packument(&self, name: &str) -> Result<Rc<Packument>, RegistryError>;
     fn tarball(&self, url: &str) -> Result<Vec<u8>, RegistryError>;
+
+    /// A packument if one is already here, and never a request.
+    ///
+    /// For facts worth reporting but not worth waiting for — a deprecation
+    /// notice on an install that the lockfile already answered. Going to the
+    /// network for those would undo the whole point of the metadata cache,
+    /// which is that a warm re-install makes no round trips at all.
+    fn cached_packument(&self, _name: &str) -> Option<Rc<Packument>> {
+        None
+    }
 }
 
 /// The real client: an in-process packument cache over an on-disk one over a
@@ -229,7 +335,13 @@ pub struct NpmRegistry {
 
 impl NpmRegistry {
     pub fn new(base: impl Into<String>) -> Self {
-        Self::with_transport(base, Box::new(HttpTransport))
+        Self::with_transport(
+            base,
+            Box::new(RetryingTransport::new(
+                HttpTransport::new(),
+                RetryPolicy::default(),
+            )),
+        )
     }
 
     pub fn with_transport(base: impl Into<String>, transport: Box<dyn Transport>) -> Self {
@@ -358,6 +470,22 @@ impl Registry for NpmRegistry {
         Ok(packument)
     }
 
+    fn cached_packument(&self, name: &str) -> Option<Rc<Packument>> {
+        if let Some(cached) = self.memory.borrow().get(name) {
+            return Some(Rc::clone(cached));
+        }
+        // Freshness is not consulted: a stale deprecation notice is a better
+        // answer than a round trip, and this is the one caller that would
+        // rather have nothing than wait.
+        let record = self.disk.as_ref()?.get(&self.base, name)?;
+        let value: Value = serde_json::from_slice(&record.body).ok()?;
+        let packument = Rc::new(Packument::parse(name, &value));
+        self.memory
+            .borrow_mut()
+            .insert(name.to_string(), Rc::clone(&packument));
+        Some(packument)
+    }
+
     fn tarball(&self, url: &str) -> Result<Vec<u8>, RegistryError> {
         // Offline is offline. The store already answered "do I have this"
         // before the pipeline asked for a tarball at all, so reaching here
@@ -395,9 +523,9 @@ fn read_file(url: &str, path: &str) -> Result<Vec<u8>, RegistryError> {
     read_chunked(url, file)
 }
 
-fn read_http(request: &Request<'_>) -> Result<Fetched, RegistryError> {
+fn read_http(agent: &ureq::Agent, request: &Request<'_>) -> Result<Fetched, RegistryError> {
     let url = request.url;
-    let mut call = ureq::get(url);
+    let mut call = agent.get(url);
     if let Some(accept) = request.accept {
         call = call.header("Accept", accept);
     }
@@ -543,6 +671,115 @@ mod tests {
         let packument = Packument::parse("demo", &sample());
         let metadata = packument.version(&Version::new(1, 2, 0)).unwrap();
         assert!(metadata.integrity.to_string().starts_with("sha1-"));
+    }
+
+    /// Fails a fixed number of times before answering, counting attempts.
+    struct Flaky {
+        failures: std::cell::Cell<u32>,
+        attempts: std::cell::Cell<u32>,
+        error: fn() -> RegistryError,
+    }
+
+    impl Flaky {
+        fn new(failures: u32, error: fn() -> RegistryError) -> Self {
+            Self {
+                failures: std::cell::Cell::new(failures),
+                attempts: std::cell::Cell::new(0),
+                error,
+            }
+        }
+    }
+
+    impl Transport for &Flaky {
+        fn get(&self, _request: &Request<'_>) -> Result<Fetched, RegistryError> {
+            self.attempts.set(self.attempts.get() + 1);
+            if self.failures.get() > 0 {
+                self.failures.set(self.failures.get() - 1);
+                return Err((self.error)());
+            }
+            Ok(Fetched::Fresh(Response {
+                body: b"{}".to_vec(),
+                etag: None,
+                max_age: None,
+            }))
+        }
+    }
+
+    fn immediate(attempts: u32) -> RetryPolicy {
+        RetryPolicy {
+            attempts,
+            backoff: Duration::ZERO,
+        }
+    }
+
+    fn fetch(transport: &impl Transport) -> Result<Fetched, RegistryError> {
+        transport.get(&Request {
+            url: "https://registry.example/demo",
+            accept: None,
+            etag: None,
+        })
+    }
+
+    fn server_error() -> RegistryError {
+        RegistryError::Status {
+            url: "https://registry.example/demo".to_string(),
+            status: 503,
+        }
+    }
+
+    fn not_found() -> RegistryError {
+        RegistryError::Status {
+            url: "https://registry.example/demo".to_string(),
+            status: 404,
+        }
+    }
+
+    #[test]
+    fn test_a_transient_failure_is_retried_until_it_succeeds() {
+        for error in [
+            server_error as fn() -> RegistryError,
+            || RegistryError::Transport {
+                url: "https://registry.example/demo".to_string(),
+                message: "connection reset".to_string(),
+            },
+            || RegistryError::Status {
+                url: "https://registry.example/demo".to_string(),
+                status: 429,
+            },
+        ] {
+            let flaky = Flaky::new(2, error);
+            let transport = RetryingTransport::new(&flaky, immediate(3));
+            assert!(fetch(&transport).is_ok());
+            assert_eq!(flaky.attempts.get(), 3);
+        }
+    }
+
+    #[test]
+    fn test_a_client_error_is_never_retried() {
+        let flaky = Flaky::new(1, not_found);
+        let transport = RetryingTransport::new(&flaky, immediate(5));
+
+        let error = fetch(&transport).expect_err("404 stands");
+        assert!(matches!(error, RegistryError::Status { status: 404, .. }));
+        assert_eq!(flaky.attempts.get(), 1, "repeating it repeats the answer");
+    }
+
+    #[test]
+    fn test_retrying_is_bounded_and_reports_the_last_failure() {
+        let flaky = Flaky::new(u32::MAX, server_error);
+        let transport = RetryingTransport::new(&flaky, immediate(3));
+
+        let error = fetch(&transport).expect_err("never recovers");
+        assert!(matches!(error, RegistryError::Status { status: 503, .. }));
+        assert_eq!(flaky.attempts.get(), 3, "exactly the budget, no more");
+    }
+
+    #[test]
+    fn test_one_attempt_means_no_retrying() {
+        let flaky = Flaky::new(1, server_error);
+        let transport = RetryingTransport::new(&flaky, immediate(1));
+        assert!(fetch(&transport).is_err());
+        assert_eq!(flaky.attempts.get(), 1);
     }
 
     #[test]
