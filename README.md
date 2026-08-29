@@ -86,6 +86,8 @@ opal install [--root <ROOT>] [--cache-dir <CACHE_DIR>] [--registry <URL>] [--pro
 
 Packages declaring an `os` or `cpu` this host cannot run are recorded in `opal.lock` and skipped at install time, so one committed lockfile installs the right native binary on every platform.
 
+Progress is reported on stderr as each stage begins — a spinner while resolving and linking, a bar advancing per package while fetching — with the summary on stdout. When stderr is not a terminal, the same stages print as plain lines, so a CI log stays readable and nothing redraws over it.
+
 Resolves against the public npm registry, downloads tarballs into the shared CAS keyed by content hash, and links `node_modules` from the CAS via hardlinks — a reconciler that diffs `opal.lock` against disk and applies only the delta, so a killed install converges by re-running `opal install`:
 
 ```console

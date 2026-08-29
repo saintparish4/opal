@@ -19,6 +19,7 @@ pub struct Package {
     pub name: String,
     pub version: String,
     pub dependencies: BTreeMap<String, String>,
+    pub dev_dependencies: BTreeMap<String, String>,
     pub optional_dependencies: BTreeMap<String, String>,
     pub peer_dependencies: BTreeMap<String, String>,
     pub optional_peers: Vec<String>,
@@ -36,6 +37,7 @@ impl Package {
             name: name.to_string(),
             version: version.to_string(),
             dependencies: BTreeMap::new(),
+            dev_dependencies: BTreeMap::new(),
             optional_dependencies: BTreeMap::new(),
             peer_dependencies: BTreeMap::new(),
             optional_peers: Vec::new(),
@@ -48,6 +50,14 @@ impl Package {
 
     pub fn dependency(mut self, name: &str, spec: &str) -> Self {
         self.dependencies.insert(name.to_string(), spec.to_string());
+        self
+    }
+
+    /// A package's own dev tooling, which no install ever fetches. Published
+    /// so the classifier can be tested against the shape that misleads it.
+    pub fn dev_dependency(mut self, name: &str, spec: &str) -> Self {
+        self.dev_dependencies
+            .insert(name.to_string(), spec.to_string());
         self
     }
 
@@ -97,6 +107,12 @@ impl Package {
         let object = value.as_object_mut().expect("object");
         if !self.dependencies.is_empty() {
             object.insert("dependencies".into(), serde_json::json!(self.dependencies));
+        }
+        if !self.dev_dependencies.is_empty() {
+            object.insert(
+                "devDependencies".into(),
+                serde_json::json!(self.dev_dependencies),
+            );
         }
         if !self.optional_dependencies.is_empty() {
             object.insert(

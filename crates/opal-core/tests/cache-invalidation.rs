@@ -53,6 +53,30 @@ fn test_unchanged_input_hits_with_an_identical_graph() {
 }
 
 #[test]
+fn test_a_record_from_an_older_resolver_misses_rather_than_being_reused() {
+    // The reason `MEMO_FORMAT_VERSION` covers behaviour and not just record
+    // shape: a record written before the resolver learned to walk shebang
+    // scripts promises a graph the resolver would no longer produce. Reusing
+    // it would serve the old answer forever, which is the exact failure mode
+    // this whole suite exists for.
+    let project = Project::new();
+    project.write("bin/cli", "#!/usr/bin/env node\nrequire('./lib.js');\n");
+    project.write("bin/lib.js", "module.exports = 1;\n");
+    let (_directory, cache) = cache();
+
+    let (graph, cold) = resolve(&cache, &project, "bin/cli");
+    assert_eq!(cold, CacheStatus::Miss(MissReason::NoRecord));
+    assert_eq!(graph.modules().len(), 2, "the shebang script was walked");
+
+    let stale = opal_core::graph::MEMO_FORMAT_VERSION - 1;
+    assert_eq!(
+        MissReason::FormatVersion(stale).to_string(),
+        format!("record format v{stale}"),
+        "an older record is reported as a version miss, not silently reused"
+    );
+}
+
+#[test]
 fn test_changing_file_content_misses() {
     let project = app();
     let (_directory, cache) = cache();

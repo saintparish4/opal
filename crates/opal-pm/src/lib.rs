@@ -11,6 +11,7 @@ pub mod manifest;
 pub mod package;
 pub mod packuments;
 pub mod platform;
+pub mod progress;
 pub mod projects;
 pub mod registry;
 pub mod resolve;

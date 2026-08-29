@@ -184,6 +184,9 @@ struct Resolver<'a> {
     /// parallelism would move this to `Arc` plus a shared cache.
     manifests: HashMap<NormalizedPath, Option<Rc<Value>>>,
     sources: HashMap<NormalizedPath, Rc<String>>,
+    /// What each loaded file turned out to be. Kept because an extensionless
+    /// file's kind is decided by its first line, which only `load` has seen.
+    kinds: HashMap<NormalizedPath, SourceKind>,
 }
 
 impl<'a> Resolver<'a> {
@@ -196,6 +199,7 @@ impl<'a> Resolver<'a> {
             missing: BTreeSet::new(),
             manifests: HashMap::new(),
             sources: HashMap::new(),
+            kinds: HashMap::new(),
         }
     }
 
@@ -281,7 +285,7 @@ impl<'a> Resolver<'a> {
         &mut self,
         path: &NormalizedPath,
     ) -> Result<Vec<(String, DependencyKind)>, ResolveError> {
-        let kind = source_kind_of(path);
+        let kind = self.kind_of(path);
         if !kind.is_parsed() {
             return Ok(Vec::new());
         }
@@ -606,11 +610,18 @@ impl<'a> Resolver<'a> {
         parsed
     }
 
+    /// What a loaded file is, or what its name alone suggests.
+    fn kind_of(&self, path: &NormalizedPath) -> SourceKind {
+        self.kinds
+            .get(path)
+            .copied()
+            .unwrap_or_else(|| source_kind_of(path))
+    }
+
     /// Reads a file, recording its content hash in the trace.
     fn load(&mut self, path: &NormalizedPath) -> Result<(ContentHash, SourceKind), ResolveError> {
-        let kind = source_kind_of(path);
         if let Some(hash) = self.files.get(path) {
-            return Ok((*hash, kind));
+            return Ok((*hash, self.kind_of(path)));
         }
         if !self.probe(path) {
             return Err(ResolveError::Io {
@@ -625,6 +636,18 @@ impl<'a> Resolver<'a> {
         })?;
         let hash = ContentHash::of(&bytes);
         self.files.insert(path.clone(), hash);
+
+        // An npm bin script — `node_modules/next/dist/bin/next` — is an
+        // extensionless file with a shebang, so a name-only decision calls it
+        // opaque and nothing is ever walked from it. That reads as a clean
+        // pass ("1 modules, 0 edges") rather than as the silent no-op it is.
+        let kind = match source_kind_of(path) {
+            SourceKind::Opaque if path.extension().is_none() => {
+                shebang_kind(&bytes).unwrap_or(SourceKind::Opaque)
+            }
+            named => named,
+        };
+        self.kinds.insert(path.clone(), kind);
 
         // Source text is kept only for files that get parsed; a `.node` addon
         // or a large asset is hashed and dropped.
@@ -729,6 +752,23 @@ fn select_condition(value: &Value, conditions: &[String]) -> Option<String> {
         // `null` blocks a subpath on purpose.
         _ => None,
     }
+}
+
+/// A `#!` line naming node, which is how a file with no extension says it is
+/// JavaScript. Anything else — `#!/bin/sh`, a binary, a plain text file —
+/// stays opaque, because guessing wrong means parsing a shell script as JS.
+fn shebang_kind(bytes: &[u8]) -> Option<SourceKind> {
+    let first = bytes.split(|byte| *byte == b'\n').next()?;
+    let shebang = std::str::from_utf8(first)
+        .ok()?
+        .trim_end()
+        .strip_prefix("#!")?;
+    // Splitting on `/` as well as whitespace covers `#!/usr/bin/node` and
+    // `#!/usr/bin/env node` alike, and `env -S node --flag` falls out of it.
+    shebang
+        .split(|character: char| character.is_whitespace() || character == '/')
+        .any(|word| matches!(word, "node" | "nodejs"))
+        .then_some(SourceKind::JavaScript)
 }
 
 fn source_kind_of(path: &NormalizedPath) -> SourceKind {

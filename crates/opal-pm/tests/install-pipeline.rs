@@ -16,6 +16,7 @@ use opal_pm::install::{self, InstallError, InstallOptions, InstallReport};
 use opal_pm::lockfile;
 use opal_pm::package::PackageStore;
 use opal_pm::platform::Platform;
+use opal_pm::progress::{Silent, Stage};
 use opal_pm::projects::ProjectIndex;
 use opal_pm::registry::NpmRegistry;
 
@@ -56,13 +57,34 @@ impl Sandbox {
         self.install_at(&self.project.clone(), options)
     }
 
+    fn install_reporting(
+        &self,
+        progress: &dyn opal_pm::progress::Progress,
+    ) -> Result<InstallReport, InstallError> {
+        install::install(
+            &self.project,
+            &NpmRegistry::new(self.registry.url()),
+            &self.store,
+            &self.projects,
+            &InstallOptions::default(),
+            progress,
+        )
+    }
+
     fn install_at(
         &self,
         project: &Path,
         options: &InstallOptions,
     ) -> Result<InstallReport, InstallError> {
         let registry = NpmRegistry::new(self.registry.url());
-        install::install(project, &registry, &self.store, &self.projects, options)
+        install::install(
+            project,
+            &registry,
+            &self.store,
+            &self.projects,
+            options,
+            &Silent,
+        )
     }
 
     fn path(&self, relative: &str) -> PathBuf {
@@ -345,6 +367,78 @@ fn test_production_install_skips_dev_dependencies() {
 
     assert!(sandbox.installed("node_modules/a"));
     assert!(!sandbox.path("node_modules/tool").exists());
+}
+
+/// Records what the pipeline reported, so the seam can be asserted without a
+/// terminal anywhere near it.
+#[derive(Default)]
+struct Recorder {
+    stages: std::cell::RefCell<Vec<Stage>>,
+    fetched: std::cell::RefCell<Vec<(String, bool)>>,
+    finished: std::cell::Cell<bool>,
+}
+
+impl opal_pm::progress::Progress for Recorder {
+    fn stage(&self, stage: Stage) {
+        self.stages.borrow_mut().push(stage);
+    }
+
+    fn fetched(&self, id: &opal_pm::resolve::PackageId, from_store: bool) {
+        self.fetched
+            .borrow_mut()
+            .push((id.name.clone(), from_store));
+    }
+
+    fn finished(&self) {
+        self.finished.set(true);
+    }
+}
+
+#[test]
+fn test_the_pipeline_reports_each_stage_once_and_every_package() {
+    let mut sandbox = Sandbox::new();
+    sandbox
+        .registry
+        .publish(Package::new("b", "1.0.0"))
+        .publish(Package::new("a", "1.0.0").dependency("b", "^1.0.0"));
+    sandbox.project(serde_json::json!({ "dependencies": { "a": "^1.0.0" } }));
+
+    let first = Recorder::default();
+    sandbox.install_reporting(&first).expect("install");
+
+    assert_eq!(
+        first.stages.borrow().as_slice(),
+        [
+            Stage::Resolving,
+            Stage::Fetching { packages: 2 },
+            Stage::Linking { packages: 2 },
+        ]
+    );
+    assert_eq!(
+        first.fetched.borrow().as_slice(),
+        [("a".to_string(), false), ("b".to_string(), false)],
+        "a cold store reports every package as a download"
+    );
+    assert!(first.finished.get());
+
+    // A second run answers from the lockfile, so there is no resolve stage to
+    // report and every package is already in the store.
+    let second = Recorder::default();
+    sandbox.install_reporting(&second).expect("second install");
+    assert_eq!(
+        second.stages.borrow().as_slice(),
+        [
+            Stage::Fetching { packages: 2 },
+            Stage::Linking { packages: 2 }
+        ]
+    );
+    assert!(
+        second
+            .fetched
+            .borrow()
+            .iter()
+            .all(|(_, from_store)| *from_store)
+    );
 }
 
 #[test]
@@ -715,6 +809,75 @@ fn test_an_absent_optional_peer_reads_as_informational() {
     assert_eq!(findings[0].package, "supports-color");
     assert_eq!(findings[0].severity, Severity::Informational);
     assert!(findings[0].explain().contains("optional peerDependency"));
+}
+
+#[test]
+fn test_a_dependencys_own_dev_dependency_is_not_an_error() {
+    // `sharp` declares `@img/sharp-libvips-dev` as its own devDependency.
+    // Nothing installs a dependency's dev tooling, so telling the reader to
+    // run `opal install` points at a command that cannot change the outcome.
+    let mut sandbox = Sandbox::new();
+    sandbox.registry.publish(
+        Package::new("sharp", "1.0.0")
+            .dev_dependency("libvips-dev", "^1.0.0")
+            .file("index.js", "module.exports = require('libvips-dev');\n"),
+    );
+    sandbox.project(serde_json::json!({ "dependencies": { "sharp": "^1.0.0" } }));
+    sandbox.install().expect("install");
+    std::fs::write(
+        sandbox.path("index.js"),
+        "module.exports = require('sharp');\n",
+    )
+    .expect("entry");
+
+    let root = NormalizedPath::from_native(&sandbox.project).expect("utf-8");
+    let resolution = resolver::resolve(
+        &root,
+        &NormalizedPath::new("index.js"),
+        &ResolverOptions::default(),
+    )
+    .expect("resolve");
+
+    let findings = diagnose::classify(&resolution.graph, &sandbox.project);
+    assert_eq!(findings.len(), 1);
+    assert_eq!(findings[0].package, "libvips-dev");
+    assert_eq!(findings[0].severity, Severity::Informational);
+    assert_eq!(findings[0].declared_by.as_deref(), Some("sharp"));
+    assert_eq!(
+        findings[0].explain(),
+        "libvips-dev is sharp's own devDependency, which is never installed"
+    );
+}
+
+#[test]
+fn test_the_projects_own_missing_dev_dependency_stays_actionable() {
+    let mut sandbox = Sandbox::new();
+    sandbox.registry.publish(Package::new("tool", "1.0.0"));
+    sandbox.project(serde_json::json!({
+        "devDependencies": { "tool": "^1.0.0" }
+    }));
+    // Resolved and linked, then removed from disk: declared, not installed.
+    sandbox.install().expect("install");
+    std::fs::remove_dir_all(sandbox.path("node_modules/tool")).expect("remove");
+    std::fs::write(
+        sandbox.path("index.js"),
+        "module.exports = require('tool');\n",
+    )
+    .expect("entry");
+
+    let root = NormalizedPath::from_native(&sandbox.project).expect("utf-8");
+    let resolution = resolver::resolve(
+        &root,
+        &NormalizedPath::new("index.js"),
+        &ResolverOptions::default(),
+    )
+    .expect("resolve");
+
+    let findings = diagnose::classify(&resolution.graph, &sandbox.project);
+    assert_eq!(findings.len(), 1);
+    assert_eq!(findings[0].severity, Severity::Error);
+    assert_eq!(findings[0].declared_by, None);
+    assert!(findings[0].explain().contains("run `opal install`"));
 }
 
 #[test]

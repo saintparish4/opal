@@ -36,6 +36,12 @@ sha1 = "0.11.0"
 # Blocking HTTP with rustls: no async runtime to thread through the install
 # pipeline, and no OpenSSL system dependency for the single static binary.
 ureq = "3.4.0"
+# Progress rendering for opal-cli only. Drawing a bar in place is terminal
+# capability detection, cursor control, redraw throttling and width handling —
+# not the hundred lines of escape codes it looks like. A full TUI framework
+# (ratatui: alternate screen, widget tree, its own event loop) is the wrong
+# shape for one bar that advances and one line per stage.
+indicatif = "0.18"
 # std has no advisory file locking; this is one extern function (flock), not
 # worth a wrapper crate like fs2/fd-lock for.
 libc = "0.2.189"

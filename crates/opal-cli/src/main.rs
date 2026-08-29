@@ -7,6 +7,8 @@
 //! and the analysis command — they arrive with the phase that
 //! implements them.
 
+mod progress;
+
 use std::collections::BTreeSet;
 use std::path::PathBuf;
 use std::process::ExitCode;
@@ -218,7 +220,15 @@ fn install_command(args: InstallArgs) -> Result<ExitCode, Failure> {
     };
 
     let started = Instant::now();
-    let report = install::install(&root, &registry, &store, &projects, &options)?;
+    let reporter = progress::reporter();
+    let report = install::install(
+        &root,
+        &registry,
+        &store,
+        &projects,
+        &options,
+        reporter.as_ref(),
+    )?;
     let elapsed = started.elapsed();
 
     println!(
@@ -244,6 +254,9 @@ fn install_command(args: InstallArgs) -> Result<ExitCode, Failure> {
         report.link.files_copied,
         report.link.bins
     );
+    for (id, message) in &report.deprecated {
+        eprintln!("warning: {id} is deprecated: {message}");
+    }
     for (name, reason) in &report.skipped {
         println!("skipped {name}: {reason}");
     }

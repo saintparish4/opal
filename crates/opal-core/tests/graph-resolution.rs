@@ -239,6 +239,70 @@ fn test_json_and_opaque_files_are_leaf_modules() {
 }
 
 #[test]
+fn test_an_extensionless_shebang_script_is_walked() {
+    // The shape of every npm bin script: no extension, a node shebang, and
+    // real requires underneath it.
+    let project = Project::new();
+    project
+        .write(
+            "bin/cli",
+            "#!/usr/bin/env node\nconst lib = require('../lib.js');\nlib.run();\n",
+        )
+        .write("lib.js", "module.exports.run = () => {};\n");
+
+    let resolution = graph_of(&project, "bin/cli");
+    let cli = resolution.graph.id_of(&entry("bin/cli")).expect("entry");
+
+    assert_eq!(resolution.graph.module(cli).source, SourceKind::JavaScript);
+    assert_eq!(
+        specifiers(&resolution, "bin/cli"),
+        vec![("../lib.js".to_string(), "lib.js".to_string())]
+    );
+}
+
+#[test]
+fn test_a_shebang_for_something_other_than_node_stays_opaque() {
+    let project = Project::new();
+    project
+        .write("run.sh.bak", "#!/bin/sh\nrequire not javascript\n")
+        .write(
+            "bin/tool",
+            "#!/usr/bin/env -S node --enable-source-maps\nrequire('./dep.js');\n",
+        )
+        .write("bin/dep.js", "module.exports = 1;\n")
+        .write("notes", "just text, no shebang at all\n");
+
+    for (path, expected) in [
+        ("bin/tool", SourceKind::JavaScript),
+        ("notes", SourceKind::Opaque),
+    ] {
+        let resolution = graph_of(&project, path);
+        let id = resolution.graph.id_of(&entry(path)).expect("entry");
+        assert_eq!(resolution.graph.module(id).source, expected, "{path}");
+    }
+
+    // `env -S node --flag` is still node, and its requires are still edges.
+    let resolution = graph_of(&project, "bin/tool");
+    assert_eq!(
+        specifiers(&resolution, "bin/tool"),
+        vec![("./dep.js".to_string(), "bin/dep.js".to_string())]
+    );
+}
+
+#[test]
+fn test_a_shebang_script_takes_its_module_system_from_the_nearest_manifest() {
+    let project = Project::new();
+    project
+        .write("package.json", r#"{ "type": "module" }"#)
+        .write("bin/cli", "#!/usr/bin/env node\nimport './lib.js';\n")
+        .write("lib.js", "export const x = 1;\n");
+
+    let resolution = graph_of(&project, "bin/cli");
+    let cli = resolution.graph.id_of(&entry("bin/cli")).expect("entry");
+    assert_eq!(resolution.graph.module(cli).system, ModuleSystem::Esm);
+}
+
+#[test]
 fn test_trace_records_the_probes_a_result_depends_on() {
     let project = Project::new();
     project

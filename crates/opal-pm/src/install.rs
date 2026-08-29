@@ -19,6 +19,7 @@ use crate::locks::InstallLock;
 use crate::manifest::{Manifest, ManifestError};
 use crate::package::{PackageError, PackageStore};
 use crate::platform::Platform;
+use crate::progress::{Progress, Stage};
 use crate::projects::{ProjectError, ProjectIndex};
 use crate::registry::{Registry, RegistryError};
 use crate::resolve::{self, PackageId, Resolution, ResolveError, ResolveOptions};
@@ -86,6 +87,11 @@ pub struct InstallReport {
     pub platform_skipped: Vec<(PackageId, String)>,
     /// An older lockfile was replaced by re-resolving.
     pub lockfile_upgraded: bool,
+    /// Packages in this tree the registry marks deprecated, with the message
+    /// its publisher left. Only populated on a run that resolved: the message
+    /// lives in the packument, and `opal.lock` does not carry it, so a run
+    /// answered entirely by the lockfile has nothing to report.
+    pub deprecated: Vec<(PackageId, String)>,
 }
 
 pub fn install(
@@ -94,6 +100,7 @@ pub fn install(
     store: &PackageStore,
     projects: &ProjectIndex,
     options: &InstallOptions,
+    progress: &dyn Progress,
 ) -> Result<InstallReport, InstallError> {
     let manifest = Manifest::read(&project_root.join("package.json"))?;
     let node_modules = project_root.join(link::NODE_MODULES);
@@ -134,6 +141,7 @@ pub fn install(
             if options.frozen_lockfile {
                 return Err(InstallError::LockfileOutdated);
             }
+            progress.stage(Stage::Resolving);
             // Always resolves devDependencies, whatever this install links, so
             // one lockfile serves a dev install and a production one.
             let resolved = resolve::resolve(
@@ -164,12 +172,59 @@ pub fn install(
             include_development: options.include_development,
         },
     );
-    let fetched = fetch_all(registry, store, &resolution, &plan.layout, &mut report)?;
     report.packages = plan.layout.len();
+
+    progress.stage(Stage::Fetching {
+        packages: report.packages,
+    });
+    let fetched = fetch_all(
+        registry,
+        store,
+        &resolution,
+        &plan.layout,
+        &mut report,
+        progress,
+    )?;
+
+    progress.stage(Stage::Linking {
+        packages: report.packages,
+    });
     report.link = link::reconcile(project_root, &plan.layout, &fetched, store.cas())?;
     report.skipped = resolution.skipped.clone();
     report.platform_skipped = plan.platform_skipped;
+
+    // Only after a resolve: every packument this reads is one the resolve just
+    // put in the client's own cache, so it costs lookups rather than requests.
+    // On a lockfile-reuse run there is nothing to read it from.
+    if report.resolved {
+        report.deprecated = deprecations(registry, &plan.layout);
+    }
+
+    progress.finished();
     Ok(report)
+}
+
+/// What the registry says about the packages actually being installed.
+fn deprecations(registry: &dyn Registry, layout: &Layout) -> Vec<(PackageId, String)> {
+    let mut found: Vec<(PackageId, String)> = Vec::new();
+    for id in layout.values() {
+        if found.iter().any(|(seen, _)| seen == id) {
+            continue;
+        }
+        // A package whose metadata cannot be re-read is not a reason to fail an
+        // install that has already succeeded.
+        let Ok(packument) = registry.packument(&id.name) else {
+            continue;
+        };
+        if let Some(message) = packument
+            .version(&id.version)
+            .and_then(|metadata| metadata.deprecated.clone())
+        {
+            found.push((id.clone(), message));
+        }
+    }
+    found.sort();
+    found
 }
 
 /// Ensures the contents of everything the planned tree names are in the store.
@@ -179,6 +234,7 @@ fn fetch_all(
     resolution: &Resolution,
     layout: &Layout,
     report: &mut InstallReport,
+    progress: &dyn Progress,
 ) -> Result<Fetched, InstallError> {
     let mut fetched: Fetched = BTreeMap::new();
 
@@ -189,7 +245,9 @@ fn fetch_all(
         let Some(package) = resolution.package(id) else {
             continue;
         };
-        let index_hash = match store.lookup(&package.integrity)? {
+        let stored = store.lookup(&package.integrity)?;
+        let from_store = stored.is_some();
+        let index_hash = match stored {
             Some(hash) => {
                 report.already_stored += 1;
                 hash
@@ -201,6 +259,7 @@ fn fetch_all(
                 hash
             }
         };
+        progress.fetched(id, from_store);
         let index = store.read_index(&index_hash)?;
         fetched.insert(id.clone(), FetchedPackage { index_hash, index });
     }

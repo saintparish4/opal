@@ -45,6 +45,7 @@ use opal_pm::link;
 use opal_pm::lockfile;
 use opal_pm::package::PackageStore;
 use opal_pm::packuments::PackumentCache;
+use opal_pm::progress::Silent;
 use opal_pm::projects::ProjectIndex;
 use opal_pm::registry::{HttpTransport, NpmRegistry, Registry};
 
@@ -285,6 +286,7 @@ impl Sandbox {
             &self.store,
             &self.projects,
             &InstallOptions::default(),
+            &Silent,
         )
         .expect("install")
     }

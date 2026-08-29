@@ -27,9 +27,15 @@ use crate::path::NormalizedPath;
 /// Record written to its temp file; the rename has not run.
 pub const FAULT_BEFORE_RENAME: FaultPoint = FaultPoint::new("memo-before-rename");
 
-/// Bumped when the record shape changes; old records then miss rather than
-/// being misread.
-pub const MEMO_FORMAT_VERSION: u32 = 1;
+/// Bumped when the record shape changes *or when the resolver's behaviour
+/// does*; old records then miss rather than being misread.
+///
+/// The second half is the one that is easy to forget. A record is a promise
+/// that re-resolving these inputs produces this graph, so a change to what the
+/// resolver does with the same bytes invalidates every record ever written —
+/// v2 taught it to walk extensionless shebang scripts, which turns files that
+/// previously had no edges into files that have them.
+pub const MEMO_FORMAT_VERSION: u32 = 2;
 
 #[derive(Debug, thiserror::Error)]
 pub enum MemoError {

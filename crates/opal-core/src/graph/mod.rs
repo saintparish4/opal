@@ -20,7 +20,8 @@ use crate::hash::{ContentHash, HashBuilder};
 use crate::path::NormalizedPath;
 
 pub use memo::{
-    CacheStatus, CachedResolution, GraphCache, MemoError, MemoKey, MissReason, resolve_cached,
+    CacheStatus, CachedResolution, GraphCache, MEMO_FORMAT_VERSION, MemoError, MemoKey, MissReason,
+    resolve_cached,
 };
 pub use resolver::{Resolution, ResolveError, ResolveTrace, ResolverOptions, resolve};
 
