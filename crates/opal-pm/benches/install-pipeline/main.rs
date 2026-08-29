@@ -35,6 +35,7 @@ mod workload;
 
 use std::path::PathBuf;
 use std::process::ExitCode;
+use std::rc::Rc;
 use std::time::{Duration, Instant};
 
 use opal_core::cache::CacheRoot;
@@ -43,10 +44,11 @@ use opal_pm::install::{self, InstallOptions, InstallReport};
 use opal_pm::link;
 use opal_pm::lockfile;
 use opal_pm::package::PackageStore;
+use opal_pm::packuments::PackumentCache;
 use opal_pm::projects::ProjectIndex;
-use opal_pm::registry::{NpmRegistry, Registry};
+use opal_pm::registry::{HttpTransport, NpmRegistry, Registry};
 
-use wire::{Meter, MeteredRegistry};
+use wire::{Counters, Meter, MeteredTransport};
 use workload::{Shape, Workload};
 
 const USAGE: &str = "\
@@ -63,6 +65,8 @@ usage: cargo bench -p opal-pm --bench install-pipeline -- [options]
   --rtt-ms N       simulated per-request round-trip latency (default 0)
   --scenario LIST  comma-separated subset of cold,resolve,link,noop
   --json           emit one JSON record instead of a report
+  --no-packument-cache
+                   resolve without the on-disk metadata cache, for before/after
   --help
 ";
 
@@ -117,6 +121,10 @@ struct Options {
     rtt: Duration,
     scenarios: Vec<Scenario>,
     json: bool,
+    /// Off measures what an install cost before metadata was kept between
+    /// runs. Two runs of one binary, minutes apart on one machine, is a far
+    /// better before/after than two runs of two binaries.
+    packument_cache: bool,
 }
 
 impl Default for Options {
@@ -127,6 +135,7 @@ impl Default for Options {
             rtt: Duration::ZERO,
             scenarios: Scenario::ALL.to_vec(),
             json: false,
+            packument_cache: true,
         }
     }
 }
@@ -180,6 +189,10 @@ fn parse_arguments(arguments: impl Iterator<Item = String>) -> Result<Option<Opt
             options.json = true;
             continue;
         }
+        if argument == "--no-packument-cache" {
+            options.packument_cache = false;
+            continue;
+        }
         let value = arguments
             .next()
             .ok_or_else(|| format!("{argument} needs a value"))?;
@@ -222,6 +235,7 @@ fn parse_arguments(arguments: impl Iterator<Item = String>) -> Result<Option<Opt
 struct Sandbox {
     _directory: tempfile::TempDir,
     project: PathBuf,
+    cache: CacheRoot,
     store: PackageStore,
     projects: ProjectIndex,
 }
@@ -239,8 +253,28 @@ impl Sandbox {
         Self {
             _directory: directory,
             project,
+            cache,
             store,
             projects,
+        }
+    }
+
+    /// The client an `opal install` would build: metadata cached under this
+    /// sandbox's cache root, unless the run is measuring what life was like
+    /// without it.
+    fn registry(&self, workload: &Workload, options: &Options, rtt: Duration) -> Client {
+        let counters = Rc::new(Counters::default());
+        let transport = MeteredTransport::new(HttpTransport, rtt, Rc::clone(&counters));
+        let mut registry =
+            NpmRegistry::with_transport(workload.registry_url(), Box::new(transport));
+        if options.packument_cache {
+            registry = registry
+                .with_packument_cache(PackumentCache::new(self.cache.path().join("packuments")));
+        }
+        Client {
+            registry,
+            counters,
+            rtt,
         }
     }
 
@@ -263,6 +297,19 @@ impl Sandbox {
             std::fs::remove_dir_all(self.project.join(link::NODE_MODULES))
                 .expect("remove node_modules");
         }
+    }
+}
+
+/// A registry client and the counters underneath it.
+struct Client {
+    registry: NpmRegistry,
+    counters: Rc<Counters>,
+    rtt: Duration,
+}
+
+impl Client {
+    fn meter(&self) -> Meter {
+        self.counters.meter(self.rtt)
     }
 }
 
@@ -294,7 +341,11 @@ fn measure(scenario: Scenario, workload: &Workload, options: &Options) -> Measur
     // makes it warm. A cold one gets a new one each time.
     let warm = scenario.warm().then(|| {
         let sandbox = Sandbox::new(workload);
-        sandbox.install(&NpmRegistry::new(workload.registry_url()));
+        // Untimed and unlatched, but through the same client, so whatever a
+        // real first install would leave behind — a warm store, and now warm
+        // metadata — is what the timed runs start from.
+        let client = sandbox.registry(workload, options, Duration::ZERO);
+        sandbox.install(&client.registry);
         sandbox
     });
 
@@ -312,14 +363,15 @@ fn measure(scenario: Scenario, workload: &Workload, options: &Options) -> Measur
         };
         sandbox.prepare(scenario);
 
-        // A fresh client per iteration, because `NpmRegistry`'s packument cache
+        // A fresh client per iteration, because the in-process packument cache
         // is per-process and a reused one would hand the second iteration a
-        // warm cache no real `opal install` ever starts with.
-        let registry = MeteredRegistry::new(NpmRegistry::new(workload.registry_url()), options.rtt);
+        // warm memory no real `opal install` ever starts with. What *does*
+        // carry over is the on-disk cache, which is the point.
+        let client = sandbox.registry(workload, options, options.rtt);
         let started = Instant::now();
-        let report = sandbox.install(&registry);
+        let report = sandbox.install(&client.registry);
         wall.push(started.elapsed());
-        last = Some((report, registry.meter()));
+        last = Some((report, client.meter()));
     }
 
     wall.sort_unstable();
@@ -375,9 +427,9 @@ fn report(workload: &Workload, options: &Options, setup: Duration, measurements:
             duration(measurement.max()),
         );
         println!(
-            "  registry   {} packument round-trips of {} lookups, {} tarballs, {}",
+            "  registry   {} packument round-trips ({} revalidated), {} tarballs, {}",
             meter.packuments.round_trips,
-            meter.packuments.requests,
+            meter.packuments.revalidations,
             meter.tarballs.round_trips,
             bytes(meter.tarball_bytes),
         );
@@ -432,7 +484,7 @@ fn json(
                 },
                 "stalled_ms": millis(meter.stalled()),
                 "packument_round_trips": meter.packuments.round_trips,
-                "packument_lookups": meter.packuments.requests,
+                "packument_revalidations": meter.packuments.revalidations,
                 "tarball_round_trips": meter.tarballs.round_trips,
                 "tarball_bytes": meter.tarball_bytes,
                 "packages": measurement.report.packages,

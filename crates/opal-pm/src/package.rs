@@ -8,6 +8,7 @@
 //! materialize a package with hardlinks alone.
 
 use std::collections::BTreeMap;
+use std::io::Read as _;
 use std::path::{Component, Path, PathBuf};
 
 use opal_core::atomic::write_atomic;
@@ -23,6 +24,11 @@ use crate::semver::Version;
 
 /// Tarball downloaded, integrity not yet checked.
 pub const FAULT_BEFORE_VERIFY: FaultPoint = FaultPoint::new("pm-before-verify");
+
+/// A tar entry at or under this size is read into memory so its hash is
+/// known before anything is written. Above it, streaming wins: the peak
+/// cost of buffering stops being worth one avoided fsync.
+const BUFFERED_ENTRY_BYTES: u64 = 8 * 1024 * 1024;
 /// Some of the tarball's files are in the CAS, the index is not yet written.
 pub const FAULT_MID_EXTRACT: FaultPoint = FaultPoint::new("pm-mid-extract");
 
@@ -258,7 +264,25 @@ impl PackageStore {
                 continue;
             };
 
-            let hash = self.cas.put_reader(&mut entry)?;
+            // Buffered rather than streamed, so the CAS can check whether it
+            // already holds these bytes before writing any. Duplicate files are
+            // ordinary across an npm tree — licences, tiny shims, identical
+            // `package.json` shapes — and every one it recognizes here skips an
+            // fsync. Anything larger keeps streaming: the win is not worth
+            // holding a 10 MB native binary in memory to get it.
+            let hash = if size <= BUFFERED_ENTRY_BYTES {
+                let mut bytes = Vec::with_capacity(size as usize);
+                entry
+                    .read_to_end(&mut bytes)
+                    .map_err(|source| PackageError::Tarball {
+                        name: name.to_string(),
+                        version: version.clone(),
+                        source,
+                    })?;
+                self.cas.put(&bytes)?
+            } else {
+                self.cas.put_reader(&mut entry)?
+            };
             files.insert(
                 path,
                 PackageFile {

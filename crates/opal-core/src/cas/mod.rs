@@ -134,7 +134,17 @@ impl Cas {
     }
 
     /// Stores bytes, returning their hash.
+    ///
+    /// Hashes before writing, so bytes already in the store cost one hash and a
+    /// `stat` rather than a temp file, an fsync, a read-back and a rename.
+    /// [`Self::put_reader`] cannot do this — it only learns the hash by
+    /// streaming the bytes somewhere — so it dedupes after the write instead,
+    /// which is correct but pays full price for content it already has.
     pub fn put(&self, bytes: &[u8]) -> Result<ContentHash> {
+        let hash = ContentHash::of(bytes);
+        if self.contains(&hash) {
+            return Ok(hash);
+        }
         self.put_reader(bytes)
     }
 

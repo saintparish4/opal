@@ -89,6 +89,38 @@ pub struct LinkReport {
     pub files_linked: usize,
     pub files_copied: usize,
     pub bins: usize,
+    /// Set once, when the filesystem turns out not to support hardlinking the
+    /// store into the project at all. Reported rather than printed: `opal-pm`
+    /// is a library, and the caller decides whether a terminal hears about it.
+    pub hardlink_fallback: Option<String>,
+}
+
+/// What a failed `hard_link` means for the rest of the run.
+enum LinkFailure {
+    /// Cross-device: the store and the project are on different filesystems,
+    /// so no file will ever link. A project under `/mnt/c` on WSL2 — a v1
+    /// target — is exactly this, and retrying it 20,000 times is 20,000
+    /// syscalls spent proving the same thing.
+    Impossible(String),
+    /// This file, this time: the inode is at its link limit, or permissions
+    /// disagree. The next file is worth attempting.
+    ThisFile,
+}
+
+fn classify_link_failure(error: &std::io::Error) -> LinkFailure {
+    match error.raw_os_error() {
+        Some(libc::EXDEV) => LinkFailure::Impossible(
+            "the store and this project are on different filesystems, so every file was copied              instead of hardlinked"
+                .to_string(),
+        ),
+        // Some filesystems (and some FUSE mounts) refuse hardlinks outright
+        // rather than reporting a cross-device link.
+        Some(libc::EPERM) | Some(libc::ENOSYS) => LinkFailure::Impossible(
+            "this filesystem does not permit hardlinks, so every file was copied instead"
+                .to_string(),
+        ),
+        _ => LinkFailure::ThisFile,
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -307,11 +339,17 @@ fn materialize(
             // needs its execute bit gets a private copy instead of a hardlink.
             copy_with_mode(&source, &destination, 0o555)?;
             report.files_copied += 1;
+        } else if report.hardlink_fallback.is_some() {
+            // Already established that this filesystem cannot do it.
+            copy_with_mode(&source, &destination, 0o444)?;
+            report.files_copied += 1;
         } else {
             match std::fs::hard_link(&source, &destination) {
                 Ok(()) => report.files_linked += 1,
-                // Different filesystem, or the inode is at its link limit.
-                Err(_) => {
+                Err(error) => {
+                    if let LinkFailure::Impossible(reason) = classify_link_failure(&error) {
+                        report.hardlink_fallback = Some(reason);
+                    }
                     copy_with_mode(&source, &destination, 0o444)?;
                     report.files_copied += 1;
                 }
@@ -837,6 +875,30 @@ mod tests {
             ]
         );
         assert_eq!(plan(&resolution, &linux()).layout.len(), 3);
+    }
+
+    #[test]
+    fn test_a_cross_device_failure_is_terminal_and_anything_else_is_not() {
+        // A cross-device mount cannot be conjured in a test, so the classifier
+        // is exercised directly on the errno the kernel would report.
+        let exdev = std::io::Error::from_raw_os_error(libc::EXDEV);
+        assert!(matches!(
+            classify_link_failure(&exdev),
+            LinkFailure::Impossible(_)
+        ));
+
+        let too_many_links = std::io::Error::from_raw_os_error(libc::EMLINK);
+        assert!(matches!(
+            classify_link_failure(&too_many_links),
+            LinkFailure::ThisFile
+        ));
+
+        // No errno at all: a synthesized error, not something to give up over.
+        let synthetic = std::io::Error::other("no errno");
+        assert!(matches!(
+            classify_link_failure(&synthetic),
+            LinkFailure::ThisFile
+        ));
     }
 
     #[test]

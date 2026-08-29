@@ -22,8 +22,9 @@ use opal_pm::gc as package_gc;
 use opal_pm::install::{self, InstallOptions};
 use opal_pm::locks::CacheLock;
 use opal_pm::package::PackageStore;
+use opal_pm::packuments::PackumentCache;
 use opal_pm::projects::ProjectIndex;
-use opal_pm::registry::NpmRegistry;
+use opal_pm::registry::{Freshness, NpmRegistry};
 
 #[derive(Parser)]
 #[command(
@@ -79,6 +80,13 @@ struct InstallArgs {
     /// Fail instead of re-resolving when opal.lock does not match package.json.
     #[arg(long)]
     frozen_lockfile: bool,
+    /// Resolve from cached registry metadata only; never reach the network.
+    #[arg(long)]
+    offline: bool,
+    /// Use cached registry metadata however old it is, and only fetch what is
+    /// missing.
+    #[arg(long, conflicts_with = "offline")]
+    prefer_offline: bool,
 }
 
 #[derive(Subcommand)]
@@ -190,10 +198,19 @@ fn install_command(args: InstallArgs) -> Result<ExitCode, Failure> {
     let cache = cache_root(args.cache_dir)?;
     let store = PackageStore::open(cache.open_cas()?, cache.path())?;
     let projects = ProjectIndex::new(cache.path().join("projects"))?;
+    let freshness = match (args.offline, args.prefer_offline) {
+        (true, _) => Freshness::Offline,
+        (_, true) => Freshness::PreferOffline,
+        _ => Freshness::Revalidate,
+    };
     let registry = match args.registry {
         Some(url) => NpmRegistry::new(url),
         None => NpmRegistry::discover(),
-    };
+    }
+    // Packument metadata outlives the process here, so a re-resolve against a
+    // warm store does not re-download what built it.
+    .with_packument_cache(PackumentCache::new(cache.path().join("packuments")))
+    .with_freshness(freshness);
     let options = InstallOptions {
         include_development: !args.production,
         frozen_lockfile: args.frozen_lockfile,
@@ -232,6 +249,9 @@ fn install_command(args: InstallArgs) -> Result<ExitCode, Failure> {
     }
     for (id, reason) in &report.platform_skipped {
         println!("skipped {id}: {reason}");
+    }
+    if let Some(reason) = &report.link.hardlink_fallback {
+        eprintln!("warning: {reason}");
     }
     if report.lockfile_upgraded {
         println!("opal.lock was written by an older build and has been re-resolved");

@@ -71,7 +71,7 @@ unresolved specifiers: 1
 ### `opal install` — install the dependencies in `package.json`
 
 ```bash
-opal install [--root <ROOT>] [--cache-dir <CACHE_DIR>] [--registry <URL>] [--production] [--frozen-lockfile]
+opal install [--root <ROOT>] [--cache-dir <CACHE_DIR>] [--registry <URL>] [--production] [--frozen-lockfile] [--offline | --prefer-offline]
 ```
 
 | Flag | Description |
@@ -79,8 +79,12 @@ opal install [--root <ROOT>] [--cache-dir <CACHE_DIR>] [--registry <URL>] [--pro
 | `--root` | Project directory. Defaults to the current directory |
 | `--cache-dir` | Cache location. Defaults to the discovered user cache directory |
 | `--registry` | Registry base URL. Defaults to `$OPAL_REGISTRY`, else the public npm registry |
-| `--production` | Skip `devDependencies` |
+| `--production` | Link `dependencies` only. `opal.lock` still records `devDependencies`, so it stays byte-identical and works in CI alongside `--frozen-lockfile` |
 | `--frozen-lockfile` | Fail instead of re-resolving when `opal.lock` does not match `package.json` |
+| `--offline` | Resolve from cached registry metadata only; never reach the network |
+| `--prefer-offline` | Use cached registry metadata however old it is, and fetch only what is missing |
+
+Packages declaring an `os` or `cpu` this host cannot run are recorded in `opal.lock` and skipped at install time, so one committed lockfile installs the right native binary on every platform.
 
 Resolves against the public npm registry, downloads tarballs into the shared CAS keyed by content hash, and links `node_modules` from the CAS via hardlinks — a reconciler that diffs `opal.lock` against disk and applies only the delta, so a killed install converges by re-running `opal install`:
 
