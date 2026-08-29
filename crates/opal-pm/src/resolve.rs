@@ -69,6 +69,11 @@ pub struct ResolvedPackage {
     pub integrity: Integrity,
     /// Sorted by dependency name.
     pub dependencies: Vec<ResolvedEdge>,
+    /// `os` and `cpu` as published. Recorded rather than applied here: a
+    /// lockfile that resolved away another platform's native binary would be
+    /// wrong the moment it was committed and installed on that platform.
+    pub os: Vec<String>,
+    pub cpu: Vec<String>,
 }
 
 /// What the root project asked for, kept so a `package.json` edit can be
@@ -78,6 +83,12 @@ pub struct RequirementRecord {
     pub class: DependencyClass,
     pub name: String,
     pub spec: String,
+    /// What this requirement resolved to, or `None` for an optional that was
+    /// skipped. Recorded rather than re-derived: the layout is planned from
+    /// the root edges, and deriving them from the resolved set by version
+    /// order picks a transitive dependency's higher major over the version the
+    /// project actually asked for.
+    pub version: Option<Version>,
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
@@ -96,20 +107,45 @@ impl Resolution {
 
     /// Root-level edges, resolved.
     pub fn roots(&self) -> Vec<PackageId> {
+        self.roots_for(true)
+    }
+
+    /// Root-level edges, with the project's own `devDependencies` dropped when
+    /// they are not being installed. A dev package that another root also
+    /// depends on is still reached, through that root.
+    pub fn roots_for(&self, include_development: bool) -> Vec<PackageId> {
         let mut roots: Vec<PackageId> = self
             .requirements
             .iter()
-            .filter_map(|requirement| {
-                self.packages
-                    .keys()
-                    .filter(|id| id.name == requirement.name)
-                    .max()
-                    .cloned()
+            .filter(|requirement| {
+                include_development || requirement.class != DependencyClass::Development
             })
+            .filter_map(|requirement| self.root_of(requirement))
             .collect();
         roots.sort();
         roots.dedup();
         roots
+    }
+
+    fn root_of(&self, requirement: &RequirementRecord) -> Option<PackageId> {
+        if let Some(version) = &requirement.version {
+            return Some(PackageId::new(requirement.name.clone(), version.clone()));
+        }
+        // No recorded version: a resolution built by hand, or one parsed from a
+        // lockfile written before the field existed. The spec still narrows it
+        // correctly for every range — only a dist-tag is unrecoverable here,
+        // because the tag maps to a version through the packument, not through
+        // anything the lockfile holds.
+        let versions = self
+            .packages
+            .keys()
+            .filter(|id| id.name == requirement.name)
+            .map(|id| &id.version);
+        match Range::parse(&requirement.spec) {
+            Ok(range) => range.max_satisfying(versions),
+            Err(_) => versions.max(),
+        }
+        .map(|version| PackageId::new(requirement.name.clone(), version.clone()))
     }
 }
 
@@ -139,6 +175,7 @@ pub fn resolve(
         packages: BTreeMap::new(),
         expanded: BTreeSet::new(),
         skipped: Vec::new(),
+        root_versions: BTreeMap::new(),
     }
     .run(root, options)
 }
@@ -150,6 +187,10 @@ struct Resolver<'a> {
     packages: BTreeMap<PackageId, ResolvedPackage>,
     expanded: BTreeSet<PackageId>,
     skipped: Vec<(String, String)>,
+    /// (name, spec) -> the version that root requirement resolved to. Keyed by
+    /// spec too, because a package can be both a dependency and a
+    /// devDependency at different ranges.
+    root_versions: BTreeMap<(String, String), Version>,
 }
 
 /// One unit of work: resolve `name @ spec`, requested by `parent`.
@@ -174,6 +215,7 @@ impl<'a> Resolver<'a> {
                 class: requirement.class,
                 name: requirement.name.clone(),
                 spec: requirement.spec.to_string(),
+                version: None,
             });
             queue.push_back(Request {
                 parent: None,
@@ -190,6 +232,13 @@ impl<'a> Resolver<'a> {
                 continue;
             };
             let id = PackageId::new(request.name.clone(), version);
+
+            if request.parent.is_none() {
+                self.root_versions.insert(
+                    (request.name.clone(), request.spec.to_string()),
+                    id.version.clone(),
+                );
+            }
 
             if let Some(parent) = &request.parent {
                 let edge = ResolvedEdge {
@@ -222,6 +271,13 @@ impl<'a> Resolver<'a> {
                     spec: requirement.spec,
                 });
             }
+        }
+
+        for requirement in &mut requirements {
+            requirement.version = self
+                .root_versions
+                .get(&(requirement.name.clone(), requirement.spec.clone()))
+                .cloned();
         }
 
         Ok(Resolution {
@@ -299,6 +355,8 @@ impl<'a> Resolver<'a> {
                 tarball: metadata.tarball.clone(),
                 integrity: metadata.integrity.clone(),
                 dependencies: Vec::new(),
+                os: metadata.manifest.os.clone(),
+                cpu: metadata.manifest.cpu.clone(),
             }
         });
         self.selected
@@ -325,24 +383,38 @@ impl<'a> Resolver<'a> {
 }
 
 /// Whether a lockfile still describes what `package.json` asks for.
-pub fn requirements_match(
-    resolution: &Resolution,
-    manifest: &Manifest,
-    include_development: bool,
-) -> bool {
-    let declared: Vec<RequirementRecord> = {
-        let mut declared: Vec<RequirementRecord> = manifest
-            .installable(include_development)
-            .map(|requirement| RequirementRecord {
-                class: requirement.class,
-                name: requirement.name.clone(),
-                spec: requirement.spec.to_string(),
-            })
-            .collect();
-        declared.sort_by(|left, right| (left.class, &left.name).cmp(&(right.class, &right.name)));
-        declared
-    };
-    declared == resolution.requirements
+///
+/// Always compares against the *whole* manifest, dev dependencies included: the
+/// lockfile is the resolution of everything the project declares, and
+/// `--production` is a filter applied when the tree is planned. Comparing a
+/// dev-filtered manifest against a dev-complete lockfile never matches, which
+/// is what made `--production` rewrite the lockfile and `--production
+/// --frozen-lockfile` fail against a perfectly good one.
+pub fn requirements_match(resolution: &Resolution, manifest: &Manifest) -> bool {
+    let mut declared: Vec<(DependencyClass, &str, String)> = manifest
+        .installable(true)
+        .map(|requirement| {
+            (
+                requirement.class,
+                requirement.name.as_str(),
+                requirement.spec.to_string(),
+            )
+        })
+        .collect();
+    declared.sort_by(|left, right| (left.0, left.1).cmp(&(right.0, right.1)));
+
+    let recorded: Vec<(DependencyClass, &str, String)> = resolution
+        .requirements
+        .iter()
+        .map(|requirement| {
+            (
+                requirement.class,
+                requirement.name.as_str(),
+                requirement.spec.clone(),
+            )
+        })
+        .collect();
+    declared == recorded
 }
 
 /// A range that was satisfied by reuse rather than by a fresh fetch.

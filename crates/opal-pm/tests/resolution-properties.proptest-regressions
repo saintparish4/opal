@@ -5,3 +5,4 @@
 # It is recommended to check this file in to source control so that
 # everyone who runs the test benefits from these saved cases.
 cc bd288da1e17fce6dd494d1fe63a5007a714ffec4ce8c4787f5ff7b1d866e3c84 # shrinks to plan = Plan { versions: [[Version { major: 0, minor: 0, patch: 0, prerelease: [], build: None }]], dependencies: [[Edge { package: 0, version: 0, shape: 6, optional: true }]], root: [Edge { package: 0, version: 0, shape: 0, optional: false }] }
+cc a8b0842eee8a1499fa8f9b13066bff68bac31d6ece60a081ad1bc0f532c13ff5 # shrinks to plan = Plan { versions: [[Version { major: 0, minor: 0, patch: 1, prerelease: [], build: None }, Version { major: 2, minor: 1, patch: 2, prerelease: [], build: None }]], dependencies: [[], []], root: [Edge { package: 0, version: 1, shape: 0, optional: false }, Edge { package: 0, version: 0, shape: 0, optional: true }] }

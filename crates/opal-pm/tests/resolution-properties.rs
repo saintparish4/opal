@@ -23,7 +23,9 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::rc::Rc;
 
+use opal_pm::link::{self, PlanOptions};
 use opal_pm::manifest::Manifest;
+use opal_pm::platform::Platform;
 use opal_pm::registry::{Packument, Registry, RegistryError};
 use opal_pm::resolve::{self, PackageId, Resolution, ResolveError, ResolveOptions};
 use opal_pm::semver::{Range, Version};
@@ -334,6 +336,60 @@ proptest! {
     }
 
     /// Absence is only ever tolerated where the manifest said it could be.
+    /// The invariant `test_every_root_requirement_is_met_or_recorded_as_skipped`
+    /// is one step short of: *some* resolved version satisfying the root's
+    /// range is not the same as the root resolving *to* one. Deriving the root
+    /// by version order satisfies the weaker property and still hoists a
+    /// transitive dependency's higher major into the project's own slot.
+    #[test]
+    fn test_every_root_resolves_to_a_version_its_own_spec_allows(plan in plan()) {
+        let universe = plan.build();
+        let Some(resolution) = universe.resolution() else { return Ok(()); };
+
+        for requirement in &resolution.requirements {
+            let Some(version) = &requirement.version else { continue };
+            let range = Range::parse(&requirement.spec).expect("every generated spec is a range");
+            prop_assert!(
+                range.satisfies(version),
+                "root {}@{} resolved to {}",
+                requirement.name, requirement.spec, version
+            );
+        }
+
+        for id in resolution.roots() {
+            let allowed = resolution
+                .requirements
+                .iter()
+                .filter(|requirement| requirement.name == id.name)
+                .any(|requirement| {
+                    Range::parse(&requirement.spec)
+                        .expect("every generated spec is a range")
+                        .satisfies(&id.version)
+                });
+            prop_assert!(allowed, "{id} is a root no root requirement allows");
+        }
+    }
+
+    /// A resolved package the layout never places is one that was downloaded
+    /// and thrown away — and, if it was the version a root asked for, one the
+    /// project cannot import.
+    #[test]
+    fn test_the_layout_places_every_package_the_resolution_keeps(plan in plan()) {
+        let universe = plan.build();
+        let Some(resolution) = universe.resolution() else { return Ok(()); };
+
+        let planned = link::plan(&resolution, &PlanOptions {
+            platform: Platform::new("linux", "x64"),
+            include_development: true,
+        });
+        prop_assert!(planned.platform_skipped.is_empty(), "no generated package constrains a platform");
+
+        let placed: BTreeSet<&PackageId> = planned.layout.values().collect();
+        for id in resolution.packages.keys() {
+            prop_assert!(placed.contains(id), "{id} was resolved but never placed");
+        }
+    }
+
     #[test]
     fn test_only_optional_dependencies_are_ever_skipped(plan in plan()) {
         let universe = plan.build();

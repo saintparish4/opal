@@ -9,6 +9,7 @@ pub mod lockfile;
 pub mod locks;
 pub mod manifest;
 pub mod package;
+pub mod platform;
 pub mod projects;
 pub mod registry;
 pub mod resolve;

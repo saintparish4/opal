@@ -23,6 +23,8 @@ pub struct Package {
     pub peer_dependencies: BTreeMap<String, String>,
     pub optional_peers: Vec<String>,
     pub bin: BTreeMap<String, String>,
+    pub os: Vec<String>,
+    pub cpu: Vec<String>,
     /// Extra files beyond the generated `package.json`, as (path, contents,
     /// executable).
     pub files: Vec<(String, Vec<u8>, bool)>,
@@ -38,6 +40,8 @@ impl Package {
             peer_dependencies: BTreeMap::new(),
             optional_peers: Vec::new(),
             bin: BTreeMap::new(),
+            os: Vec::new(),
+            cpu: Vec::new(),
             files: Vec::new(),
         }
     }
@@ -57,6 +61,13 @@ impl Package {
         self.peer_dependencies
             .insert(name.to_string(), spec.to_string());
         self.optional_peers.push(name.to_string());
+        self
+    }
+
+    /// Publishes with npm's `os`/`cpu` constraints, negations included.
+    pub fn platform(mut self, os: &[&str], cpu: &[&str]) -> Self {
+        self.os = os.iter().map(|item| (*item).to_string()).collect();
+        self.cpu = cpu.iter().map(|item| (*item).to_string()).collect();
         self
     }
 
@@ -107,6 +118,12 @@ impl Package {
         }
         if !self.bin.is_empty() {
             object.insert("bin".into(), serde_json::json!(self.bin));
+        }
+        if !self.os.is_empty() {
+            object.insert("os".into(), serde_json::json!(self.os));
+        }
+        if !self.cpu.is_empty() {
+            object.insert("cpu".into(), serde_json::json!(self.cpu));
         }
         value
     }

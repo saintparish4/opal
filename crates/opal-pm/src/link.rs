@@ -31,6 +31,7 @@ use opal_core::path::NormalizedPath;
 
 use crate::manifest::Manifest;
 use crate::package::{PackageError, PackageIndex};
+use crate::platform::Platform;
 use crate::resolve::{PackageId, Resolution};
 
 /// Some of a package's files are linked; its marker is not written.
@@ -90,13 +91,43 @@ pub struct LinkReport {
     pub bins: usize,
 }
 
-/// Places every resolved package, hoisting as far as each one can go.
-pub fn plan(resolution: &Resolution) -> Layout {
+#[derive(Clone, Debug)]
+pub struct PlanOptions {
+    /// The host a tree is being planned for. A value rather than a `cfg!` so
+    /// the lockfile stays platform-independent and a test can plan for a host
+    /// it is not running on.
+    pub platform: Platform,
+    /// Whether the project's own `devDependencies` are part of this tree.
+    pub include_development: bool,
+}
+
+impl Default for PlanOptions {
+    fn default() -> Self {
+        Self {
+            platform: Platform::host(),
+            include_development: true,
+        }
+    }
+}
+
+/// A planned tree, and what was left out of it.
+#[derive(Debug, Default)]
+pub struct Plan {
+    pub layout: Layout,
+    /// Packages this host cannot run, with the constraint that excluded them.
+    /// Reported rather than printed: `opal-pm` is a library and has no
+    /// business knowing about a terminal.
+    pub platform_skipped: Vec<(PackageId, String)>,
+}
+
+/// Places every resolved package this host can run, hoisting as far as each
+/// one can go.
+pub fn plan(resolution: &Resolution, options: &PlanOptions) -> Plan {
     let root = NormalizedPath::new(".");
-    let mut layout = Layout::new();
+    let mut plan = Plan::default();
     let mut visited: BTreeSet<(NormalizedPath, PackageId)> = BTreeSet::new();
     let mut queue: VecDeque<(NormalizedPath, PackageId)> = resolution
-        .roots()
+        .roots_for(options.include_development)
         .into_iter()
         .map(|id| (root.clone(), id))
         .collect();
@@ -108,10 +139,27 @@ pub fn plan(resolution: &Resolution) -> Layout {
             continue;
         }
 
-        let directory = placement(&owner, &id, &layout);
-        layout.insert(directory.clone(), id.clone());
+        let package = resolution.package(&id);
+        // A package that cannot run here is not placed, and neither is
+        // anything it alone depends on — that subtree is unreachable now.
+        if let Some(package) = package
+            && !options.platform.supports(&package.os, &package.cpu)
+        {
+            let reason = options.platform.rejection(&package.os, &package.cpu);
+            if !plan
+                .platform_skipped
+                .iter()
+                .any(|(skipped, _)| *skipped == id)
+            {
+                plan.platform_skipped.push((id.clone(), reason));
+            }
+            continue;
+        }
 
-        let Some(package) = resolution.package(&id) else {
+        let directory = placement(&owner, &id, &plan.layout);
+        plan.layout.insert(directory.clone(), id.clone());
+
+        let Some(package) = package else {
             continue;
         };
         for edge in &package.dependencies {
@@ -121,7 +169,8 @@ pub fn plan(resolution: &Resolution) -> Layout {
             ));
         }
     }
-    layout
+    plan.platform_skipped.sort();
+    plan
 }
 
 /// The shallowest directory whose `node_modules` slot for this name is free, or
@@ -525,17 +574,64 @@ mod tests {
                     version: Version::new(version.0, version.1, version.2),
                 })
                 .collect(),
+            os: Vec::new(),
+            cpu: Vec::new(),
         }
     }
 
+    fn only_on(mut package: ResolvedPackage, os: &str) -> ResolvedPackage {
+        package.os = vec![os.to_string()];
+        package
+    }
+
     fn resolution(roots: &[&str], packages: Vec<ResolvedPackage>) -> Resolution {
+        classified_resolution(
+            &roots
+                .iter()
+                .map(|name| (DependencyClass::Runtime, *name))
+                .collect::<Vec<_>>(),
+            packages,
+        )
+    }
+
+    /// Roots that publish exactly one version, so there is nothing to choose.
+    /// Ambiguity has to be spelled out with [`rooted_resolution`] — deriving it
+    /// by version order is the bug these tests exist to catch, and a helper
+    /// that does it quietly reintroduces it into every test written after.
+    fn classified_resolution(
+        roots: &[(DependencyClass, &str)],
+        packages: Vec<ResolvedPackage>,
+    ) -> Resolution {
+        let roots: Vec<(DependencyClass, &str, Version)> = roots
+            .iter()
+            .map(|(class, name)| {
+                let mut versions = packages
+                    .iter()
+                    .filter(|package| package.id.name == *name)
+                    .map(|package| package.id.version.clone());
+                let version = versions.next().expect("a root has to be resolved");
+                assert!(
+                    versions.next().is_none(),
+                    "{name} publishes more than one version: name the root's own"
+                );
+                (*class, *name, version)
+            })
+            .collect();
+        rooted_resolution(&roots, packages)
+    }
+
+    fn rooted_resolution(
+        roots: &[(DependencyClass, &str, Version)],
+        packages: Vec<ResolvedPackage>,
+    ) -> Resolution {
         Resolution {
             requirements: roots
                 .iter()
-                .map(|name| RequirementRecord {
-                    class: DependencyClass::Runtime,
+                .map(|(class, name, version)| RequirementRecord {
+                    class: *class,
                     name: (*name).to_string(),
                     spec: "*".to_string(),
+                    version: Some(version.clone()),
                 })
                 .collect(),
             packages: packages
@@ -544,6 +640,17 @@ mod tests {
                 .collect(),
             skipped: Vec::new(),
         }
+    }
+
+    fn linux() -> PlanOptions {
+        PlanOptions {
+            platform: Platform::new("linux", "x64"),
+            include_development: true,
+        }
+    }
+
+    fn layout_of(resolution: &Resolution) -> Layout {
+        plan(resolution, &linux()).layout
     }
 
     fn paths(layout: &Layout) -> Vec<String> {
@@ -555,7 +662,7 @@ mod tests {
 
     #[test]
     fn test_hoists_a_simple_tree_flat() {
-        let layout = plan(&resolution(
+        let layout = layout_of(&resolution(
             &["a"],
             vec![
                 package("a", (1, 0, 0), &[("b", (1, 0, 0))]),
@@ -573,7 +680,7 @@ mod tests {
 
     #[test]
     fn test_conflicting_versions_nest_under_the_dependent() {
-        let layout = plan(&resolution(
+        let layout = layout_of(&resolution(
             &["a", "b"],
             vec![
                 package("a", (1, 0, 0), &[("shared", (1, 0, 0))]),
@@ -594,7 +701,7 @@ mod tests {
 
     #[test]
     fn test_dependency_cycles_terminate() {
-        let layout = plan(&resolution(
+        let layout = layout_of(&resolution(
             &["a"],
             vec![
                 package("a", (1, 0, 0), &[("b", (1, 0, 0))]),
@@ -607,7 +714,7 @@ mod tests {
     #[test]
     fn test_plan_is_deterministic() {
         let build = || {
-            plan(&resolution(
+            layout_of(&resolution(
                 &["a", "b"],
                 vec![
                     package("a", (1, 0, 0), &[("shared", (1, 0, 0)), ("x", (1, 0, 0))]),
@@ -623,7 +730,7 @@ mod tests {
 
     #[test]
     fn test_scoped_packages_keep_their_scope_directory() {
-        let layout = plan(&resolution(
+        let layout = layout_of(&resolution(
             &["@scope/a"],
             vec![package("@scope/a", (1, 0, 0), &[])],
         ));
@@ -631,6 +738,105 @@ mod tests {
             paths(&layout),
             vec!["node_modules/@scope/a = @scope/a@1.0.0".to_string()]
         );
+    }
+
+    #[test]
+    fn test_a_root_keeps_its_own_version_when_a_dependency_wants_a_higher_one() {
+        // The project asks for shared@1, `b` asks for shared@2. Deriving the
+        // root from version order picks 2.0.0 and never places 1.0.0 at all.
+        let layout = layout_of(&rooted_resolution(
+            &[
+                (DependencyClass::Runtime, "shared", Version::new(1, 0, 0)),
+                (DependencyClass::Runtime, "b", Version::new(1, 0, 0)),
+            ],
+            vec![
+                package("shared", (1, 0, 0), &[]),
+                package("shared", (2, 0, 0), &[]),
+                package("b", (1, 0, 0), &[("shared", (2, 0, 0))]),
+            ],
+        ));
+        assert_eq!(
+            layout.get(&NormalizedPath::new("node_modules/shared")),
+            Some(&PackageId::new("shared", Version::new(1, 0, 0)))
+        );
+        assert_eq!(
+            layout.get(&NormalizedPath::new("node_modules/b/node_modules/shared")),
+            Some(&PackageId::new("shared", Version::new(2, 0, 0)))
+        );
+    }
+
+    #[test]
+    fn test_a_package_this_host_cannot_run_is_left_out_with_its_subtree() {
+        let plan = plan(
+            &resolution(
+                &["a", "native"],
+                vec![
+                    package("a", (1, 0, 0), &[]),
+                    only_on(
+                        package("native", (1, 0, 0), &[("helper", (1, 0, 0))]),
+                        "darwin",
+                    ),
+                    package("helper", (1, 0, 0), &[]),
+                ],
+            ),
+            &linux(),
+        );
+        assert_eq!(paths(&plan.layout), vec!["node_modules/a = a@1.0.0"]);
+        assert_eq!(plan.platform_skipped.len(), 1);
+        assert_eq!(
+            plan.platform_skipped[0].1,
+            "requires os darwin (host is linux)"
+        );
+    }
+
+    #[test]
+    fn test_the_same_package_is_placed_for_a_host_that_can_run_it() {
+        let resolution = resolution(
+            &["native"],
+            vec![only_on(package("native", (1, 0, 0), &[]), "darwin")],
+        );
+        let plan = plan(
+            &resolution,
+            &PlanOptions {
+                platform: Platform::new("darwin", "arm64"),
+                include_development: true,
+            },
+        );
+        assert_eq!(
+            paths(&plan.layout),
+            vec!["node_modules/native = native@1.0.0"]
+        );
+        assert!(plan.platform_skipped.is_empty());
+    }
+
+    #[test]
+    fn test_a_production_plan_drops_dev_roots_but_keeps_shared_packages() {
+        let resolution = classified_resolution(
+            &[
+                (DependencyClass::Runtime, "a"),
+                (DependencyClass::Development, "tool"),
+            ],
+            vec![
+                package("a", (1, 0, 0), &[("shared", (1, 0, 0))]),
+                package("tool", (1, 0, 0), &[("shared", (1, 0, 0))]),
+                package("shared", (1, 0, 0), &[]),
+            ],
+        );
+        let production = plan(
+            &resolution,
+            &PlanOptions {
+                include_development: false,
+                ..linux()
+            },
+        );
+        assert_eq!(
+            paths(&production.layout),
+            vec![
+                "node_modules/a = a@1.0.0",
+                "node_modules/shared = shared@1.0.0"
+            ]
+        );
+        assert_eq!(plan(&resolution, &linux()).layout.len(), 3);
     }
 
     #[test]

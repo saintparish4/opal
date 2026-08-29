@@ -6,15 +6,24 @@
 //! dependency moved.
 //!
 //! ```text
-//! opal-lock 1
-//! require dependency express ^4.18.2
-//! pkg accepts 1.3.8 sha512-… https://registry.npmjs.org/accepts/-/accepts-1.3.8.tgz
+//! opal-lock 2
+//! require dependency express 4.18.2 ^4.18.2
+//! require optionalDependency fsevents - ^2.3.0
+//! pkg accepts 1.3.8 sha512-… - - https://registry.npmjs.org/accepts/-/accepts-1.3.8.tgz
+//! pkg fsevents 2.3.3 sha512-… darwin x64,arm64 https://registry.npmjs.org/…
 //! dep express 4.18.2 accepts 1.3.8 ^1.3.8
 //! skip fsevents no version satisfies ^2.3.0
 //! ```
 //!
 //! Any field that can contain a space — a range like `>=1 <2`, a skip reason —
-//! is last on its line, so no escaping is needed anywhere.
+//! is last on its line, so no escaping is needed anywhere. `-` is the empty
+//! marker: an unresolved requirement, or an unconstrained `os`/`cpu`.
+//!
+//! **v2** added the resolved version to `require` and `os`/`cpu` to `pkg`. Both
+//! exist so the lockfile alone determines the tree: without the first, the root
+//! of each dependency chain has to be guessed from version order, and without
+//! the second, platform filtering would have to happen during resolution and
+//! the file would stop being portable across platforms.
 
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
@@ -28,7 +37,9 @@ use crate::resolve::{PackageId, RequirementRecord, Resolution, ResolvedEdge, Res
 use crate::semver::Version;
 
 pub const LOCKFILE_NAME: &str = "opal.lock";
-pub const LOCKFILE_VERSION: u32 = 1;
+pub const LOCKFILE_VERSION: u32 = 2;
+/// Stands in for a field with nothing in it, so every line keeps its shape.
+const EMPTY: &str = "-";
 
 /// The new lockfile is written and fsynced; the rename over the old one has not
 /// happened yet.
@@ -53,6 +64,18 @@ pub enum LockfileError {
 }
 
 impl LockfileError {
+    /// An older lockfile, which `opal install` replaces by re-resolving. A
+    /// *newer* one is not this: re-resolving would overwrite a file written by
+    /// a build that knows more than this one does.
+    pub fn is_outdated_version(&self) -> bool {
+        match self {
+            Self::Version { found, .. } => found
+                .parse::<u32>()
+                .is_ok_and(|found| found < LOCKFILE_VERSION),
+            _ => false,
+        }
+    }
+
     fn io(path: impl Into<PathBuf>, source: std::io::Error) -> Self {
         Self::Io {
             path: path.into(),
@@ -91,16 +114,25 @@ pub fn render(resolution: &Resolution) -> String {
 
     for requirement in &resolution.requirements {
         out.push_str(&format!(
-            "require {} {} {}\n",
+            "require {} {} {} {}\n",
             class_name(requirement.class),
             requirement.name,
+            requirement
+                .version
+                .as_ref()
+                .map_or_else(|| EMPTY.to_string(), ToString::to_string),
             requirement.spec
         ));
     }
     for package in resolution.packages.values() {
         out.push_str(&format!(
-            "pkg {} {} {} {}\n",
-            package.id.name, package.id.version, package.integrity, package.tarball
+            "pkg {} {} {} {} {} {}\n",
+            package.id.name,
+            package.id.version,
+            package.integrity,
+            render_list(&package.os),
+            render_list(&package.cpu),
+            package.tarball
         ));
     }
     for package in resolution.packages.values() {
@@ -158,22 +190,32 @@ pub fn parse(path: &Path, text: &str) -> Result<Resolution, LockfileError> {
 
         match kind {
             "require" => {
-                let [class, name, spec] = split_n::<3>(rest)
-                    .ok_or_else(|| malformed(number, "expected: require <class> <name> <spec>"))?;
+                let [class, name, version, spec] = split_n::<4>(rest).ok_or_else(|| {
+                    malformed(number, "expected: require <class> <name> <version> <spec>")
+                })?;
+                let version = match version {
+                    EMPTY => None,
+                    text => Some(
+                        Version::parse(text)
+                            .map_err(|error| malformed(number, &error.to_string()))?,
+                    ),
+                };
                 resolution.requirements.push(RequirementRecord {
                     class: parse_class(class)
                         .ok_or_else(|| malformed(number, "unknown dependency class"))?,
                     name: name.to_string(),
                     spec: spec.to_string(),
+                    version,
                 });
             }
             "pkg" => {
-                let [name, version, integrity, tarball] = split_n::<4>(rest).ok_or_else(|| {
-                    malformed(
-                        number,
-                        "expected: pkg <name> <version> <integrity> <tarball>",
-                    )
-                })?;
+                let [name, version, integrity, os, cpu, tarball] =
+                    split_n::<6>(rest).ok_or_else(|| {
+                        malformed(
+                            number,
+                            "expected: pkg <name> <version> <integrity> <os> <cpu> <tarball>",
+                        )
+                    })?;
                 let version = Version::parse(version)
                     .map_err(|error| malformed(number, &error.to_string()))?;
                 let integrity = Integrity::parse(integrity)
@@ -186,6 +228,8 @@ pub fn parse(path: &Path, text: &str) -> Result<Resolution, LockfileError> {
                         tarball: tarball.to_string(),
                         integrity,
                         dependencies: Vec::new(),
+                        os: parse_list(os),
+                        cpu: parse_list(cpu),
                     },
                 );
             }
@@ -259,6 +303,26 @@ fn class_name(class: DependencyClass) -> &'static str {
     }
 }
 
+/// Comma-separated, or `-` when there is nothing to constrain. npm's values
+/// never contain a comma or a space, so no escaping is needed.
+fn render_list(items: &[String]) -> String {
+    if items.is_empty() {
+        EMPTY.to_string()
+    } else {
+        items.join(",")
+    }
+}
+
+fn parse_list(text: &str) -> Vec<String> {
+    if text == EMPTY {
+        return Vec::new();
+    }
+    text.split(',')
+        .filter(|item| !item.is_empty())
+        .map(str::to_string)
+        .collect()
+}
+
 fn parse_class(text: &str) -> Option<DependencyClass> {
     Some(match text {
         "dependency" => DependencyClass::Runtime,
@@ -289,6 +353,8 @@ mod tests {
                     spec: ">=1.3.0 <2".to_string(),
                     version: Version::new(1, 3, 8),
                 }],
+                os: Vec::new(),
+                cpu: Vec::new(),
             },
         );
         let accepts = PackageId::new("accepts", Version::new(1, 3, 8));
@@ -299,15 +365,26 @@ mod tests {
                 tarball: "https://registry.example/accepts-1.3.8.tgz".to_string(),
                 integrity: Integrity::of(Algorithm::Sha512, b"accepts"),
                 dependencies: Vec::new(),
+                os: vec!["darwin".to_string(), "!win32".to_string()],
+                cpu: vec!["x64".to_string(), "arm64".to_string()],
             },
         );
 
         Resolution {
-            requirements: vec![RequirementRecord {
-                class: DependencyClass::Runtime,
-                name: "express".to_string(),
-                spec: "^4.18.2".to_string(),
-            }],
+            requirements: vec![
+                RequirementRecord {
+                    class: DependencyClass::Runtime,
+                    name: "express".to_string(),
+                    spec: "^4.18.2".to_string(),
+                    version: Some(Version::new(4, 18, 2)),
+                },
+                RequirementRecord {
+                    class: DependencyClass::Optional,
+                    name: "fsevents".to_string(),
+                    spec: "^2.3.0".to_string(),
+                    version: None,
+                },
+            ],
             packages,
             skipped: vec![("fsevents".to_string(), "not in the registry".to_string())],
         }
@@ -329,10 +406,14 @@ mod tests {
             .skip(1)
             .map(|line| line.split(' ').next().unwrap())
             .collect();
-        assert_eq!(kinds, vec!["require", "pkg", "pkg", "dep", "skip"]);
+        assert_eq!(
+            kinds,
+            vec!["require", "require", "pkg", "pkg", "dep", "skip"]
+        );
         // BTreeMap ordering puts accepts before express, whatever order they
         // were resolved in.
         assert!(text.contains("\npkg accepts 1.3.8 "));
+        assert!(text.contains(" darwin,!win32 x64,arm64 "));
         assert_eq!(render(&sample()), text);
     }
 
@@ -351,14 +432,51 @@ mod tests {
     fn test_rejects_a_future_version() {
         let error = parse(Path::new("opal.lock"), "opal-lock 99\n").unwrap_err();
         assert!(matches!(error, LockfileError::Version { .. }));
+        // Re-resolving would overwrite a lockfile written by a build that
+        // knows more than this one does.
+        assert!(!error.is_outdated_version());
+    }
+
+    #[test]
+    fn test_an_older_version_is_replaceable_rather_than_fatal() {
+        let error = parse(Path::new("opal.lock"), "opal-lock 1\n").unwrap_err();
+        assert!(error.is_outdated_version());
+        let garbage = parse(Path::new("opal.lock"), "opal-lock v1\n").unwrap_err();
+        assert!(!garbage.is_outdated_version());
+    }
+
+    #[test]
+    fn test_a_requirement_without_a_resolution_round_trips() {
+        let text = render(&sample());
+        assert!(text.contains("require optionalDependency fsevents - ^2.3.0\n"));
+        let parsed = parse(Path::new("opal.lock"), &text).unwrap();
+        assert_eq!(parsed.requirements[1].version, None);
+        assert_eq!(parsed.requirements[0].version, Some(Version::new(4, 18, 2)));
+    }
+
+    #[test]
+    fn test_platform_constraints_round_trip() {
+        let parsed = parse(Path::new("opal.lock"), &render(&sample())).unwrap();
+        let accepts = parsed
+            .package(&PackageId::new("accepts", Version::new(1, 3, 8)))
+            .unwrap();
+        assert_eq!(accepts.os, vec!["darwin".to_string(), "!win32".to_string()]);
+        assert_eq!(accepts.cpu, vec!["x64".to_string(), "arm64".to_string()]);
+
+        let express = parsed
+            .package(&PackageId::new("express", Version::new(4, 18, 2)))
+            .unwrap();
+        assert!(express.os.is_empty() && express.cpu.is_empty());
     }
 
     #[test]
     fn test_rejects_malformed_lines() {
         for text in [
-            "opal-lock 1\npkg only-a-name\n",
-            "opal-lock 1\nnonsense a b\n",
-            "opal-lock 1\ndep ghost 1.0.0 x 1.0.0 ^1\n",
+            "opal-lock 2\npkg only-a-name\n",
+            "opal-lock 2\nnonsense a b\n",
+            "opal-lock 2\ndep ghost 1.0.0 x 1.0.0 ^1\n",
+            "opal-lock 2\nrequire dependency a ^1\n",
+            "opal-lock 2\nrequire dependency a not-a-version ^1\n",
         ] {
             assert!(parse(Path::new("opal.lock"), text).is_err(), "{text:?}");
         }

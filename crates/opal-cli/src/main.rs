@@ -197,6 +197,7 @@ fn install_command(args: InstallArgs) -> Result<ExitCode, Failure> {
     let options = InstallOptions {
         include_development: !args.production,
         frozen_lockfile: args.frozen_lockfile,
+        ..InstallOptions::default()
     };
 
     let started = Instant::now();
@@ -228,6 +229,12 @@ fn install_command(args: InstallArgs) -> Result<ExitCode, Failure> {
     );
     for (name, reason) in &report.skipped {
         println!("skipped {name}: {reason}");
+    }
+    for (id, reason) in &report.platform_skipped {
+        println!("skipped {id}: {reason}");
+    }
+    if report.lockfile_upgraded {
+        println!("opal.lock was written by an older build and has been re-resolved");
     }
     Ok(ExitCode::SUCCESS)
 }

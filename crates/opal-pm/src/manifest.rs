@@ -112,6 +112,10 @@ pub struct Manifest {
     pub requirements: Vec<Requirement>,
     /// `bin` entries, normalized to a map of command name to relative path.
     pub bin: BTreeMap<String, String>,
+    /// `os` and `cpu`, verbatim — `!` negations included, since dropping one
+    /// would invert what it constrains. Empty means "runs anywhere".
+    pub os: Vec<String>,
+    pub cpu: Vec<String>,
 }
 
 impl Manifest {
@@ -154,6 +158,8 @@ impl Manifest {
             name,
             version,
             bin: read_bin(value),
+            os: read_string_list(value, "os"),
+            cpu: read_string_list(value, "cpu"),
             ..Self::default()
         };
 
@@ -181,10 +187,54 @@ impl Manifest {
                 });
             }
         }
+        manifest.dedupe_requirements();
         manifest
             .requirements
             .sort_by(|left, right| (left.class, &left.name).cmp(&(right.class, &right.name)));
         manifest
+    }
+
+    /// npm's rule: "entries in optionalDependencies will override entries of
+    /// the same name in dependencies". A name left in two installable classes
+    /// at conflicting ranges resolves twice and then places twice, into one
+    /// directory — the second version silently overwriting the first.
+    ///
+    /// Peers are untouched: depending on a package *and* declaring a peer range
+    /// for it is ordinary, and the two say different things.
+    fn dedupe_requirements(&mut self) {
+        fn precedence(class: DependencyClass) -> Option<u8> {
+            match class {
+                DependencyClass::Optional => Some(0),
+                DependencyClass::Runtime => Some(1),
+                DependencyClass::Development => Some(2),
+                DependencyClass::Peer | DependencyClass::OptionalPeer => None,
+            }
+        }
+
+        let mut winner: BTreeMap<&str, u8> = BTreeMap::new();
+        for requirement in &self.requirements {
+            if let Some(rank) = precedence(requirement.class) {
+                winner
+                    .entry(requirement.name.as_str())
+                    .and_modify(|best| *best = (*best).min(rank))
+                    .or_insert(rank);
+            }
+        }
+
+        let mut kept: BTreeSet<&str> = BTreeSet::new();
+        let mut keep = Vec::with_capacity(self.requirements.len());
+        for requirement in &self.requirements {
+            keep.push(match precedence(requirement.class) {
+                None => true,
+                Some(rank) => {
+                    winner.get(requirement.name.as_str()) == Some(&rank)
+                        && kept.insert(requirement.name.as_str())
+                }
+            });
+        }
+
+        let mut keep = keep.into_iter();
+        self.requirements.retain(|_| keep.next() == Some(true));
     }
 
     /// Requirements that an install should fetch: runtime always, dev only for
@@ -204,6 +254,20 @@ impl Manifest {
             .iter()
             .find(|requirement| requirement.name == name)
             .map(|requirement| requirement.class)
+    }
+}
+
+/// `os` and `cpu` are arrays, but a single string appears in the wild often
+/// enough to accept.
+fn read_string_list(value: &Value, field: &str) -> Vec<String> {
+    match value.get(field) {
+        Some(Value::String(single)) => vec![single.clone()],
+        Some(Value::Array(items)) => items
+            .iter()
+            .filter_map(Value::as_str)
+            .map(str::to_string)
+            .collect(),
+        _ => Vec::new(),
     }
 }
 
@@ -326,6 +390,60 @@ mod tests {
         assert_eq!(manifest.requirements.len(), 1);
         assert_eq!(manifest.requirements[0].name, "b");
         assert!(manifest.bin.is_empty());
+    }
+
+    #[test]
+    fn test_an_optional_declaration_overrides_a_required_one() {
+        let parsed = manifest(serde_json::json!({
+            "dependencies": { "shared": "^1.0.0", "kept": "^1.0.0" },
+            "devDependencies": { "shared": "^3.0.0" },
+            "optionalDependencies": { "shared": "^2.0.0" },
+            "peerDependencies": { "kept": ">=1" },
+        }));
+
+        let shared: Vec<(DependencyClass, String)> = parsed
+            .requirements
+            .iter()
+            .filter(|requirement| requirement.name == "shared")
+            .map(|requirement| (requirement.class, requirement.spec.to_string()))
+            .collect();
+        assert_eq!(
+            shared,
+            vec![(DependencyClass::Optional, "^2.0.0".to_string())]
+        );
+
+        // A peer alongside a dependency of the same name is left alone.
+        assert_eq!(
+            parsed
+                .requirements
+                .iter()
+                .filter(|requirement| requirement.name == "kept")
+                .count(),
+            2
+        );
+    }
+
+    #[test]
+    fn test_a_dependency_overrides_a_dev_declaration() {
+        let parsed = manifest(serde_json::json!({
+            "dependencies": { "shared": "^1.0.0" },
+            "devDependencies": { "shared": "^3.0.0" },
+        }));
+        assert_eq!(parsed.class_of("shared"), Some(DependencyClass::Runtime));
+        assert_eq!(parsed.requirements.len(), 1);
+    }
+
+    #[test]
+    fn test_reads_platform_constraints() {
+        let parsed = manifest(serde_json::json!({
+            "os": ["darwin", "!win32"],
+            "cpu": "arm64",
+        }));
+        assert_eq!(parsed.os, vec!["darwin".to_string(), "!win32".to_string()]);
+        assert_eq!(parsed.cpu, vec!["arm64".to_string()]);
+
+        let bare = manifest(serde_json::json!({ "os": 7 }));
+        assert!(bare.os.is_empty() && bare.cpu.is_empty());
     }
 
     #[test]

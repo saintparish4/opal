@@ -15,6 +15,7 @@ use opal_pm::fixtures::{FixtureRegistry, Package, write_project};
 use opal_pm::install::{self, InstallError, InstallOptions, InstallReport};
 use opal_pm::lockfile;
 use opal_pm::package::PackageStore;
+use opal_pm::platform::Platform;
 use opal_pm::projects::ProjectIndex;
 use opal_pm::registry::NpmRegistry;
 
@@ -344,6 +345,308 @@ fn test_production_install_skips_dev_dependencies() {
 
     assert!(sandbox.installed("node_modules/a"));
     assert!(!sandbox.path("node_modules/tool").exists());
+}
+
+#[test]
+fn test_a_root_pin_survives_a_higher_transitive_version() {
+    let mut sandbox = Sandbox::new();
+    sandbox
+        .registry
+        .publish(Package::new("shared", "1.0.0"))
+        .publish(Package::new("shared", "2.0.0"))
+        .publish(Package::new("b", "1.0.0").dependency("shared", "^2.0.0"));
+    sandbox.project(serde_json::json!({
+        "dependencies": { "shared": "^1.0.0", "b": "^1.0.0" }
+    }));
+
+    sandbox.install().expect("install");
+
+    // Deriving the root from version order hoists b's 2.0.0 into the project's
+    // own slot and never places 1.0.0 at all — a silently wrong major.
+    let installed = std::fs::read_to_string(sandbox.path("node_modules/shared/package.json"))
+        .expect("shared is installed");
+    assert!(
+        installed.contains("\"version\": \"1.0.0\""),
+        "the project asked for shared@^1.0.0: {installed}"
+    );
+    assert!(sandbox.installed("node_modules/b/node_modules/shared"));
+}
+
+#[test]
+fn test_a_dist_tag_root_survives_a_higher_transitive_version() {
+    let mut sandbox = Sandbox::new();
+    // The fixture registry points `latest` at whatever was published last, so
+    // this leaves 2.0.0 published but untagged.
+    sandbox
+        .registry
+        .publish(Package::new("shared", "2.0.0"))
+        .publish(Package::new("shared", "1.0.0"))
+        .publish(Package::new("b", "1.0.0").dependency("shared", "^2.0.0"));
+    sandbox.project(serde_json::json!({
+        "dependencies": { "shared": "latest", "b": "^1.0.0" }
+    }));
+
+    sandbox.install().expect("install");
+
+    // A tag maps to a version through the packument, so this is the case the
+    // spec alone cannot recover — only the version recorded in the lockfile.
+    let installed = std::fs::read_to_string(sandbox.path("node_modules/shared/package.json"))
+        .expect("shared is installed");
+    assert!(installed.contains("\"version\": \"1.0.0\""), "{installed}");
+    assert!(
+        sandbox
+            .lockfile()
+            .contains("require dependency shared 1.0.0 latest\n")
+    );
+
+    // And again from the lockfile, without the registry to ask.
+    let report = sandbox.install().expect("second install");
+    assert!(!report.resolved);
+    let installed = std::fs::read_to_string(sandbox.path("node_modules/shared/package.json"))
+        .expect("shared is installed");
+    assert!(installed.contains("\"version\": \"1.0.0\""), "{installed}");
+}
+
+#[test]
+fn test_production_leaves_the_lockfile_alone() {
+    let mut sandbox = Sandbox::new();
+    sandbox
+        .registry
+        .publish(Package::new("a", "1.0.0"))
+        .publish(Package::new("tool", "1.0.0"));
+    sandbox.project(serde_json::json!({
+        "dependencies": { "a": "^1.0.0" },
+        "devDependencies": { "tool": "^1.0.0" }
+    }));
+
+    sandbox.install().expect("dev install");
+    let dev_lockfile = sandbox.lockfile();
+
+    let report = sandbox
+        .install_with(&InstallOptions {
+            include_development: false,
+            ..InstallOptions::default()
+        })
+        .expect("production install");
+
+    assert!(!report.resolved, "a dev lockfile already answers this");
+    assert_eq!(
+        sandbox.lockfile(),
+        dev_lockfile,
+        "opal.lock must not change"
+    );
+    assert!(sandbox.installed("node_modules/a"));
+    assert!(!sandbox.path("node_modules/tool").exists());
+    assert_eq!(report.fetched, 0, "tool is neither linked nor fetched");
+}
+
+#[test]
+fn test_production_and_frozen_lockfile_work_together() {
+    let mut sandbox = Sandbox::new();
+    sandbox
+        .registry
+        .publish(Package::new("a", "1.0.0"))
+        .publish(Package::new("tool", "1.0.0"));
+    sandbox.project(serde_json::json!({
+        "dependencies": { "a": "^1.0.0" },
+        "devDependencies": { "tool": "^1.0.0" }
+    }));
+
+    sandbox.install().expect("dev install");
+    std::fs::remove_dir_all(sandbox.path("node_modules")).expect("clear the tree");
+
+    // The CI invocation: a committed lockfile, no dev dependencies, and no
+    // permission to re-resolve.
+    let report = sandbox
+        .install_with(&InstallOptions {
+            include_development: false,
+            frozen_lockfile: true,
+            ..InstallOptions::default()
+        })
+        .expect("production frozen install");
+
+    assert!(!report.resolved);
+    assert!(sandbox.installed("node_modules/a"));
+    assert!(!sandbox.path("node_modules/tool").exists());
+}
+
+#[test]
+fn test_a_dev_only_package_is_still_linked_when_a_runtime_dependency_needs_it() {
+    let mut sandbox = Sandbox::new();
+    sandbox
+        .registry
+        .publish(Package::new("shared", "1.0.0"))
+        .publish(Package::new("a", "1.0.0").dependency("shared", "^1.0.0"));
+    sandbox.project(serde_json::json!({
+        "dependencies": { "a": "^1.0.0" },
+        "devDependencies": { "shared": "^1.0.0" }
+    }));
+
+    sandbox
+        .install_with(&InstallOptions {
+            include_development: false,
+            ..InstallOptions::default()
+        })
+        .expect("production install");
+
+    assert!(
+        sandbox.installed("node_modules/shared"),
+        "a reaches shared, so dropping the dev root must not drop the package"
+    );
+}
+
+#[test]
+fn test_a_package_for_another_platform_is_recorded_but_never_installed() {
+    let mut sandbox = Sandbox::new();
+    sandbox
+        .registry
+        .publish(Package::new("a", "1.0.0"))
+        .publish(Package::new("native-darwin", "1.0.0").platform(&["darwin"], &[]))
+        .publish(Package::new("native-linux", "1.0.0").platform(&["linux"], &[]));
+    sandbox.project(serde_json::json!({
+        "dependencies": { "a": "^1.0.0" },
+        "optionalDependencies": {
+            "native-darwin": "^1.0.0",
+            "native-linux": "^1.0.0"
+        }
+    }));
+
+    let report = sandbox
+        .install_with(&InstallOptions {
+            platform: Platform::new("linux", "x64"),
+            ..InstallOptions::default()
+        })
+        .expect("install");
+
+    assert!(sandbox.installed("node_modules/native-linux"));
+    assert!(!sandbox.path("node_modules/native-darwin").exists());
+    assert_eq!(report.platform_skipped.len(), 1);
+    assert_eq!(
+        report.platform_skipped[0].0.to_string(),
+        "native-darwin@1.0.0"
+    );
+    // Never downloaded either: a, plus the one native binary this host runs.
+    assert_eq!(report.fetched, 2);
+
+    // The lockfile stays portable — it records the package it did not install,
+    // constraints and all, so the same file drives a macOS install.
+    let lockfile = sandbox.lockfile();
+    assert!(lockfile.contains("pkg native-darwin 1.0.0 "));
+    assert!(lockfile.contains(" darwin - "));
+}
+
+#[test]
+fn test_the_same_lockfile_installs_the_other_platforms_binary() {
+    let mut sandbox = Sandbox::new();
+    sandbox
+        .registry
+        .publish(Package::new("native-darwin", "1.0.0").platform(&["darwin"], &[]))
+        .publish(Package::new("native-linux", "1.0.0").platform(&["linux"], &[]));
+    sandbox.project(serde_json::json!({
+        "optionalDependencies": {
+            "native-darwin": "^1.0.0",
+            "native-linux": "^1.0.0"
+        }
+    }));
+
+    sandbox
+        .install_with(&InstallOptions {
+            platform: Platform::new("linux", "x64"),
+            ..InstallOptions::default()
+        })
+        .expect("linux install");
+    let linux_lockfile = sandbox.lockfile();
+    std::fs::remove_dir_all(sandbox.path("node_modules")).expect("clear the tree");
+
+    let report = sandbox
+        .install_with(&InstallOptions {
+            platform: Platform::new("darwin", "arm64"),
+            frozen_lockfile: true,
+            ..InstallOptions::default()
+        })
+        .expect("darwin install from the same lockfile");
+
+    assert!(!report.resolved, "the lockfile is platform-independent");
+    assert_eq!(sandbox.lockfile(), linux_lockfile);
+    assert!(sandbox.installed("node_modules/native-darwin"));
+    assert!(!sandbox.path("node_modules/native-linux").exists());
+}
+
+#[test]
+fn test_a_cpu_constraint_is_checked_independently_of_os() {
+    let mut sandbox = Sandbox::new();
+    sandbox
+        .registry
+        .publish(Package::new("arm-only", "1.0.0").platform(&["linux"], &["arm64"]));
+    sandbox.project(serde_json::json!({
+        "optionalDependencies": { "arm-only": "^1.0.0" }
+    }));
+
+    let report = sandbox
+        .install_with(&InstallOptions {
+            platform: Platform::new("linux", "x64"),
+            ..InstallOptions::default()
+        })
+        .expect("install");
+
+    assert!(!sandbox.path("node_modules/arm-only").exists());
+    assert_eq!(report.platform_skipped.len(), 1);
+    assert!(report.platform_skipped[0].1.contains("cpu arm64"));
+}
+
+#[test]
+fn test_an_older_lockfile_is_re_resolved() {
+    let mut sandbox = Sandbox::new();
+    sandbox.registry.publish(Package::new("a", "1.0.0"));
+    sandbox.project(serde_json::json!({ "dependencies": { "a": "^1.0.0" } }));
+
+    sandbox.install().expect("install");
+    let v1 = sandbox.lockfile().replace("opal-lock 2", "opal-lock 1");
+    std::fs::write(sandbox.path("opal.lock"), &v1).expect("downgrade the lockfile");
+
+    let report = sandbox.install().expect("install over a v1 lockfile");
+
+    assert!(report.lockfile_upgraded);
+    assert!(report.resolved);
+    assert!(sandbox.lockfile().starts_with("opal-lock 2\n"));
+    assert!(sandbox.installed("node_modules/a"));
+}
+
+#[test]
+fn test_an_older_lockfile_is_not_rewritten_under_frozen_lockfile() {
+    let mut sandbox = Sandbox::new();
+    sandbox.registry.publish(Package::new("a", "1.0.0"));
+    sandbox.project(serde_json::json!({ "dependencies": { "a": "^1.0.0" } }));
+
+    sandbox.install().expect("install");
+    let v1 = sandbox.lockfile().replace("opal-lock 2", "opal-lock 1");
+    std::fs::write(sandbox.path("opal.lock"), &v1).expect("downgrade the lockfile");
+
+    let error = sandbox
+        .install_with(&InstallOptions {
+            frozen_lockfile: true,
+            ..InstallOptions::default()
+        })
+        .expect_err("CI must not silently upgrade a committed lockfile");
+
+    assert!(matches!(error, InstallError::Lockfile(_)), "{error}");
+    assert_eq!(sandbox.lockfile(), v1, "the lockfile is untouched");
+}
+
+#[test]
+fn test_a_newer_lockfile_is_never_overwritten() {
+    let mut sandbox = Sandbox::new();
+    sandbox.registry.publish(Package::new("a", "1.0.0"));
+    sandbox.project(serde_json::json!({ "dependencies": { "a": "^1.0.0" } }));
+
+    sandbox.install().expect("install");
+    let future = sandbox.lockfile().replace("opal-lock 2", "opal-lock 99");
+    std::fs::write(sandbox.path("opal.lock"), &future).expect("write a future lockfile");
+
+    let error = sandbox.install().expect_err("a future lockfile is fatal");
+
+    assert!(matches!(error, InstallError::Lockfile(_)), "{error}");
+    assert_eq!(sandbox.lockfile(), future);
 }
 
 #[test]
