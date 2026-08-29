@@ -594,7 +594,7 @@ checksum = "384b8ab6d37215f3c5301a95a4accb5d64aa607f1fcb26a11b5303878451b4fe"
 
 [[package]]
 name = "opal-cli"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "clap",
  "indicatif",
@@ -606,7 +606,7 @@ dependencies = [
 
 [[package]]
 name = "opal-core"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "blake3",
  "oxc_allocator",
@@ -623,7 +623,7 @@ dependencies = [
 
 [[package]]
 name = "opal-pm"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "flate2",
  "libc",
