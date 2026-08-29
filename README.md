@@ -2,33 +2,48 @@
 
 An all-in-one JavaScript/TypeScript toolkit — package manager, runtime, bundler, and test runner in a single native binary, built around one shared incremental module graph engine (`opal-core`) instead of four independently-implemented resolvers.
 
-> **Status**: Phase 0 (`opal-core`) and Phase 1 (`opal-pm`) are complete and meet their exit criteria. `opal install` against a real `package.json` (e.g. `express`) produces a `node_modules` tree Node can `require` against, `opal-core`'s resolver walks that tree with nothing unresolved, and SIGKILL at any of seven pipeline stages converges on re-run. `opal-runtime`, `opal-bundler`, and `opal-test` are **not implemented** and are not yet workspace members; the directories under `crates/` for those phases hold empty placeholder files only. See [Architecture](#architecture) for the target shape, [Build order](#build-order) for sequencing, and [What Phase 1 left for later](#what-phase-1-left-for-later) for what `opal install` deliberately does not do yet.
+> **Status**: Beta. The package manager works today — `opal install` resolves against the real npm registry and produces a `node_modules` tree Node runs against, validated on real projects (a Next.js scaffold at 365 packages, express, webpack, and a curated compatibility suite), and it is under active development, so expect rough edges and breaking releases. The runtime (`opal run`), bundler (`opal build`), and test runner (`opal test`) are **not implemented**; their directories under `crates/` hold placeholder files only. See [Architecture](#architecture) for the target shape.
 
 ## Requirements
 
 - **Language/runtime**: Rust, `stable` channel, pinned via [`rust-toolchain.toml`](./rust-toolchain.toml) (installs the `rustfmt` and `clippy` components automatically via `rustup`).
 - **Package manager**: Cargo (ships with the Rust toolchain above).
-- **C/C++ toolchain**: required once V8 embedding lands (`opal-runtime`, Phase 2) — `build-essential` on Linux, Xcode Command Line Tools on macOS. Not needed to build the current workspace.
-- **`cmake` and `ninja`**: recommended for V8-related builds (Phase 2 onward).
+- **C/C++ toolchain**: required once V8 embedding lands in `opal-runtime` — `build-essential` on Linux, Xcode Command Line Tools on macOS. Not needed to build the current workspace.
+- **`cmake` and `ninja`**: recommended for the future V8-related builds. Not needed today.
 - **Database**: none — state is a local content-addressed store (CAS) on disk, not a database.
 - **Other services**: none currently.
 - **OS-level dependencies**: `git`.
-- **Supported dev platforms**: macOS, Linux, or WSL2 on Windows (native Windows is a v2 target — see [Deployment](#deployment)).
+- **Supported dev platforms**: macOS, Linux, or WSL2 on Windows. Native Windows is a v2 target.
 
 ## Installation
 
+**Using Opal** (prebuilt binary, no Rust required):
+
 ```bash
-git clone <repo-url>
+curl -fsSL https://raw.githubusercontent.com/saintparish4/opal/master/install.sh | bash
+```
+
+The script detects OS/arch, downloads the latest [GitHub Release](https://github.com/saintparish4/opal/releases), verifies its SHA256 checksum, and places the binary at `~/.opal/bin/opal` on your `PATH`. Releases exist and are real — currently `v0.2.1` — but this is beta software: pre-1.0, breaking lockfile changes happen between minor versions, and it is not yet something to run against a project you cannot reinstall. To try it without touching your shell config first:
+
+```bash
+env -i HOME="$HOME" PATH="/usr/bin:/bin" bash --noprofile --norc
+curl -fsSL https://raw.githubusercontent.com/saintparish4/opal/master/install.sh | bash
+```
+
+**Building from source** (contributors):
+
+```bash
+git clone https://github.com/saintparish4/opal
 cd opal
 
 cargo build --release   # binary at ./target/release/opal
 ```
 
-> For end users (once releases exist), the intended install path is a curl-based installer script, **not** `cargo install` — see [Deployment](#deployment). `cargo install opal` is reserved for contributors building from source.
+`cargo install opal` is not the end-user path — end users should never need a Rust toolchain.
 
 ## Usage
 
-The binary ships only what is implemented. `run`, `build`, and `test` are absent by design — a command that exists and does nothing is worse than one that does not exist.
+The binary ships only what is implemented. `run`, `build`, and `test` are absent by design — a command that exists and does nothing is worse than one that does not exist. The same goes for `add`, `remove`, `update`, `why`, `outdated`, `audit`, and `publish`: not implemented yet, so not stubbed.
 
 ### `opal graph` — resolve a module graph
 
@@ -39,24 +54,24 @@ opal graph <ENTRY> [--root <ROOT>] [--cache-dir <CACHE_DIR>] [--json]
 | Flag | Description |
 |---|---|
 | `<ENTRY>` | Entry file to walk from (required) |
-| `--root` | Project root; module paths are reported relative to it. Defaults to the entry's parent directory |
-| `--cache-dir` | Cache location. Defaults to the discovered user cache directory |
+| `--root` | Project root; resolution happens against this directory's `node_modules`, and module paths are reported relative to it. Defaults to the entry's parent directory — **pass `--root .` from your project root whenever the entry is not a top-level file**, or packages will not resolve |
+| `--cache-dir` | Cache location. Defaults to `$OPAL_CACHE_DIR`, else the platform cache directory |
 | `--json` | Print the resolved graph as JSON instead of the summary |
 
-Walking a tree installed by npm — the compatibility check that matters is that Opal resolves a `node_modules` it did not create:
+Walking a tree installed by `opal install` (works identically against a tree npm created — the compatibility check that matters is that Opal resolves a `node_modules` it did not build):
 
 ```console
-$ opal graph index.js --root . --cache-dir /tmp/opal-cache
-141 modules, 273 edges in 30.1ms
+$ opal graph index.js --root .
+146 modules, 311 edges in 139.4ms
 cache:  MISS (no record)
-digest: f5282b03c8203a839cd2a9d851d9147e479f1a9d9983d0c0beff7a10938606e9
-graph:  be15ccc48bd0b870626db386f096c26116a77afa687292d4afda1aaa28198178
+digest: 17f9f3684825419c873c15d69062b41b4b1fb79bbf742c384dda551fd03e0185
+graph:  a4de6468733c97fbfb374dcbe7e647f8824ec95216ba2b80c99985a1b287184f
 
-$ opal graph index.js --root . --cache-dir /tmp/opal-cache
-141 modules, 273 edges in 7.5ms
+$ opal graph index.js --root .
+146 modules, 311 edges in 26.6ms
 cache:  HIT
-digest: f5282b03c8203a839cd2a9d851d9147e479f1a9d9983d0c0beff7a10938606e9
-graph:  be15ccc48bd0b870626db386f096c26116a77afa687292d4afda1aaa28198178
+digest: 17f9f3684825419c873c15d69062b41b4b1fb79bbf742c384dda551fd03e0185
+graph:  a4de6468733c97fbfb374dcbe7e647f8824ec95216ba2b80c99985a1b287184f
 ```
 
 The digest is identical across both runs; only the cache status differs. Touching a file's mtime still reports `HIT` — invalidation is content-hash only, never mtime. Changing a byte reports `MISS (changed: <path>)`, naming the file that moved.
@@ -68,6 +83,8 @@ unresolved specifiers: 1
   node_modules/debug/src/node.js: cannot resolve "supports-color": package "supports-color" is not installed under the project root
 ```
 
+Known friction: needing an explicit entry file and `--root .` is more ceremony than the command deserves. A planned change makes `opal graph` with no arguments discover the entry from `package.json` and default the root to the current directory.
+
 ### `opal install` — install the dependencies in `package.json`
 
 ```bash
@@ -77,7 +94,7 @@ opal install [--root <ROOT>] [--cache-dir <CACHE_DIR>] [--registry <URL>] [--pro
 | Flag | Description |
 |---|---|
 | `--root` | Project directory. Defaults to the current directory |
-| `--cache-dir` | Cache location. Defaults to the discovered user cache directory |
+| `--cache-dir` | Cache location. Defaults to `$OPAL_CACHE_DIR`, else the platform cache directory |
 | `--registry` | Registry base URL. Defaults to `$OPAL_REGISTRY`, else the public npm registry |
 | `--production` | Link `dependencies` only. `opal.lock` still records `devDependencies`, so it stays byte-identical and works in CI alongside `--frozen-lockfile` |
 | `--frozen-lockfile` | Fail instead of re-resolving when `opal.lock` does not match `package.json` |
@@ -86,25 +103,35 @@ opal install [--root <ROOT>] [--cache-dir <CACHE_DIR>] [--registry <URL>] [--pro
 
 Packages declaring an `os` or `cpu` this host cannot run are recorded in `opal.lock` and skipped at install time, so one committed lockfile installs the right native binary on every platform. A platform-mismatched package that nothing declared optional is `EBADPLATFORM`, matching npm — skipping it silently would produce a tree that cannot run.
 
-`npm:` alias specifiers (`"string-width-cjs": "npm:string-width@^4.2.0"`) install one package under another's name, which is how a package depends on two majors of one dependency at once. `git:` and `file:` specifiers remain unsupported in v1: unlike an alias, they resolve somewhere other than the public registry.
+`npm:` alias specifiers (`"string-width-cjs": "npm:string-width@^4.2.0"`) install one package under another's name, which is how a package depends on two majors of one dependency at once.
 
 Progress is reported on stderr as each stage begins — a spinner while resolving and linking, a bar advancing per package while fetching — with the summary on stdout. When stderr is not a terminal, the same stages print as plain lines, so a CI log stays readable and nothing redraws over it.
 
-Resolves against the public npm registry, downloads tarballs into the shared CAS keyed by content hash, and links `node_modules` from the CAS via hardlinks — a reconciler that diffs `opal.lock` against disk and applies only the delta, so a killed install converges by re-running `opal install`:
+Resolves against the public npm registry, downloads tarballs into the shared CAS keyed by content hash, and links `node_modules` from the CAS via hardlinks — a reconciler that diffs `opal.lock` against disk and applies only the delta, so a killed install converges by re-running `opal install`. The summary reports each phase separately, because the phases are slow for unrelated reasons:
 
 ```console
 $ opal install
-71 packages resolved in 26.8s
+71 packages resolved in 18.1s  (resolve 4.7s, fetch 12.5s, link 924.4ms)
 store:  71 fetched, 0 already present
 link:   71 added, 0 unchanged, 0 removed (657 hardlinked, 2 copied, 1 bins)
 
 $ opal install                      # warm: nothing changed
-71 packages from opal.lock in 37.9ms
+71 packages from opal.lock in 58.8ms  (resolve 0.0ns, fetch 5.9ms, link 15.0ms)
 store:  0 fetched, 71 already present
 link:   0 added, 71 unchanged, 0 removed (0 hardlinked, 0 copied, 1 bins)
 ```
 
-`opal.lock` is written atomically (`opal.lock.tmp` → fsync → rename), and a per-project flock serializes concurrent installs against the same project rather than letting them interleave writes. Lifecycle scripts (`preinstall`/`install`/`postinstall`) do not run — see [What Phase 1 left for later](#what-phase-1-left-for-later).
+Registry metadata is cached on disk between runs, which is what makes a re-resolve cheap: on a 74-package tree with a warm store, deleting `opal.lock` and re-resolving takes ~0.4s instead of the 7.6s it cost before the cache existed. Commit `opal.lock` and leave it alone — an install it answers skips resolution entirely.
+
+`opal.lock` is written atomically (`opal.lock.tmp` → fsync → rename), and a per-project flock serializes concurrent installs against the same project rather than letting them interleave writes.
+
+Current limitations worth knowing before pointing this at a project:
+
+- **Lifecycle scripts (`preinstall`/`install`/`postinstall`) do not run.** Packages shipping prebuilt binaries (`esbuild`, `sharp`, `@next/swc`) work; a package that needs `node-gyp` to compile at install time installs but does not build.
+- **Peers are recorded and classified, never auto-installed.**
+- **`git:` and `file:` specifiers are unsupported** and reported as such — resolution is against the public registry only.
+- **Downloads are sequential.** A cold install is round-trip bound; parallel fetching and linking are planned.
+- **If your project and cache sit on different filesystems** (a project on `/mnt/c` under WSL2 with the default cache, for instance), every file is copied instead of hardlinked and the install warns. Keep both on the same filesystem, or set `OPAL_CACHE_DIR`.
 
 ### `opal cache` — inspect the shared CAS
 
@@ -114,14 +141,15 @@ opal cache gc [--cache-dir <DIR>] [--dry-run] [--project <PATH>]...    # remove 
 opal cache path [--cache-dir <DIR>]                                    # print the cache location
 ```
 
-`verify` exits non-zero if any object's content does not match its hash key. `gc --dry-run` reports what would be removed without removing it; a repeatable `--project` treats a given directory's `opal.lock` as live without recording it, for CI where the cache outlives the checkout. `gc` blocks while an install is in flight against the shared cache, and never collects a package a still-installed project needs:
+`verify` exits non-zero if any object's content does not match its hash key. `gc --dry-run` reports what would be removed without removing it; a repeatable `--project` treats a given directory's `opal.lock` as live without recording it, for CI where the cache outlives the checkout. `gc` blocks while an install is in flight against the shared cache, never collects a package a still-installed project needs, and also prunes graph records whose project is gone and registry metadata untouched for 30 days:
 
 ```console
 $ opal cache gc                     # the project from above is still here
 projects: 1 tracked, 0 forgotten
 packages: 71 live (0 in a lockfile but never fetched here)
-0 of 686 objects removed, 0.0 MiB
+0 of 687 objects removed, 0.0 MiB
 pointers: 0 pruned
+records:  0 graph, 0 metadata pruned
 temp files: 0 swept, 0 still in flight
 ```
 
@@ -141,17 +169,18 @@ cargo clippy --workspace --all-targets --all-features -- -D warnings
 
 ### Repository layout
 
-A Cargo workspace. Only the crates below marked *implemented* are workspace members — the rest are added as their phase begins, so the workspace never carries a crate whose API has not been designed yet.
+A Cargo workspace. Only the crates below marked *implemented* are workspace members — the rest are added when work on them begins, so the workspace never carries a crate whose API has not been designed yet.
 
 ```
 opal/
 ├── crates/
 │   ├── opal-core/       # implemented — module graph, resolver, CAS, BLAKE3 hashing, memoization
 │   ├── opal-cli/        # implemented — `opal` binary; dispatches `graph`, `install`, and `cache`
-│   ├── opal-pm/         # implemented — semver resolution, registry client, lockfile, node_modules linker, GC
-│   ├── opal-runtime/    # Phase 2, placeholder files only, not a workspace member
-│   ├── opal-bundler/    # Phase 3, placeholder files only, not a workspace member
-│   └── opal-test/       # Phase 4, placeholder files only, not a workspace member
+│   ├── opal-pm/         # implemented (beta) — semver resolution, registry client, lockfile, node_modules linker, GC
+│   ├── opal-runtime/    # planned — placeholder files only, not a workspace member
+│   ├── opal-bundler/    # planned — placeholder files only, not a workspace member
+│   └── opal-test/       # planned — placeholder files only, not a workspace member
+├── fuzz/                # cargo-fuzz targets, its own workspace (see Testing)
 └── Cargo.toml           # workspace root
 ```
 
@@ -172,14 +201,17 @@ Inside `opal-pm`:
 | Module | Responsibility |
 |---|---|
 | `semver` | Version and range parsing, matching, `max_satisfying` |
-| `manifest` | `package.json` parsing |
-| `registry` | npm registry client (packument fetch, dist-tag resolution) |
+| `manifest` | `package.json` parsing, including `os`/`cpu` and `npm:` aliases |
+| `registry` | npm registry client: transport seam, retries, timeouts, abbreviated packuments |
+| `packuments` | The on-disk registry-metadata cache, with ETag revalidation |
 | `resolve` | Dependency graph resolution against the registry |
 | `integrity` | `dist.integrity` (sha512) and legacy `shasum` (sha1) verification |
-| `package` | Tarball extraction into the CAS, content-addressed and pointer-backed |
+| `package` | Tarball extraction into the CAS, content-addressed, pointer-backed, and bounded against decompression bombs |
+| `platform` | npm's `os`/`cpu` host matching |
 | `lockfile` | `opal.lock` read/write, atomic (`opal.lock.tmp` → fsync → rename) |
 | `link` | The `node_modules` reconciler — diffs `opal.lock` against disk, applies only the delta |
 | `install` | The end-to-end pipeline wiring the above together |
+| `progress` | The reporting seam the pipeline calls; rendering lives in `opal-cli` |
 | `diagnose` | Classifies unresolved imports (missing optional dep, undeclared import, etc.) |
 | `projects` | Tracks which projects are live, for GC |
 | `gc` | Mark-and-sweep collection of CAS objects no live project's lockfile points at |
@@ -196,15 +228,15 @@ modules inside them are snake_case.
 
 ### Build order
 
-Phases are sequential — each is a prerequisite for the next, and each has its own exit criteria.
+Crates are built strictly in sequence — each is a prerequisite for the next, and each has a concrete definition of done.
 
-| Phase | Crate | Status | Exit criteria |
-|---|---|---|---|
-| 0 | `opal-core` | **complete** | Resolve a real-world project's dependency graph, cache the result, demonstrate cache hits on unchanged input; SIGKILL mid-CAS-write never leaves a corrupt entry |
-| 1 | `opal-pm` | **complete** | `opal install` against a real `package.json` produces a working `node_modules` that Node can run against; SIGKILL at randomized pipeline points always converges on re-run |
-| 2 | `opal-runtime` | not started | `opal run` executes a real project's entrypoint, including `node_modules` dependencies from Phase 1 |
-| 3 | `opal-bundler` | not started | Tree-shaking + minification over the resolved graph, outputs cached in the CAS |
-| 4 | `opal-test` | not started | Test discovery via the graph, wired into the Phase 2 execution path |
+| Crate | Status | Definition of done |
+|---|---|---|
+| `opal-core` | **done** | Resolve a real-world project's dependency graph, cache the result, demonstrate cache hits on unchanged input; SIGKILL mid-CAS-write never leaves a corrupt entry |
+| `opal-pm` | **working, beta** | `opal install` against a real `package.json` produces a working `node_modules` that Node can run against; SIGKILL at randomized pipeline points always converges on re-run |
+| `opal-runtime` | not started | `opal run` executes a real project's entrypoint, including its `node_modules` dependencies |
+| `opal-bundler` | not started | Tree-shaking + minification over the resolved graph, outputs cached in the CAS |
+| `opal-test` | not started | Test discovery via the graph, wired into the runtime's execution path |
 
 ## Testing
 
@@ -221,7 +253,7 @@ cargo test --workspace --all-features
 | `tests/cache-invalidation.rs` (`opal-core`) | 16 | The invalidation matrix: content change, add/remove, direct and transitive dependency change — asserting the right hits *and* misses. Includes the "never mtime" invariant as a direct test, and memo-record pruning |
 | `tests/graph-resolution.rs` (`opal-core`) | 15 | Resolution against fixture trees, plus a golden/snapshot test of resolved graph output (`tests/golden/`) |
 | `tests/cas-crash-safety.rs` (`opal-core`) | 6 | Atomic CAS writes under fault injection — a killed write leaves orphaned temp files, never a corrupt entry |
-| `tests/install-pipeline.rs` (`opal-pm`) | 39 | The full install pipeline end to end, incl. `test_node_can_require_the_installed_tree` and `test_the_module_graph_resolves_against_the_installed_tree` — the Phase 0 ↔ Phase 1 contract |
+| `tests/install-pipeline.rs` (`opal-pm`) | 39 | The full install pipeline end to end, incl. `test_node_can_require_the_installed_tree` and `test_the_module_graph_resolves_against_the_installed_tree` — the `opal-core` ↔ `opal-pm` contract |
 | `tests/packument-cache.rs` (`opal-pm`) | 8 | When the registry client reaches the wire and when it does not: freshness, revalidation, `--offline`, and never answering one registry from another's cache |
 | `tests/resolution-properties.rs` (`opal-pm`) | 10 | `proptest` over generated registries: every resolved edge satisfies the range that asked for it, every root resolves to a version its own spec allows, and the layout places everything the resolution keeps |
 | `tests/semver-properties.rs` (`opal-pm`) | 12 | `proptest` over the range algebra in isolation |
@@ -236,17 +268,16 @@ Fuzzing lives in `fuzz/`, its own workspace so that `cargo fuzz`'s sanitizer fla
 
 Benchmarks live in `benches/install-pipeline`, which times four scenarios separately (`cold`, `resolve`, `link`, `noop`) because collapsing them into one number is how a ten-minute install can look ordinary. Per the testing strategy it tracks numbers and never gates CI on them.
 
-Still to come as later phases land: a V8 embedding-boundary suite, and overlapping the tarball downloads — the last remaining round-trip stall, and the only one the metadata cache did not remove.
+Still to come: a V8 embedding-boundary suite once the runtime exists, and parallel fetching and linking — the remaining costs the metadata cache did not remove.
 
-CI (GitHub Actions) runs fmt, clippy, test, and build on `ubuntu-latest` and `macos-latest` for every push and PR against `master`. Native Windows is out of scope for v1 — see [Deployment](#deployment).
+CI (GitHub Actions) runs fmt, clippy, test, and build on `ubuntu-latest` and `macos-latest` for every push and PR against `master`. Native Windows is out of scope for v1.
 
 ## Environment Variables
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
 | `OPAL_REGISTRY` | No | `https://registry.npmjs.org` | Registry base URL used by `opal install`. Overridden per-invocation by `--registry` |
-
-Cache location has no environment variable — it's set via `--cache-dir`, or discovered from the platform's user cache directory.
+| `OPAL_CACHE_DIR` | No | The platform user cache directory (`~/.cache/opal` on Linux, `~/Library/Caches/opal` on macOS) | Where the shared CAS, graph records, and registry metadata live. Overridden per-invocation by `--cache-dir` |
 
 ## Architecture
 
@@ -269,7 +300,7 @@ Every JS toolchain today (npm/pnpm/yarn + Node/Bun/Deno + webpack/esbuild/vite +
 
 - **Core stack**: Rust for all native code; BLAKE3 for all content hashing (SIMD-accelerated, on the hot path for every file read); `oxc` as the JS parser (preferred over `swc` for performance).
 - **`opal-core`**: parses/resolves import graphs, content-addresses every file and computed artifact, maintains an on-disk CAS, and answers "what changed since last run" via hash comparison — never mtime (unreliable across git checkouts, CI runners, and Docker layers). Every CAS write is atomic: temp file → verify BLAKE3 → rename into place, so a killed write leaves orphaned garbage rather than a corrupt entry.
-- **`opal-pm`** (`opal install`): resolves against the public npm registry, populates the CAS keyed by tarball content hash (enabling cross-package dedup), links packages via hardlinks from the CAS (pnpm-style), and writes a flat `opal.lock` lockfile. Install pipeline: `package.json → registry metadata → semver resolution → dependency graph → opal.lock → download → BLAKE3 integrity verification → CAS → node_modules`. The link step is a reconciler that diffs `opal.lock` against disk and applies only the delta, so an interrupted run resumes by re-running `opal install`. The resolved tree feeds straight back into `opal-core`'s resolver, with nothing unresolved — see [`opal install`](#opal-install--install-the-dependencies-in-packagejson) and [What Phase 1 left for later](#what-phase-1-left-for-later).
+- **`opal-pm`** (`opal install`): resolves against the public npm registry, populates the CAS keyed by tarball content hash (enabling cross-package dedup), links packages via hardlinks from the CAS, and writes a flat `opal.lock` lockfile. Install pipeline: `package.json → registry metadata → semver resolution → dependency graph → opal.lock → download → BLAKE3 integrity verification → CAS → node_modules`. The link step is a reconciler that diffs `opal.lock` against disk and applies only the delta, so an interrupted run resumes by re-running `opal install`. The resolved tree feeds straight back into `opal-core`'s resolver, with nothing unresolved.
 
 **Target shape, not yet built** — the sections below describe intended design, and none of these commands exist in the binary today:
 
@@ -279,72 +310,14 @@ Every JS toolchain today (npm/pnpm/yarn + Node/Bun/Deno + webpack/esbuild/vite +
 
 The architectural bet is one resolver shared by every tool. A tool that implements its own import resolution, or shortcuts around the shared graph, defeats the entire design.
 
-### What Phase 1 left for later
-
-`opal install` deliberately does not do the following yet — see `base/directive/p1.md` for the full rationale:
-
-- **Lifecycle scripts** (`preinstall`/`install`/`postinstall`) do not run. A package needing `node-gyp` installs but does not build — native addons are best-effort per the PRD.
-- **Peer auto-install.** Peers are recorded and classified, never fetched.
-- **`opal add` / `remove` / `update` / `why` / `outdated` / `audit` / `publish`** are not implemented, and deliberately absent from the CLI rather than stubbed.
-- **Parallel downloads.** Installs fetch sequentially. With metadata now cached across runs, a re-resolve makes no round trips at all, but a cold install is still roughly half round-trip stall — all of it tarballs, and the only stall left in the pipeline.
-- **Git and `file:` specifiers** are reported as unsupported, never guessed at — v1 resolves the public registry only. `npm:` aliases *are* supported, since they resolve there too.
-- **Lifecycle scripts still do not run**, so a deprecation notice is the only thing a package gets to say during an install.
-- **Collector starvation.** The cache flock isn't fair, so a continuous stream of installs can keep `opal cache gc` waiting indefinitely. Nothing is lost when it does, since collection isn't on any critical path.
-
-### Fixed since v0.1.0
-
-Every gap the `create-next-app` validation found is closed, each with the regression test it should have had. Full detail in `base/optimization-plan.md`.
-
-- **`os`/`cpu` filtering.** Platform variants of a native optional are recorded in `opal.lock` and skipped at install time — `esbuild` declares 25 of them totalling 256 MB, and one 9.8 MB binary is installed. A mismatched package nothing declared optional is `EBADPLATFORM`, matching npm.
-- **Root versions are pinned.** A transitive dependency's higher major no longer displaces the version the project asked for — that was a silent wrong-version install, the worst failure mode the testing strategy names.
-- **`--production` and `--frozen-lockfile` work together.** `opal.lock` stays dev-complete and byte-identical, so the ordinary CI invocation no longer fails against a valid lockfile.
-- **Metadata is cached across runs.** A re-resolve against a warm store went from 7.6s to 0.36s on a 74-package tree, and makes no round trips at all.
-- **Extensionless shebang scripts are walked.** `opal graph` against `typescript/bin/tsc` reported one module and zero edges; it now reports three modules and ten edges.
-- **`diagnose` stopped giving advice that cannot work.** A dependency's own devDependency reads as a note, not an error telling you to run a command that cannot fix it.
-
 ## Deployment
 
 Opal ships as a single self-contained native binary — no runtime dependency on a separate install step or interpreter.
 
-**Release targets**: `opal-linux-x64`, `opal-linux-arm64`, `opal-macos-x64`, `opal-macos-arm64`. Native Windows is out of scope for v1 (see platform support note below) — no `windows-x64` artifact until v2.
-
-**Release process**:
-1. Tag a release (e.g. `v0.2.0`).
-2. CI (GitHub Actions) builds all four platform targets in release mode, from the same matrix run.
-3. Each binary is packaged as a `.tar.gz` archive.
-4. A `SHA256SUMS` file is generated across all artifacts.
-5. Artifacts publish to GitHub Releases — the single canonical source of truth. Any future downstream package manager (Homebrew, Scoop, WinGet, npm wrapper, Docker) must fetch from here, never build independently.
-6. The install script and installer endpoint are updated to point at the new release, once a branded domain exists to host it under.
-
-A release ships all four targets or none — partial releases create version skew between platforms.
-
-**End-user install** is a curl-based script that detects OS/arch and places the binary at `~/.opal/bin/opal`, added to `PATH`. There's no branded install domain yet — `opal.dev` turned out to already be a live, unrelated site, so the final domain is still undecided. Until one exists, the same script is reachable straight off `master`, and has already been self-tested end to end: a real tagged release, a real CI-built binary, real checksum verification.
-
-> **Not live under a branded domain, and experimental** — Opal is pre-1.0, the install pipeline itself is only days old, and `opal install` has [known gaps](#known-gaps-from-real-world-validation) found by real-world testing. **Run at your own risk.**
->
-> Safer: try it in an isolated shell first, so nothing touches your real `PATH` or shell config until you've checked it works:
-> ```bash
-> env -i HOME="$HOME" PATH="/usr/bin:/bin" bash --noprofile --norc
-> curl -fsSL https://raw.githubusercontent.com/saintparish4/opal/master/install.sh | bash
-> ```
->
-> Or straight into your current shell, once you're comfortable with it:
-> ```bash
-> curl -fsSL https://raw.githubusercontent.com/saintparish4/opal/master/install.sh | bash
-> ```
-
-**Hard constraint**: `cargo install opal` must never be presented as the primary install path for end users (requires a Rust toolchain) — it's contributor-only, for building Opal itself from source.
+**Release targets**: `opal-linux-x64`, `opal-linux-arm64`, `opal-macos-x64`, `opal-macos-arm64`, all built from the same CI matrix run with a combined `SHA256SUMS` — a release ships all four targets or none, so platforms never skew. [GitHub Releases](https://github.com/saintparish4/opal/releases) are the single canonical source of binaries; any future package-manager integration (Homebrew, npm wrapper, Docker) must fetch from there, never build independently.
 
 Platform support: macOS, Linux, and WSL2 in v1 (WSL2 runs a genuine Linux kernel, so the Linux build target covers it directly). Native Windows (non-WSL) is v2, requiring junction-based fallbacks for linking and path-separator abstraction throughout `opal-core`.
 
-## Contributing
-
-- Follow the naming and package-layout conventions described under [Repository layout](#repository-layout).
-- Run `cargo fmt` and `cargo clippy --workspace --all-targets --all-features -- -D warnings` before opening a PR — CI treats Clippy warnings as errors.
-- Open PRs against `master`.
-- New subsystem work should follow the phased build order above — don't start a later phase's crate, or add it to the workspace, before the prior phase's exit criteria are met.
-- Core architecture — resolver design, pipeline stages, cache scheme, the on-disk lockfile/CAS format — gets discussed before it gets changed. Those decisions constrain every later phase.
-
 ## License
 
-[MIT](./LICENSE) © Sharif Parish / Bluesky Labs
+MIT — see [LICENSE](./LICENSE).
