@@ -238,14 +238,17 @@ fn install_command(args: InstallArgs) -> Result<ExitCode, Failure> {
     let elapsed = started.elapsed();
 
     println!(
-        "{} packages {} in {:.1?}",
+        "{} packages {} in {:.1?}  (resolve {:.1?}, fetch {:.1?}, link {:.1?})",
         report.packages,
         if report.resolved {
             "resolved"
         } else {
             "from opal.lock"
         },
-        elapsed
+        elapsed,
+        report.timings.resolve,
+        report.timings.fetch,
+        report.timings.link,
     );
     println!(
         "store:  {} fetched, {} already present",
@@ -271,6 +274,14 @@ fn install_command(args: InstallArgs) -> Result<ExitCode, Failure> {
     }
     if let Some(reason) = &report.link.hardlink_fallback {
         eprintln!("warning: {reason}");
+        // The library states the fact; naming the remedy needs to know about
+        // the environment variable, which is this crate's business.
+        eprintln!(
+            "note: copying {} files is most of an install's time. Set {}=<dir> to a directory \
+             on the same filesystem as this project to restore hardlinking.",
+            report.link.files_copied,
+            opal_core::cache::CACHE_DIR_ENV,
+        );
     }
     if report.lockfile_upgraded {
         println!("opal.lock was written by an older build and has been re-resolved");

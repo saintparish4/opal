@@ -12,6 +12,7 @@
 
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
+use std::time::{Duration, Instant};
 
 use crate::link::{self, Fetched, FetchedPackage, Layout, LinkError, LinkReport};
 use crate::lockfile::{self, LockfileError};
@@ -83,6 +84,20 @@ impl Default for InstallOptions {
     }
 }
 
+/// Wall time per phase.
+///
+/// One total hides which phase cost what, and the phases fail for unrelated
+/// reasons: resolution is round-trip bound, fetching is bandwidth bound, and
+/// linking is filesystem bound. A ten-minute install that is nine minutes of
+/// linking and one of resolving needs a different fix from the reverse, and
+/// the summary line is where someone looks first.
+#[derive(Clone, Copy, Debug, Default)]
+pub struct Timings {
+    pub resolve: Duration,
+    pub fetch: Duration,
+    pub link: Duration,
+}
+
 #[derive(Debug, Default)]
 pub struct InstallReport {
     pub packages: usize,
@@ -96,6 +111,7 @@ pub struct InstallReport {
     pub platform_skipped: Vec<(PackageId, String)>,
     /// An older lockfile was replaced by re-resolving.
     pub lockfile_upgraded: bool,
+    pub timings: Timings,
     /// Packages in this tree the registry marks deprecated, with the message
     /// its publisher left. Only populated on a run that resolved: the message
     /// lives in the packument, and `opal.lock` does not carry it, so a run
@@ -151,6 +167,7 @@ pub fn install(
                 return Err(InstallError::LockfileOutdated);
             }
             progress.stage(Stage::Resolving);
+            let started = Instant::now();
             // Always resolves devDependencies, whatever this install links, so
             // one lockfile serves a dev install and a production one.
             let resolved = resolve::resolve(
@@ -161,6 +178,7 @@ pub fn install(
                 },
             )?;
             lockfile::write(&lockfile_path, &resolved)?;
+            report.timings.resolve = started.elapsed();
             report.resolved = true;
             resolved
         }
@@ -195,6 +213,7 @@ pub fn install(
         });
     }
 
+    let started = Instant::now();
     let fetched = fetch_all(
         registry,
         store,
@@ -203,11 +222,14 @@ pub fn install(
         &mut report,
         progress,
     )?;
+    report.timings.fetch = started.elapsed();
 
     progress.stage(Stage::Linking {
         packages: report.packages,
     });
+    let started = Instant::now();
     report.link = link::reconcile(project_root, &plan.layout, &fetched, store.cas())?;
+    report.timings.link = started.elapsed();
     report.skipped = resolution.skipped.clone();
     report.platform_skipped = plan.platform_skipped;
 

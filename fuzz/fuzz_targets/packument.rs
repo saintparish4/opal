@@ -6,17 +6,15 @@
 use libfuzzer_sys::fuzz_target;
 
 fuzz_target!(|data: &[u8]| {
-    let Ok(text) = std::str::from_utf8(data) else {
-        return;
-    };
-    let Ok(value) = serde_json::from_str::<serde_json::Value>(text) else {
-        return;
-    };
     // Every field is optional and every unexpected shape is ignored rather
-    // than fatal, so this must produce a packument for any JSON at all —
+    // than fatal, so this must produce a packument for any bytes at all —
     // possibly one with no usable versions in it.
-    let packument = opal_pm::registry::Packument::parse("fuzzed", &value);
-    for (version, metadata) in &packument.versions {
-        assert_eq!(version, &metadata.version, "a version indexes itself");
+    let packument = opal_pm::registry::Packument::parse("fuzzed", data);
+    for version in packument.versions() {
+        // Bodies are parsed on demand, so this is where a malformed one has
+        // to degrade rather than panic.
+        if let Some(metadata) = packument.version(version) {
+            assert_eq!(version, &metadata.version, "a version indexes itself");
+        }
     }
 });

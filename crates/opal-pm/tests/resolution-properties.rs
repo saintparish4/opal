@@ -135,7 +135,10 @@ impl Plan {
             });
             packuments.insert(
                 name(package),
-                Rc::new(Packument::parse(&name(package), &document)),
+                Rc::new(Packument::parse(
+                    &name(package),
+                    &serde_json::to_vec(&document).expect("serializable"),
+                )),
             );
         }
 

@@ -346,10 +346,19 @@ fn materialize(
     }
 
     let mut linked_one = false;
+    // A package's files are sorted by path, so consecutive files usually share
+    // a directory — remembering the last one turns one `create_dir_all` per
+    // file into one per directory. That is a stat and a mkdir attempt saved
+    // per file, which is invisible on ext4 and very much not on a DrvFS mount
+    // under WSL2, where an install is tens of thousands of syscalls.
+    let mut made: Option<PathBuf> = None;
     for (path, file) in &package.index.files {
         let destination = directory.join(path.as_str());
-        if let Some(parent) = destination.parent() {
+        if let Some(parent) = destination.parent()
+            && made.as_deref() != Some(parent)
+        {
             std::fs::create_dir_all(parent).map_err(|source| LinkError::io(parent, source))?;
+            made = Some(parent.to_path_buf());
         }
         let source = cas.object_path(&file.hash);
 

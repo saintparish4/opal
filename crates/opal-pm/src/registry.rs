@@ -12,7 +12,9 @@ use std::rc::Rc;
 use std::time::{Duration, SystemTime};
 
 use opal_core::fault::{self, FaultPoint};
+use serde::Deserialize;
 use serde_json::Value;
+use serde_json::value::RawValue;
 
 use crate::integrity::Integrity;
 use crate::manifest::Manifest;
@@ -229,75 +231,94 @@ pub struct VersionMetadata {
 #[derive(Clone, Debug)]
 pub struct Packument {
     pub name: String,
-    pub versions: BTreeMap<Version, VersionMetadata>,
+    /// Every published version, with its entry left as raw JSON.
+    ///
+    /// A packument lists every version a package ever shipped — 130,000 of
+    /// them across a Next.js tree's 418 packages — and resolution reads the
+    /// body of exactly the one it picks. Eagerly building a `Manifest` for all
+    /// of them cost 61s of a 4-minute install, plus 25s to free again, to
+    /// answer a question that only needs the keys.
+    versions: BTreeMap<Version, Box<RawValue>>,
     pub dist_tags: BTreeMap<String, Version>,
 }
 
+/// The shape actually read off a registry response: version bodies stay as
+/// raw slices, so nothing below the top level is walked until it is wanted.
+#[derive(Deserialize)]
+struct RawPackument {
+    #[serde(default, rename = "dist-tags")]
+    dist_tags: BTreeMap<String, String>,
+    #[serde(default)]
+    versions: BTreeMap<String, Box<RawValue>>,
+}
+
 impl Packument {
-    pub fn parse(name: &str, value: &Value) -> Self {
-        let mut packument = Self {
-            name: name.to_string(),
-            versions: BTreeMap::new(),
+    pub fn parse(name: &str, bytes: &[u8]) -> Self {
+        let raw: RawPackument = serde_json::from_slice(bytes).unwrap_or(RawPackument {
             dist_tags: BTreeMap::new(),
-        };
+            versions: BTreeMap::new(),
+        });
 
-        if let Some(entries) = value.get("versions").and_then(Value::as_object) {
-            for (text, entry) in entries {
-                // A version the registry lists but Opal cannot parse is skipped
-                // rather than fatal: one malformed entry must not make a
-                // package uninstallable.
-                let Ok(version) = Version::parse(text) else {
-                    continue;
-                };
-                let Some(distribution) = entry.get("dist") else {
-                    continue;
-                };
-                let Some(tarball) = distribution.get("tarball").and_then(Value::as_str) else {
-                    continue;
-                };
-                let integrity = distribution
-                    .get("integrity")
-                    .and_then(Value::as_str)
-                    .and_then(|text| Integrity::parse(text).ok())
-                    .or_else(|| {
-                        // Packages published before 2017 carry only a shasum.
-                        distribution
-                            .get("shasum")
-                            .and_then(Value::as_str)
-                            .and_then(|hex| Integrity::from_shasum(hex).ok())
-                    });
-                let Some(integrity) = integrity else {
-                    continue;
-                };
-
-                packument.versions.insert(
-                    version.clone(),
-                    VersionMetadata {
-                        version,
-                        tarball: tarball.to_string(),
-                        integrity,
-                        manifest: Manifest::from_value(entry),
-                        deprecated: entry
-                            .get("deprecated")
-                            .and_then(Value::as_str)
-                            .map(str::to_string),
-                    },
-                );
-            }
+        Self {
+            name: name.to_string(),
+            // A version the registry lists but Opal cannot parse is skipped
+            // rather than fatal: one malformed entry must not make a package
+            // uninstallable. Only the key is examined here — whether the body
+            // is usable is decided when something asks for it.
+            versions: raw
+                .versions
+                .into_iter()
+                .filter_map(|(text, entry)| Some((Version::parse(&text).ok()?, entry)))
+                .collect(),
+            dist_tags: raw
+                .dist_tags
+                .into_iter()
+                .filter_map(|(tag, text)| Some((tag, Version::parse(&text).ok()?)))
+                .collect(),
         }
-
-        if let Some(tags) = value.get("dist-tags").and_then(Value::as_object) {
-            for (tag, text) in tags {
-                if let Some(version) = text.as_str().and_then(|text| Version::parse(text).ok()) {
-                    packument.dist_tags.insert(tag.clone(), version);
-                }
-            }
-        }
-        packument
     }
 
-    pub fn version(&self, version: &Version) -> Option<&VersionMetadata> {
-        self.versions.get(version)
+    /// Published versions, in order. The whole answer to "which one satisfies
+    /// this range", and the only thing most packuments are ever asked.
+    pub fn versions(&self) -> impl DoubleEndedIterator<Item = &Version> {
+        self.versions.keys()
+    }
+
+    pub fn published(&self) -> usize {
+        self.versions.len()
+    }
+
+    /// Everything about one version, parsed now rather than at fetch time.
+    ///
+    /// Returns `None` for a version whose body cannot be installed from — no
+    /// `dist`, no tarball, no usable integrity — which is the same leniency
+    /// the eager parser applied, just deferred to the point of use.
+    pub fn version(&self, version: &Version) -> Option<VersionMetadata> {
+        let entry: Value = serde_json::from_str(self.versions.get(version)?.get()).ok()?;
+        let distribution = entry.get("dist")?;
+        let tarball = distribution.get("tarball").and_then(Value::as_str)?;
+        let integrity = distribution
+            .get("integrity")
+            .and_then(Value::as_str)
+            .and_then(|text| Integrity::parse(text).ok())
+            .or_else(|| {
+                // Packages published before 2017 carry only a shasum.
+                distribution
+                    .get("shasum")
+                    .and_then(Value::as_str)
+                    .and_then(|hex| Integrity::from_shasum(hex).ok())
+            })?;
+
+        Some(VersionMetadata {
+            version: version.clone(),
+            tarball: tarball.to_string(),
+            integrity,
+            manifest: Manifest::from_value(&entry),
+            deprecated: entry
+                .get("deprecated")
+                .and_then(Value::as_str)
+                .map(str::to_string),
+        })
     }
 }
 
@@ -457,13 +478,7 @@ impl Registry for NpmRegistry {
         }
         let url = self.packument_url(name);
         let bytes = self.packument_bytes(name, &url)?;
-        let value: Value =
-            serde_json::from_slice(&bytes).map_err(|source| RegistryError::Json {
-                url: url.clone(),
-                source,
-            })?;
-
-        let packument = Rc::new(Packument::parse(name, &value));
+        let packument = Rc::new(Packument::parse(name, &bytes));
         self.memory
             .borrow_mut()
             .insert(name.to_string(), Rc::clone(&packument));
@@ -478,8 +493,7 @@ impl Registry for NpmRegistry {
         // answer than a round trip, and this is the one caller that would
         // rather have nothing than wait.
         let record = self.disk.as_ref()?.get(&self.base, name)?;
-        let value: Value = serde_json::from_slice(&record.body).ok()?;
-        let packument = Rc::new(Packument::parse(name, &value));
+        let packument = Rc::new(Packument::parse(name, &record.body));
         self.memory
             .borrow_mut()
             .insert(name.to_string(), Rc::clone(&packument));
@@ -646,8 +660,11 @@ mod tests {
 
     #[test]
     fn test_parses_versions_and_tags() {
-        let packument = Packument::parse("demo", &sample());
-        assert_eq!(packument.versions.len(), 2);
+        let packument = Packument::parse("demo", &serde_json::to_vec(&sample()).unwrap());
+        // Three keys parse; `1.3.0` has no `dist`, so it is listed but not
+        // installable — a distinction that only exists now bodies are lazy.
+        assert_eq!(packument.published(), 3);
+        assert!(packument.version(&Version::new(1, 3, 0)).is_none());
         assert_eq!(
             packument.dist_tags.get("latest").map(ToString::to_string),
             Some("1.2.0".to_string())
@@ -660,7 +677,7 @@ mod tests {
 
     #[test]
     fn test_skips_unusable_entries_rather_than_failing() {
-        let packument = Packument::parse("demo", &sample());
+        let packument = Packument::parse("demo", &serde_json::to_vec(&sample()).unwrap());
         // "not-a-version" is unparseable and "1.3.0" has no dist; neither can be
         // installed, and neither prevents installing the rest.
         assert!(packument.version(&Version::new(1, 3, 0)).is_none());
@@ -668,7 +685,7 @@ mod tests {
 
     #[test]
     fn test_falls_back_to_shasum_when_integrity_is_absent() {
-        let packument = Packument::parse("demo", &sample());
+        let packument = Packument::parse("demo", &serde_json::to_vec(&sample()).unwrap());
         let metadata = packument.version(&Version::new(1, 2, 0)).unwrap();
         assert!(metadata.integrity.to_string().starts_with("sha1-"));
     }

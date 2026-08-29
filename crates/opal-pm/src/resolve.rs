@@ -387,12 +387,26 @@ impl<'a> Resolver<'a> {
             Err(error) => return Err(error.into()),
         };
 
+        // Highest first, and stop at the first one that is actually
+        // installable. A packument lists versions whose bodies cannot be
+        // installed from — no `dist`, no tarball, no usable integrity — and
+        // since bodies are parsed on demand, "does this version exist" and
+        // "can this version be installed" are now two questions. Asking the
+        // second one lazily is what keeps this to one parse rather than one
+        // per published version.
         let chosen = match (&range, &request.spec) {
-            (Some(range), _) => range.max_satisfying(packument.versions.keys()).cloned(),
-            (None, Spec::Tag(tag)) => packument.dist_tags.get(tag).cloned(),
+            (Some(range), _) => packument
+                .versions()
+                .rev()
+                .filter(|candidate| range.satisfies(candidate))
+                .find_map(|candidate| Some((candidate.clone(), packument.version(candidate)?))),
+            (None, Spec::Tag(tag)) => packument
+                .dist_tags
+                .get(tag)
+                .and_then(|version| Some((version.clone(), packument.version(version)?))),
             (None, _) => None,
         };
-        let Some(version) = chosen else {
+        let Some((version, metadata)) = chosen else {
             if request.optional {
                 self.skipped.push((
                     request.name.clone(),
@@ -403,24 +417,21 @@ impl<'a> Resolver<'a> {
             return Err(ResolveError::NoMatchingVersion {
                 name: request.name.clone(),
                 spec: request.spec.to_string(),
-                available: packument.versions.len(),
+                available: packument.published(),
             });
         };
 
         let id = PackageId::new(request.package.clone(), version.clone());
-        self.packages.entry(id.clone()).or_insert_with(|| {
-            let metadata = packument
-                .version(&version)
-                .expect("the chosen version came from this packument");
-            ResolvedPackage {
+        self.packages
+            .entry(id.clone())
+            .or_insert_with(|| ResolvedPackage {
                 id,
-                tarball: metadata.tarball.clone(),
-                integrity: metadata.integrity.clone(),
+                tarball: metadata.tarball,
+                integrity: metadata.integrity,
                 dependencies: Vec::new(),
-                os: metadata.manifest.os.clone(),
-                cpu: metadata.manifest.cpu.clone(),
-            }
-        });
+                os: metadata.manifest.os,
+                cpu: metadata.manifest.cpu,
+            });
         self.selected
             .entry(request.package.clone())
             .or_default()
