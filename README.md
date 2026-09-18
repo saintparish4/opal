@@ -23,7 +23,7 @@ An all-in-one JavaScript/TypeScript toolkit — package manager, runtime, bundle
 curl -fsSL https://raw.githubusercontent.com/saintparish4/opal/master/install.sh | bash
 ```
 
-The script detects OS/arch, downloads the latest [GitHub Release](https://github.com/saintparish4/opal/releases), verifies its SHA256 checksum, and places the binary at `~/.opal/bin/opal` on your `PATH`. Releases exist and are real — currently `v0.2.1` — but this is beta software: pre-1.0, breaking lockfile changes happen between minor versions, and it is not yet something to run against a project you cannot reinstall. To try it without touching your shell config first:
+The script detects OS/arch, downloads the latest [GitHub Release](https://github.com/saintparish4/opal/releases), verifies its SHA256 checksum, and places the binary at `~/.opal/bin/opal` on your `PATH`. Releases exist and are real — currently `v0.2.2` — but this is beta software: pre-1.0, breaking lockfile changes happen between minor versions, and it is not yet something to run against a project you cannot reinstall. To try it without touching your shell config first:
 
 ```bash
 env -i HOME="$HOME" PATH="/usr/bin:/bin" bash --noprofile --norc

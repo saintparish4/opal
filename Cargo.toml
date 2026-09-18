@@ -3,7 +3,7 @@ resolver = "3"
 members = [ "crates/opal-core", "crates/opal-cli", "crates/opal-pm" ] # TODO: add more crates
 
 [workspace.package]
-version = "0.2.1"
+version = "0.2.2"
 edition = "2024"
 license = "MIT"
 repository = "https://github.com/saintparish4/opal"
