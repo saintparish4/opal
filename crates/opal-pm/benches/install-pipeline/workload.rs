@@ -5,9 +5,9 @@
 //!
 //! - **Fat packuments.** A published package carries every version it has ever
 //!   released in one JSON document, so resolving 400 packages means parsing 400
-//!   documents of tens of versions each, not 400 one-line stubs. The
-//!   `create-next-app` measurement in `p1.md` put this — not downloading — at
-//!   the top of a warm-cache install.
+//!   documents of tens of versions each, not 400 one-line stubs. Measured on a
+//!   `create-next-app` tree, this, not downloading, was the top cost of a
+//!   warm-cache install.
 //! - **Duplicates.** Real trees have popular packages with many dependents, and
 //!   some dependent pins an old version, so the layout planner has to nest
 //!   rather than hoist everything flat. A tree where every package has exactly

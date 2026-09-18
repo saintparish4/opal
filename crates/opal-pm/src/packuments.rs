@@ -8,7 +8,7 @@
 //! warm store. This is the other half of that store.
 //!
 //! **This is HTTP freshness, not cache invalidation.** The distinction matters
-//! because `DO_NOT_RULES.md` bans mtime from invalidation logic, and a record
+//! because mtime is banned from invalidation logic outright, and a record
 //! here does carry a timestamp. Nothing content-addressed is keyed on it: a
 //! record holds the time *inside its own body*, nothing reads a file's mtime,
 //! and packuments live outside the CAS precisely so no content-addressed

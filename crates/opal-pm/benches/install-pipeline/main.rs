@@ -4,9 +4,9 @@
 //! nothing here has a threshold, and the exit code never depends on a
 //! measurement. A flaky perf gate teaches people to ignore red CI.
 //!
-//! "Install time" is four different numbers, and collapsing them is how the
-//! `create-next-app` run in `p1.md` looked ordinary at ten minutes. Each
-//! scenario isolates one stage by varying only what is already on disk:
+//! "Install time" is four different numbers, and collapsing them is how a
+//! ten-minute `create-next-app` install once looked ordinary. Each scenario
+//! isolates one stage by varying only what is already on disk:
 //!
 //! | Scenario  | Store | `opal.lock` | `node_modules` | Measures                  |
 //! | --------- | ----- | ----------- | -------------- | ------------------------- |
