@@ -244,11 +244,11 @@ Crates are built strictly in sequence — each is a prerequisite for the next, a
 cargo test --workspace --all-features
 ```
 
-258 tests currently pass, organized by **risk category** rather than a unit/integration/e2e pyramid — the question is where the system actually breaks, and what a bug looks like when it does:
+260 tests currently pass, organized by **risk category** rather than a unit/integration/e2e pyramid — the question is where the system actually breaks, and what a bug looks like when it does:
 
 | Suite | Count | Covers |
 |---|---|---|
-| `opal-core` unit | 51 | Hashing, path abstraction, CAS layout, graph construction, resolver internals |
+| `opal-core` unit | 53 | Hashing, path abstraction, CAS layout, graph construction, resolver internals |
 | `opal-pm` unit | 94 | Semver parsing/matching, manifests, registry client and retry policy, integrity verification, tarball ingestion and its ceilings, lockfile, linker planning, platform matching, locks, GC bookkeeping |
 | `tests/cache-invalidation.rs` (`opal-core`) | 16 | The invalidation matrix: content change, add/remove, direct and transitive dependency change — asserting the right hits *and* misses. Includes the "never mtime" invariant as a direct test, and memo-record pruning |
 | `tests/graph-resolution.rs` (`opal-core`) | 15 | Resolution against fixture trees, plus a golden/snapshot test of resolved graph output (`tests/golden/`) |

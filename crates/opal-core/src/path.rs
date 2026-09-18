@@ -114,11 +114,16 @@ impl NormalizedPath {
         }
     }
 
-    /// Path segments, excluding any root prefix
+    /// Path segments, excluding any root prefix.
+    ///
+    /// `.` has none. It is the one spelling `normalize` keeps a `.` in (the
+    /// empty relative path), and counting it as a segment made `x` relative to
+    /// `.` come out as `../x`.
     pub fn segments(&self) -> impl Iterator<Item = &str> {
         let root = root_prefix(&self.inner);
         let rest = &self.inner[root.len()..];
-        rest.split('/').filter(|segment| !segment.is_empty())
+        rest.split('/')
+            .filter(|segment| !segment.is_empty() && *segment != ".")
     }
 
     /// Whether `base` is a path prefix of `self`, compared segment-wise so that
@@ -131,6 +136,9 @@ impl NormalizedPath {
         let mut segments = self.segments();
         loop {
             match (base_segments.next(), segments.next()) {
+                // Past the end of `base`, a leading `..` climbs back out of
+                // it: `../a` is not under `.`, and `../..` is not under `..`.
+                (None, Some("..")) => return false,
                 (None, _) => return true,
                 (Some(_), None) => return false,
                 (Some(expected), Some(actual)) if expected != actual => return false,
@@ -349,6 +357,41 @@ mod tests {
         assert!(path.starts_with(&NormalizedPath::new("/a/bc")));
         assert!(!path.starts_with(&NormalizedPath::new("/a/b")));
         assert!(!path.starts_with(&NormalizedPath::new("a/bc")));
+    }
+
+    #[test]
+    fn test_dot_is_the_empty_relative_path() {
+        let dot = NormalizedPath::new(".");
+        assert_eq!(dot.segments().count(), 0);
+        assert_eq!(
+            NormalizedPath::new("node_modules/a")
+                .relative_to(&dot)
+                .unwrap()
+                .as_str(),
+            "node_modules/a"
+        );
+        assert_eq!(
+            NormalizedPath::new("../a")
+                .relative_to(&dot)
+                .unwrap()
+                .as_str(),
+            "../a"
+        );
+        assert_eq!(dot.relative_to(&dot).unwrap().as_str(), ".");
+        assert_eq!(
+            dot.relative_to(&NormalizedPath::new("a")).unwrap().as_str(),
+            ".."
+        );
+    }
+
+    #[test]
+    fn test_starts_with_does_not_count_climbing_out_as_inside() {
+        let dot = NormalizedPath::new(".");
+        assert!(NormalizedPath::new("a/b").starts_with(&dot));
+        assert!(dot.starts_with(&dot));
+        assert!(!NormalizedPath::new("../a").starts_with(&dot));
+        assert!(NormalizedPath::new("../a").starts_with(&NormalizedPath::new("..")));
+        assert!(!NormalizedPath::new("../..").starts_with(&NormalizedPath::new("..")));
     }
 
     #[test]
