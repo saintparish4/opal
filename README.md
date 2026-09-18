@@ -244,14 +244,14 @@ Crates are built strictly in sequence — each is a prerequisite for the next, a
 cargo test --workspace --all-features
 ```
 
-276 tests currently pass, organized by **risk category** rather than a unit/integration/e2e pyramid — the question is where the system actually breaks, and what a bug looks like when it does:
+278 tests currently pass, organized by **risk category** rather than a unit/integration/e2e pyramid — the question is where the system actually breaks, and what a bug looks like when it does:
 
 | Suite | Count | Covers |
 |---|---|---|
-| `opal-core` unit | 53 | Hashing, path abstraction, CAS layout, graph construction, resolver internals |
+| `opal-core` unit | 54 | Hashing, path abstraction, CAS layout, graph construction, resolver internals |
 | `opal-pm` unit | 102 | Semver parsing/matching, manifests and their lifecycle scripts, registry client and retry policy, integrity verification, tarball ingestion and its ceilings, lockfile, linker planning and depth ordering, the linking worker pool, platform matching, locks, GC bookkeeping |
 | `tests/cache-invalidation.rs` (`opal-core`) | 16 | The invalidation matrix: content change, add/remove, direct and transitive dependency change — asserting the right hits *and* misses. Includes the "never mtime" invariant as a direct test, and memo-record pruning |
-| `tests/graph-resolution.rs` (`opal-core`) | 15 | Resolution against fixture trees, plus a golden/snapshot test of resolved graph output (`tests/golden/`) |
+| `tests/graph-resolution.rs` (`opal-core`) | 16 | Resolution against fixture trees, plus a golden/snapshot test of resolved graph output (`tests/golden/`) |
 | `tests/cas-crash-safety.rs` (`opal-core`) | 6 | Atomic CAS writes under fault injection — a killed write leaves orphaned temp files, never a corrupt entry |
 | `tests/install-pipeline.rs` (`opal-pm`) | 45 | The full install pipeline end to end, incl. `test_node_can_require_the_installed_tree` and `test_the_module_graph_resolves_against_the_installed_tree` — the `opal-core` ↔ `opal-pm` contract |
 | `tests/packument-cache.rs` (`opal-pm`) | 8 | When the registry client reaches the wire and when it does not: freshness, revalidation, `--offline`, and never answering one registry from another's cache |

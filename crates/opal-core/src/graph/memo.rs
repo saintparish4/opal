@@ -36,7 +36,9 @@ pub const FAULT_BEFORE_RENAME: FaultPoint = FaultPoint::new("memo-before-rename"
 /// v2 taught it to walk extensionless shebang scripts, which turns files that
 /// previously had no edges into files that have them. v3 added the project
 /// root to the record, which is a shape change rather than a behaviour one.
-pub const MEMO_FORMAT_VERSION: u32 = 3;
+/// v4 stopped an `exports` target from resolving outside its package, which
+/// turns edges that used to resolve into unresolved ones.
+pub const MEMO_FORMAT_VERSION: u32 = 4;
 
 #[derive(Debug, thiserror::Error)]
 pub enum MemoError {

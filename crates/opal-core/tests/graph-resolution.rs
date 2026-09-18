@@ -163,6 +163,36 @@ fn test_exports_conditions_follow_the_edge_kind() {
 }
 
 #[test]
+fn test_exports_never_resolve_outside_the_package() {
+    // Found by the resolver fuzz target: a `*` capture carried `..` segments
+    // straight through, and the target landed next to the package.
+    let project = Project::new();
+    project
+        .write(
+            "index.js",
+            "import a from 'pkg/a';\n\
+             import escaped from 'pkg/../../outside';\n\
+             import direct from 'pkg/up';\n",
+        )
+        .write(
+            "node_modules/pkg/package.json",
+            r#"{ "exports": { "./up": "./lib/../../outside.js", "./*": "./lib/*.js" } }"#,
+        )
+        .write("node_modules/pkg/lib/a.js", "export default 1;\n")
+        .write("node_modules/outside.js", "export default 2;\n");
+
+    let resolution = graph_of(&project, "index.js");
+    assert_eq!(
+        specifiers(&resolution, "index.js"),
+        vec![
+            ("pkg/a".to_string(), "node_modules/pkg/lib/a.js".to_string()),
+            ("pkg/../../outside".to_string(), "unresolved".to_string()),
+            ("pkg/up".to_string(), "unresolved".to_string()),
+        ]
+    );
+}
+
+#[test]
 fn test_module_system_follows_nearest_package_type() {
     let project = Project::new();
     project

@@ -464,11 +464,21 @@ impl<'a> Resolver<'a> {
         };
 
         let target = match wildcard {
+            Some(ref captured) if has_invalid_segment(captured) => {
+                return Target::Unresolved(format!(
+                    "{subpath:?} is not a valid subpath of this package's exports"
+                ));
+            }
             Some(ref captured) => target.replace('*', captured),
             None => target,
         };
-        if !target.starts_with("./") {
-            return Target::Unresolved(format!("exports target {target:?} is not a relative path"));
+        if !target
+            .strip_prefix("./")
+            .is_some_and(|rest| !has_invalid_segment(rest))
+        {
+            return Target::Unresolved(format!(
+                "exports target {target:?} is not a relative path inside the package"
+            ));
         }
 
         let candidate = package_dir.join(&target);
@@ -735,6 +745,20 @@ fn match_subpath(exports: &Value, subpath: &str) -> Option<(Value, Option<String
     best.map(|(_, value, captured)| (value, Some(captured)))
 }
 
+/// Node's containment rule for `exports`. Past its leading `./`, a target may
+/// not contain an empty, `.`, `..`, or `node_modules` segment, and neither may
+/// the part of a specifier a `*` captures. Without it, `pkg/../../x` through
+/// `"./*": "./dist/*"` resolves outside the package, into whatever sits next
+/// to it, while Node refuses it.
+fn has_invalid_segment(path: &str) -> bool {
+    path.split(['/', '\\']).any(|segment| {
+        segment.is_empty()
+            || segment == "."
+            || segment == ".."
+            || segment.eq_ignore_ascii_case("node_modules")
+    })
+}
+
 /// Walks a condition object in declaration order, which is why `serde_json` is
 /// built with `preserve_order`.
 fn select_condition(value: &Value, conditions: &[String]) -> Option<String> {
@@ -908,6 +932,29 @@ mod tests {
         let (value, captured) = match_subpath(&exports, "./features/a").unwrap();
         assert_eq!(value.as_str(), Some("./src/features/*.js"));
         assert_eq!(captured.as_deref(), Some("a"));
+    }
+
+    #[test]
+    fn test_exports_segments_that_would_leave_the_package_are_invalid() {
+        for invalid in [
+            "..",
+            "../x",
+            "a/../../x",
+            "a//b",
+            "./a",
+            "a/.",
+            "node_modules/x",
+            "a\\..\\x",
+            "",
+        ] {
+            assert!(
+                has_invalid_segment(invalid),
+                "{invalid:?} should be refused"
+            );
+        }
+        for valid in ["a", "a/b.js", "features/x.mjs", "..a", "a.."] {
+            assert!(!has_invalid_segment(valid), "{valid:?} should be allowed");
+        }
     }
 
     #[test]
