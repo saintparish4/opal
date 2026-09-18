@@ -248,6 +248,57 @@ fn test_a_package_without_its_marker_is_rebuilt() {
     assert!(sandbox.installed("node_modules/a"));
 }
 
+/// Publishes a tree three `node_modules` levels deep. Each version of `z`
+/// conflicts with the one already placed above it, so the last one nests
+/// under `x/node_modules/y`.
+fn publish_three_levels(registry: &mut FixtureRegistry) {
+    registry
+        .publish(Package::new("z", "1.0.0"))
+        .publish(Package::new("z", "2.0.0"))
+        .publish(Package::new("z", "3.0.0"))
+        .publish(Package::new("y", "1.0.0"))
+        .publish(Package::new("y", "2.0.0").dependency("z", "^2.0.0"))
+        .publish(
+            Package::new("x", "1.0.0")
+                .dependency("y", "^2.0.0")
+                .dependency("z", "^3.0.0"),
+        );
+}
+
+const DEEPEST: &str = "node_modules/x/node_modules/y/node_modules/z";
+
+#[test]
+fn test_a_parent_rebuilt_under_intact_children_rebuilds_them_too() {
+    let mut sandbox = Sandbox::new();
+    publish_three_levels(&mut sandbox.registry);
+    sandbox.project(serde_json::json!({
+        "dependencies": { "x": "^1.0.0", "y": "^1.0.0", "z": "^1.0.0" }
+    }));
+    sandbox.install().expect("install");
+    assert!(
+        sandbox.installed(DEEPEST),
+        "the fixture must nest three deep"
+    );
+
+    // The parent reads as incomplete while every package nested inside it
+    // still has its marker. Rebuilding the parent clears its directory, so
+    // counting those children as unchanged would leave them missing.
+    std::fs::remove_file(sandbox.path("node_modules/x/.opal-package")).expect("remove marker");
+
+    let report = sandbox.install().expect("reinstall");
+    for nested in [
+        "node_modules/x",
+        "node_modules/x/node_modules/y",
+        "node_modules/x/node_modules/z",
+        DEEPEST,
+    ] {
+        assert!(sandbox.installed(nested), "{nested} is missing");
+        assert!(sandbox.path(nested).join("index.js").is_file());
+    }
+    assert_eq!(report.link.added, 4);
+    assert_eq!(report.link.unchanged, 2);
+}
+
 #[test]
 fn test_files_are_hardlinked_from_the_store() {
     use std::os::unix::fs::MetadataExt as _;

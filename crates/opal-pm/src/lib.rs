@@ -10,6 +10,7 @@ pub mod locks;
 pub mod manifest;
 pub mod package;
 pub mod packuments;
+pub mod parallel;
 pub mod platform;
 pub mod progress;
 pub mod projects;

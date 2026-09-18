@@ -130,7 +130,7 @@ Current limitations worth knowing before pointing this at a project:
 - **Lifecycle scripts (`preinstall`/`install`/`postinstall`) do not run.** Packages shipping prebuilt binaries (`esbuild`, `sharp`, `@next/swc`) work; a package that needs `node-gyp` to compile at install time installs but does not build.
 - **Peers are recorded and classified, never auto-installed.**
 - **`git:` and `file:` specifiers are unsupported** and reported as such — resolution is against the public registry only.
-- **Downloads are sequential.** A cold install is round-trip bound; parallel fetching and linking are planned.
+- **Downloads are sequential.** Linking runs in parallel, one `node_modules` depth at a time, but a cold install is still round-trip bound; parallel fetching is planned.
 - **If your project and cache sit on different filesystems** (a project on `/mnt/c` under WSL2 with the default cache, for instance), every file is copied instead of hardlinked and the install warns. Keep both on the same filesystem, or set `OPAL_CACHE_DIR`.
 
 ### `opal cache` — inspect the shared CAS
@@ -244,20 +244,20 @@ Crates are built strictly in sequence — each is a prerequisite for the next, a
 cargo test --workspace --all-features
 ```
 
-260 tests currently pass, organized by **risk category** rather than a unit/integration/e2e pyramid — the question is where the system actually breaks, and what a bug looks like when it does:
+268 tests currently pass, organized by **risk category** rather than a unit/integration/e2e pyramid — the question is where the system actually breaks, and what a bug looks like when it does:
 
 | Suite | Count | Covers |
 |---|---|---|
 | `opal-core` unit | 53 | Hashing, path abstraction, CAS layout, graph construction, resolver internals |
-| `opal-pm` unit | 94 | Semver parsing/matching, manifests, registry client and retry policy, integrity verification, tarball ingestion and its ceilings, lockfile, linker planning, platform matching, locks, GC bookkeeping |
+| `opal-pm` unit | 100 | Semver parsing/matching, manifests, registry client and retry policy, integrity verification, tarball ingestion and its ceilings, lockfile, linker planning and depth ordering, the linking worker pool, platform matching, locks, GC bookkeeping |
 | `tests/cache-invalidation.rs` (`opal-core`) | 16 | The invalidation matrix: content change, add/remove, direct and transitive dependency change — asserting the right hits *and* misses. Includes the "never mtime" invariant as a direct test, and memo-record pruning |
 | `tests/graph-resolution.rs` (`opal-core`) | 15 | Resolution against fixture trees, plus a golden/snapshot test of resolved graph output (`tests/golden/`) |
 | `tests/cas-crash-safety.rs` (`opal-core`) | 6 | Atomic CAS writes under fault injection — a killed write leaves orphaned temp files, never a corrupt entry |
-| `tests/install-pipeline.rs` (`opal-pm`) | 39 | The full install pipeline end to end, incl. `test_node_can_require_the_installed_tree` and `test_the_module_graph_resolves_against_the_installed_tree` — the `opal-core` ↔ `opal-pm` contract |
+| `tests/install-pipeline.rs` (`opal-pm`) | 40 | The full install pipeline end to end, incl. `test_node_can_require_the_installed_tree` and `test_the_module_graph_resolves_against_the_installed_tree` — the `opal-core` ↔ `opal-pm` contract |
 | `tests/packument-cache.rs` (`opal-pm`) | 8 | When the registry client reaches the wire and when it does not: freshness, revalidation, `--offline`, and never answering one registry from another's cache |
 | `tests/resolution-properties.rs` (`opal-pm`) | 10 | `proptest` over generated registries: every resolved edge satisfies the range that asked for it, every root resolves to a version its own spec allows, and the layout places everything the resolution keeps |
 | `tests/semver-properties.rs` (`opal-pm`) | 12 | `proptest` over the range algebra in isolation |
-| `tests/install-crash-safety.rs` (`opal-cli`) | 6 | SIGKILL at each of seven pipeline stages converges on re-run; a killed lockfile rewrite leaves the previous lockfile byte-identical; two racing installs serialize instead of interleaving; `opal cache gc` blocks on an in-flight install rather than racing it |
+| `tests/install-crash-safety.rs` (`opal-cli`) | 7 | SIGKILL at each of seven pipeline stages converges on re-run, including mid-link in a tree three `node_modules` levels deep; a killed lockfile rewrite leaves the previous lockfile byte-identical; two racing installs serialize instead of interleaving; `opal cache gc` blocks on an in-flight install rather than racing it |
 | `tests/install-relative-root.rs` (`opal-cli`) | 1 | `opal install --root .` from inside a project: an unchanged tree stays unchanged, and nothing outside the project is touched |
 | `tests/npm-compatibility.rs` (`opal-cli`) | 15 | Real packages from the public registry, curated by the edge case each exercises. `#[ignore]` by default; install and execute run as separate CI jobs |
 
@@ -269,7 +269,7 @@ Fuzzing lives in `fuzz/`, its own workspace so that `cargo fuzz`'s sanitizer fla
 
 Benchmarks live in `benches/install-pipeline`, which times four scenarios separately (`cold`, `resolve`, `link`, `noop`) because collapsing them into one number is how a ten-minute install can look ordinary. Per the testing strategy it tracks numbers and never gates CI on them.
 
-Still to come: a V8 embedding-boundary suite once the runtime exists, and parallel fetching and linking — the remaining costs the metadata cache did not remove.
+Still to come: a V8 embedding-boundary suite once the runtime exists, and parallel fetching — the remaining cost the metadata cache did not remove.
 
 CI (GitHub Actions) runs fmt, clippy, test, and build on `ubuntu-latest` and `macos-latest` for every push and PR against `master`. Native Windows is out of scope for v1.
 

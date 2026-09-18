@@ -31,12 +31,16 @@ use opal_core::path::NormalizedPath;
 
 use crate::manifest::Manifest;
 use crate::package::{PackageError, PackageIndex};
+use crate::parallel;
 use crate::platform::Platform;
 use crate::resolve::{PackageId, Resolution};
 
 /// Some of a package's files are linked; its marker is not written.
 pub const FAULT_MID_LINK: FaultPoint = FaultPoint::new("pm-mid-link");
-/// One package is fully materialized; the next has not started.
+/// One nesting depth of packages is fully materialized; the next has not
+/// started. Between levels rather than between packages, because packages
+/// within a level finish in whatever order the threads do, and a kill point
+/// the crash-safety suite relies on has to be reached deterministically.
 pub const FAULT_BETWEEN_PACKAGES: FaultPoint = FaultPoint::new("pm-between-packages");
 
 /// Written last in a package directory; its presence means "complete".
@@ -93,6 +97,22 @@ pub struct LinkReport {
     /// store into the project at all. Reported rather than printed: `opal-pm`
     /// is a library, and the caller decides whether a terminal hears about it.
     pub hardlink_fallback: Option<String>,
+}
+
+impl LinkReport {
+    /// Threads accumulate separately and fold at the end, so no counter is
+    /// shared and no lock sits in the per-file path.
+    fn absorb(&mut self, other: Self) {
+        self.added += other.added;
+        self.removed += other.removed;
+        self.unchanged += other.unchanged;
+        self.files_linked += other.files_linked;
+        self.files_copied += other.files_copied;
+        self.bins += other.bins;
+        // Whichever thread hit it first: the reason is about the filesystem,
+        // not about a file, so any one of them is the whole answer.
+        self.hardlink_fallback = self.hardlink_fallback.take().or(other.hardlink_fallback);
+    }
 }
 
 /// What a failed `hard_link` means for the rest of the run.
@@ -309,26 +329,82 @@ pub fn reconcile(
         report.removed += 1;
     }
 
+    let mut by_depth: BTreeMap<usize, Vec<(&NormalizedPath, &PackageId)>> = BTreeMap::new();
     for (path, id) in layout {
-        let intact = actual.get(path).is_some_and(|marker| {
-            !removed_roots.iter().any(|root| path.starts_with(root))
-                && marker.name == id.name
-                && marker.version == id.version.to_string()
-        });
-        if intact {
-            report.unchanged += 1;
+        by_depth
+            .entry(nesting_depth(path))
+            .or_default()
+            .push((path, id));
+    }
+
+    // Every directory emptied during this run. The scan ran before any of it,
+    // so a nested package it found intact is gone once a directory above it is
+    // cleared, and has to be rebuilt rather than counted as unchanged.
+    let mut cleared: BTreeSet<NormalizedPath> = removed_roots.into_iter().collect();
+    let threads = parallel::workers();
+    for level in by_depth.into_values() {
+        let mut pending: Vec<(&NormalizedPath, &PackageId)> = Vec::new();
+        for (path, id) in level {
+            let intact = !is_cleared(path, &cleared)
+                && actual.get(path).is_some_and(|marker| {
+                    marker.name == id.name && marker.version == id.version.to_string()
+                });
+            if intact {
+                report.unchanged += 1;
+            } else {
+                pending.push((path, id));
+            }
+        }
+        if pending.is_empty() {
             continue;
         }
-        let package = fetched
-            .get(id)
-            .ok_or_else(|| LinkError::NotFetched { id: id.clone() })?;
-        materialize(project_root, path, package, cas, &mut report)?;
-        report.added += 1;
+
+        let reports = parallel::each(
+            &pending,
+            threads.min(pending.len()),
+            LinkReport::default,
+            |(path, id), report| -> Result<(), LinkError> {
+                let package = fetched
+                    .get(*id)
+                    .ok_or_else(|| LinkError::NotFetched { id: (*id).clone() })?;
+                materialize(project_root, path, package, cas, report)?;
+                report.added += 1;
+                Ok(())
+            },
+        )?;
+        for thread_report in reports {
+            report.absorb(thread_report);
+        }
+        cleared.extend(pending.into_iter().map(|(path, _)| path.clone()));
         fault::checkpoint(FAULT_BETWEEN_PACKAGES);
     }
 
     write_bin_directories(project_root, layout, fetched, cas, &mut report)?;
     Ok(report)
+}
+
+/// How many `node_modules` segments deep a placement sits.
+///
+/// The linker's one ordering rule: a package must be materialized before
+/// anything nested inside it, because materializing a package clears its
+/// directory first. Running a whole depth level at a time satisfies that on
+/// purpose, which is what makes each level safe to parallelize. Counted by
+/// segment rather than substring so a package named `x-node_modules` cannot
+/// shift a level.
+fn nesting_depth(path: &NormalizedPath) -> usize {
+    path.segments()
+        .filter(|segment| *segment == NODE_MODULES)
+        .count()
+}
+
+/// Whether this placement, or any package directory above it, was emptied.
+///
+/// Walks the owning packages rather than testing every cleared path as a
+/// prefix: on a cold install every package is cleared, and a prefix scan would
+/// make deciding intactness quadratic in the size of the tree.
+fn is_cleared(path: &NormalizedPath, cleared: &BTreeSet<NormalizedPath>) -> bool {
+    std::iter::successors(Some(path.clone()), strip_last_package)
+        .any(|directory| cleared.contains(&directory))
 }
 
 /// Writes one package's files, then its marker.
@@ -369,7 +445,9 @@ fn materialize(
             copy_with_mode(&source, &destination, 0o555)?;
             report.files_copied += 1;
         } else if report.hardlink_fallback.is_some() {
-            // Already established that this filesystem cannot do it.
+            // Already established that this filesystem cannot do it. Per
+            // thread: each worker pays one failed `hard_link` to find out,
+            // which is cheaper than an atomic read on every file to save them.
             copy_with_mode(&source, &destination, 0o444)?;
             report.files_copied += 1;
         } else {
@@ -1013,6 +1091,29 @@ mod tests {
             classify_link_failure(&synthetic),
             LinkFailure::ThisFile
         ));
+    }
+
+    #[test]
+    fn test_nesting_depth_counts_node_modules_segments_not_substrings() {
+        let depth = |path: &str| nesting_depth(&NormalizedPath::new(path));
+        assert_eq!(depth("node_modules/a"), 1);
+        assert_eq!(depth("node_modules/@scope/a"), 1);
+        assert_eq!(depth("node_modules/a/node_modules/@scope/b"), 2);
+        assert_eq!(depth("node_modules/x-node_modules/node_modules/b"), 2);
+    }
+
+    #[test]
+    fn test_a_cleared_directory_takes_everything_nested_under_it() {
+        let cleared: BTreeSet<NormalizedPath> = [NormalizedPath::new("node_modules/@scope/a")]
+            .into_iter()
+            .collect();
+        let under = |path: &str| is_cleared(&NormalizedPath::new(path), &cleared);
+
+        assert!(under("node_modules/@scope/a"));
+        assert!(under("node_modules/@scope/a/node_modules/b"));
+        assert!(under("node_modules/@scope/a/node_modules/b/node_modules/c"));
+        assert!(!under("node_modules/@scope/ab"));
+        assert!(!under("node_modules/b/node_modules/@scope/a"));
     }
 
     #[test]

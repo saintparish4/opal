@@ -38,30 +38,57 @@ struct Fixtures {
 
 impl Fixtures {
     fn new() -> Self {
+        Self::publishing(|registry| {
+            registry
+                .publish(Package::new("leaf", "1.0.0"))
+                .publish(Package::new("shared", "1.0.0"))
+                .publish(Package::new("shared", "2.0.0"))
+                .publish(
+                    Package::new("tool", "1.0.0")
+                        .executable("cli.js", "#!/usr/bin/env node\nconsole.log('tool');\n")
+                        .bin("tool", "./cli.js"),
+                )
+                .publish(
+                    Package::new("a", "1.0.0")
+                        .dependency("leaf", "^1.0.0")
+                        .dependency("shared", "^1.0.0"),
+                )
+                .publish(Package::new("b", "1.0.0").dependency("shared", "^2.0.0"));
+        })
+    }
+
+    /// A tree three `node_modules` levels deep, for [`NESTED_DEPENDENCIES`]:
+    /// each version of `z` conflicts with the one already placed above it, so
+    /// the last one nests under `x/node_modules/y`.
+    fn nested() -> Self {
+        Self::publishing(|registry| {
+            registry
+                .publish(Package::new("z", "1.0.0"))
+                .publish(Package::new("z", "2.0.0"))
+                .publish(Package::new("z", "3.0.0"))
+                .publish(Package::new("y", "1.0.0"))
+                .publish(Package::new("y", "2.0.0").dependency("z", "^2.0.0"))
+                .publish(
+                    Package::new("x", "1.0.0")
+                        .dependency("y", "^2.0.0")
+                        .dependency("z", "^3.0.0"),
+                );
+        })
+    }
+
+    fn publishing(publish: impl FnOnce(&mut FixtureRegistry)) -> Self {
         let directory = tempfile::tempdir().expect("temp dir");
         let mut registry = FixtureRegistry::new(directory.path().join("registry"));
-        registry
-            .publish(Package::new("leaf", "1.0.0"))
-            .publish(Package::new("shared", "1.0.0"))
-            .publish(Package::new("shared", "2.0.0"))
-            .publish(
-                Package::new("tool", "1.0.0")
-                    .executable("cli.js", "#!/usr/bin/env node\nconsole.log('tool');\n")
-                    .bin("tool", "./cli.js"),
-            )
-            .publish(
-                Package::new("a", "1.0.0")
-                    .dependency("leaf", "^1.0.0")
-                    .dependency("shared", "^1.0.0"),
-            )
-            .publish(Package::new("b", "1.0.0").dependency("shared", "^2.0.0"));
-
+        publish(&mut registry);
         Self {
             _directory: directory,
             registry,
         }
     }
 }
+
+const NESTED_DEPENDENCIES: &[(&str, &str)] = &[("x", "^1.0.0"), ("y", "^1.0.0"), ("z", "^1.0.0")];
+const DEEPEST_MARKER: &str = "node_modules/x/node_modules/y/node_modules/z/.opal-package";
 
 /// A project plus its own cache, so each trial starts cold.
 struct World {
@@ -73,14 +100,25 @@ struct World {
 
 impl World {
     fn new(fixtures: &Fixtures) -> Self {
+        Self::depending_on(
+            fixtures,
+            &[("a", "^1.0.0"), ("b", "^1.0.0"), ("tool", "^1.0.0")],
+        )
+    }
+
+    fn depending_on(fixtures: &Fixtures, dependencies: &[(&str, &str)]) -> Self {
         let directory = tempfile::tempdir().expect("temp dir");
         let project = directory.path().join("project");
+        let dependencies: serde_json::Map<String, serde_json::Value> = dependencies
+            .iter()
+            .map(|(name, spec)| ((*name).to_string(), serde_json::json!(spec)))
+            .collect();
         write_project(
             &project,
             serde_json::json!({
                 "name": "app",
                 "version": "1.0.0",
-                "dependencies": { "a": "^1.0.0", "b": "^1.0.0", "tool": "^1.0.0" }
+                "dependencies": dependencies
             }),
         );
         Self {
@@ -317,6 +355,38 @@ fn test_repeated_kills_still_converge() {
 
     world.install();
     assert_eq!(world.snapshot(), expected);
+}
+
+#[test]
+fn test_a_kill_while_linking_a_nested_tree_converges() {
+    // Linking runs one nesting depth at a time, threads within a depth. A
+    // package materialized too early would clear a directory another package
+    // is already nested in, and the failure is a silently missing package, so
+    // the comparison has to reach three levels down.
+    let fixtures = Fixtures::nested();
+    let reference = World::depending_on(&fixtures, NESTED_DEPENDENCIES);
+    reference.install();
+    let expected = reference.snapshot();
+    assert!(
+        expected.contains_key(DEEPEST_MARKER),
+        "the fixture no longer nests three levels deep"
+    );
+
+    for point in ["pm-mid-link", "pm-between-packages"] {
+        let world = World::depending_on(&fixtures, NESTED_DEPENDENCIES);
+        assert!(world.install_killed_at(point), "{point} was never reached");
+
+        world.install();
+        let recovered = world.snapshot();
+        assert!(
+            recovered.contains_key(DEEPEST_MARKER),
+            "{point}: the deepest nested package is missing after re-running"
+        );
+        assert_eq!(
+            recovered, expected,
+            "{point}: re-running did not converge on the clean state"
+        );
+    }
 }
 
 #[test]
