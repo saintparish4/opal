@@ -244,7 +244,7 @@ Crates are built strictly in sequence — each is a prerequisite for the next, a
 cargo test --workspace --all-features
 ```
 
-278 tests currently pass, organized by **risk category** rather than a unit/integration/e2e pyramid — the question is where the system actually breaks, and what a bug looks like when it does:
+279 tests currently pass, organized by **risk category** rather than a unit/integration/e2e pyramid — the question is where the system actually breaks, and what a bug looks like when it does:
 
 | Suite | Count | Covers |
 |---|---|---|
@@ -252,6 +252,7 @@ cargo test --workspace --all-features
 | `opal-pm` unit | 102 | Semver parsing/matching, manifests and their lifecycle scripts, registry client and retry policy, integrity verification, tarball ingestion and its ceilings, lockfile, linker planning and depth ordering, the linking worker pool, platform matching, locks, GC bookkeeping |
 | `tests/cache-invalidation.rs` (`opal-core`) | 16 | The invalidation matrix: content change, add/remove, direct and transitive dependency change — asserting the right hits *and* misses. Includes the "never mtime" invariant as a direct test, and memo-record pruning |
 | `tests/graph-resolution.rs` (`opal-core`) | 16 | Resolution against fixture trees, plus a golden/snapshot test of resolved graph output (`tests/golden/`) |
+| `tests/exports-properties.rs` (`opal-core`) | 1 | `proptest` over `exports` maps and specifiers built from the segments that move a path: whatever a package's exports resolve to stays inside the package, which is Node's rule |
 | `tests/cas-crash-safety.rs` (`opal-core`) | 6 | Atomic CAS writes under fault injection — a killed write leaves orphaned temp files, never a corrupt entry |
 | `tests/install-pipeline.rs` (`opal-pm`) | 45 | The full install pipeline end to end, incl. `test_node_can_require_the_installed_tree` and `test_the_module_graph_resolves_against_the_installed_tree` — the `opal-core` ↔ `opal-pm` contract |
 | `tests/packument-cache.rs` (`opal-pm`) | 8 | When the registry client reaches the wire and when it does not: freshness, revalidation, `--offline`, and never answering one registry from another's cache |
@@ -266,7 +267,7 @@ Cache invalidation is the highest-risk area in this architecture: a bug there do
 
 `--all-features` turns on the `fixtures` module both `install-pipeline.rs` and `install-crash-safety.rs` build against — a file-backed registry so those suites run offline, without hitting the real npm registry.
 
-Fuzzing lives in `fuzz/`, its own workspace so that `cargo fuzz`'s sanitizer flags never reach an ordinary build. Four targets cover the inputs that are not trusted — registry JSON, tarball bytes, `package.json`, and `opal.lock` — and standing them up found three bugs in the lockfile round trip, one of which let a dependency write lines into the lockfile of every project installing it. See `fuzz/README.md`.
+Fuzzing lives in `fuzz/`, its own workspace so that `cargo fuzz`'s sanitizer flags never reach an ordinary build. Five targets cover the inputs that are not trusted: registry JSON, tarball bytes, `package.json`, `opal.lock`, and JS/TS source through the resolver, together with a dependency's `exports` map. Standing them up found three bugs in the lockfile round trip, one of which let a dependency write lines into the lockfile of every project installing it, and one in the resolver, which let a package's `exports` resolve outside the package. See `fuzz/README.md`.
 
 Benchmarks live in `benches/install-pipeline`, which times four scenarios separately (`cold`, `resolve`, `link`, `noop`) because collapsing them into one number is how a ten-minute install can look ordinary. Per the testing strategy it tracks numbers and never gates CI on them: a CI job runs it on every push and PR, at 0 ms and 25 ms of simulated latency, and records the results in the job summary and as a JSON artifact. Nothing fails on a measurement until a noise threshold is agreed.
 
