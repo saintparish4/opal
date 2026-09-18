@@ -83,3 +83,24 @@ jobs:
           node-version: "22"
       - name: Execute
         run: cargo test -p opal-cli --test npm-compatibility -- --ignored test_execute
+
+  # `testing_strategy.md` §1: resolve the same package.json with npm and with
+  # opal, and fail if they pick different versions for the project's own
+  # dependencies or read any range differently. The property tests only hold
+  # opal to its own semver; this holds it to npm's.
+  npm-cross-check:
+    name: npm cross-check (resolution)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install Rust toolchain
+        run: rustup show
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+      - name: Install Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Cross-check
+        run: cargo test -p opal-pm --test npm-cross-check -- --ignored --nocapture

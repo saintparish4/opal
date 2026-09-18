@@ -260,6 +260,7 @@ cargo test --workspace --all-features
 | `tests/install-crash-safety.rs` (`opal-cli`) | 8 | SIGKILL at each of seven pipeline stages converges on re-run, including mid-link in a tree three `node_modules` levels deep, and so do kills at random moments (seeded: replay a failure with the `OPAL_CHAOS_SEED` it prints, run longer with `OPAL_CHAOS_TRIALS`); a killed lockfile rewrite leaves the previous lockfile byte-identical; two racing installs serialize instead of interleaving; `opal cache gc` blocks on an in-flight install rather than racing it |
 | `tests/install-relative-root.rs` (`opal-cli`) | 1 | `opal install --root .` from inside a project: an unchanged tree stays unchanged, and nothing outside the project is touched |
 | `tests/npm-compatibility.rs` (`opal-cli`) | 15 | Real packages from the public registry, curated by the edge case each exercises. `#[ignore]` by default; install and execute run as separate CI jobs |
+| `tests/npm-cross-check.rs` (`opal-pm`) | 6 | npm and opal resolve the same `package.json`: the project's own dependencies must get the same versions, and each side must read the other's picks as inside their ranges (npm's own `semver` checks opal's). Tree differences that come from selection policy rather than semver are printed, not failed. `#[ignore]` by default; its own CI job |
 
 Cache invalidation is the highest-risk area in this architecture: a bug there does not crash, it silently serves stale output. Any change to CAS key derivation, integrity verification, or invalidation logic must add or update the invalidation-matrix tests.
 
@@ -271,7 +272,7 @@ Benchmarks live in `benches/install-pipeline`, which times four scenarios separa
 
 Still to come: a V8 embedding-boundary suite once the runtime exists, and parallel fetching — the remaining cost the metadata cache did not remove.
 
-CI (GitHub Actions) runs fmt, clippy, test, and build on `ubuntu-latest` and `macos-latest` for every push and PR against `master`. Native Windows is out of scope for v1.
+CI (GitHub Actions) runs fmt, clippy, test, and build on `ubuntu-latest` and `macos-latest` for every push and PR against `master`, plus three registry-backed jobs: npm compatibility install, npm compatibility execute, and the npm resolution cross-check. Native Windows is out of scope for v1.
 
 ## Environment Variables
 
