@@ -605,13 +605,20 @@ fn read_marker(package_directory: &Path) -> Result<Option<Marker>, LinkError> {
     }))
 }
 
+/// Where a scanned directory sits under the project, as a layout key.
+///
+/// Every scanned path is built by joining onto `project_root`, so stripping it
+/// is exact. Normalizing both and diffing them lexically is not: a root of `.`
+/// keeps its one `.` segment while the joined path's normalizes away, so
+/// `opal install --root .` keyed every package as `../node_modules/<name>`,
+/// read the whole tree as stale, and removed those paths, which are outside
+/// the project.
 fn relative_to_root(project_root: &Path, path: &Path) -> Result<NormalizedPath, LinkError> {
-    let root = NormalizedPath::from_native(project_root)
-        .map_err(|error| LinkError::io(project_root, std::io::Error::other(error)))?;
-    let full = NormalizedPath::from_native(path)
-        .map_err(|error| LinkError::io(path, std::io::Error::other(error)))?;
-    full.relative_to(&root)
-        .ok_or_else(|| LinkError::io(path, std::io::Error::other("outside the project root")))
+    let relative = path
+        .strip_prefix(project_root)
+        .map_err(|_| LinkError::io(path, std::io::Error::other("outside the project root")))?;
+    NormalizedPath::from_native(relative)
+        .map_err(|error| LinkError::io(path, std::io::Error::other(error)))
 }
 
 #[cfg(test)]
@@ -999,6 +1006,20 @@ mod tests {
             classify_link_failure(&synthetic),
             LinkFailure::ThisFile
         ));
+    }
+
+    #[test]
+    fn test_a_relative_project_root_keys_packages_inside_the_project() {
+        for root in [".", "./", "app", "/abs/app"] {
+            let root = Path::new(root);
+            let scanned = root.join(NODE_MODULES).join("@scope").join("a");
+            assert_eq!(
+                relative_to_root(root, &scanned).expect("under the root"),
+                NormalizedPath::new("node_modules/@scope/a"),
+                "root {}",
+                root.display()
+            );
+        }
     }
 
     #[test]
