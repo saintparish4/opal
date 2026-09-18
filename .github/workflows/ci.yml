@@ -104,3 +104,51 @@ jobs:
           node-version: "22"
       - name: Cross-check
         run: cargo test -p opal-pm --test npm-cross-check -- --ignored --nocapture
+
+  # `testing_strategy.md` §7: record every run's numbers, never gate on them.
+  # No noise threshold has been agreed, so nothing here can fail the build on a
+  # measurement, and `continue-on-error` keeps a broken harness from blocking
+  # a merge. Each run's numbers go to the job summary, and as JSON to an
+  # artifact, one record per simulated latency.
+  benchmark:
+    name: Install benchmark (tracked, not gated)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install Rust toolchain
+        run: rustup show
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+      - name: Run
+        run: |
+          set -euo pipefail
+          mkdir -p bench
+          for rtt in 0 25; do
+            cargo bench -p opal-pm --bench install-pipeline -- --json --rtt-ms "$rtt" > "bench/rtt-${rtt}ms.json"
+          done
+      - name: Summarize
+        run: |
+          python3 - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import glob
+          import json
+
+          print("### Install benchmark (tracked, not gated)\n")
+          print("| RTT | Scenario | Median | Min | Max | Round trips |")
+          print("|---|---|---|---|---|---|")
+          for path in sorted(glob.glob("bench/*.json"), key=lambda p: json.load(open(p))["rtt_ms"]):
+              record = json.load(open(path))
+              for scenario in record["scenarios"]:
+                  wall = scenario["wall_ms"]
+                  trips = scenario["packument_round_trips"] + scenario["tarball_round_trips"]
+                  print(
+                      f"| {record['rtt_ms']:g} ms | {scenario['scenario']} | {wall['median']:.1f} ms "
+                      f"| {wall['min']:.1f} ms | {wall['max']:.1f} ms | {trips} |"
+                  )
+          PY
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: install-benchmark
+          path: bench/*.json

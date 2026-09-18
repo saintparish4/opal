@@ -268,11 +268,11 @@ Cache invalidation is the highest-risk area in this architecture: a bug there do
 
 Fuzzing lives in `fuzz/`, its own workspace so that `cargo fuzz`'s sanitizer flags never reach an ordinary build. Four targets cover the inputs that are not trusted — registry JSON, tarball bytes, `package.json`, and `opal.lock` — and standing them up found three bugs in the lockfile round trip, one of which let a dependency write lines into the lockfile of every project installing it. See `fuzz/README.md`.
 
-Benchmarks live in `benches/install-pipeline`, which times four scenarios separately (`cold`, `resolve`, `link`, `noop`) because collapsing them into one number is how a ten-minute install can look ordinary. Per the testing strategy it tracks numbers and never gates CI on them.
+Benchmarks live in `benches/install-pipeline`, which times four scenarios separately (`cold`, `resolve`, `link`, `noop`) because collapsing them into one number is how a ten-minute install can look ordinary. Per the testing strategy it tracks numbers and never gates CI on them: a CI job runs it on every push and PR, at 0 ms and 25 ms of simulated latency, and records the results in the job summary and as a JSON artifact. Nothing fails on a measurement until a noise threshold is agreed.
 
 Still to come: a V8 embedding-boundary suite once the runtime exists, and parallel fetching — the remaining cost the metadata cache did not remove.
 
-CI (GitHub Actions) runs fmt, clippy, test, and build on `ubuntu-latest` and `macos-latest` for every push and PR against `master`, plus three registry-backed jobs: npm compatibility install, npm compatibility execute, and the npm resolution cross-check. Native Windows is out of scope for v1.
+CI (GitHub Actions) runs fmt, clippy, test, and build on `ubuntu-latest` and `macos-latest` for every push and PR against `master`, plus three registry-backed jobs (npm compatibility install, npm compatibility execute, and the npm resolution cross-check) and the install benchmark, which records numbers and never fails the build. Native Windows is out of scope for v1.
 
 ## Environment Variables
 
