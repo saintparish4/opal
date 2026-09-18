@@ -110,7 +110,8 @@ enum LinkFailure {
 fn classify_link_failure(error: &std::io::Error) -> LinkFailure {
     match error.raw_os_error() {
         Some(libc::EXDEV) => LinkFailure::Impossible(
-            "the store and this project are on different filesystems, so every file was copied              instead of hardlinked"
+            "the store and this project are on different filesystems, so every file was copied \
+             instead of hardlinked"
                 .to_string(),
         ),
         // Some filesystems (and some FUSE mounts) refuse hardlinks outright
@@ -989,10 +990,16 @@ mod tests {
         // A cross-device mount cannot be conjured in a test, so the classifier
         // is exercised directly on the errno the kernel would report.
         let exdev = std::io::Error::from_raw_os_error(libc::EXDEV);
-        assert!(matches!(
-            classify_link_failure(&exdev),
-            LinkFailure::Impossible(_)
-        ));
+        let LinkFailure::Impossible(reason) = classify_link_failure(&exdev) else {
+            panic!("a cross-device link can never succeed");
+        };
+        // Printed as the install's warning, so it has to read as one sentence.
+        assert_eq!(
+            reason,
+            "the store and this project are on different filesystems, so every file was copied \
+             instead of hardlinked"
+        );
+        assert!(!reason.contains("  "));
 
         let too_many_links = std::io::Error::from_raw_os_error(libc::EMLINK);
         assert!(matches!(
