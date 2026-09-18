@@ -1,16 +1,18 @@
 //! Exit criterion: SIGKILL anywhere in the install pipeline, re-run,
 //! and converge on exactly the state an uninterrupted install produces.
 //!
-//! The kill lands at a named point the process announces on stderr, so each
+//! Most kills land at a named point the process announces on stderr, so each
 //! trial interrupts a specific stage rather than whatever the scheduler happened
 //! to be doing. `testing_strategy.md` §8 names the stages: mid-download,
-//! mid-verify, mid-rename, mid-link, mid-lockfile-write.
+//! mid-verify, mid-rename, mid-link, mid-lockfile-write. Those are only the
+//! stages someone thought to instrument, so one test also kills at random
+//! moments to find the ones nobody did.
 
 use std::collections::BTreeMap;
 use std::io::{BufRead, BufReader};
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
-use std::time::Duration;
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use opal_core::fault::{FAULT_ENV, READY_MARKER};
 use opal_core::hash::ContentHash;
@@ -36,43 +38,56 @@ struct Fixtures {
     registry: FixtureRegistry,
 }
 
+fn publish_standard(registry: &mut FixtureRegistry) {
+    registry
+        .publish(Package::new("leaf", "1.0.0"))
+        .publish(Package::new("shared", "1.0.0"))
+        .publish(Package::new("shared", "2.0.0"))
+        .publish(
+            Package::new("tool", "1.0.0")
+                .executable("cli.js", "#!/usr/bin/env node\nconsole.log('tool');\n")
+                .bin("tool", "./cli.js"),
+        )
+        .publish(
+            Package::new("a", "1.0.0")
+                .dependency("leaf", "^1.0.0")
+                .dependency("shared", "^1.0.0"),
+        )
+        .publish(Package::new("b", "1.0.0").dependency("shared", "^2.0.0"));
+}
+
+/// A tree three `node_modules` levels deep, for [`NESTED_DEPENDENCIES`]: each
+/// version of `z` conflicts with the one already placed above it, so the last
+/// one nests under `x/node_modules/y`.
+fn publish_nested(registry: &mut FixtureRegistry) {
+    registry
+        .publish(Package::new("z", "1.0.0"))
+        .publish(Package::new("z", "2.0.0"))
+        .publish(Package::new("z", "3.0.0"))
+        .publish(Package::new("y", "1.0.0"))
+        .publish(Package::new("y", "2.0.0").dependency("z", "^2.0.0"))
+        .publish(
+            Package::new("x", "1.0.0")
+                .dependency("y", "^2.0.0")
+                .dependency("z", "^3.0.0"),
+        );
+}
+
 impl Fixtures {
     fn new() -> Self {
-        Self::publishing(|registry| {
-            registry
-                .publish(Package::new("leaf", "1.0.0"))
-                .publish(Package::new("shared", "1.0.0"))
-                .publish(Package::new("shared", "2.0.0"))
-                .publish(
-                    Package::new("tool", "1.0.0")
-                        .executable("cli.js", "#!/usr/bin/env node\nconsole.log('tool');\n")
-                        .bin("tool", "./cli.js"),
-                )
-                .publish(
-                    Package::new("a", "1.0.0")
-                        .dependency("leaf", "^1.0.0")
-                        .dependency("shared", "^1.0.0"),
-                )
-                .publish(Package::new("b", "1.0.0").dependency("shared", "^2.0.0"));
-        })
+        Self::publishing(publish_standard)
     }
 
-    /// A tree three `node_modules` levels deep, for [`NESTED_DEPENDENCIES`]:
-    /// each version of `z` conflicts with the one already placed above it, so
-    /// the last one nests under `x/node_modules/y`.
     fn nested() -> Self {
+        Self::publishing(publish_nested)
+    }
+
+    /// Both trees at once: a bin to link, a conflict to nest, and three
+    /// depths to order, so a random kill has every kind of state to land in.
+    fn chaos() -> Self {
         Self::publishing(|registry| {
-            registry
-                .publish(Package::new("z", "1.0.0"))
-                .publish(Package::new("z", "2.0.0"))
-                .publish(Package::new("z", "3.0.0"))
-                .publish(Package::new("y", "1.0.0"))
-                .publish(Package::new("y", "2.0.0").dependency("z", "^2.0.0"))
-                .publish(
-                    Package::new("x", "1.0.0")
-                        .dependency("y", "^2.0.0")
-                        .dependency("z", "^3.0.0"),
-                );
+            publish_standard(registry);
+            publish_nested(registry);
         })
     }
 
@@ -87,6 +102,8 @@ impl Fixtures {
     }
 }
 
+const STANDARD_DEPENDENCIES: &[(&str, &str)] =
+    &[("a", "^1.0.0"), ("b", "^1.0.0"), ("tool", "^1.0.0")];
 const NESTED_DEPENDENCIES: &[(&str, &str)] = &[("x", "^1.0.0"), ("y", "^1.0.0"), ("z", "^1.0.0")];
 const DEEPEST_MARKER: &str = "node_modules/x/node_modules/y/node_modules/z/.opal-package";
 
@@ -100,10 +117,7 @@ struct World {
 
 impl World {
     fn new(fixtures: &Fixtures) -> Self {
-        Self::depending_on(
-            fixtures,
-            &[("a", "^1.0.0"), ("b", "^1.0.0"), ("tool", "^1.0.0")],
-        )
+        Self::depending_on(fixtures, STANDARD_DEPENDENCIES)
     }
 
     fn depending_on(fixtures: &Fixtures, dependencies: &[(&str, &str)]) -> Self {
@@ -180,6 +194,21 @@ impl World {
         }
         child.wait().expect("reap");
         reached
+    }
+
+    /// Starts an install and SIGKILLs it after `delay`, wherever it is by
+    /// then. It may already have finished, which is one of the moments a
+    /// random delay is supposed to sample.
+    fn install_killed_after(&self, delay: Duration) {
+        let mut child = self
+            .command()
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .spawn()
+            .expect("spawn opal install");
+        std::thread::sleep(delay);
+        let _ = child.kill();
+        child.wait().expect("reap");
     }
 
     /// Starts an install and waits for it to park at `point`, leaving it alive
@@ -385,6 +414,80 @@ fn test_a_kill_while_linking_a_nested_tree_converges() {
         assert_eq!(
             recovered, expected,
             "{point}: re-running did not converge on the clean state"
+        );
+    }
+}
+
+/// splitmix64. Enough randomness to spread kill moments, and small enough
+/// that a failing run replays exactly from the seed it prints.
+struct SplitMix64(u64);
+
+impl SplitMix64 {
+    fn next(&mut self) -> u64 {
+        self.0 = self.0.wrapping_add(0x9E37_79B9_7F4A_7C15);
+        let mut z = self.0;
+        z = (z ^ (z >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
+        z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
+        z ^ (z >> 31)
+    }
+
+    fn below(&mut self, bound: u64) -> u64 {
+        self.next() % bound.max(1)
+    }
+}
+
+fn env_number(name: &str) -> Option<u64> {
+    std::env::var(name).ok()?.trim().parse().ok()
+}
+
+#[test]
+fn test_kills_at_random_moments_converge() {
+    // Replay a failure with the OPAL_CHAOS_SEED it prints; run longer with
+    // OPAL_CHAOS_TRIALS.
+    let seed = env_number("OPAL_CHAOS_SEED").unwrap_or_else(|| {
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map(|elapsed| elapsed.as_nanos() as u64)
+            .unwrap_or_default()
+    });
+    let trials = env_number("OPAL_CHAOS_TRIALS").unwrap_or(12);
+    let mut random = SplitMix64(seed);
+
+    let fixtures = Fixtures::chaos();
+    let dependencies = [STANDARD_DEPENDENCIES, NESTED_DEPENDENCIES].concat();
+    let reference = World::depending_on(&fixtures, &dependencies);
+    let started = Instant::now();
+    reference.install();
+    // Anywhere in a whole cold install, and a little past its end, so a run
+    // that finishes before the kill arrives is sampled too.
+    let window = started.elapsed().as_micros() as u64 * 5 / 4;
+    let expected = reference.snapshot();
+
+    for trial in 0..trials {
+        let world = World::depending_on(&fixtures, &dependencies);
+        // Up to three kills in a row, so one can land in the recovery from
+        // the last.
+        let delays: Vec<Duration> = (0..1 + random.below(3))
+            .map(|_| Duration::from_micros(random.below(window)))
+            .collect();
+        let context = format!("OPAL_CHAOS_SEED={seed}, trial {trial}, killed after {delays:?}");
+
+        for delay in &delays {
+            world.install_killed_after(*delay);
+            assert!(
+                world.cache_is_clean(),
+                "{context}: cache failed verification"
+            );
+        }
+        world.install();
+        assert!(
+            world.cache_is_clean(),
+            "{context}: cache dirty after recovery"
+        );
+        assert_eq!(
+            world.snapshot(),
+            expected,
+            "{context}: re-running did not converge on the clean state"
         );
     }
 }

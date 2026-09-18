@@ -244,7 +244,7 @@ Crates are built strictly in sequence — each is a prerequisite for the next, a
 cargo test --workspace --all-features
 ```
 
-275 tests currently pass, organized by **risk category** rather than a unit/integration/e2e pyramid — the question is where the system actually breaks, and what a bug looks like when it does:
+276 tests currently pass, organized by **risk category** rather than a unit/integration/e2e pyramid — the question is where the system actually breaks, and what a bug looks like when it does:
 
 | Suite | Count | Covers |
 |---|---|---|
@@ -257,7 +257,7 @@ cargo test --workspace --all-features
 | `tests/packument-cache.rs` (`opal-pm`) | 8 | When the registry client reaches the wire and when it does not: freshness, revalidation, `--offline`, and never answering one registry from another's cache |
 | `tests/resolution-properties.rs` (`opal-pm`) | 10 | `proptest` over generated registries: every resolved edge satisfies the range that asked for it, every root resolves to a version its own spec allows, and the layout places everything the resolution keeps |
 | `tests/semver-properties.rs` (`opal-pm`) | 12 | `proptest` over the range algebra in isolation |
-| `tests/install-crash-safety.rs` (`opal-cli`) | 7 | SIGKILL at each of seven pipeline stages converges on re-run, including mid-link in a tree three `node_modules` levels deep; a killed lockfile rewrite leaves the previous lockfile byte-identical; two racing installs serialize instead of interleaving; `opal cache gc` blocks on an in-flight install rather than racing it |
+| `tests/install-crash-safety.rs` (`opal-cli`) | 8 | SIGKILL at each of seven pipeline stages converges on re-run, including mid-link in a tree three `node_modules` levels deep, and so do kills at random moments (seeded: replay a failure with the `OPAL_CHAOS_SEED` it prints, run longer with `OPAL_CHAOS_TRIALS`); a killed lockfile rewrite leaves the previous lockfile byte-identical; two racing installs serialize instead of interleaving; `opal cache gc` blocks on an in-flight install rather than racing it |
 | `tests/install-relative-root.rs` (`opal-cli`) | 1 | `opal install --root .` from inside a project: an unchanged tree stays unchanged, and nothing outside the project is touched |
 | `tests/npm-compatibility.rs` (`opal-cli`) | 15 | Real packages from the public registry, curated by the edge case each exercises. `#[ignore]` by default; install and execute run as separate CI jobs |
 
