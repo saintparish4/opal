@@ -1,9 +1,10 @@
 //! Semver resolution: `package.json` plus the registry, into a resolved graph.
 //!
 //! The algorithm is npm's in spirit: walk requirements breadth-first, and for
-//! each one reuse an already-selected version if it satisfies, otherwise take
-//! the highest version the range allows. Reuse is what keeps the tree small;
-//! the layout planner is what copes with the conflicts reuse cannot avoid.
+//! each one reuse an already-selected version if it satisfies, otherwise fetch
+//! the version npm itself would pick for the range ([`pick`]). Reuse is what
+//! keeps the tree small; the layout planner is what copes with the conflicts
+//! reuse cannot avoid.
 //!
 //! Determinism is a requirement, not a nicety — a lockfile that differs between
 //! two runs over the same inputs is a lockfile nobody can review. Every
@@ -14,7 +15,7 @@ use std::fmt;
 
 use crate::integrity::Integrity;
 use crate::manifest::{DependencyClass, Manifest, Spec};
-use crate::registry::{Registry, RegistryError};
+use crate::registry::{Packument, Registry, RegistryError, VersionMetadata};
 use crate::semver::{Range, Version};
 
 #[derive(Debug, thiserror::Error)]
@@ -387,26 +388,15 @@ impl<'a> Resolver<'a> {
             Err(error) => return Err(error.into()),
         };
 
-        // Highest first, and stop at the first one that is actually
-        // installable. A packument lists versions whose bodies cannot be
-        // installed from — no `dist`, no tarball, no usable integrity — and
-        // since bodies are parsed on demand, "does this version exist" and
-        // "can this version be installed" are now two questions. Asking the
-        // second one lazily is what keeps this to one parse rather than one
-        // per published version.
         let chosen = match (&range, &request.spec) {
-            (Some(range), _) => packument
-                .versions()
-                .rev()
-                .filter(|candidate| range.satisfies(candidate))
-                .find_map(|candidate| Some((candidate.clone(), packument.version(candidate)?))),
+            (Some(range), _) => pick(&packument, range),
             (None, Spec::Tag(tag)) => packument
                 .dist_tags
                 .get(tag)
-                .and_then(|version| Some((version.clone(), packument.version(version)?))),
+                .and_then(|version| packument.version(version)),
             (None, _) => None,
         };
-        let Some((version, metadata)) = chosen else {
+        let Some(metadata) = chosen else {
             if request.optional {
                 self.skipped.push((
                     request.name.clone(),
@@ -421,6 +411,7 @@ impl<'a> Resolver<'a> {
             });
         };
 
+        let version = metadata.version.clone();
         let id = PackageId::new(request.package.clone(), version.clone());
         self.packages
             .entry(id.clone())
@@ -453,6 +444,57 @@ impl<'a> Resolver<'a> {
             .cloned()
             .collect::<Vec<_>>())
     }
+}
+
+/// The version of `packument` that npm would install for `range`, among those
+/// that can be installed at all.
+///
+/// This is `npm-pick-manifest`'s order without its engines check:
+///
+/// 1. the `latest` dist-tag, if it satisfies the range and isn't deprecated;
+/// 2. otherwise the highest satisfying version that isn't deprecated;
+/// 3. otherwise the highest satisfying version.
+///
+/// Taking `latest` first matters on real trees. A maintainer who publishes
+/// without moving the tag hasn't offered that release to ranges yet, and npm
+/// won't install it. get-intrinsic 1.3.1 is the live case: it sits past a
+/// `latest` of 1.3.0, pulls in three more packages, and is in nearly every
+/// express-shaped tree.
+///
+/// Two of npm's rules are left out on purpose. Engines needs the running
+/// Node's version, which `opal-pm` has no business knowing before the runtime
+/// exists. For a bare `*`, npm takes `latest` even when `latest` is a
+/// prerelease, and that's a version no range allows as opal reads semver.
+pub fn pick(packument: &Packument, range: &Range) -> Option<VersionMetadata> {
+    if let Some(latest) = packument.dist_tags.get("latest")
+        && range.satisfies(latest)
+        && let Some(metadata) = packument.version(latest)
+        && metadata.deprecated.is_none()
+    {
+        return Some(metadata);
+    }
+
+    // Highest first. A packument lists versions whose bodies can't be
+    // installed from (no `dist`, no tarball, no usable integrity), and bodies
+    // are parsed on demand, so each candidate costs a parse. Stopping at the
+    // first installable version that isn't deprecated keeps that to one parse
+    // in the usual case. Only a range whose every version is deprecated walks
+    // all of them.
+    let mut highest_deprecated = None;
+    for candidate in packument
+        .versions()
+        .rev()
+        .filter(|candidate| range.satisfies(candidate))
+    {
+        let Some(metadata) = packument.version(candidate) else {
+            continue;
+        };
+        if metadata.deprecated.is_none() {
+            return Some(metadata);
+        }
+        highest_deprecated.get_or_insert(metadata);
+    }
+    highest_deprecated
 }
 
 /// Whether a lockfile still describes what `package.json` asks for.
@@ -494,4 +536,120 @@ pub fn requirements_match(resolution: &Resolution, manifest: &Manifest) -> bool 
 /// A range that was satisfied by reuse rather than by a fresh fetch.
 pub fn satisfied_by(range: &Range, version: &Version) -> bool {
     range.satisfies(version)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// `(version, deprecated)` pairs, published in that order, with `latest`
+    /// pointing wherever it's told to.
+    fn packument(versions: &[(&str, bool)], latest: Option<&str>) -> Packument {
+        let entries: serde_json::Map<String, serde_json::Value> = versions
+            .iter()
+            .map(|(version, deprecated)| {
+                let mut entry = serde_json::json!({
+                    "version": version,
+                    "dist": {
+                        "tarball": format!("https://example.invalid/demo-{version}.tgz"),
+                        "integrity": "sha512-Zm9vYmFy",
+                    },
+                });
+                if *deprecated {
+                    entry["deprecated"] = "do not use".into();
+                }
+                (version.to_string(), entry)
+            })
+            .collect();
+        let mut document = serde_json::json!({ "versions": entries });
+        if let Some(latest) = latest {
+            document["dist-tags"] = serde_json::json!({ "latest": latest });
+        }
+        Packument::parse("demo", &serde_json::to_vec(&document).unwrap())
+    }
+
+    fn picked(packument: &Packument, range: &str) -> Option<String> {
+        pick(packument, &Range::parse(range).unwrap()).map(|metadata| metadata.version.to_string())
+    }
+
+    #[test]
+    fn test_latest_wins_over_a_newer_untagged_release() {
+        let packument = packument(&[("1.3.0", false), ("1.3.1", false)], Some("1.3.0"));
+        assert_eq!(picked(&packument, "^1.3.0").as_deref(), Some("1.3.0"));
+        // Asked for exactly, the untagged release is still reachable.
+        assert_eq!(picked(&packument, "1.3.1").as_deref(), Some("1.3.1"));
+    }
+
+    #[test]
+    fn test_latest_outside_the_range_falls_back_to_the_highest() {
+        let packument = packument(
+            &[("1.0.0", false), ("1.2.0", false), ("2.0.0", false)],
+            Some("2.0.0"),
+        );
+        assert_eq!(picked(&packument, "^1.0.0").as_deref(), Some("1.2.0"));
+    }
+
+    #[test]
+    fn test_a_deprecated_latest_is_passed_over() {
+        let packument = packument(
+            &[("1.0.0", false), ("1.1.0", false), ("1.2.0", true)],
+            Some("1.2.0"),
+        );
+        assert_eq!(picked(&packument, "^1.0.0").as_deref(), Some("1.1.0"));
+    }
+
+    #[test]
+    fn test_a_deprecated_version_loses_to_a_lower_one_that_is_not() {
+        let packument = packument(
+            &[("1.0.0", false), ("1.1.0", true), ("2.0.0", false)],
+            Some("2.0.0"),
+        );
+        assert_eq!(picked(&packument, "^1.0.0").as_deref(), Some("1.0.0"));
+    }
+
+    #[test]
+    fn test_when_everything_is_deprecated_the_highest_still_installs() {
+        // A whole package deprecated (`request`, `har-validator`) is still
+        // installable, and npm installs it.
+        let packument = packument(&[("2.0.0", true), ("2.1.0", true)], Some("2.1.0"));
+        assert_eq!(picked(&packument, "^2.0.0").as_deref(), Some("2.1.0"));
+    }
+
+    #[test]
+    fn test_a_prerelease_latest_only_counts_where_the_range_allows_prereleases() {
+        let packument = packument(
+            &[("1.0.0", false), ("2.0.0-rc.1", false)],
+            Some("2.0.0-rc.1"),
+        );
+        assert_eq!(picked(&packument, "*").as_deref(), Some("1.0.0"));
+        assert_eq!(
+            picked(&packument, "^2.0.0-rc.0").as_deref(),
+            Some("2.0.0-rc.1")
+        );
+    }
+
+    #[test]
+    fn test_no_latest_tag_means_the_highest() {
+        let packument = packument(&[("1.0.0", false), ("1.1.0", false)], None);
+        assert_eq!(picked(&packument, "^1.0.0").as_deref(), Some("1.1.0"));
+    }
+
+    #[test]
+    fn test_an_uninstallable_latest_is_skipped_not_fatal() {
+        let document = serde_json::json!({
+            "dist-tags": { "latest": "1.1.0" },
+            "versions": {
+                "1.0.0": { "dist": { "tarball": "https://example.invalid/a.tgz", "integrity": "sha512-Zm9vYmFy" } },
+                "1.1.0": { "version": "1.1.0" },
+            }
+        });
+        let packument = Packument::parse("demo", &serde_json::to_vec(&document).unwrap());
+        assert_eq!(picked(&packument, "^1.0.0").as_deref(), Some("1.0.0"));
+    }
+
+    #[test]
+    fn test_nothing_satisfying_picks_nothing() {
+        let packument = packument(&[("1.0.0", true)], Some("1.0.0"));
+        assert_eq!(picked(&packument, "^2.0.0"), None);
+    }
 }

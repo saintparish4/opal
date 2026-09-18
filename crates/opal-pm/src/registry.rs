@@ -225,6 +225,8 @@ pub struct VersionMetadata {
     pub integrity: Integrity,
     /// Dependencies as declared by that published version.
     pub manifest: Manifest,
+    /// The maintainer's message. Mutable registry state, so it steers which
+    /// version gets picked but is never written to the lockfile.
     pub deprecated: Option<String>,
 }
 
@@ -314,9 +316,12 @@ impl Packument {
             tarball: tarball.to_string(),
             integrity,
             manifest: Manifest::from_value(&entry),
+            // Empty is how a version gets un-deprecated, and npm tests the
+            // field for truthiness, so `""` has to read as not deprecated.
             deprecated: entry
                 .get("deprecated")
                 .and_then(Value::as_str)
+                .filter(|message| !message.is_empty())
                 .map(str::to_string),
         })
     }
@@ -681,6 +686,27 @@ mod tests {
         // "not-a-version" is unparseable and "1.3.0" has no dist; neither can be
         // installed, and neither prevents installing the rest.
         assert!(packument.version(&Version::new(1, 3, 0)).is_none());
+    }
+
+    #[test]
+    fn test_an_empty_deprecation_message_is_not_a_deprecation() {
+        let entry = |deprecated: &str| {
+            serde_json::json!({
+                "dist": { "tarball": "https://example.invalid/demo.tgz", "integrity": "sha512-Zm9vYmFy" },
+                "deprecated": deprecated,
+            })
+        };
+        let document = serde_json::json!({
+            "versions": { "1.0.0": entry("use 2.x"), "1.0.1": entry("") }
+        });
+        let packument = Packument::parse("demo", &serde_json::to_vec(&document).unwrap());
+
+        let deprecated = |version| packument.version(&version).unwrap().deprecated;
+        assert_eq!(
+            deprecated(Version::new(1, 0, 0)).as_deref(),
+            Some("use 2.x")
+        );
+        assert_eq!(deprecated(Version::new(1, 0, 1)), None);
     }
 
     #[test]

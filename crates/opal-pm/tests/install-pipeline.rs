@@ -527,6 +527,64 @@ fn test_dist_tags_resolve() {
 }
 
 #[test]
+fn test_a_release_published_past_latest_is_not_installed() {
+    let mut sandbox = Sandbox::new();
+    // get-intrinsic's shape: 1.3.1 shipped after 1.3.0 without moving
+    // `latest`, and brought a dependency 1.3.0 doesn't have. The fixture
+    // registry tags whatever was published last, so 1.3.0 goes second.
+    sandbox
+        .registry
+        .publish(Package::new("extra", "1.0.0"))
+        .publish(Package::new("intrinsic", "1.3.1").dependency("extra", "^1.0.0"))
+        .publish(Package::new("intrinsic", "1.3.0"))
+        .publish(Package::new("a", "1.0.0").dependency("intrinsic", "^1.3.0"));
+    sandbox.project(serde_json::json!({ "dependencies": { "a": "^1.0.0" } }));
+
+    sandbox.install().expect("install");
+
+    let lockfile = sandbox.lockfile();
+    assert!(lockfile.contains("pkg intrinsic 1.3.0 "), "{lockfile}");
+    assert!(!lockfile.contains("extra"), "{lockfile}");
+    assert!(!sandbox.path("node_modules/extra").exists());
+}
+
+#[test]
+fn test_a_deprecated_release_is_passed_over_for_one_that_is_not() {
+    let mut sandbox = Sandbox::new();
+    sandbox
+        .registry
+        .publish(Package::new("shared", "1.0.0"))
+        .publish(Package::new("shared", "1.1.0").deprecated("broken, use 1.0.0"))
+        .publish(Package::new("shared", "2.0.0"));
+    sandbox.project(serde_json::json!({ "dependencies": { "shared": "^1.0.0" } }));
+
+    let report = sandbox.install().expect("install");
+
+    assert!(sandbox.lockfile().contains("pkg shared 1.0.0 "));
+    assert!(report.deprecated.is_empty(), "{:?}", report.deprecated);
+}
+
+#[test]
+fn test_a_range_with_nothing_but_deprecated_releases_installs_the_highest_and_says_so() {
+    let mut sandbox = Sandbox::new();
+    sandbox
+        .registry
+        .publish(Package::new("old", "1.0.0").deprecated("unmaintained"))
+        .publish(Package::new("old", "1.1.0").deprecated("unmaintained"));
+    sandbox.project(serde_json::json!({ "dependencies": { "old": "^1.0.0" } }));
+
+    let report = sandbox.install().expect("install");
+
+    assert!(sandbox.lockfile().contains("pkg old 1.1.0 "));
+    let warned: Vec<String> = report
+        .deprecated
+        .iter()
+        .map(|(id, message)| format!("{id}: {message}"))
+        .collect();
+    assert_eq!(warned, ["old@1.1.0: unmaintained"]);
+}
+
+#[test]
 fn test_production_install_skips_dev_dependencies() {
     let mut sandbox = Sandbox::new();
     sandbox

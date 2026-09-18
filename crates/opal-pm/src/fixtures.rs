@@ -27,6 +27,9 @@ pub struct Package {
     pub scripts: BTreeMap<String, String>,
     pub os: Vec<String>,
     pub cpu: Vec<String>,
+    /// Registry state rather than package contents: it goes in the
+    /// packument's version entry, never the tarball's `package.json`.
+    pub deprecated: Option<String>,
     /// Extra files beyond the generated `package.json`, as (path, contents,
     /// executable).
     pub files: Vec<(String, Vec<u8>, bool)>,
@@ -46,6 +49,7 @@ impl Package {
             scripts: BTreeMap::new(),
             os: Vec::new(),
             cpu: Vec::new(),
+            deprecated: None,
             files: Vec::new(),
         }
     }
@@ -88,6 +92,11 @@ impl Package {
     pub fn platform(mut self, os: &[&str], cpu: &[&str]) -> Self {
         self.os = os.iter().map(|item| (*item).to_string()).collect();
         self.cpu = cpu.iter().map(|item| (*item).to_string()).collect();
+        self
+    }
+
+    pub fn deprecated(mut self, message: &str) -> Self {
+        self.deprecated = Some(message.to_string());
         self
     }
 
@@ -240,13 +249,17 @@ impl FixtureRegistry {
 
         for (package, integrity, path) in entries {
             let mut value = package.manifest_json();
-            value.as_object_mut().expect("object").insert(
+            let entry = value.as_object_mut().expect("object");
+            entry.insert(
                 "dist".into(),
                 serde_json::json!({
                     "tarball": format!("file://{}", path.display()),
                     "integrity": integrity.to_string(),
                 }),
             );
+            if let Some(message) = &package.deprecated {
+                entry.insert("deprecated".into(), serde_json::json!(message));
+            }
             versions.insert(package.version.clone(), value);
             // Fixtures publish in ascending order, so the last one is latest.
             latest = package.version.clone();

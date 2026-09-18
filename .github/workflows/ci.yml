@@ -85,9 +85,9 @@ jobs:
         run: cargo test -p opal-cli --test npm-compatibility -- --ignored test_execute
 
   # `testing_strategy.md` §1: resolve the same package.json with npm and with
-  # opal, and fail if they pick different versions for the project's own
-  # dependencies or read any range differently. The property tests only hold
-  # opal to its own semver; this holds it to npm's.
+  # opal, and fail if the trees differ or either reads a range differently.
+  # It also holds opal's version preference to `npm-pick-manifest` itself.
+  # The property tests only hold opal to its own semver; this holds it to npm's.
   npm-cross-check:
     name: npm cross-check (resolution)
     runs-on: ubuntu-latest

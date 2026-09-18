@@ -10,17 +10,13 @@
 //! - **Semver, both ways.** Every version npm chose for an edge satisfies that
 //!   edge's range as opal parses it, and every version opal chose satisfies it
 //!   as npm's own `semver` reads it.
-//!
-//! The rest of the tree is compared and printed, not asserted, because two
-//! differences in selection policy make it diverge without either side
-//! misreading a range:
-//!
-//! - opal reuses any already-selected version of a package that satisfies a
-//!   range; npm reuses only what is visible from the dependent's position.
-//! - npm prefers the `latest` dist-tag whenever it satisfies the range (and
-//!   avoids deprecated versions); opal takes the highest satisfying version.
-//!   `get-intrinsic@^1.3.0` inside express is the live example: `latest` is
-//!   1.3.0, and 1.3.1 was published after it without moving the tag.
+//! - **The whole tree.** The same set of package versions. Since opal picks
+//!   versions in `npm-pick-manifest`'s order, one known policy difference
+//!   remains: opal reuses any already-selected version that satisfies a
+//!   range, while npm reuses only what is visible from the dependent's
+//!   position. None of these fixtures exercises it. If one starts to after a
+//!   registry change, the failure names the packages, and the fix is a
+//!   decision about that difference, not a retry.
 //!
 //! Fixtures are chosen for the edge case each exercises, not for popularity.
 //! They need the public registry, `node`, and `npm`, so every test is
@@ -38,9 +34,9 @@ use std::io::Write as _;
 use std::process::{Command, Stdio};
 
 use opal_pm::manifest::{Manifest, Spec};
-use opal_pm::registry::NpmRegistry;
+use opal_pm::registry::{NpmRegistry, Packument};
 use opal_pm::resolve::{self, Resolution, ResolveOptions};
-use opal_pm::semver::Version;
+use opal_pm::semver::{Range, Version};
 use serde_json::Value;
 
 /// npm lockfile v3 `packages`: `""` is the project, every other key a
@@ -170,24 +166,32 @@ fn range_text(spec: &str) -> Option<String> {
     }
 }
 
-/// Every (version, range) pair npm's own `semver` rejects.
-fn rejected_by_npm_semver(pairs: &[(String, String)]) -> Vec<(String, String)> {
+/// Runs `script` under node with one of npm's own dependencies loaded as
+/// `module`, `input` as JSON on stdin, and whatever it prints parsed as JSON.
+/// Loading npm's copy rather than installing one is what makes this npm's
+/// answer: the version is whatever the installed npm resolves with.
+fn with_npm_module<T: serde::de::DeserializeOwned>(
+    module: &str,
+    script: &str,
+    input: &impl serde::Serialize,
+) -> T {
     let root = Command::new("npm")
         .args(["root", "-g"])
         .output()
         .expect("run npm root -g");
-    let semver = format!(
-        "{}/npm/node_modules/semver",
+    let path = format!(
+        "{}/npm/node_modules/{module}",
         String::from_utf8_lossy(&root.stdout).trim()
     );
     let mut node = Command::new("node")
         .args([
             "-e",
-            "const semver = require(process.argv[1]);\
-             const pairs = JSON.parse(require('fs').readFileSync(0, 'utf8'));\
-             process.stdout.write(JSON.stringify(\
-               pairs.filter(([version, range]) => !semver.satisfies(version, range, { loose: true }))));",
-            &semver,
+            &format!(
+                "const module = require(process.argv[1]);\
+                 const input = JSON.parse(require('fs').readFileSync(0, 'utf8'));\
+                 process.stdout.write(JSON.stringify(({script})(module, input)));"
+            ),
+            &path,
         ])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
@@ -196,14 +200,21 @@ fn rejected_by_npm_semver(pairs: &[(String, String)]) -> Vec<(String, String)> {
     node.stdin
         .take()
         .expect("stdin")
-        .write_all(&serde_json::to_vec(pairs).expect("serializable"))
-        .expect("write pairs");
+        .write_all(&serde_json::to_vec(input).expect("serializable"))
+        .expect("write input");
     let output = node.wait_with_output().expect("node output");
-    assert!(
-        output.status.success(),
-        "npm's semver could not be loaded from {semver}"
-    );
-    serde_json::from_slice(&output.stdout).expect("rejected pairs")
+    assert!(output.status.success(), "node failed running {path}");
+    serde_json::from_slice(&output.stdout).expect("node printed JSON")
+}
+
+/// Every (version, range) pair npm's own `semver` rejects.
+fn rejected_by_npm_semver(pairs: &[(String, String)]) -> Vec<(String, String)> {
+    with_npm_module(
+        "semver",
+        "(semver, pairs) => pairs.filter(([version, range]) =>\
+           !semver.satisfies(version, range, { loose: true }))",
+        &pairs,
+    )
 }
 
 fn cross_check(manifest: Value) {
@@ -232,7 +243,7 @@ fn cross_check(manifest: Value) {
             continue;
         };
         let agrees = Version::parse(&version).is_ok_and(|parsed| {
-            opal_pm::semver::Range::parse(&range_text).is_ok_and(|range| range.satisfies(&parsed))
+            Range::parse(&range_text).is_ok_and(|range| range.satisfies(&parsed))
         });
         if !agrees {
             failures.push(format!(
@@ -301,10 +312,10 @@ fn cross_check(manifest: Value) {
         opal_set.intersection(&npm_set).count()
     );
     for only in opal_set.difference(&npm_set) {
-        println!("  only opal: {only}");
+        failures.push(format!("only opal installs {only}"));
     }
     for only in npm_set.difference(&opal_set) {
-        println!("  only npm:  {only}");
+        failures.push(format!("only npm installs {only}"));
     }
 
     assert!(
@@ -385,4 +396,131 @@ fn test_npm_agrees_on_a_deep_dev_tree() {
     cross_check(serde_json::json!({
         "devDependencies": { "webpack": "^5.90.0" }
     }));
+}
+
+/// `resolve::pick` against `npm-pick-manifest` itself, over every combination
+/// of a small registry: where `latest` points (or that there is no `latest`),
+/// which versions are deprecated, and a range of each shape. That's 12,032
+/// cases. The space is small enough to cover exhaustively in one `node` run,
+/// so there's no reason to sample it.
+///
+/// Two npm rules opal leaves out on purpose are kept out of the space rather
+/// than asserted as differences: no version declares `engines`, and a bare `*`
+/// with a prerelease `latest` is skipped, because npm takes the prerelease.
+#[test]
+#[ignore = "needs node and npm"]
+fn test_npm_pick_manifest_agrees_on_version_preference() {
+    const VERSIONS: [&str; 7] = [
+        "1.0.0",
+        "1.1.0",
+        "1.2.0-beta.1",
+        "1.2.0",
+        "1.3.0",
+        "2.0.0-rc.1",
+        "2.0.0",
+    ];
+    const RANGES: [&str; 12] = [
+        "^1.0.0",
+        "~1.1.0",
+        "1.x",
+        ">=1.1.0 <2.0.0",
+        "^1.2.0-beta.0",
+        ">=1.0.0",
+        "^2.0.0-rc.0",
+        "1.1.0",
+        "^1.0.0 || ^2.0.0",
+        "<1.2.0",
+        "*",
+        "^3.0.0",
+    ];
+
+    let mut packuments: Vec<Value> = Vec::new();
+    let mut cases: Vec<(usize, &str)> = Vec::new();
+    let mut skipped = 0;
+    let latest_choices = std::iter::once(None).chain(VERSIONS.iter().copied().map(Some));
+    for latest in latest_choices {
+        for deprecated in 0u32..1 << VERSIONS.len() {
+            let versions: serde_json::Map<String, Value> = VERSIONS
+                .iter()
+                .enumerate()
+                .map(|(index, version)| {
+                    let mut entry = serde_json::json!({
+                        "name": "demo",
+                        "version": version,
+                        "dist": {
+                            "tarball": format!("https://example.invalid/demo-{version}.tgz"),
+                            "integrity": "sha512-Zm9vYmFy",
+                        },
+                    });
+                    if deprecated & (1 << index) != 0 {
+                        entry["deprecated"] = "deprecated".into();
+                    }
+                    (version.to_string(), entry)
+                })
+                .collect();
+            let tags = latest.map_or_else(
+                || serde_json::json!({}),
+                |latest| serde_json::json!({ "latest": latest }),
+            );
+            packuments.push(serde_json::json!({
+                "name": "demo",
+                "dist-tags": tags,
+                "versions": versions,
+            }));
+            for range in RANGES {
+                if range == "*" && latest.is_some_and(|latest| latest.contains('-')) {
+                    skipped += 1;
+                    continue;
+                }
+                cases.push((packuments.len() - 1, range));
+            }
+        }
+    }
+
+    let npm: Vec<Option<String>> = with_npm_module(
+        "npm-pick-manifest",
+        "(pick, { packuments, cases }) => cases.map(([index, range]) => {\
+           try { return pick(packuments[index], range).version; }\
+           catch (error) { if (error.code === 'ETARGET') return null; throw error; }\
+         })",
+        &serde_json::json!({ "packuments": packuments, "cases": cases }),
+    );
+
+    let parsed: Vec<Packument> = packuments
+        .iter()
+        .map(|document| Packument::parse("demo", &serde_json::to_vec(document).expect("JSON")))
+        .collect();
+    let mut failures = Vec::new();
+    for ((index, range), npm) in cases.iter().zip(&npm) {
+        let opal = resolve::pick(
+            &parsed[*index],
+            &Range::parse(range).expect("a valid range"),
+        )
+        .map(|metadata| metadata.version.to_string());
+        if opal != *npm {
+            let packument = &packuments[*index];
+            let deprecated: Vec<&String> = packument["versions"]
+                .as_object()
+                .expect("versions")
+                .iter()
+                .filter(|(_, entry)| entry.get("deprecated").is_some())
+                .map(|(version, _)| version)
+                .collect();
+            failures.push(format!(
+                "{range} with latest {} and {deprecated:?} deprecated: opal {opal:?}, npm {npm:?}",
+                packument["dist-tags"]["latest"]
+            ));
+        }
+    }
+    println!(
+        "{} cases, {skipped} skipped (bare * with a prerelease latest), {} disagree",
+        cases.len(),
+        failures.len()
+    );
+    assert!(
+        failures.is_empty(),
+        "opal and npm-pick-manifest disagree on {} cases, first:\n  {}",
+        failures.len(),
+        failures[..failures.len().min(20)].join("\n  ")
+    );
 }

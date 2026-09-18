@@ -105,6 +105,8 @@ Packages declaring an `os` or `cpu` this host cannot run are recorded in `opal.l
 
 `npm:` alias specifiers (`"string-width-cjs": "npm:string-width@^4.2.0"`) install one package under another's name, which is how a package depends on two majors of one dependency at once.
 
+Versions are picked the way npm picks them: the `latest` dist-tag when it satisfies the range and isn't deprecated, otherwise the newest satisfying version that isn't deprecated, otherwise the newest. A release published without moving `latest` is therefore not installed until the tag moves, which is how npm treats it too. npm's `engines` check is the one rule left out, because it needs the running Node's version. Before any of that, a version already chosen elsewhere in the tree is reused if it satisfies the range, which keeps the tree small.
+
 Progress is reported on stderr as each stage begins — a spinner while resolving and linking, a bar advancing per package while fetching — with the summary on stdout. When stderr is not a terminal, the same stages print as plain lines, so a CI log stays readable and nothing redraws over it.
 
 Resolves against the public npm registry, downloads tarballs into the shared CAS keyed by content hash, and links `node_modules` from the CAS via hardlinks — a reconciler that diffs `opal.lock` against disk and applies only the delta, so a killed install converges by re-running `opal install`. The summary reports each phase separately, because the phases are slow for unrelated reasons:
@@ -244,24 +246,24 @@ Crates are built strictly in sequence — each is a prerequisite for the next, a
 cargo test --workspace --all-features
 ```
 
-279 tests currently pass, organized by **risk category** rather than a unit/integration/e2e pyramid — the question is where the system actually breaks, and what a bug looks like when it does:
+293 tests currently pass, organized by **risk category** rather than a unit/integration/e2e pyramid — the question is where the system actually breaks, and what a bug looks like when it does:
 
 | Suite | Count | Covers |
 |---|---|---|
 | `opal-core` unit | 54 | Hashing, path abstraction, CAS layout, graph construction, resolver internals |
-| `opal-pm` unit | 102 | Semver parsing/matching, manifests and their lifecycle scripts, registry client and retry policy, integrity verification, tarball ingestion and its ceilings, lockfile, linker planning and depth ordering, the linking worker pool, platform matching, locks, GC bookkeeping |
+| `opal-pm` unit | 112 | Semver parsing/matching, manifests and their lifecycle scripts, npm's version preference (`latest`, then not deprecated, then newest), registry client and retry policy, integrity verification, tarball ingestion and its ceilings, lockfile, linker planning and depth ordering, the linking worker pool, platform matching, locks, GC bookkeeping |
 | `tests/cache-invalidation.rs` (`opal-core`) | 16 | The invalidation matrix: content change, add/remove, direct and transitive dependency change — asserting the right hits *and* misses. Includes the "never mtime" invariant as a direct test, and memo-record pruning |
 | `tests/graph-resolution.rs` (`opal-core`) | 16 | Resolution against fixture trees, plus a golden/snapshot test of resolved graph output (`tests/golden/`) |
 | `tests/exports-properties.rs` (`opal-core`) | 1 | `proptest` over `exports` maps and specifiers built from the segments that move a path: whatever a package's exports resolve to stays inside the package, which is Node's rule |
 | `tests/cas-crash-safety.rs` (`opal-core`) | 6 | Atomic CAS writes under fault injection — a killed write leaves orphaned temp files, never a corrupt entry |
-| `tests/install-pipeline.rs` (`opal-pm`) | 45 | The full install pipeline end to end, incl. `test_node_can_require_the_installed_tree` and `test_the_module_graph_resolves_against_the_installed_tree` — the `opal-core` ↔ `opal-pm` contract |
+| `tests/install-pipeline.rs` (`opal-pm`) | 48 | The full install pipeline end to end, incl. `test_node_can_require_the_installed_tree` and `test_the_module_graph_resolves_against_the_installed_tree` — the `opal-core` ↔ `opal-pm` contract |
 | `tests/packument-cache.rs` (`opal-pm`) | 8 | When the registry client reaches the wire and when it does not: freshness, revalidation, `--offline`, and never answering one registry from another's cache |
-| `tests/resolution-properties.rs` (`opal-pm`) | 10 | `proptest` over generated registries: every resolved edge satisfies the range that asked for it, every root resolves to a version its own spec allows, and the layout places everything the resolution keeps |
+| `tests/resolution-properties.rs` (`opal-pm`) | 11 | `proptest` over generated registries (with `latest` tags that lag and deprecated releases): every resolved edge satisfies the range that asked for it, version preference matches npm's order, every root resolves to a version its own spec allows, and the layout places everything the resolution keeps |
 | `tests/semver-properties.rs` (`opal-pm`) | 12 | `proptest` over the range algebra in isolation |
 | `tests/install-crash-safety.rs` (`opal-cli`) | 8 | SIGKILL at each of seven pipeline stages converges on re-run, including mid-link in a tree three `node_modules` levels deep, and so do kills at random moments (seeded: replay a failure with the `OPAL_CHAOS_SEED` it prints, run longer with `OPAL_CHAOS_TRIALS`); a killed lockfile rewrite leaves the previous lockfile byte-identical; two racing installs serialize instead of interleaving; `opal cache gc` blocks on an in-flight install rather than racing it |
 | `tests/install-relative-root.rs` (`opal-cli`) | 1 | `opal install --root .` from inside a project: an unchanged tree stays unchanged, and nothing outside the project is touched |
 | `tests/npm-compatibility.rs` (`opal-cli`) | 15 | Real packages from the public registry, curated by the edge case each exercises. `#[ignore]` by default; install and execute run as separate CI jobs |
-| `tests/npm-cross-check.rs` (`opal-pm`) | 6 | npm and opal resolve the same `package.json`: the project's own dependencies must get the same versions, and each side must read the other's picks as inside their ranges (npm's own `semver` checks opal's). Tree differences that come from selection policy rather than semver are printed, not failed. `#[ignore]` by default; its own CI job |
+| `tests/npm-cross-check.rs` (`opal-pm`) | 7 | npm and opal resolve the same `package.json`, and the trees must match package for package: same versions for the project's dependencies, the same set of package versions overall, and each side reading the other's picks as inside their ranges (npm's own `semver` checks opal's). A seventh test holds opal's version preference to `npm-pick-manifest` itself across 12,032 generated cases. `#[ignore]` by default; its own CI job |
 
 Cache invalidation is the highest-risk area in this architecture: a bug there does not crash, it silently serves stale output. Any change to CAS key derivation, integrity verification, or invalidation logic must add or update the invalidation-matrix tests.
 

@@ -55,6 +55,13 @@ struct Plan {
     versions: Vec<Vec<Version>>,
     /// What each published version declares, in the order `versions` flattens.
     dependencies: Vec<Vec<Edge>>,
+    /// Which published version each package's `latest` tag points at, as an
+    /// index. Not always the highest: a release published without moving the
+    /// tag is the case the resolver has to pass over.
+    latest: Vec<usize>,
+    /// Whether each published version is deprecated, flattened like
+    /// `dependencies`.
+    deprecated: Vec<bool>,
     root: Vec<Edge>,
 }
 
@@ -109,28 +116,29 @@ impl Plan {
                     .dependencies
                     .get(published)
                     .map_or(&[][..], Vec::as_slice);
+                let deprecated = self.deprecated.get(published).copied().unwrap_or(false);
                 published += 1;
                 let (required, tolerated) = self.declare(edges, &mut optional);
-                entries.insert(
-                    version.to_string(),
-                    json!({
-                        "name": name(package),
-                        "version": version.to_string(),
-                        "dependencies": required,
-                        "optionalDependencies": tolerated,
-                        "dist": {
-                            "tarball": format!("file:///{}-{version}.tgz", name(package)),
-                            "integrity": INTEGRITY,
-                        },
-                    }),
-                );
+                let mut entry = json!({
+                    "name": name(package),
+                    "version": version.to_string(),
+                    "dependencies": required,
+                    "optionalDependencies": tolerated,
+                    "dist": {
+                        "tarball": format!("file:///{}-{version}.tgz", name(package)),
+                        "integrity": INTEGRITY,
+                    },
+                });
+                if deprecated {
+                    entry["deprecated"] = json!("generated");
+                }
+                entries.insert(version.to_string(), entry);
             }
 
+            let latest = &versions[self.latest.get(package).copied().unwrap_or(0) % versions.len()];
             let document = json!({
                 "name": name(package),
-                "dist-tags": {
-                    "latest": versions.last().expect("every package publishes one version").to_string(),
-                },
+                "dist-tags": { "latest": latest.to_string() },
                 "versions": entries,
             });
             packuments.insert(
@@ -220,6 +228,8 @@ impl Plan {
         Self {
             versions: self.versions.clone(),
             dependencies: self.dependencies.iter().map(optional).collect(),
+            latest: self.latest.clone(),
+            deprecated: self.deprecated.clone(),
             root: optional(&self.root),
         }
     }
@@ -266,12 +276,16 @@ fn plan() -> impl Strategy<Value = Plan> {
             (
                 Just(versions),
                 prop::collection::vec(prop::collection::vec(edge.clone(), 0..=3), published),
+                prop::collection::vec(0..4usize, packages),
+                prop::collection::vec(prop::bool::weighted(0.3), published),
                 prop::collection::vec(edge, 1..=3),
             )
         })
-        .prop_map(|(versions, dependencies, root)| Plan {
+        .prop_map(|(versions, dependencies, latest, deprecated, root)| Plan {
             versions,
             dependencies,
+            latest,
+            deprecated,
             root,
         })
 }
@@ -426,6 +440,40 @@ proptest! {
     fn test_resolving_the_same_registry_twice_gives_the_same_answer(plan in plan()) {
         prop_assert_eq!(plan.build().resolution(), plan.build().resolution());
     }
+
+    /// `pick`, stated the way npm-pick-manifest states it: sort the satisfying
+    /// versions by (is `latest` and not deprecated, is not deprecated,
+    /// version) and take the top. `pick` gets there by walking down and
+    /// stopping early, which is where an off-by-one in the order would hide.
+    #[test]
+    fn test_pick_takes_latest_then_the_undeprecated_then_the_highest(
+        plan in plan(),
+        package in 0..5usize,
+        version in 0..4usize,
+        shape in 0u8..7,
+    ) {
+        let universe = plan.build();
+        let (name, spec) = plan.specifier(Edge { package, version, shape, optional: false });
+        let packument = &universe.packuments[&name];
+        let range = Range::parse(&spec).expect("every generated spec is a range");
+        let latest = packument.dist_tags.get("latest");
+
+        let expected = packument
+            .versions()
+            .filter(|candidate| range.satisfies(candidate))
+            .filter_map(|candidate| packument.version(candidate))
+            .max_by_key(|metadata| {
+                let undeprecated = metadata.deprecated.is_none();
+                (
+                    undeprecated && Some(&metadata.version) == latest,
+                    undeprecated,
+                    metadata.version.clone(),
+                )
+            })
+            .map(|metadata| metadata.version);
+        let picked = resolve::pick(packument, &range).map(|metadata| metadata.version);
+        prop_assert_eq!(picked, expected, "{}@{} with latest {:?}", name, spec, latest);
+    }
 }
 
 /// Two packages that depend on each other. npm publishes these, and the
@@ -441,6 +489,8 @@ fn test_a_dependency_cycle_terminates() {
     let plan = Plan {
         versions: vec![vec![Version::new(1, 0, 0)], vec![Version::new(1, 0, 0)]],
         dependencies: vec![vec![edge(1)], vec![edge(0)]],
+        latest: vec![0, 0],
+        deprecated: vec![false, false],
         root: vec![edge(0)],
     };
 
@@ -459,6 +509,8 @@ fn test_a_package_that_depends_on_itself_terminates() {
     let plan = Plan {
         versions: vec![vec![Version::new(1, 0, 0)]],
         dependencies: vec![vec![edge]],
+        latest: vec![0],
+        deprecated: vec![false],
         root: vec![edge],
     };
 
