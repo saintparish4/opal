@@ -52,11 +52,16 @@ fn npm_resolve(manifest: &Value) -> NpmTree {
     .expect("write package.json");
     let output = Command::new("npm")
         .current_dir(directory.path())
+        // `--prefer-online` because opal always revalidates here, and npm's
+        // own cache can predate a release: once, electron-to-chromium 1.5.433
+        // was 38 seconds old, npm answered 1.5.432 from cache, and the trees
+        // "differed" over nothing but timing.
         .args([
             "install",
             "--package-lock-only",
             "--ignore-scripts",
             "--legacy-peer-deps",
+            "--prefer-online",
             "--no-audit",
             "--no-fund",
         ])
