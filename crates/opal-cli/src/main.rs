@@ -21,7 +21,7 @@ use opal_core::graph::{ResolverOptions, resolve_cached};
 use opal_core::path::NormalizedPath;
 use opal_pm::diagnose::{self, Severity};
 use opal_pm::gc as package_gc;
-use opal_pm::install::{self, InstallOptions};
+use opal_pm::install::{self, InstallOptions, UnrunScripts};
 use opal_pm::locks::CacheLock;
 use opal_pm::package::PackageStore;
 use opal_pm::packuments::PackumentCache;
@@ -266,6 +266,27 @@ fn install_command(args: InstallArgs) -> Result<ExitCode, Failure> {
     for (id, message) in &report.deprecated {
         eprintln!("warning: {id} is deprecated: {message}");
     }
+    // Names the scripts and stops there. Any remedy offered now either does
+    // nothing yet (`trustedDependencies`) or runs a script in place, which
+    // writes through hardlinks into the store every project shares.
+    if let Some(scripts) = &report.project_scripts_not_run {
+        eprintln!(
+            "warning: this project's own install scripts were not run (opal does not run \
+             install scripts): {}",
+            describe_scripts(scripts)
+        );
+    }
+    if !report.scripts_not_run.is_empty() {
+        let count = report.scripts_not_run.len();
+        eprintln!(
+            "warning: install scripts were not run for {count} {} (opal does not run \
+             install scripts), so anything they build or download is missing:",
+            if count == 1 { "package" } else { "packages" },
+        );
+        for (id, scripts) in &report.scripts_not_run {
+            eprintln!("  {id}: {}", describe_scripts(scripts));
+        }
+    }
     for (name, reason) in &report.skipped {
         println!("skipped {name}: {reason}");
     }
@@ -287,6 +308,17 @@ fn install_command(args: InstallArgs) -> Result<ExitCode, Failure> {
         println!("opal.lock was written by an older build and has been re-resolved");
     }
     Ok(ExitCode::SUCCESS)
+}
+
+/// The scripts in the order npm would have run them. An implied
+/// `node-gyp rebuild` only exists when no `install` or `preinstall` does, so
+/// it always comes first.
+fn describe_scripts(scripts: &UnrunScripts) -> String {
+    let mut named: Vec<&str> = scripts.events.clone();
+    if scripts.implicit_node_gyp {
+        named.insert(0, "install (node-gyp rebuild, implied by binding.gyp)");
+    }
+    named.join(", ")
 }
 
 fn verify(cache_dir: Option<PathBuf>) -> Result<ExitCode, Failure> {

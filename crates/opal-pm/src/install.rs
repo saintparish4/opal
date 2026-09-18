@@ -10,14 +10,14 @@
 //! by content, so re-running skips whatever is already done — a re-run with an
 //! unchanged lockfile goes straight to linking.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
 use crate::link::{self, Fetched, FetchedPackage, Layout, LinkError, LinkReport};
 use crate::lockfile::{self, LockfileError};
 use crate::locks::InstallLock;
-use crate::manifest::{Manifest, ManifestError};
+use crate::manifest::{DEPENDENCY_SCRIPTS, Manifest, ManifestError, PROJECT_SCRIPTS};
 use crate::package::{PackageError, PackageStore};
 use crate::platform::Platform;
 use crate::progress::{Progress, Stage};
@@ -117,6 +117,44 @@ pub struct InstallReport {
     /// lives in the packument, and `opal.lock` does not carry it, so a run
     /// answered entirely by the lockfile has nothing to report.
     pub deprecated: Vec<(PackageId, String)>,
+    /// Packages in this tree with install scripts, which opal does not run.
+    /// Populated on every run, including one `opal.lock` answered, because
+    /// the consequence (a native addon that was never built) persists until
+    /// something runs them.
+    pub scripts_not_run: Vec<(PackageId, UnrunScripts)>,
+    /// The project's own lifecycle scripts, which npm runs on every install
+    /// of it (`patch-package` and `husky` live here), and opal does not.
+    pub project_scripts_not_run: Option<UnrunScripts>,
+}
+
+/// Lifecycle scripts that exist and were not run.
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub struct UnrunScripts {
+    /// The lifecycle events declared, in the order npm runs them.
+    pub events: Vec<&'static str>,
+    /// No `install` or `preinstall`, but a `binding.gyp` at the root, for
+    /// which npm supplies `node-gyp rebuild` as the install script. Native
+    /// addons commonly rely on exactly this and declare nothing.
+    pub implicit_node_gyp: bool,
+}
+
+impl UnrunScripts {
+    /// What npm would run, out of `lifecycle`, for the package in `directory`.
+    fn find(manifest: &Manifest, directory: &Path, lifecycle: &[&'static str]) -> Option<Self> {
+        let events: Vec<&'static str> = lifecycle
+            .iter()
+            .copied()
+            .filter(|event| manifest.lifecycle_scripts.contains_key(event))
+            .collect();
+        let declares_install = events.contains(&"install") || events.contains(&"preinstall");
+        let implicit_node_gyp = !declares_install
+            && !manifest.gypfile_opt_out
+            && directory.join("binding.gyp").is_file();
+        (!events.is_empty() || implicit_node_gyp).then_some(Self {
+            events,
+            implicit_node_gyp,
+        })
+    }
 }
 
 pub fn install(
@@ -238,6 +276,8 @@ pub fn install(
     // it is whatever the on-disk cache still holds, which is why this survives
     // an install the lockfile answered entirely.
     report.deprecated = deprecations(registry, &plan.layout);
+    report.scripts_not_run = scripts_not_run(project_root, &plan.layout);
+    report.project_scripts_not_run = UnrunScripts::find(&manifest, project_root, &PROJECT_SCRIPTS);
 
     progress.finished();
     Ok(report)
@@ -260,6 +300,32 @@ fn deprecations(registry: &dyn Registry, layout: &Layout) -> Vec<(PackageId, Str
             .and_then(|metadata| metadata.deprecated.clone())
         {
             found.push((id.clone(), message));
+        }
+    }
+    found.sort();
+    found
+}
+
+/// Every package in the linked tree with install scripts.
+///
+/// Read from each package's materialized directory, the same place a script
+/// runner will discover them, so neither the package index nor the lockfile
+/// has to carry it.
+fn scripts_not_run(project_root: &Path, layout: &Layout) -> Vec<(PackageId, UnrunScripts)> {
+    let mut seen: BTreeSet<&PackageId> = BTreeSet::new();
+    let mut found = Vec::new();
+    for (path, id) in layout {
+        if !seen.insert(id) {
+            continue;
+        }
+        let directory = project_root.join(path.as_str());
+        // The install has already succeeded; a manifest that cannot be read
+        // is not a reason to fail it, and has no scripts to report.
+        let Ok(manifest) = Manifest::read(&directory.join("package.json")) else {
+            continue;
+        };
+        if let Some(scripts) = UnrunScripts::find(&manifest, &directory, &DEPENDENCY_SCRIPTS) {
+            found.push((id.clone(), scripts));
         }
     }
     found.sort();

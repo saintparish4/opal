@@ -161,7 +161,30 @@ pub struct Manifest {
     /// would invert what it constrains. Empty means "runs anywhere".
     pub os: Vec<String>,
     pub cpu: Vec<String>,
+    /// The lifecycle scripts an install can run, from [`PROJECT_SCRIPTS`],
+    /// with their commands. Every other script is `npm run` territory, which
+    /// an install never touches.
+    pub lifecycle_scripts: BTreeMap<&'static str, String>,
+    /// `"gypfile": false`, which opts a package that ships a `binding.gyp` out
+    /// of the `node-gyp rebuild` npm would otherwise run as its install script.
+    pub gypfile_opt_out: bool,
 }
+
+/// What `npm install` runs for a dependency from the registry, in order.
+pub const DEPENDENCY_SCRIPTS: [&str; 3] = ["preinstall", "install", "postinstall"];
+
+/// What `npm install` runs for the project itself, in order. The `prepare`
+/// family runs for the project (and for git dependencies), never for a
+/// package from the registry.
+pub const PROJECT_SCRIPTS: [&str; 7] = [
+    "preinstall",
+    "install",
+    "postinstall",
+    "prepublish",
+    "preprepare",
+    "prepare",
+    "postprepare",
+];
 
 impl Manifest {
     pub fn read(path: &Path) -> Result<Self, ManifestError> {
@@ -205,6 +228,8 @@ impl Manifest {
             bin: read_bin(value),
             os: read_string_list(value, "os"),
             cpu: read_string_list(value, "cpu"),
+            lifecycle_scripts: read_lifecycle_scripts(value),
+            gypfile_opt_out: value.get("gypfile") == Some(&Value::Bool(false)),
             ..Self::default()
         };
 
@@ -314,6 +339,21 @@ fn read_string_list(value: &Value, field: &str) -> Vec<String> {
             .collect(),
         _ => Vec::new(),
     }
+}
+
+/// An empty command is skipped: npm runs it and nothing happens, so there is
+/// nothing a skipped run would have done.
+fn read_lifecycle_scripts(value: &Value) -> BTreeMap<&'static str, String> {
+    let Some(scripts) = value.get("scripts").and_then(Value::as_object) else {
+        return BTreeMap::new();
+    };
+    PROJECT_SCRIPTS
+        .into_iter()
+        .filter_map(|event| {
+            let command = scripts.get(event)?.as_str()?.trim();
+            (!command.is_empty()).then(|| (event, command.to_string()))
+        })
+        .collect()
 }
 
 /// `bin` is either a string (one command, named after the package) or a map.
@@ -507,5 +547,36 @@ mod tests {
             "bin": { "tool": "./cli.js", "tool-dev": "./dev.js" }
         }));
         assert_eq!(map_form.bin.len(), 2);
+    }
+
+    #[test]
+    fn test_keeps_only_lifecycle_scripts() {
+        let parsed = manifest(serde_json::json!({
+            "scripts": {
+                "build": "tsc",
+                "postinstall": "node install.js",
+                "prepare": "husky",
+                "preinstall": " ",
+                "install": 7
+            }
+        }));
+        assert_eq!(
+            parsed.lifecycle_scripts.into_iter().collect::<Vec<_>>(),
+            vec![
+                ("postinstall", "node install.js".to_string()),
+                ("prepare", "husky".to_string()),
+            ]
+        );
+
+        let wrong_type = manifest(serde_json::json!({ "scripts": ["postinstall"] }));
+        assert!(wrong_type.lifecycle_scripts.is_empty());
+    }
+
+    #[test]
+    fn test_only_an_explicit_false_opts_out_of_gypfile() {
+        assert!(manifest(serde_json::json!({ "gypfile": false })).gypfile_opt_out);
+        assert!(!manifest(serde_json::json!({ "gypfile": true })).gypfile_opt_out);
+        assert!(!manifest(serde_json::json!({ "gypfile": "false" })).gypfile_opt_out);
+        assert!(!manifest(serde_json::json!({})).gypfile_opt_out);
     }
 }

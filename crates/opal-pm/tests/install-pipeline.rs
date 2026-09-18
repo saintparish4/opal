@@ -12,7 +12,7 @@ use opal_core::graph::{ResolverOptions, resolver};
 use opal_core::path::NormalizedPath;
 use opal_pm::diagnose::{self, Severity};
 use opal_pm::fixtures::{FixtureRegistry, Package, write_project};
-use opal_pm::install::{self, InstallError, InstallOptions, InstallReport};
+use opal_pm::install::{self, InstallError, InstallOptions, InstallReport, UnrunScripts};
 use opal_pm::lockfile;
 use opal_pm::package::PackageStore;
 use opal_pm::platform::Platform;
@@ -297,6 +297,134 @@ fn test_a_parent_rebuilt_under_intact_children_rebuilds_them_too() {
     }
     assert_eq!(report.link.added, 4);
     assert_eq!(report.link.unchanged, 2);
+}
+
+/// (package, lifecycle events, implicit `node-gyp rebuild`) for each package
+/// whose install scripts were not run.
+fn scripts_not_run(report: &InstallReport) -> Vec<(String, Vec<&'static str>, bool)> {
+    report
+        .scripts_not_run
+        .iter()
+        .map(|(id, scripts)| {
+            (
+                id.to_string(),
+                scripts.events.clone(),
+                scripts.implicit_node_gyp,
+            )
+        })
+        .collect()
+}
+
+#[test]
+fn test_install_scripts_that_were_not_run_are_reported() {
+    let mut sandbox = Sandbox::new();
+    sandbox
+        .registry
+        .publish(
+            Package::new("native", "1.0.0")
+                .script("postinstall", "node build.js")
+                .script("preinstall", "node check.js")
+                .script("test", "node test.js"),
+        )
+        .publish(Package::new("plain", "1.0.0"));
+    sandbox.project(serde_json::json!({
+        "dependencies": { "native": "^1.0.0", "plain": "^1.0.0" }
+    }));
+    let expected = vec![(
+        "native@1.0.0".to_string(),
+        vec!["preinstall", "postinstall"],
+        false,
+    )];
+
+    let first = sandbox.install().expect("install");
+    assert_eq!(scripts_not_run(&first), expected);
+
+    // Answered by opal.lock and already linked: the scripts still have not
+    // run, so the warning must not disappear with the resolve.
+    let second = sandbox.install().expect("reinstall");
+    assert!(!second.resolved);
+    assert_eq!(second.link.added, 0);
+    assert_eq!(scripts_not_run(&second), expected);
+}
+
+#[test]
+fn test_a_binding_gyp_without_an_install_script_is_reported_as_node_gyp() {
+    // npm runs `node-gyp rebuild` for a package with a `binding.gyp` and no
+    // `install` or `preinstall` of its own. Native addons that rely on that
+    // declare no scripts at all, so looking at `scripts` alone misses them.
+    let mut sandbox = Sandbox::new();
+    sandbox
+        .registry
+        .publish(Package::new("addon", "1.0.0").file("binding.gyp", "{ \"targets\": [] }"))
+        .publish(
+            Package::new("prebuilt", "1.0.0")
+                .file("binding.gyp", "{ \"targets\": [] }")
+                .script("install", "prebuild-install || node-gyp rebuild"),
+        );
+    sandbox.project(serde_json::json!({
+        "dependencies": { "addon": "^1.0.0", "prebuilt": "^1.0.0" }
+    }));
+
+    let report = sandbox.install().expect("install");
+    assert_eq!(
+        scripts_not_run(&report),
+        vec![
+            ("addon@1.0.0".to_string(), vec![], true),
+            ("prebuilt@1.0.0".to_string(), vec!["install"], false),
+        ]
+    );
+}
+
+#[test]
+fn test_a_tree_without_install_scripts_reports_none() {
+    let mut sandbox = Sandbox::new();
+    sandbox
+        .registry
+        .publish(Package::new("a", "1.0.0").script("build", "tsc"));
+    sandbox.project(serde_json::json!({ "dependencies": { "a": "^1.0.0" } }));
+
+    let report = sandbox.install().expect("install");
+    assert!(report.scripts_not_run.is_empty());
+    assert_eq!(report.project_scripts_not_run, None);
+}
+
+#[test]
+fn test_the_projects_own_install_scripts_are_reported() {
+    // npm runs the project's own lifecycle scripts on every install of it,
+    // `prepare` included, which it never runs for a registry dependency.
+    let mut sandbox = Sandbox::new();
+    sandbox.registry.publish(Package::new("a", "1.0.0"));
+    sandbox.project(serde_json::json!({
+        "dependencies": { "a": "^1.0.0" },
+        "scripts": {
+            "prepare": "husky",
+            "postinstall": "patch-package",
+            "build": "tsc"
+        }
+    }));
+
+    let report = sandbox.install().expect("install");
+    assert_eq!(
+        report.project_scripts_not_run,
+        Some(UnrunScripts {
+            events: vec!["postinstall", "prepare"],
+            implicit_node_gyp: false,
+        })
+    );
+    assert!(report.scripts_not_run.is_empty());
+}
+
+#[test]
+fn test_a_dependency_prepare_script_is_not_reported() {
+    // A registry package ships built; npm never runs its `prepare`.
+    let mut sandbox = Sandbox::new();
+    sandbox
+        .registry
+        .publish(Package::new("a", "1.0.0").script("prepare", "tsc"));
+    sandbox.project(serde_json::json!({ "dependencies": { "a": "^1.0.0" } }));
+
+    let report = sandbox.install().expect("install");
+    assert!(report.scripts_not_run.is_empty());
 }
 
 #[test]

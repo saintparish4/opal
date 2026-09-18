@@ -24,6 +24,7 @@ pub struct Package {
     pub peer_dependencies: BTreeMap<String, String>,
     pub optional_peers: Vec<String>,
     pub bin: BTreeMap<String, String>,
+    pub scripts: BTreeMap<String, String>,
     pub os: Vec<String>,
     pub cpu: Vec<String>,
     /// Extra files beyond the generated `package.json`, as (path, contents,
@@ -42,6 +43,7 @@ impl Package {
             peer_dependencies: BTreeMap::new(),
             optional_peers: Vec::new(),
             bin: BTreeMap::new(),
+            scripts: BTreeMap::new(),
             os: Vec::new(),
             cpu: Vec::new(),
             files: Vec::new(),
@@ -106,6 +108,11 @@ impl Package {
         self
     }
 
+    pub fn script(mut self, event: &str, command: &str) -> Self {
+        self.scripts.insert(event.to_string(), command.to_string());
+        self
+    }
+
     fn manifest_json(&self) -> serde_json::Value {
         let mut value = serde_json::json!({
             "name": self.name,
@@ -142,6 +149,9 @@ impl Package {
         }
         if !self.bin.is_empty() {
             object.insert("bin".into(), serde_json::json!(self.bin));
+        }
+        if !self.scripts.is_empty() {
+            object.insert("scripts".into(), serde_json::json!(self.scripts));
         }
         if !self.os.is_empty() {
             object.insert("os".into(), serde_json::json!(self.os));
