@@ -4,3 +4,4 @@ base/
 /fuzz/target
 content/
 public/
+.claude/
