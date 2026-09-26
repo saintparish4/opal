@@ -55,6 +55,11 @@ struct Bar {
 
 impl Progress for Bar {
     fn stage(&self, stage: Stage) {
+        // A spinner draws the moment its steady tick starts, so the previous
+        // bar has to be gone first. Cleared afterwards, the new line has
+        // already wrapped below the old full-width one, the clear lands on the
+        // new line, and the old bar stays on screen.
+        self.finished();
         let next = match stage {
             // Neither stage knows its own size as it goes — resolution
             // discovers the tree, and the reconciler's work depends on what it
@@ -79,9 +84,7 @@ impl Progress for Bar {
                 bar
             }
         };
-        if let Some(previous) = self.current.borrow_mut().replace(next) {
-            previous.finish_and_clear();
-        }
+        *self.current.borrow_mut() = Some(next);
     }
 
     fn fetched(&self, id: &PackageId, _from_store: bool) {
