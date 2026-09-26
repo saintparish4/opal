@@ -1,3 +1,10 @@
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset=".github/assets/opal-logo-horizontal-white.svg">
+    <img src=".github/assets/opal-logo-horizontal-ink.svg" alt="Opal" width="400">
+  </picture>
+</p>
+
 # Opal
 
 An all-in-one JavaScript/TypeScript toolkit — package manager, runtime, bundler, and test runner in a single native binary, built around one shared incremental module graph engine (`opal-core`) instead of four independently-implemented resolvers.
