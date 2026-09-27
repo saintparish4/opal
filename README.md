@@ -57,21 +57,27 @@ Opal is pre-1.0 beta software, and the lockfile format can change between minor 
 
 ### Upgrade
 
-To upgrade to the latest version of Opal, run the install script again:
+To upgrade to the latest version of Opal, run:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/saintparish4/opal/master/install.sh | bash
+opal upgrade
 ```
 
-It replaces the binary in `~/.opal/bin` and leaves your `PATH` line as it is. To switch to a specific version instead, set `OPAL_VERSION` as shown above.
+To switch to a specific version, older or newer, name it:
+
+```sh
+opal upgrade 0.3.1
+```
+
+It downloads the release for your platform from GitHub, checks it against the release's `SHA256SUMS`, and runs it once to make sure it starts before replacing the binary, so a failed upgrade leaves the old one untouched. Running the install script again works too.
 
 If the new version changed the lockfile format, the next `opal install` in each project re-resolves `opal.lock` and says so. Commit the rewritten file, because `opal install --frozen-lockfile` refuses to rewrite it and CI fails until you do. An older Opal can't read a lockfile written by a newer one.
 
-There's no `opal upgrade` command and no canary channel; every release is a tagged [GitHub Release](https://github.com/saintparish4/opal/releases). To run unreleased changes from `master`, build from source.
+There's no canary channel; every release is a tagged [GitHub Release](https://github.com/saintparish4/opal/releases). To run unreleased changes from `master`, build from source.
 
 ## Usage
 
-Opal has three commands today: `opal install`, `opal graph`, and `opal cache`. Run `opal <command> --help` to see their flags.
+Opal has four commands today: `opal install`, `opal graph`, `opal cache`, and `opal upgrade`. Run `opal <command> --help` to see their flags.
 
 Commit `opal.lock`. In CI, run `opal install --frozen-lockfile`, which installs exactly what `opal.lock` records and fails instead of changing it.
 

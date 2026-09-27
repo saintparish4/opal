@@ -1,13 +1,14 @@
 //! The `opal` binary.
 //!
 //! Implements: resolving a module graph,
-//! installing dependencies, and inspecting the shared cache. `run`, `build`, and
+//! installing dependencies, inspecting the shared cache, and upgrading itself. `run`, `build`, and
 //! `test` are not here, because a command that exists and does nothing is worse
 //! than one that does not exist. The same goes for `add`, `remove`, `update`,
 //! and the analysis command — they arrive with the phase that
 //! implements them.
 
 mod progress;
+mod upgrade;
 
 use std::collections::BTreeSet;
 use std::path::PathBuf;
@@ -26,7 +27,9 @@ use opal_pm::locks::CacheLock;
 use opal_pm::package::PackageStore;
 use opal_pm::packuments::PackumentCache;
 use opal_pm::projects::ProjectIndex;
-use opal_pm::registry::{Freshness, NpmRegistry};
+use opal_pm::registry::{Freshness, HttpTransport, NpmRegistry, RetryPolicy, RetryingTransport};
+use opal_pm::semver::Version;
+use upgrade::{Outcome, Releases};
 
 #[derive(Parser)]
 #[command(
@@ -50,6 +53,15 @@ enum Command {
         #[command(subcommand)]
         command: CacheCommand,
     },
+    /// Upgrade opal to the latest release, or to a given version.
+    Upgrade(UpgradeArgs),
+}
+
+#[derive(Args)]
+struct UpgradeArgs {
+    /// Install this version instead of the latest, e.g. 0.3.1. An older one
+    /// works too.
+    version: Option<String>,
 }
 
 #[derive(Args)]
@@ -157,6 +169,7 @@ fn run(cli: Cli) -> Result<ExitCode, Failure> {
                 Ok(ExitCode::SUCCESS)
             }
         },
+        Command::Upgrade(args) => upgrade_command(args),
     }
 }
 
@@ -395,6 +408,33 @@ fn platform_skip_summary(count: usize) -> Option<String> {
             "skipped {count} optional packages built for other platforms"
         )),
     }
+}
+
+fn upgrade_command(args: UpgradeArgs) -> Result<ExitCode, Failure> {
+    let current = Version::parse(env!("CARGO_PKG_VERSION"))?;
+    // The install's own client: the same timeouts, and the same retries on a
+    // dropped connection or a 5xx.
+    let transport = RetryingTransport::new(HttpTransport::new(), RetryPolicy::default());
+    let outcome = upgrade::upgrade(
+        &Releases::from_env(),
+        &transport,
+        args.version.as_deref(),
+        &current,
+        &std::env::current_exe()?,
+        (std::env::consts::OS, std::env::consts::ARCH),
+        &mut |step| eprintln!("{step}"),
+    )?;
+    match outcome {
+        Outcome::Upgraded { from, to } => println!("opal {from} → {to}"),
+        Outcome::AlreadyLatest(version) => {
+            println!("opal {version} is already the latest release");
+        }
+        Outcome::AlreadyInstalled(version) => println!("opal {version} is already installed"),
+        Outcome::NewerThanLatest { current, latest } => {
+            println!("opal {current} is newer than the latest release ({latest})");
+        }
+    }
+    Ok(ExitCode::SUCCESS)
 }
 
 /// The scripts in the order npm would have run them. An implied

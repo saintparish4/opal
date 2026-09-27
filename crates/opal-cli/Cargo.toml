@@ -12,10 +12,16 @@ opal-pm.workspace = true
 clap.workspace = true
 indicatif.workspace = true
 console.workspace = true
+# `opal upgrade` unpacks and checks a release archive: the same crates opal-pm
+# already uses for npm tarballs and their integrity, so nothing new is built.
+flate2.workspace = true
+tar.workspace = true
+sha2.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
 
 [dev-dependencies]
 opal-pm = { workspace = true, features = ["fixtures"] }
-serde_json.workspace = true
 tempfile.workspace = true
 
 # tests/install-crash-safety.rs drives the real binary, so it has to live in the
