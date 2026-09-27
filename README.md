@@ -108,18 +108,47 @@ Each number is the median of 3 runs (cold, ci) or 5 (warm, noop); fastest in bol
 | yarn 1.22.22 | 59.98s | 53.90s | 6.70s | 414ms | 633 MB |
 | bun 1.3.14 | **19.27s** | **13.52s** | 1.32s | **22ms** | 565 MB |
 
-- **First installs and CI are where Opal loses.** It's about 4× slower than npm on a cold install and 5–6× slower on CI, because it downloads packages one at a time. Parallel downloads are the next thing being built.
-- **Reinstalls are where it wins.** On a warm install it's 6× faster than npm on express and 12× on Next.js, where it's the fastest of the five. A no-op install is 17× (express) and 7.6× (Next.js) faster than npm; bun is faster still.
+<details>
+<summary>The same benchmark on a second machine: Intel Core i9-9900K (16 threads), 16 GB RAM, Linux under WSL2</summary>
+
+Same tool versions and Node 24.19.0, measured 2026-09-26 on a different network.
+
+**express**
+
+| | cold | ci | warm | noop | Peak memory (cold) |
+|---|---|---|---|---|---|
+| opal 0.3.0 | 7.53s | 6.07s | 93ms | 16ms | **15 MB** |
+| npm 11.17.0 | 1.61s | 934ms | 590ms | 291ms | 158 MB |
+| pnpm 11.17.0 | 1.32s | 1.14s | 739ms | 418ms | 470 MB |
+| yarn 1.22.22 | 1.61s | 1.25s | 560ms | 225ms | 162 MB |
+| bun 1.3.14 | **480ms** | **557ms** | **42ms** | **6ms** | 40 MB |
+
+**Next.js 16.3.2**
+
+| | cold | ci | warm | noop | Peak memory (cold) |
+|---|---|---|---|---|---|
+| opal 0.3.0 | 180.29s | 177.91s | 673ms | 77ms | **277 MB** |
+| npm 11.17.0 | 27.88s | 14.03s | 12.37s | 738ms | 420 MB |
+| pnpm 11.17.0 | 18.60s | 15.78s | 1.55s | 447ms | 1,789 MB |
+| yarn 1.22.22 | 56.11s | 48.00s | 6.36s | 319ms | 649 MB |
+| bun 1.3.14 | **16.87s** | **11.97s** | **641ms** | **16ms** | 718 MB |
+
+</details>
+
+Across both machines:
+
+- **First installs and CI are where Opal loses.** It's 4–7× slower than npm on a cold install and 5–13× slower on CI, because it downloads packages one at a time. The gap is widest on Next.js's large downloads, and it depends on the network. Parallel downloads are the next thing being built.
+- **Reinstalls are where it wins.** A warm install is 6× faster than npm on express and 12–18× on Next.js, where it's roughly tied with bun. A no-op install is 17–18× (express) and 8–10× (Next.js) faster than npm; bun is faster still.
 - **It uses the least memory of the five** on every cold install.
 - On Next.js, opal, yarn, and bun also download six musl builds that npm and pnpm skip (see [Limitations](#limitations)), which adds to their cold and CI times.
 
-Absolute times vary between sessions on this machine, so compare tools within a table rather than against numbers from another run.
+Absolute times vary between sessions and machines, so compare tools within one table rather than across tables.
 
 ## Limitations
 
 Worth knowing before you point Opal at a project:
 
-- **First installs and CI installs are slower than npm's**, about 4–6× in the [benchmarks](#benchmarks), because packages download one at a time. Linking already runs in parallel; parallel downloads are next.
+- **First installs and CI installs are slower than npm's**, 4–7× on a cold install and up to 13× on CI in the [benchmarks](#benchmarks), because packages download one at a time. Linking already runs in parallel; parallel downloads are next.
 - **Lifecycle scripts (`preinstall`/`install`/`postinstall`) do not run.** Packages shipping prebuilt binaries (`esbuild`, `sharp`, `@next/swc`) work; a package that needs `node-gyp` to compile at install time installs but does not build. `opal install` says so on every run: it names each dependency whose install scripts were skipped (including native addons that declare none and rely on npm running `node-gyp rebuild` for their `binding.gyp`), and the project's own lifecycle scripts, `prepare` included.
 - **`libc` isn't checked.** On Linux with glibc (most distributions), Opal also installs the musl builds of native packages, which npm and pnpm skip. On a Next.js app that's six extra packages and 124 MB, 91 MB of it `@next/swc-linux-x64-musl`. A glibc system doesn't use them, but they cost download time and disk.
 - **Peers are recorded and classified, never auto-installed.**
