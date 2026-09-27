@@ -56,7 +56,7 @@ fn test_a_relative_root_reinstalls_nothing_and_reaches_nothing_outside() {
         "an install removed a directory outside its project"
     );
     assert!(
-        second.contains("0 added, 1 unchanged, 0 removed"),
+        second.starts_with("1 package already installed"),
         "an unchanged tree was rebuilt: {second}"
     );
 }

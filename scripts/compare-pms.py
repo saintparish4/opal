@@ -288,7 +288,8 @@ def main():
                           "packages": count_packages(project_dir / "node_modules")}
                 if name == "opal":
                     sample["summary"] = next((line for line in log.read_text().splitlines()
-                                              if " packages " in line and " in " in line), "")
+                                              if " packages " in line and
+                                              (" in " in line or "already installed" in line)), "")
                 results.append(sample)
                 status = "ok" if code == 0 and check else f"FAIL exit={code} runs={check}"
                 print(f"{scenario:<5} #{round_index + 1} {name:<5} {fmt(wall):>9}  "

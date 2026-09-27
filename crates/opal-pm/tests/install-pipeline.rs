@@ -210,6 +210,26 @@ fn test_frozen_lockfile_refuses_to_re_resolve() {
 }
 
 #[test]
+fn test_frozen_lockfile_refuses_to_create_a_missing_lockfile() {
+    let mut sandbox = Sandbox::new();
+    sandbox.registry.publish(Package::new("a", "1.0.0"));
+    sandbox.project(serde_json::json!({ "dependencies": { "a": "^1.0.0" } }));
+
+    let options = InstallOptions {
+        frozen_lockfile: true,
+        ..InstallOptions::default()
+    };
+    assert!(matches!(
+        sandbox.install_with(&options),
+        Err(InstallError::LockfileMissing)
+    ));
+    assert!(
+        !sandbox.path("opal.lock").exists(),
+        "a frozen install wrote a lockfile"
+    );
+}
+
+#[test]
 fn test_removing_a_dependency_removes_it_from_the_tree() {
     let mut sandbox = Sandbox::new();
     sandbox

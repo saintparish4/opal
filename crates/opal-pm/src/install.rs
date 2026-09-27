@@ -50,6 +50,11 @@ pub enum InstallError {
     #[error("opal.lock does not match package.json, and --frozen-lockfile was requested")]
     LockfileOutdated,
     #[error(
+        "there is no opal.lock to install from, and --frozen-lockfile was requested; \
+         run `opal install` without it once to create opal.lock, then commit it"
+    )]
+    LockfileMissing,
+    #[error(
         "{}",
         rejected
             .iter()
@@ -196,13 +201,21 @@ pub fn install(
         }
         Err(error) => return Err(error.into()),
     };
+    let lockfile_present = existing.is_some();
     let reusable = existing.filter(|resolution| resolve::requirements_match(resolution, &manifest));
 
     let resolution = match reusable {
         Some(resolution) => resolution,
         None => {
+            // Under --frozen-lockfile an older lockfile has already failed above,
+            // so no lockfile here means there was no file at all, which calls for
+            // a different remedy than a stale one.
             if options.frozen_lockfile {
-                return Err(InstallError::LockfileOutdated);
+                return Err(if lockfile_present {
+                    InstallError::LockfileOutdated
+                } else {
+                    InstallError::LockfileMissing
+                });
             }
             progress.stage(Stage::Resolving);
             let started = Instant::now();
