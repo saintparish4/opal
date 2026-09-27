@@ -314,13 +314,32 @@ fn replace(executable: &Path, binary: &[u8], expected: &Version) -> Result<(), U
     temp.persist(&path).map_err(replace_error)
 }
 
+/// Runs `binary --version`, waiting out `ETXTBSY`.
+///
+/// Linux won't execute a file that any process has open for writing. The temp
+/// file is closed before this runs, but a process started from another thread
+/// at the wrong moment briefly holds a copy of every open file, this one
+/// included, until it starts its own program. Seen in CI when the tests ran in
+/// parallel (2 in 300 stress runs locally); `opal upgrade` itself is single
+/// threaded. The wait doubles from 5ms, about 1.3s in all.
+fn run_version(binary: &Path) -> io::Result<std::process::Output> {
+    let mut pause = std::time::Duration::from_millis(5);
+    for _ in 0..8 {
+        match Command::new(binary).arg("--version").output() {
+            Err(error) if error.kind() == io::ErrorKind::ExecutableFileBusy => {
+                std::thread::sleep(pause);
+                pause *= 2;
+            }
+            outcome => return outcome,
+        }
+    }
+    Command::new(binary).arg("--version").output()
+}
+
 fn check_runs(binary: &Path, expected: &Version) -> Result<(), UpgradeError> {
-    let output = Command::new(binary)
-        .arg("--version")
-        .output()
-        .map_err(|error| UpgradeError::WontRun {
-            reason: error.to_string(),
-        })?;
+    let output = run_version(binary).map_err(|error| UpgradeError::WontRun {
+        reason: error.to_string(),
+    })?;
     if !output.status.success() {
         return Err(UpgradeError::WontRun {
             reason: String::from_utf8_lossy(&output.stderr).trim().to_string(),
