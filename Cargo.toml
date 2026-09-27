@@ -45,6 +45,12 @@ ureq = "3.4.0"
 # (ratatui: alternate screen, widget tree, its own event loop) is the wrong
 # shape for one bar that advances and one line per stage.
 indicatif = "0.18"
+# Already in the build as indicatif's own terminal layer, at this version with
+# these features, so naming it adds no code. opal-cli needs `Term` directly to
+# hand indicatif a terminal one column narrower than the real one: a line that
+# fills the last column wraps early in some terminals, and indicatif's next
+# redraw then clears the wrong row.
+console = { version = "0.16.4", default-features = false, features = ["std"] }
 # std has no advisory file locking; this is one extern function (flock), not
 # worth a wrapper crate like fs2/fd-lock for.
 libc = "0.2.189"

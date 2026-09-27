@@ -11,6 +11,7 @@ opal-core.workspace = true
 opal-pm.workspace = true
 clap.workspace = true
 indicatif.workspace = true
+console.workspace = true
 
 [dev-dependencies]
 opal-pm = { workspace = true, features = ["fixtures"] }

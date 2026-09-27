@@ -597,6 +597,7 @@ name = "opal-cli"
 version = "0.3.0"
 dependencies = [
  "clap",
+ "console",
  "indicatif",
  "opal-core",
  "opal-pm",
