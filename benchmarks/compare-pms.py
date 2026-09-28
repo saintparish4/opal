@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Opal against npm, pnpm, yarn, and bun on one real package.json.
 
-    python3 scripts/compare-pms.py <express|next> [--opal PATH] [--rounds cold=3,ci=3,warm=5,noop=5]
+    python3 benchmarks/compare-pms.py <express|next> [--opal PATH] [--rounds cold=3,ci=3,warm=5,noop=5]
 
 Four scenarios, each a different question:
   cold  no lockfile, no cache, no node_modules: a first install
