@@ -27,8 +27,6 @@ opal cache gc                    # delete store files no project uses anymore
 
 > **Status**: Beta. The package manager works today — `opal install` resolves against the real npm registry and produces a `node_modules` tree Node runs against, validated on real projects (a Next.js scaffold at 365 packages, express, webpack, and a curated compatibility suite), and it is under active development, so expect rough edges and breaking releases. The runtime (`opal run`), bundler (`opal build`), and test runner (`opal test`) are **not implemented**; their directories under `crates/` hold placeholder files only.
 
-<a name="deployment"></a>
-
 ## Install
 
 Opal supports Linux (x64 & arm64) and macOS (x64 & Apple Silicon). On Windows, it runs inside WSL2.

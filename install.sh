@@ -4,8 +4,9 @@
 # No branded install domain yet, so run it straight off the repo:
 #   curl -fsSL https://raw.githubusercontent.com/saintparish4/opal/master/install.sh | bash
 #
-# Pin a version instead of the latest release:
-#   OPAL_VERSION=v0.2.0 curl -fsSL https://raw.githubusercontent.com/saintparish4/opal/master/install.sh | bash
+# Pin a version instead of the latest release. The variable goes on bash, the
+# command that reads it; in front of curl it would be ignored:
+#   curl -fsSL https://raw.githubusercontent.com/saintparish4/opal/master/install.sh | OPAL_VERSION=v0.3.1 bash
 #
 # v1 targets macOS, Linux, and WSL2 only (WSL2 reports as Linux via uname,
 # so the linux-x64/linux-arm64 assets cover it directly). Native Windows is
@@ -18,9 +19,10 @@ BIN_NAME="opal"
 INSTALL_DIR="${OPAL_INSTALL_DIR:-$HOME/.opal/bin}"
 VERSION="${OPAL_VERSION:-latest}"
 # Set by main(), read by the EXIT trap; declared here (rather than left to
-# spring into existence on first assignment) so `rm -rf "$tmp"` is always
+# spring into existence on first assignment) so the trap's `rm` is always
 # defined under `set -u`, even if the script dies before main() gets to it.
 tmp=""
+staged=""
 
 log() { printf 'opal: %s\n' "$1"; }
 die() {
@@ -33,7 +35,7 @@ detect_asset() {
   case "$(uname -s)" in
     Linux) os=linux ;;
     Darwin) os=macos ;;
-    *) die "unsupported OS: $(uname -s). opal v1 supports macOS, Linux, and WSL2 only — see https://github.com/${REPO}#deployment" ;;
+    *) die "unsupported OS: $(uname -s). opal v1 supports macOS, Linux, and WSL2 only — see https://github.com/${REPO}#install" ;;
   esac
   case "$(uname -m)" in
     x86_64 | amd64) arch=x64 ;;
@@ -62,6 +64,38 @@ sha256_of() {
   fi
 }
 
+host_libc() {
+  local version
+  if version="$(getconf GNU_LIBC_VERSION 2>/dev/null)"; then
+    printf '%s' "$version"
+    return 0
+  fi
+  # musl's ldd prints its banner and exits 1, so the status says nothing.
+  case "$(ldd --version 2>&1 || true)" in
+    *musl*) printf 'musl' ;;
+  esac
+}
+
+# Running the binary is the only check that can't drift from what a release
+# actually needs: the Linux assets link against glibc, and on an older glibc
+# or on musl the loader rejects them. A version floor written here would go
+# stale the first time the release build image changes.
+check_runs() {
+  local bin="$1" output libc hint=""
+  if output="$("$bin" --version 2>&1)"; then
+    printf '%s' "$output"
+    return 0
+  fi
+  if [ "$(uname -s)" = "Linux" ]; then
+    libc="$(host_libc)"
+    hint="
+This system has ${libc:-an unrecognized libc}. The Linux binaries need a recent glibc and don't run on musl."
+  fi
+  die "the downloaded ${BIN_NAME} doesn't run on this system, so nothing was installed:
+$(printf '%s\n' "$output" | sed 's/^/  /')${hint}
+See https://github.com/${REPO}#install"
+}
+
 add_to_path() {
   local rc marker line
   marker="# added by opal's install.sh"
@@ -83,7 +117,7 @@ add_to_path() {
 }
 
 main() {
-  local asset archive expected actual
+  local asset archive expected actual version
 
   asset="$(detect_asset)"
   archive="${BIN_NAME}-${asset}.tar.gz"
@@ -92,7 +126,7 @@ main() {
   # bash has already discarded any local variables, so a local tmp here would
   # be unbound by the time the trap tries to read it.
   tmp="$(mktemp -d)"
-  trap 'rm -rf "$tmp"' EXIT
+  trap 'rm -rf "$tmp" "$staged"' EXIT
 
   log "downloading ${archive} (${VERSION})"
   curl -fsSL "$(release_url "$archive")" -o "$tmp/$archive" ||
@@ -109,12 +143,18 @@ main() {
 
   mkdir -p "$INSTALL_DIR"
   tar -xzf "$tmp/$archive" -C "$tmp"
-  install -m 755 "$tmp/$BIN_NAME" "$INSTALL_DIR/$BIN_NAME"
+  # Staged beside its destination, not run from $tmp: /tmp is often mounted
+  # noexec, and a rename within one directory replaces an existing opal
+  # only once the new one has been shown to start.
+  staged="$INSTALL_DIR/.$BIN_NAME.new.$$"
+  install -m 755 "$tmp/$BIN_NAME" "$staged"
+  version="$(check_runs "$staged")"
+  mv -f "$staged" "$INSTALL_DIR/$BIN_NAME"
 
   add_to_path
 
   log "installed to $INSTALL_DIR/$BIN_NAME"
-  log "$("$INSTALL_DIR/$BIN_NAME" --version 2>/dev/null || echo "$BIN_NAME $VERSION")"
+  log "$version"
   log "open a new shell, or run: export PATH=\"$INSTALL_DIR:\$PATH\""
 }
 
