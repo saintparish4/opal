@@ -31,7 +31,7 @@ opal cache gc                    # delete store files no project uses anymore
 
 Opal supports Linux (x64 & arm64) and macOS (x64 & Apple Silicon). On Windows, it runs inside WSL2.
 
-> **Linux users**: the prebuilt binaries need glibc 2.34 or newer (Ubuntu 22.04+, Debian 12+, Fedora 35+, RHEL 9+). Check yours with `ldd --version`. On an older system, Opal fails to start with a `GLIBC_2.34 not found` error. Alpine and other musl-based distributions aren't supported.
+> **Linux users**: the prebuilt binaries need glibc 2.34 or newer (Ubuntu 22.04+, Debian 12+, Fedora 35+, RHEL 9+). Check yours with `ldd --version`. v0.3.1 is the exception: it needs glibc 2.39 (Ubuntu 24.04+, Debian 13+, Fedora 40+). On an older system, the install script stops without installing anything. Alpine and other musl-based distributions aren't supported.
 
 > **Windows users**: install and run Opal inside WSL2. Native Windows support is planned.
 

@@ -8,6 +8,9 @@ on:
 env:
   CARGO_TERM_COLOR: always
   BIN_NAME: opal
+  # The newest glibc a Linux binary may require; the README's Install section
+  # states the same number.
+  MAX_GLIBC: "2.34"
 
 permissions:
   contents: write
@@ -20,11 +23,15 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # The Linux targets pin ubuntu-22.04, never ubuntu-latest: a binary
+          # can require the newest symbols of the glibc it was linked against.
+          # v0.3.1 was built on 24.04, needed glibc 2.39, and wouldn't start
+          # on Ubuntu 22.04, Debian 12, or RHEL 9.
           - asset: linux-x64
-            os: ubuntu-latest
+            os: ubuntu-22.04
             target: x86_64-unknown-linux-gnu
           - asset: linux-arm64
-            os: ubuntu-latest
+            os: ubuntu-22.04
             target: aarch64-unknown-linux-gnu
             linker_package: gcc-aarch64-linux-gnu
             linker: aarch64-linux-gnu-gcc
@@ -42,7 +49,7 @@ jobs:
       - name: Install Rust toolchain
         run: rustup target add ${{ matrix.target }}
 
-      # ubuntu-latest is x86_64; aarch64-unknown-linux-gnu needs a cross
+      # The Linux runner is x86_64; aarch64-unknown-linux-gnu needs a cross
       # linker. macos-latest is an Apple Silicon runner and can cross-link
       # x86_64-apple-darwin directly via Xcode's toolchain, no extra package.
       - name: Install cross linker
@@ -61,6 +68,17 @@ jobs:
 
       - name: Build
         run: cargo build --release -p opal-cli --target ${{ matrix.target }}
+
+      # Nothing else notices when the requirement rises: the build passes and
+      # the binary runs on the runner. readelf, not objdump, because it reads
+      # the cross-compiled arm64 binary too.
+      - name: Check the glibc requirement
+        if: startsWith(matrix.asset, 'linux-')
+        run: |
+          set -euo pipefail
+          needed="$(readelf -V "target/${{ matrix.target }}/release/${BIN_NAME}" | grep -o 'GLIBC_[0-9.]*' | sort -uV | tail -1)"
+          echo "requires ${needed}; the limit is GLIBC_${MAX_GLIBC}"
+          [ "$(printf '%s\n' "$needed" "GLIBC_${MAX_GLIBC}" | sort -V | tail -1)" = "GLIBC_${MAX_GLIBC}" ]
 
       - name: Package
         run: |
