@@ -109,7 +109,7 @@ python3 benchmarks/compare-pms.py next --opal "$(command -v opal)" \
 - `--tools opal,npm` compares a subset of the tools.
 - `--rounds cold=3,ci=3,warm=5,noop=5` changes how many rounds each scenario gets.
 - `--work DIR` sets the scratch directory (default `/tmp/opal-compare`).
-- `--results DIR` sets where the raw samples go (default `benchmarks/results/`).
+- `--results DIR` sets where the raw samples go (default `benchmarks/results/`). The samples record the path of the Opal binary that ran, so with the default the harness refuses a binary that sits under the system's temporary folder. Keep the binary somewhere you're happy to publish, such as `~/opal-bench/`.
 
 Raw samples for every run are written to `benchmarks/results/` as JSON, one file per run. A table published here from now on is committed together with the file it was computed from, so anyone can recompute it. The tables above predate that: the laptop's samples were kept outside the repository and the desktop's were not kept.
 
@@ -135,4 +135,6 @@ It has two workloads, and they answer different questions:
     --rtt-ms 70 --bandwidth-mbit 37 --scenario cold --iterations 2
   ```
 
-  37 Mbit/s and 70 ms are what one network measured on one afternoon (157 MB in 34s over 16 connections), not constants; set them to the network you care about. At those values the benchmark's fetch took 41s where the real tree's took 43–44s the same afternoon. It still leaves out what a single connection can carry, so it flatters one-at-a-time downloads, and generating the fixture takes one to two minutes.
+  37 Mbit/s and 70 ms are what one network measured on one afternoon (157 MB in 34s over 16 connections), not constants; set them to the network you care about. At those values the benchmark's fetch took 41s where the real tree's took 43–44s the same afternoon. Generating the fixture takes one to two minutes.
+
+  **Read this workload as a floor on transfer time, not a prediction of a real install.** It models one shared link and nothing else: no limit on what a single connection carries, and a bandwidth that never changes. So it credits parallel downloading with more than a real network gives: it measured parallel fetching at about 5× where the real tree, in the same machine state, showed 2.7×. Use it to see whether a change adds or removes transfer and round trips, and measure the real tree before quoting a speedup.

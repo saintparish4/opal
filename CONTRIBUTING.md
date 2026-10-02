@@ -53,7 +53,7 @@ cargo test --workspace --all-features
 
 `--all-features` matters: it turns on `opal-pm`'s `fixtures` feature, a file-backed registry the `install-pipeline` and `install-crash-safety` suites use so they run offline. Without it those suites don't compile, and clippy never sees them.
 
-One of those tests kills installs at random moments. If it fails, it prints an `OPAL_CHAOS_SEED`: set that variable to replay the same run, and set `OPAL_CHAOS_TRIALS` to run more trials.
+One of those tests kills installs at random moments. If it fails, it prints an `OPAL_CHAOS_SEED`: set that variable to replay the same run, and set `OPAL_CHAOS_TRIALS` to run more trials. Run it with `--nocapture` to see where the kills landed. A kill that arrives after the install has finished tests nothing, and about 44% of them do, so quote a long run by the number of kills that interrupted a running install, not by its trial count.
 
 If you change how the cache decides what's stale (CAS key derivation, integrity checks, or invalidation), add or update the tests in `crates/opal-core/tests/cache-invalidation.rs`. A bug there doesn't crash; it silently serves stale output.
 

@@ -20,6 +20,13 @@
 //! concurrency can overlap the waiting but never the transfer. Without that
 //! floor a parallel fetcher measures several times faster here than it is on
 //! a real network.
+//!
+//! It is a floor and not a prediction. Nothing limits what one connection can
+//! carry, and the bandwidth never varies, so this still credits parallel
+//! fetching with more than a real network gives it (about 5x here against
+//! 2.7x on the real tree, measured 2026-10-01). A per-connection limit would
+//! be a second estimated number; measure a single connection's speed before
+//! adding one.
 
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
