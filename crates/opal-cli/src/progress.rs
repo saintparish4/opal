@@ -23,9 +23,9 @@
 //! the end is the command's output and stays on stdout, so redirecting one does
 //! not swallow the other.
 
-use std::cell::RefCell;
 use std::fmt;
 use std::io::{self, IsTerminal};
+use std::sync::{Mutex, MutexGuard, PoisonError};
 use std::time::Duration;
 
 use console::Term;
@@ -64,7 +64,7 @@ impl Progress for Lines {
 /// One bar at a time, replaced as the pipeline moves between stages.
 struct Bar {
     colour: ColourSupport,
-    current: RefCell<Option<ProgressBar>>,
+    current: Mutex<Option<ProgressBar>>,
 }
 
 /// Redraw interval. Also the spinner's frame length, so it turns at an even
@@ -76,7 +76,7 @@ const TICK: Duration = Duration::from_millis(80);
 const SPINNER: [char; 10] = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
 
 /// The elapsed time is what shows a long resolve is still working: resolution
-/// fetches registry metadata one package at a time, 25s on a Next.js app.
+/// reports nothing per package, so on a large tree the timer is all that moves.
 const SPINNER_TEMPLATE: &str = "{opal_spinner} {prefix:.bold}{msg:.dim}  {opal_elapsed}";
 const DOWNLOAD_TEMPLATE: &str = "{prefix:.bold}  {opal_bar}  {opal_details}  {wide_msg:.dim}";
 
@@ -84,8 +84,14 @@ impl Bar {
     fn new(colour: ColourSupport) -> Self {
         Self {
             colour,
-            current: RefCell::new(None),
+            current: Mutex::new(None),
         }
+    }
+
+    fn current(&self) -> MutexGuard<'_, Option<ProgressBar>> {
+        // A bar is only ever swapped whole, so a poisoned lock still holds a
+        // usable one, and progress output is no reason to end an install.
+        self.current.lock().unwrap_or_else(PoisonError::into_inner)
     }
 
     fn spinner(&self, label: &'static str, detail: String) -> ProgressBar {
@@ -159,18 +165,19 @@ impl Progress for Bar {
             }
         };
         next.enable_steady_tick(TICK);
-        *self.current.borrow_mut() = Some(next);
+        *self.current() = Some(next);
     }
 
     fn fetched(&self, id: &PackageId, _from_store: bool) {
-        if let Some(bar) = self.current.borrow().as_ref() {
+        if let Some(bar) = self.current().as_ref() {
             bar.set_message(id.name.clone());
             bar.inc(1);
         }
     }
 
     fn finished(&self) {
-        if let Some(bar) = self.current.borrow_mut().take() {
+        let finished = self.current().take();
+        if let Some(bar) = finished {
             bar.finish_and_clear();
         }
     }

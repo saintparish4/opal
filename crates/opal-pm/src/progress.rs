@@ -26,7 +26,11 @@ pub enum Stage {
 
 /// Called as the install proceeds. Every method has a default, so an
 /// implementation only overrides the ones it renders.
-pub trait Progress {
+///
+/// `Sync` because packages are fetched on several threads, and each one calls
+/// [`Progress::fetched`] itself. `stage` and `finished` are only ever called
+/// from the thread running the install.
+pub trait Progress: Sync {
     fn stage(&self, _stage: Stage) {}
 
     /// One package's contents are in the store. `from_store` distinguishes a

@@ -1,6 +1,6 @@
 //! Running independent work on several threads, and nothing more.
 //!
-//! Both parallel paths in this crate have the same shape: a slice of items
+//! Every parallel path in this crate has the same shape: a slice of items
 //! that do not depend on each other, a closure that may fail, and a per-thread
 //! accumulator merged at the end. This is that, in `std`, rather than a
 //! scheduler dependency for a loop.
@@ -24,6 +24,14 @@ pub fn workers() -> usize {
         .map(|count| count.get().clamp(1, 16))
         .unwrap_or(4)
 }
+
+/// How many registry requests to have in flight at once.
+///
+/// Waiting on a round trip is not CPU work, so this deliberately ignores the
+/// core count: a two-core CI runner gains as much from overlapping requests as
+/// a workstation does. The size is close to npm's own default of 15
+/// (`maxsockets`), so it is a load the registry already sees from one client.
+pub const REQUESTS: usize = 16;
 
 /// Applies `work` to every item, on `threads` threads, folding into `T`.
 ///

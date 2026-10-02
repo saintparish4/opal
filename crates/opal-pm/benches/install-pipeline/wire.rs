@@ -7,11 +7,11 @@
 //! Below it, "reached the wire" means exactly that.
 //!
 //! What the wrapper adds is the one thing a `file://` fixture cannot supply:
-//! round-trip latency. A sequential download loop with nothing to wait for
-//! measures as free, which hides exactly the property the loop's shape is
-//! supposed to expose. The stall is a real `sleep`, not an arithmetic
-//! adjustment at the end, so that a future concurrent fetcher shows up here as
-//! wall time *below* `round_trips * rtt` rather than needing a different model.
+//! round-trip latency. A download loop with nothing to wait for measures as
+//! free, which hides exactly the property the loop's shape is supposed to
+//! expose. The stall is a real `sleep`, not an arithmetic adjustment at the
+//! end, so that concurrent fetching shows up here as wall time *below*
+//! `round_trips * rtt` rather than needing a different model.
 
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
@@ -38,8 +38,8 @@ pub struct Meter {
 }
 
 impl Meter {
-    /// Wall time this install spent waiting on round-trips it made one at a
-    /// time. The headline number for anything that wants to overlap them.
+    /// What this install's round-trips would cost taken one at a time. Wall
+    /// time below it is the evidence that they overlapped.
     pub fn stalled(&self) -> Duration {
         self.rtt * (self.packuments.round_trips + self.tarballs.round_trips) as u32
     }

@@ -90,6 +90,7 @@ fn opal_resolve(manifest: &Value) -> Resolution {
         &Manifest::from_value(manifest),
         &ResolveOptions {
             include_development: true,
+            ..ResolveOptions::default()
         },
     )
     .expect("opal resolves the fixture")

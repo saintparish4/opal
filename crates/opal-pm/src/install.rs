@@ -19,11 +19,12 @@ use crate::lockfile::{self, LockfileError};
 use crate::locks::InstallLock;
 use crate::manifest::{DEPENDENCY_SCRIPTS, Manifest, ManifestError, PROJECT_SCRIPTS};
 use crate::package::{PackageError, PackageStore};
+use crate::parallel;
 use crate::platform::Platform;
 use crate::progress::{Progress, Stage};
 use crate::projects::{ProjectError, ProjectIndex};
 use crate::registry::{Registry, RegistryError};
-use crate::resolve::{self, PackageId, Resolution, ResolveError, ResolveOptions};
+use crate::resolve::{self, PackageId, Resolution, ResolveError, ResolveOptions, ResolvedPackage};
 
 #[derive(Debug, thiserror::Error)]
 pub enum InstallError {
@@ -226,6 +227,7 @@ pub fn install(
                 &manifest,
                 &ResolveOptions {
                     include_development: true,
+                    ..ResolveOptions::default()
                 },
             )?;
             lockfile::write(&lockfile_path, &resolved)?;
@@ -345,7 +347,20 @@ fn scripts_not_run(project_root: &Path, layout: &Layout) -> Vec<(PackageId, Unru
     found
 }
 
+/// What one fetching thread got done.
+#[derive(Default)]
+struct Batch {
+    packages: Vec<(PackageId, FetchedPackage)>,
+    downloaded: usize,
+    already_stored: usize,
+}
+
 /// Ensures the contents of everything the planned tree names are in the store.
+///
+/// Packages are fetched and ingested several at a time: each is independent
+/// of the others, and every write underneath is content-addressed or atomic,
+/// so two threads ingesting at once cannot disturb each other. The result is
+/// keyed by package, so it is the same whichever download finished first.
 fn fetch_all(
     registry: &dyn Registry,
     store: &PackageStore,
@@ -354,32 +369,46 @@ fn fetch_all(
     report: &mut InstallReport,
     progress: &dyn Progress,
 ) -> Result<Fetched, InstallError> {
-    let mut fetched: Fetched = BTreeMap::new();
+    // Once per package, however many places the layout puts it.
+    let wanted: BTreeMap<&PackageId, &ResolvedPackage> = layout
+        .values()
+        .filter_map(|id| Some((id, resolution.package(id)?)))
+        .collect();
+    let wanted: Vec<(&PackageId, &ResolvedPackage)> = wanted.into_iter().collect();
 
-    for id in layout.values() {
-        if fetched.contains_key(id) {
-            continue;
-        }
-        let Some(package) = resolution.package(id) else {
-            continue;
-        };
-        let stored = store.lookup(&package.integrity)?;
-        let from_store = stored.is_some();
-        let index_hash = match stored {
-            Some(hash) => {
-                report.already_stored += 1;
-                hash
-            }
-            None => {
-                let tarball = registry.tarball(&package.tarball)?;
-                let hash = store.ingest(&id.name, &id.version, &package.integrity, &tarball)?;
-                report.fetched += 1;
-                hash
-            }
-        };
-        progress.fetched(id, from_store);
-        let index = store.read_index(&index_hash)?;
-        fetched.insert(id.clone(), FetchedPackage { index_hash, index });
+    let batches = parallel::each(
+        &wanted,
+        parallel::REQUESTS.min(wanted.len()),
+        Batch::default,
+        |(id, package), batch: &mut Batch| {
+            let stored = store.lookup(&package.integrity)?;
+            let from_store = stored.is_some();
+            let index_hash = match stored {
+                Some(hash) => {
+                    batch.already_stored += 1;
+                    hash
+                }
+                None => {
+                    let tarball = registry.tarball(&package.tarball)?;
+                    let hash = store.ingest(&id.name, &id.version, &package.integrity, &tarball)?;
+                    batch.downloaded += 1;
+                    hash
+                }
+            };
+            progress.fetched(id, from_store);
+            let index = store.read_index(&index_hash)?;
+            batch
+                .packages
+                .push(((*id).clone(), FetchedPackage { index_hash, index }));
+            Ok::<(), InstallError>(())
+        },
+    )?;
+
+    let mut fetched: Fetched = BTreeMap::new();
+    for batch in batches {
+        report.fetched += batch.downloaded;
+        report.already_stored += batch.already_stored;
+        fetched.extend(batch.packages);
     }
     Ok(fetched)
 }

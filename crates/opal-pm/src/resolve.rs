@@ -9,12 +9,21 @@
 //! Determinism is a requirement, not a nicety — a lockfile that differs between
 //! two runs over the same inputs is a lockfile nobody can review. Every
 //! collection here is ordered, and the work queue is drained in sorted order.
+//!
+//! Only the waiting is concurrent. Before each breadth-first level is
+//! resolved, the packuments it is about to ask for are fetched several at a
+//! time; the level is then resolved one request after another, exactly as if
+//! nothing had been fetched ahead. The order selections are made in is the
+//! result, so that order never depends on which response arrived first.
 
-use std::collections::{BTreeMap, BTreeSet, VecDeque};
+use std::collections::{BTreeMap, BTreeSet};
+use std::convert::Infallible;
 use std::fmt;
+use std::sync::Arc;
 
 use crate::integrity::Integrity;
 use crate::manifest::{DependencyClass, Manifest, Spec};
+use crate::parallel;
 use crate::registry::{Packument, Registry, RegistryError, VersionMetadata};
 use crate::semver::{Range, Version};
 
@@ -188,12 +197,17 @@ pub struct ResolveOptions {
     /// The root project's `devDependencies` are installed; a dependency's are
     /// never installed, which is what keeps a tree from exploding.
     pub include_development: bool,
+    /// How many packuments to fetch at once ahead of each breadth-first level.
+    /// One fetches nothing ahead, which exists so a test can hold the two to
+    /// the same answer.
+    pub concurrent_requests: usize,
 }
 
 impl Default for ResolveOptions {
     fn default() -> Self {
         Self {
             include_development: true,
+            concurrent_requests: parallel::REQUESTS,
         }
     }
 }
@@ -210,6 +224,7 @@ pub fn resolve(
         expanded: BTreeSet::new(),
         skipped: Vec::new(),
         root_versions: BTreeMap::new(),
+        refused: BTreeMap::new(),
     }
     .run(root, options)
 }
@@ -225,6 +240,9 @@ struct Resolver<'a> {
     /// spec too, because a package can be both a dependency and a
     /// devDependency at different ranges.
     root_versions: BTreeMap<(String, String), Version>,
+    /// package -> the error a fetch ahead of its level came back with, held
+    /// until the sequential pass reaches that package.
+    refused: BTreeMap<String, RegistryError>,
 }
 
 /// One unit of work: resolve `name @ spec`, requested by `parent`.
@@ -260,7 +278,7 @@ impl<'a> Resolver<'a> {
         root: &Manifest,
         options: &ResolveOptions,
     ) -> Result<Resolution, ResolveError> {
-        let mut queue: VecDeque<Request> = VecDeque::new();
+        let mut level: Vec<Request> = Vec::new();
         let mut requirements = Vec::new();
 
         for requirement in root.installable(options.include_development) {
@@ -277,56 +295,64 @@ impl<'a> Resolver<'a> {
                 spec: requirement.spec.to_string(),
                 version: None,
             });
-            queue.push_back(request);
+            level.push(request);
         }
         requirements
             .sort_by(|left, right| (left.class, &left.name).cmp(&(right.class, &right.name)));
 
-        while let Some(request) = queue.pop_front() {
-            let Some(version) = self.select(&request)? else {
-                continue;
-            };
-            let id = PackageId::new(request.package.clone(), version);
+        // One level at a time, each in the order it was queued, with the next
+        // level collected behind it: the order a single first-in, first-out
+        // queue would give.
+        while !level.is_empty() {
+            self.fetch_ahead(&level, options.concurrent_requests);
 
-            if request.parent.is_none() {
-                self.root_versions.insert(
-                    (request.name.clone(), request.spec.to_string()),
-                    id.version.clone(),
-                );
-            }
-
-            if let Some(parent) = &request.parent {
-                let edge = ResolvedEdge {
-                    name: request.name.clone(),
-                    package: id.name.clone(),
-                    spec: request.spec.to_string(),
-                    version: id.version.clone(),
-                    optional: request.optional,
+            for request in std::mem::take(&mut level) {
+                let Some(version) = self.select(&request)? else {
+                    continue;
                 };
-                let package = self
-                    .packages
-                    .get_mut(parent)
-                    .expect("a parent is recorded before its dependencies are queued");
-                if !package.dependencies.contains(&edge) {
-                    package.dependencies.push(edge);
-                    package.dependencies.sort_by(|left, right| {
-                        (&left.name, &left.spec).cmp(&(&right.name, &right.spec))
-                    });
-                }
-            }
+                let id = PackageId::new(request.package.clone(), version);
 
-            // A package's dependencies are expanded once, however many paths
-            // reach it — this is also what terminates dependency cycles.
-            if !self.expanded.insert(id.clone()) {
-                continue;
-            }
-            for requirement in self.dependencies_of(&id)? {
-                queue.push_back(Request::new(
-                    Some(id.clone()),
-                    requirement.name,
-                    requirement.spec,
-                    requirement.class.tolerates_absence(),
-                ));
+                if request.parent.is_none() {
+                    self.root_versions.insert(
+                        (request.name.clone(), request.spec.to_string()),
+                        id.version.clone(),
+                    );
+                }
+
+                if let Some(parent) = &request.parent {
+                    let edge = ResolvedEdge {
+                        name: request.name.clone(),
+                        package: id.name.clone(),
+                        spec: request.spec.to_string(),
+                        version: id.version.clone(),
+                        optional: request.optional,
+                    };
+                    let package = self
+                        .packages
+                        .get_mut(parent)
+                        .expect("a parent is recorded before its dependencies are queued");
+                    if !package.dependencies.contains(&edge) {
+                        package.dependencies.push(edge);
+                        package.dependencies.sort_by(|left, right| {
+                            (&left.name, &left.spec).cmp(&(&right.name, &right.spec))
+                        });
+                    }
+                }
+
+                // A package's dependencies are expanded once, however many
+                // paths reach it — this is also what terminates dependency
+                // cycles.
+                if !self.expanded.insert(id.clone()) {
+                    continue;
+                }
+                for requirement in self.dependencies_of(&id)? {
+                    level.push(Request::new(
+                        Some(id.clone()),
+                        requirement.name,
+                        requirement.spec,
+                        requirement.class.tolerates_absence(),
+                    ));
+                }
             }
         }
 
@@ -345,6 +371,52 @@ impl<'a> Resolver<'a> {
             packages: self.packages,
             skipped: self.skipped,
         })
+    }
+
+    /// Fetches, several at a time, the packuments this level is about to ask
+    /// for one at a time.
+    ///
+    /// Nothing is decided here. A packument that arrives is kept by the
+    /// registry, and an error is kept in `refused`, so the sequential pass
+    /// gets the answer it would have got by asking itself, without the wait
+    /// and without asking twice.
+    ///
+    /// Only packages nothing has selected yet are fetched. The first request
+    /// for one of those always asks the registry, so this never makes a
+    /// request the sequential pass would not have made.
+    fn fetch_ahead(&mut self, level: &[Request], threads: usize) {
+        let wanted: BTreeSet<&str> = level
+            .iter()
+            .filter(|request| !matches!(request.spec, Spec::Unsupported(_)))
+            .map(|request| request.package.as_str())
+            .filter(|package| !self.selected.contains_key(*package))
+            .collect();
+        let wanted: Vec<&str> = wanted.into_iter().collect();
+        let threads = threads.min(wanted.len());
+        if threads < 2 {
+            return;
+        }
+
+        let registry = self.registry;
+        let Ok(refused) = parallel::each(
+            &wanted,
+            threads,
+            Vec::new,
+            |package, refused: &mut Vec<(String, RegistryError)>| {
+                if let Err(error) = registry.packument(package) {
+                    refused.push(((*package).to_string(), error));
+                }
+                Ok::<(), Infallible>(())
+            },
+        );
+        self.refused.extend(refused.into_iter().flatten());
+    }
+
+    fn packument(&mut self, package: &str) -> Result<Arc<Packument>, RegistryError> {
+        match self.refused.remove(package) {
+            Some(error) => Err(error),
+            None => self.registry.packument(package),
+        }
     }
 
     /// Chooses a version, recording the package if it is new.
@@ -379,7 +451,7 @@ impl<'a> Resolver<'a> {
             return Ok(Some(reused.clone()));
         }
 
-        let packument = match self.registry.packument(&request.package) {
+        let packument = match self.packument(&request.package) {
             Ok(packument) => packument,
             Err(RegistryError::NotFound(name)) if request.optional => {
                 self.skipped.push((name, "not in the registry".to_string()));

@@ -19,7 +19,7 @@
 //! Everything runs offline against a fixture registry over `file://`, so the
 //! numbers are reproducible and the only network cost in them is the one
 //! `--rtt-ms` puts there deliberately. Run with a non-zero RTT to price the
-//! sequential fetch loop; run with the default zero to measure local work.
+//! round trips; run with the default zero to measure local work.
 //!
 //! Name the target: `cargo bench` otherwise passes these options to every
 //! test binary in the package too, and libtest rejects them.
@@ -437,7 +437,7 @@ fn report(workload: &Workload, options: &Options, setup: Duration, measurements:
         );
         if !meter.stalled().is_zero() {
             println!(
-                "  serialized {} in {} round-trips taken one at a time ({}% of wall)",
+                "  serialized {} is what {} round-trips cost one at a time ({}% of wall)",
                 duration(meter.stalled()),
                 meter.packuments.round_trips + meter.tarballs.round_trips,
                 percent(meter.stalled(), measurement.median()),

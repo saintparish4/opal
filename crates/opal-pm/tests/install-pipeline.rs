@@ -6,6 +6,8 @@
 //! ones.
 
 use std::path::{Path, PathBuf};
+use std::sync::Mutex;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 use opal_core::cache::CacheRoot;
 use opal_core::graph::{ResolverOptions, resolver};
@@ -630,24 +632,39 @@ fn test_production_install_skips_dev_dependencies() {
 /// terminal anywhere near it.
 #[derive(Default)]
 struct Recorder {
-    stages: std::cell::RefCell<Vec<Stage>>,
-    fetched: std::cell::RefCell<Vec<(String, bool)>>,
-    finished: std::cell::Cell<bool>,
+    stages: Mutex<Vec<Stage>>,
+    fetched: Mutex<Vec<(String, bool)>>,
+    finished: AtomicBool,
+}
+
+impl Recorder {
+    fn stages(&self) -> Vec<Stage> {
+        self.stages.lock().unwrap().clone()
+    }
+
+    /// Sorted: packages are fetched on several threads, so the order they
+    /// are reported in is whichever finished first.
+    fn fetched(&self) -> Vec<(String, bool)> {
+        let mut fetched = self.fetched.lock().unwrap().clone();
+        fetched.sort();
+        fetched
+    }
 }
 
 impl opal_pm::progress::Progress for Recorder {
     fn stage(&self, stage: Stage) {
-        self.stages.borrow_mut().push(stage);
+        self.stages.lock().unwrap().push(stage);
     }
 
     fn fetched(&self, id: &opal_pm::resolve::PackageId, from_store: bool) {
         self.fetched
-            .borrow_mut()
+            .lock()
+            .unwrap()
             .push((id.name.clone(), from_store));
     }
 
     fn finished(&self) {
-        self.finished.set(true);
+        self.finished.store(true, Ordering::Relaxed);
     }
 }
 
@@ -664,7 +681,7 @@ fn test_the_pipeline_reports_each_stage_once_and_every_package() {
     sandbox.install_reporting(&first).expect("install");
 
     assert_eq!(
-        first.stages.borrow().as_slice(),
+        first.stages(),
         [
             Stage::Resolving,
             Stage::Fetching { packages: 2 },
@@ -672,30 +689,26 @@ fn test_the_pipeline_reports_each_stage_once_and_every_package() {
         ]
     );
     assert_eq!(
-        first.fetched.borrow().as_slice(),
+        first.fetched(),
         [("a".to_string(), false), ("b".to_string(), false)],
         "a cold store reports every package as a download"
     );
-    assert!(first.finished.get());
+    assert!(first.finished.load(Ordering::Relaxed));
 
     // A second run answers from the lockfile, so there is no resolve stage to
     // report and every package is already in the store.
     let second = Recorder::default();
     sandbox.install_reporting(&second).expect("second install");
     assert_eq!(
-        second.stages.borrow().as_slice(),
+        second.stages(),
         [
             Stage::Fetching { packages: 2 },
             Stage::Linking { packages: 2 }
         ]
     );
-    assert!(
-        second
-            .fetched
-            .borrow()
-            .iter()
-            .all(|(_, from_store)| *from_store)
-    );
+    let reported = second.fetched();
+    assert_eq!(reported.len(), 2);
+    assert!(reported.iter().all(|(_, from_store)| *from_store));
 }
 
 #[test]

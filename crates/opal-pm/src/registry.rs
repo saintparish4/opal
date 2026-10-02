@@ -18,6 +18,7 @@ use serde_json::value::RawValue;
 use crate::integrity::Integrity;
 use crate::manifest::Manifest;
 use crate::packuments::{self, PackumentCache, Record};
+use crate::parallel;
 use crate::semver::Version;
 
 /// Part of the tarball is on the wire; the rest is not.
@@ -116,9 +117,16 @@ impl HttpTransport {
     pub fn new() -> Self {
         // One agent, not one per request: it holds the connection pool, and an
         // install is hundreds of requests to the same host.
+        //
+        // The pool keeps three idle connections per host unless told
+        // otherwise. With more threads than that asking, every connection
+        // past the third would be closed when its request finished and opened
+        // again, TLS handshake included, for the next one.
         let config = ureq::Agent::config_builder()
             .timeout_connect(Some(CONNECT_TIMEOUT))
             .timeout_recv_response(Some(RESPONSE_TIMEOUT))
+            .max_idle_connections(parallel::REQUESTS)
+            .max_idle_connections_per_host(parallel::REQUESTS)
             .build();
         Self {
             agent: ureq::Agent::new_with_config(config),
@@ -160,8 +168,8 @@ impl Default for RetryPolicy {
 
 /// Retries what is worth retrying.
 ///
-/// An install is hundreds of sequential requests, so it is hundreds of chances
-/// for one transient failure to end the whole run. A decorator rather than
+/// An install is hundreds of requests, so it is hundreds of chances for one
+/// transient failure to end the whole run. A decorator rather than
 /// something baked into the HTTP layer, so a test can drive it without a
 /// network and the benchmark can leave it out of a measurement.
 pub struct RetryingTransport<T> {

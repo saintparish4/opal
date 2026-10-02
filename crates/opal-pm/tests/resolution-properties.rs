@@ -24,6 +24,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Arc;
 
 use opal_pm::link::{self, PlanOptions};
+use opal_pm::lockfile;
 use opal_pm::manifest::Manifest;
 use opal_pm::platform::Platform;
 use opal_pm::registry::{Packument, Registry, RegistryError};
@@ -439,6 +440,21 @@ proptest! {
     #[test]
     fn test_resolving_the_same_registry_twice_gives_the_same_answer(plan in plan()) {
         prop_assert_eq!(plan.build().resolution(), plan.build().resolution());
+    }
+
+    /// Fetching a level's packuments ahead of resolving it must not change a
+    /// byte of the lockfile, or which error a failing plan reports: the order
+    /// selections are made in is the result.
+    #[test]
+    fn test_fetching_ahead_gives_a_byte_identical_lockfile(plan in plan()) {
+        let universe = plan.build();
+        let lockfile = |concurrent_requests| {
+            let options = ResolveOptions { concurrent_requests, ..ResolveOptions::default() };
+            resolve::resolve(&universe, &universe.root, &options)
+                .map(|resolution| lockfile::render(&resolution).expect("a generated plan renders"))
+                .map_err(|error| error.to_string())
+        };
+        prop_assert_eq!(lockfile(1), lockfile(16));
     }
 
     /// `pick`, stated the way npm-pick-manifest states it: sort the satisfying
