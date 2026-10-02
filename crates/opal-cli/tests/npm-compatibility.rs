@@ -16,23 +16,36 @@
 //!
 //! Every test is `#[ignore]`: these reach the public registry, and `cargo test`
 //! is meant to run offline in seconds. CI runs them with `--ignored`.
+//!
+//! **A passing suite is not a compatibility rate.** The cases are the shapes
+//! opal is expected to handle, so they all pass by construction. What opal
+//! does not handle is stated here too, as `known_gap` cases that assert the
+//! failure itself: a git dependency, a native addon built by its install
+//! script, a peer nothing else brings in. Report the suite as "N supported
+//! shapes pass, M known gaps", never as N out of N. When a gap is closed its
+//! case starts failing, and it gets replaced by the case that now passes.
 
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
+use std::sync::OnceLock;
 
-/// Shared across the suite so one run downloads each package once. Under
-/// `target/`, which is already ignored, and safe to delete at any time.
-fn cache() -> PathBuf {
-    let cache = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("../../target/compat-cache")
-        .canonicalize()
-        .unwrap_or_else(|_| {
-            let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../target/compat-cache");
-            std::fs::create_dir_all(&path).expect("create the shared cache");
-            path
-        });
-    std::fs::create_dir_all(&cache).expect("create the shared cache");
-    cache
+/// One store for the whole run, so a package two cases share is downloaded
+/// once, and emptied when the run starts, so every run downloads and ingests
+/// for real. A store left over from an earlier run answered almost every
+/// fetch from disk, and the suite then passed without exercising the download
+/// path at all. Under `target/`, which is already ignored.
+fn cache() -> &'static Path {
+    static CACHE: OnceLock<PathBuf> = OnceLock::new();
+    CACHE.get_or_init(|| {
+        let cache = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../target/compat-cache");
+        match std::fs::remove_dir_all(&cache) {
+            Ok(()) => {}
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+            Err(error) => panic!("empty the cache at {}: {error}", cache.display()),
+        }
+        std::fs::create_dir_all(&cache).expect("create the shared cache");
+        cache.canonicalize().expect("the cache exists")
+    })
 }
 
 struct Case {
@@ -93,6 +106,25 @@ impl Case {
             .current_dir(self.directory.path())
             .output()
             .expect("run node")
+    }
+
+    /// The version of the package linked at `node_modules/<package>`, read
+    /// from its own manifest. A directory existing says nothing about what is
+    /// in it.
+    fn version_of(&self, package: &str) -> String {
+        let manifest = self.path(&format!("node_modules/{package}/package.json"));
+        let text = std::fs::read_to_string(&manifest)
+            .unwrap_or_else(|error| panic!("{}: {error}", manifest.display()));
+        let parsed: serde_json::Value = serde_json::from_str(&text).expect("a JSON manifest");
+        assert!(
+            self.path(&format!("node_modules/{package}/.opal-package"))
+                .is_file(),
+            "{package} has no completion marker"
+        );
+        parsed["version"]
+            .as_str()
+            .expect("a version field")
+            .to_string()
     }
 
     /// Runs a script against the installed tree and returns its stdout.
@@ -184,11 +216,11 @@ fn test_install_a_deep_transitive_tree() {
     // ~70 packages, CJS throughout, the shape most real apps have.
     let case = Case::new(serde_json::json!({ "express": "4.21.2" }));
     case.installed();
-    assert!(case.path("node_modules/express/package.json").is_file());
-    assert!(
-        case.path("node_modules/accepts").is_file() || case.path("node_modules/accepts").is_dir(),
-        "transitive dependencies hoist to the top level"
-    );
+    assert_eq!(case.version_of("express"), "4.21.2");
+    // express 4.21.2 pins these exactly, so the versions are known, and they
+    // hoist to the top level.
+    assert_eq!(case.version_of("body-parser"), "1.20.3");
+    assert_eq!(case.version_of("debug"), "2.6.9");
 }
 
 #[test]
@@ -198,7 +230,11 @@ fn test_install_a_scoped_package_tree() {
     // registry URL; @babel/core brings a large tree of them.
     let case = Case::new(serde_json::json!({ "@babel/core": "7.26.0" }));
     case.installed();
-    assert!(case.path("node_modules/@babel/core/package.json").is_file());
+    assert_eq!(case.version_of("@babel/core"), "7.26.0");
+    assert!(
+        case.version_of("@babel/parser").starts_with("7."),
+        "a scoped dependency of a scoped package"
+    );
 }
 
 #[test]
@@ -208,6 +244,7 @@ fn test_install_a_package_with_an_extensionless_bin_script() {
     // scripts — the shape that used to walk as zero edges.
     let case = Case::new(serde_json::json!({ "typescript": "5.7.3" }));
     case.installed();
+    assert_eq!(case.version_of("typescript"), "5.7.3");
     assert!(case.path("node_modules/typescript/bin/tsc").is_file());
     assert!(
         case.path("node_modules/.bin/tsc").exists(),
@@ -222,7 +259,11 @@ fn test_install_an_optional_peer_that_is_legitimately_absent() {
     // must not read as a broken tree.
     let case = Case::new(serde_json::json!({ "debug": "4.4.0" }));
     case.installed();
-    assert!(case.path("node_modules/debug/package.json").is_file());
+    assert_eq!(case.version_of("debug"), "4.4.0");
+    assert!(
+        !case.path("node_modules/supports-color").exists(),
+        "an optional peer is not installed"
+    );
 }
 
 #[test]
@@ -250,6 +291,23 @@ fn test_install_an_alias_specifier() {
     );
     // The unaliased major sits beside it rather than being displaced by it.
     assert!(case.path("node_modules/string-width").is_dir());
+}
+
+#[test]
+#[ignore = "reaches the public registry"]
+fn test_install_known_gap_a_git_dependency_is_refused() {
+    // Known gap: only registry specifiers resolve. npm clones this and
+    // installs it. The install fails outright and names the specifier, which
+    // is the behaviour to keep until `git:` support lands.
+    let case = Case::new(serde_json::json!({ "is-number": "github:jonschlinkert/is-number" }));
+    let output = case.install();
+
+    assert!(!output.status.success(), "a git dependency installed");
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains("is not a supported dependency specifier"),
+        "{stderr}"
+    );
 }
 
 // ---------------------------------------------------------------- execute --
@@ -373,4 +431,56 @@ fn test_execute_an_extensionless_bin_script() {
         String::from_utf8_lossy(&output.stdout).contains("5.7.3"),
         "tsc did not report its version"
     );
+}
+
+#[test]
+#[ignore = "reaches the public registry"]
+fn test_execute_known_gap_a_native_addon_built_by_its_install_script_does_not_load() {
+    // Known gap: install scripts don't run. better-sqlite3 fetches or builds
+    // its binding in one, so the tree installs, the install says the script
+    // was skipped, and the addon cannot load. npm produces a working tree.
+    let case = Case::new(serde_json::json!({ "better-sqlite3": "11.8.1" }));
+    let output = case.install();
+    assert!(output.status.success(), "the install itself succeeds");
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains("install scripts were not run") && stderr.contains("better-sqlite3@11.8.1"),
+        "the skipped script is reported: {stderr}"
+    );
+
+    let run = case.node(
+        "import { createRequire } from 'node:module';\
+         const require = createRequire(process.cwd() + '/');\
+         const Database = require('better-sqlite3');\
+         new Database(':memory:');",
+    );
+    assert!(
+        !run.status.success(),
+        "the addon loaded without being built"
+    );
+    let stderr = String::from_utf8_lossy(&run.stderr);
+    assert!(
+        stderr.contains("Could not locate the bindings file"),
+        "{stderr}"
+    );
+}
+
+#[test]
+#[ignore = "reaches the public registry"]
+fn test_execute_known_gap_a_required_peer_is_not_installed() {
+    // Known gap: peers are recorded, never installed. react-dom requires
+    // `react` at load and declares it only as a peer; npm 7 and later
+    // install it, opal leaves it out, and the require fails.
+    let case = Case::new(serde_json::json!({ "react-dom": "19.0.0" }));
+    case.installed();
+    assert!(!case.path("node_modules/react").exists());
+
+    let run = case.node(
+        "import { createRequire } from 'node:module';\
+         const require = createRequire(process.cwd() + '/');\
+         require('react-dom');",
+    );
+    assert!(!run.status.success(), "react-dom loaded without react");
+    let stderr = String::from_utf8_lossy(&run.stderr);
+    assert!(stderr.contains("Cannot find module 'react'"), "{stderr}");
 }

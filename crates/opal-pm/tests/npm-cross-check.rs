@@ -10,13 +10,7 @@
 //! - **Semver, both ways.** Every version npm chose for an edge satisfies that
 //!   edge's range as opal parses it, and every version opal chose satisfies it
 //!   as npm's own `semver` reads it.
-//! - **The whole tree.** The same set of package versions. Since opal picks
-//!   versions in `npm-pick-manifest`'s order, one known policy difference
-//!   remains: opal reuses any already-selected version that satisfies a
-//!   range, while npm reuses only what is visible from the dependent's
-//!   position. None of these fixtures exercises it. If one starts to after a
-//!   registry change, the failure names the packages, and the fix is a
-//!   decision about that difference, not a retry.
+//! - **The whole tree.** The same set of package versions.
 //!
 //! Fixtures are chosen for the edge case each exercises, not for popularity.
 //! They need the public registry, `node`, and `npm`, so every test is
@@ -26,8 +20,26 @@
 //! cargo test -p opal-pm --test npm-cross-check -- --ignored --nocapture
 //! ```
 //!
-//! npm runs with `--legacy-peer-deps`, because opal records peers and doesn't
-//! install them yet. Without it, npm's tree holds packages opal's can't.
+//! **Identical fixtures are not the whole story, and the suite says so.** The
+//! `agrees` fixtures were written to exercise semver and layout, and none of
+//! them reaches a place where opal is known to differ from npm, so "every
+//! fixture is identical" would hold however large those differences were.
+//! The `known_difference` tests cover them. Each resolves a tree where opal
+//! and npm are known to disagree and asserts the disagreement is exactly the
+//! documented one, no more and no less:
+//!
+//! - **Reuse.** opal reuses any already-selected version that satisfies a
+//!   range, and resolves `dependencies` before `devDependencies`; npm walks
+//!   the root's dependencies by name and can place a newer copy first.
+//! - **`bundleDependencies`.** opal also resolves, from the registry, what a
+//!   package ships inside its own tarball.
+//! - **Peers.** opal records peers and never installs them. Every other test
+//!   here runs npm with `--legacy-peer-deps` so the trees are comparable at
+//!   all, which is not how npm runs by default.
+//!
+//! A `known_difference` test failing means the difference grew, shrank, or
+//! was fixed. Whichever it is, it's a decision about that difference and an
+//! edit to the expectation, not a retry.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::io::Write as _;
@@ -43,15 +55,23 @@ use serde_json::Value;
 /// `node_modules` placement.
 type NpmTree = BTreeMap<String, Value>;
 
-fn npm_resolve(manifest: &Value) -> NpmTree {
+/// Whether npm installs peers, which is its default since npm 7.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Peers {
+    /// `--legacy-peer-deps`: record them and install none, as opal does.
+    Recorded,
+    Installed,
+}
+
+fn npm_resolve(manifest: &Value, peers: Peers) -> NpmTree {
     let directory = tempfile::tempdir().expect("temp dir");
     std::fs::write(
         directory.path().join("package.json"),
         serde_json::to_vec_pretty(manifest).expect("serializable"),
     )
     .expect("write package.json");
-    let output = Command::new("npm")
-        .current_dir(directory.path())
+    let mut npm = Command::new("npm");
+    npm.current_dir(directory.path())
         // `--prefer-online` because opal always revalidates here, and npm's
         // own cache can predate a release: once, electron-to-chromium 1.5.433
         // was 38 seconds old, npm answered 1.5.432 from cache, and the trees
@@ -60,13 +80,14 @@ fn npm_resolve(manifest: &Value) -> NpmTree {
             "install",
             "--package-lock-only",
             "--ignore-scripts",
-            "--legacy-peer-deps",
             "--prefer-online",
             "--no-audit",
             "--no-fund",
-        ])
-        .output()
-        .expect("run npm; these tests need it on PATH");
+        ]);
+    if peers == Peers::Recorded {
+        npm.arg("--legacy-peer-deps");
+    }
+    let output = npm.output().expect("run npm; these tests need it on PATH");
     assert!(
         output.status.success(),
         "npm could not resolve the fixture: {}",
@@ -223,9 +244,60 @@ fn rejected_by_npm_semver(pairs: &[(String, String)]) -> Vec<(String, String)> {
     )
 }
 
+/// The npm that answered, printed with every comparison: it is the reference,
+/// and its behaviour is not the same from one major version to the next.
+fn npm_version() -> String {
+    let output = Command::new("npm")
+        .arg("--version")
+        .output()
+        .expect("run npm --version");
+    String::from_utf8_lossy(&output.stdout).trim().to_string()
+}
+
+/// What resolving one manifest with both tools turned up.
+struct Comparison {
+    /// Disagreements about a root's version or about what satisfies a range.
+    /// Never expected, in any test.
+    failures: Vec<String>,
+    /// `name@version` in opal's tree and not in npm's.
+    only_opal: BTreeSet<String>,
+    /// `name@version` in npm's tree and not in opal's.
+    only_npm: BTreeSet<String>,
+}
+
+impl Comparison {
+    /// Package names behind a set of `name@version` entries.
+    fn names(entries: &BTreeSet<String>) -> BTreeSet<&str> {
+        entries
+            .iter()
+            .map(|entry| {
+                entry
+                    .rsplit_once('@')
+                    .map_or(entry.as_str(), |(name, _)| name)
+            })
+            .collect()
+    }
+}
+
 fn cross_check(manifest: Value) {
-    let tree = npm_resolve(&manifest);
-    let resolution = opal_resolve(&manifest);
+    let comparison = compare(&manifest, Peers::Recorded);
+    let mut failures = comparison.failures;
+    for only in &comparison.only_opal {
+        failures.push(format!("only opal installs {only}"));
+    }
+    for only in &comparison.only_npm {
+        failures.push(format!("only npm installs {only}"));
+    }
+    assert!(
+        failures.is_empty(),
+        "opal and npm disagree:\n  {}",
+        failures.join("\n  ")
+    );
+}
+
+fn compare(manifest: &Value, peers: Peers) -> Comparison {
+    let tree = npm_resolve(manifest, peers);
+    let resolution = opal_resolve(manifest);
     let mut failures: Vec<String> = Vec::new();
 
     for requirement in &resolution.requirements {
@@ -312,23 +384,17 @@ fn cross_check(manifest: Value) {
         })
         .collect();
     println!(
-        "{} packages from opal, {} from npm; {} in both",
+        "npm {}: {} packages from opal, {} from npm; {} in both",
+        npm_version(),
         opal_set.len(),
         npm_set.len(),
         opal_set.intersection(&npm_set).count()
     );
-    for only in opal_set.difference(&npm_set) {
-        failures.push(format!("only opal installs {only}"));
+    Comparison {
+        failures,
+        only_opal: opal_set.difference(&npm_set).cloned().collect(),
+        only_npm: npm_set.difference(&opal_set).cloned().collect(),
     }
-    for only in npm_set.difference(&opal_set) {
-        failures.push(format!("only npm installs {only}"));
-    }
-
-    assert!(
-        failures.is_empty(),
-        "opal and npm disagree:\n  {}",
-        failures.join("\n  ")
-    );
 }
 
 #[test]
@@ -402,6 +468,84 @@ fn test_npm_agrees_on_a_deep_dev_tree() {
     cross_check(serde_json::json!({
         "devDependencies": { "webpack": "^5.90.0" }
     }));
+}
+
+/// The `package.json` that `create-next-app@16.3.2` writes: about 360
+/// packages, and the tree both known resolution differences were found on.
+fn next_scaffold() -> Value {
+    serde_json::json!({
+        "name": "next-test",
+        "version": "0.1.0",
+        "private": true,
+        "dependencies": {
+            "next": "16.3.2",
+            "react": "19.2.8",
+            "react-dom": "19.2.8"
+        },
+        "devDependencies": {
+            "@tailwindcss/postcss": "^4",
+            "@types/node": "^20",
+            "@types/react": "^19",
+            "@types/react-dom": "^19",
+            "eslint": "^9",
+            "eslint-config-next": "16.3.2",
+            "tailwindcss": "^4",
+            "typescript": "^5"
+        }
+    })
+}
+
+#[test]
+#[ignore = "reaches the public registry and needs npm"]
+fn test_known_difference_on_a_real_app_is_reuse_and_bundled_dependencies_only() {
+    let comparison = compare(&next_scaffold(), Peers::Recorded);
+    assert!(
+        comparison.failures.is_empty(),
+        "opal and npm disagree on a root or a range:\n  {}",
+        comparison.failures.join("\n  ")
+    );
+
+    // Reuse: `next` pins an exact postcss, and opal gives the same copy to
+    // `@tailwindcss/postcss`, whose range it satisfies. npm reaches
+    // `@tailwindcss/postcss` first, places the newest postcss for it, and
+    // nests the pinned one under `next`.
+    assert_eq!(
+        Comparison::names(&comparison.only_npm),
+        BTreeSet::from(["postcss"]),
+        "only npm installs: {:?}",
+        comparison.only_npm
+    );
+    // bundleDependencies: `@tailwindcss/oxide-wasm32-wasi` ships these inside
+    // its tarball, so npm resolves nothing for them.
+    assert_eq!(
+        Comparison::names(&comparison.only_opal),
+        BTreeSet::from(["@emnapi/core", "@emnapi/wasi-threads"]),
+        "only opal installs: {:?}",
+        comparison.only_opal
+    );
+}
+
+#[test]
+#[ignore = "reaches the public registry and needs npm"]
+fn test_known_difference_with_npm_installing_peers_is_the_peer_itself() {
+    // npm as it runs by default. react-dom declares react only as a peer:
+    // npm installs it, opal records it and installs nothing.
+    let comparison = compare(
+        &serde_json::json!({ "dependencies": { "react-dom": "19.0.0" } }),
+        Peers::Installed,
+    );
+    assert!(comparison.failures.is_empty(), "{:?}", comparison.failures);
+    assert_eq!(
+        Comparison::names(&comparison.only_npm),
+        BTreeSet::from(["react"]),
+        "only npm installs: {:?}",
+        comparison.only_npm
+    );
+    assert!(
+        comparison.only_opal.is_empty(),
+        "only opal installs: {:?}",
+        comparison.only_opal
+    );
 }
 
 /// `resolve::pick` against `npm-pick-manifest` itself, over every combination

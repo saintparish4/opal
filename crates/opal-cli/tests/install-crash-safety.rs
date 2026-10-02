@@ -9,7 +9,7 @@
 //! moments to find the ones nobody did.
 
 use std::collections::BTreeMap;
-use std::io::{BufRead, BufReader};
+use std::io::{BufRead, BufReader, Read as _};
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
@@ -199,16 +199,43 @@ impl World {
     /// Starts an install and SIGKILLs it after `delay`, wherever it is by
     /// then. It may already have finished, which is one of the moments a
     /// random delay is supposed to sample.
-    fn install_killed_after(&self, delay: Duration) {
+    ///
+    /// Returns where the kill landed. Without that, a run in which every
+    /// install finished before its kill arrived would pass as a soak of
+    /// kills that interrupted nothing.
+    fn install_killed_after(&self, delay: Duration) -> Landed {
         let mut child = self
             .command()
             .stdout(Stdio::null())
-            .stderr(Stdio::null())
+            .stderr(Stdio::piped())
             .spawn()
             .expect("spawn opal install");
         std::thread::sleep(delay);
+        let finished = child.try_wait().expect("poll").is_some();
         let _ = child.kill();
         child.wait().expect("reap");
+        if finished {
+            return Landed::AfterFinishing;
+        }
+
+        // Stderr is not a terminal here, so each stage announced itself on a
+        // line of its own, and the last one printed is the stage that died.
+        let mut announced = String::new();
+        let _ = child
+            .stderr
+            .take()
+            .expect("stderr")
+            .read_to_string(&mut announced);
+        let stage = announced.lines().rev().find_map(|line| {
+            [
+                ("Resolving", Landed::Resolving),
+                ("Installing", Landed::Fetching),
+                ("Linking", Landed::Linking),
+            ]
+            .into_iter()
+            .find_map(|(prefix, landed)| line.starts_with(prefix).then_some(landed))
+        });
+        stage.unwrap_or(Landed::BeforeAnyStage)
     }
 
     /// Starts an install and waits for it to park at `point`, leaving it alive
@@ -436,6 +463,18 @@ impl SplitMix64 {
     }
 }
 
+/// Where in an install a timed kill arrived.
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+enum Landed {
+    /// Starting up, reading the manifest and lockfile, or taking the locks.
+    BeforeAnyStage,
+    Resolving,
+    Fetching,
+    Linking,
+    /// The install had already exited, so the kill interrupted nothing.
+    AfterFinishing,
+}
+
 fn env_number(name: &str) -> Option<u64> {
     std::env::var(name).ok()?.trim().parse().ok()
 }
@@ -462,6 +501,7 @@ fn test_kills_at_random_moments_converge() {
     // that finishes before the kill arrives is sampled too.
     let window = started.elapsed().as_micros() as u64 * 5 / 4;
     let expected = reference.snapshot();
+    let mut landed: BTreeMap<Landed, usize> = BTreeMap::new();
 
     for trial in 0..trials {
         let world = World::depending_on(&fixtures, &dependencies);
@@ -473,7 +513,9 @@ fn test_kills_at_random_moments_converge() {
         let context = format!("OPAL_CHAOS_SEED={seed}, trial {trial}, killed after {delays:?}");
 
         for delay in &delays {
-            world.install_killed_after(*delay);
+            *landed
+                .entry(world.install_killed_after(*delay))
+                .or_default() += 1;
             assert!(
                 world.cache_is_clean(),
                 "{context}: cache failed verification"
@@ -490,6 +532,18 @@ fn test_kills_at_random_moments_converge() {
             "{context}: re-running did not converge on the clean state"
         );
     }
+
+    // Shown with `--nocapture`. This is what a soak's trial count is worth:
+    // only the kills that interrupted a running install tested anything.
+    let kills: usize = landed.values().sum();
+    let interrupted = kills - landed.get(&Landed::AfterFinishing).copied().unwrap_or(0);
+    println!(
+        "OPAL_CHAOS_SEED={seed}: {kills} kills over {trials} trials, {interrupted} interrupted a running install: {landed:?}"
+    );
+    assert!(
+        interrupted > 0,
+        "OPAL_CHAOS_SEED={seed}: all {kills} kills arrived after the install had finished"
+    );
 }
 
 #[test]
