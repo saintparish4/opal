@@ -747,7 +747,7 @@ mod tests {
 
     /// Fails a fixed number of times before answering, counting attempts.
     struct Flaky {
-        failures: AtomicU32,
+        failures: u32,
         attempts: AtomicU32,
         error: fn() -> RegistryError,
     }
@@ -755,7 +755,7 @@ mod tests {
     impl Flaky {
         fn new(failures: u32, error: fn() -> RegistryError) -> Self {
             Self {
-                failures: AtomicU32::new(failures),
+                failures,
                 attempts: AtomicU32::new(0),
                 error,
             }
@@ -768,14 +768,8 @@ mod tests {
 
     impl Transport for &Flaky {
         fn get(&self, _request: &Request<'_>) -> Result<Fetched, RegistryError> {
-            self.attempts.fetch_add(1, Ordering::Relaxed);
-            let failing = self
-                .failures
-                .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |left| {
-                    left.checked_sub(1)
-                })
-                .is_ok();
-            if failing {
+            let earlier_attempts = self.attempts.fetch_add(1, Ordering::Relaxed);
+            if earlier_attempts < self.failures {
                 return Err((self.error)());
             }
             Ok(Fetched::Fresh(Response {
