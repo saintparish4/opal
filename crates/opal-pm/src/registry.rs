@@ -5,10 +5,9 @@
 //! crash-safety and concurrency suites — run against a fixture registry with no
 //! network and no HTTP server, exercising exactly the code path production uses.
 
-use std::cell::RefCell;
 use std::collections::{BTreeMap, HashMap};
 use std::io::Read;
-use std::rc::Rc;
+use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 use std::time::{Duration, SystemTime};
 
 use opal_core::fault::{self, FaultPoint};
@@ -87,7 +86,9 @@ pub enum Fetched {
 /// wire *underneath* the metadata cache. Metering above it would charge a cache
 /// hit for a round trip it never made, and then no amount of caching could show
 /// up as an improvement.
-pub trait Transport {
+///
+/// `Send + Sync` because one client is shared by every thread that fetches.
+pub trait Transport: Send + Sync {
     fn get(&self, request: &Request<'_>) -> Result<Fetched, RegistryError>;
 }
 
@@ -327,8 +328,9 @@ impl Packument {
     }
 }
 
-pub trait Registry {
-    fn packument(&self, name: &str) -> Result<Rc<Packument>, RegistryError>;
+/// `Sync` so a `&dyn Registry` can be handed to worker threads.
+pub trait Registry: Sync {
+    fn packument(&self, name: &str) -> Result<Arc<Packument>, RegistryError>;
     fn tarball(&self, url: &str) -> Result<Vec<u8>, RegistryError>;
 
     /// A packument if one is already here, and never a request.
@@ -337,7 +339,7 @@ pub trait Registry {
     /// notice on an install that the lockfile already answered. Going to the
     /// network for those would undo the whole point of the metadata cache,
     /// which is that a warm re-install makes no round trips at all.
-    fn cached_packument(&self, _name: &str) -> Option<Rc<Packument>> {
+    fn cached_packument(&self, _name: &str) -> Option<Arc<Packument>> {
         None
     }
 }
@@ -345,14 +347,14 @@ pub trait Registry {
 /// The real client: an in-process packument cache over an on-disk one over a
 /// transport.
 ///
-/// Single-threaded on purpose for v1: correctness before speed, and parallel
-/// downloads are a change that needs the benchmark suite to justify it.
+/// Shareable across threads, and it never holds a lock across a request, so
+/// callers on different threads fetch at the same time.
 pub struct NpmRegistry {
     base: String,
     transport: Box<dyn Transport>,
     /// Dedupes repeat lookups inside one resolve — the resolver asks for the
     /// same name several times — and saves re-parsing what it already parsed.
-    memory: RefCell<HashMap<String, Rc<Packument>>>,
+    memory: Mutex<HashMap<String, Arc<Packument>>>,
     /// Carries metadata between runs. Absent means every run starts cold, which
     /// is what a bare `NpmRegistry::new` is for in tests.
     disk: Option<PackumentCache>,
@@ -374,7 +376,7 @@ impl NpmRegistry {
         Self {
             base: base.into().trim_end_matches('/').to_string(),
             transport,
-            memory: RefCell::new(HashMap::new()),
+            memory: Mutex::new(HashMap::new()),
             disk: None,
             freshness: Freshness::default(),
         }
@@ -409,6 +411,31 @@ impl NpmRegistry {
             // The registry wants the scope separator escaped.
             format!("{}/{}", self.base, name.replace('/', "%2f"))
         }
+    }
+
+    fn memory(&self) -> MutexGuard<'_, HashMap<String, Arc<Packument>>> {
+        // The lock only ever covers one map operation, which can't leave the
+        // map half-updated, so a poisoned lock still guards a valid map.
+        self.memory.lock().unwrap_or_else(PoisonError::into_inner)
+    }
+
+    fn remembered(&self, name: &str) -> Option<Arc<Packument>> {
+        self.memory().get(name).cloned()
+    }
+
+    /// Keeps the first packument recorded for a name, and returns that one.
+    ///
+    /// Two threads can miss on the same name and both fetch it. Holding the
+    /// lock across the request would prevent that by serializing every fetch,
+    /// which is the thing sharing the client exists to avoid, so the
+    /// duplicate request is accepted. Keeping the first answer is what stops
+    /// it from becoming two different packuments inside one resolve.
+    fn remember(&self, name: &str, packument: Packument) -> Arc<Packument> {
+        Arc::clone(
+            self.memory()
+                .entry(name.to_string())
+                .or_insert_with(|| Arc::new(packument)),
+        )
     }
 
     /// The bytes of a packument, from the freshest place that has them.
@@ -477,32 +504,24 @@ impl NpmRegistry {
 }
 
 impl Registry for NpmRegistry {
-    fn packument(&self, name: &str) -> Result<Rc<Packument>, RegistryError> {
-        if let Some(cached) = self.memory.borrow().get(name) {
-            return Ok(Rc::clone(cached));
+    fn packument(&self, name: &str) -> Result<Arc<Packument>, RegistryError> {
+        if let Some(cached) = self.remembered(name) {
+            return Ok(cached);
         }
         let url = self.packument_url(name);
         let bytes = self.packument_bytes(name, &url)?;
-        let packument = Rc::new(Packument::parse(name, &bytes));
-        self.memory
-            .borrow_mut()
-            .insert(name.to_string(), Rc::clone(&packument));
-        Ok(packument)
+        Ok(self.remember(name, Packument::parse(name, &bytes)))
     }
 
-    fn cached_packument(&self, name: &str) -> Option<Rc<Packument>> {
-        if let Some(cached) = self.memory.borrow().get(name) {
-            return Some(Rc::clone(cached));
+    fn cached_packument(&self, name: &str) -> Option<Arc<Packument>> {
+        if let Some(cached) = self.remembered(name) {
+            return Some(cached);
         }
         // Freshness is not consulted: a stale deprecation notice is a better
         // answer than a round trip, and this is the one caller that would
         // rather have nothing than wait.
         let record = self.disk.as_ref()?.get(&self.base, name)?;
-        let packument = Rc::new(Packument::parse(name, &record.body));
-        self.memory
-            .borrow_mut()
-            .insert(name.to_string(), Rc::clone(&packument));
-        Some(packument)
+        Some(self.remember(name, Packument::parse(name, &record.body)))
     }
 
     fn tarball(&self, url: &str) -> Result<Vec<u8>, RegistryError> {
@@ -641,6 +660,8 @@ fn read_chunked(url: &str, mut reader: impl Read) -> Result<Vec<u8>, RegistryErr
 
 #[cfg(test)]
 mod tests {
+    use std::sync::atomic::{AtomicU32, Ordering};
+
     use super::*;
 
     fn sample() -> Value {
@@ -718,26 +739,35 @@ mod tests {
 
     /// Fails a fixed number of times before answering, counting attempts.
     struct Flaky {
-        failures: std::cell::Cell<u32>,
-        attempts: std::cell::Cell<u32>,
+        failures: AtomicU32,
+        attempts: AtomicU32,
         error: fn() -> RegistryError,
     }
 
     impl Flaky {
         fn new(failures: u32, error: fn() -> RegistryError) -> Self {
             Self {
-                failures: std::cell::Cell::new(failures),
-                attempts: std::cell::Cell::new(0),
+                failures: AtomicU32::new(failures),
+                attempts: AtomicU32::new(0),
                 error,
             }
+        }
+
+        fn attempts(&self) -> u32 {
+            self.attempts.load(Ordering::Relaxed)
         }
     }
 
     impl Transport for &Flaky {
         fn get(&self, _request: &Request<'_>) -> Result<Fetched, RegistryError> {
-            self.attempts.set(self.attempts.get() + 1);
-            if self.failures.get() > 0 {
-                self.failures.set(self.failures.get() - 1);
+            self.attempts.fetch_add(1, Ordering::Relaxed);
+            let failing = self
+                .failures
+                .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |left| {
+                    left.checked_sub(1)
+                })
+                .is_ok();
+            if failing {
                 return Err((self.error)());
             }
             Ok(Fetched::Fresh(Response {
@@ -793,7 +823,7 @@ mod tests {
             let flaky = Flaky::new(2, error);
             let transport = RetryingTransport::new(&flaky, immediate(3));
             assert!(fetch(&transport).is_ok());
-            assert_eq!(flaky.attempts.get(), 3);
+            assert_eq!(flaky.attempts(), 3);
         }
     }
 
@@ -804,7 +834,7 @@ mod tests {
 
         let error = fetch(&transport).expect_err("404 stands");
         assert!(matches!(error, RegistryError::Status { status: 404, .. }));
-        assert_eq!(flaky.attempts.get(), 1, "repeating it repeats the answer");
+        assert_eq!(flaky.attempts(), 1, "repeating it repeats the answer");
     }
 
     #[test]
@@ -814,7 +844,7 @@ mod tests {
 
         let error = fetch(&transport).expect_err("never recovers");
         assert!(matches!(error, RegistryError::Status { status: 503, .. }));
-        assert_eq!(flaky.attempts.get(), 3, "exactly the budget, no more");
+        assert_eq!(flaky.attempts(), 3, "exactly the budget, no more");
     }
 
     #[test]
@@ -822,7 +852,7 @@ mod tests {
         let flaky = Flaky::new(1, server_error);
         let transport = RetryingTransport::new(&flaky, immediate(1));
         assert!(fetch(&transport).is_err());
-        assert_eq!(flaky.attempts.get(), 1);
+        assert_eq!(flaky.attempts(), 1);
     }
 
     #[test]

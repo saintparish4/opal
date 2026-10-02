@@ -35,7 +35,7 @@ mod workload;
 
 use std::path::PathBuf;
 use std::process::ExitCode;
-use std::rc::Rc;
+use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use opal_core::cache::CacheRoot;
@@ -264,8 +264,8 @@ impl Sandbox {
     /// sandbox's cache root, unless the run is measuring what life was like
     /// without it.
     fn registry(&self, workload: &Workload, options: &Options, rtt: Duration) -> Client {
-        let counters = Rc::new(Counters::default());
-        let transport = MeteredTransport::new(HttpTransport::new(), rtt, Rc::clone(&counters));
+        let counters = Arc::new(Counters::default());
+        let transport = MeteredTransport::new(HttpTransport::new(), rtt, Arc::clone(&counters));
         let mut registry =
             NpmRegistry::with_transport(workload.registry_url(), Box::new(transport));
         if options.packument_cache {
@@ -305,7 +305,7 @@ impl Sandbox {
 /// A registry client and the counters underneath it.
 struct Client {
     registry: NpmRegistry,
-    counters: Rc<Counters>,
+    counters: Arc<Counters>,
     rtt: Duration,
 }
 

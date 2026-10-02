@@ -13,8 +13,8 @@
 //! adjustment at the end, so that a future concurrent fetcher shows up here as
 //! wall time *below* `round_trips * rtt` rather than needing a different model.
 
-use std::cell::Cell;
-use std::rc::Rc;
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 use std::time::Duration;
 
 use opal_pm::registry::{Fetched, RegistryError, Request, Transport};
@@ -49,30 +49,34 @@ impl Meter {
 /// them after the client has taken ownership of it.
 #[derive(Default)]
 pub struct Counters {
-    packuments: Cell<Traffic>,
-    tarballs: Cell<Traffic>,
-    tarball_bytes: Cell<u64>,
+    packuments: Mutex<Traffic>,
+    tarballs: Mutex<Traffic>,
+    tarball_bytes: AtomicU64,
 }
 
 impl Counters {
     pub fn meter(&self, rtt: Duration) -> Meter {
         Meter {
-            packuments: self.packuments.get(),
-            tarballs: self.tarballs.get(),
-            tarball_bytes: self.tarball_bytes.get(),
+            packuments: *lock(&self.packuments),
+            tarballs: *lock(&self.tarballs),
+            tarball_bytes: self.tarball_bytes.load(Ordering::Relaxed),
             rtt,
         }
     }
 }
 
+fn lock(traffic: &Mutex<Traffic>) -> MutexGuard<'_, Traffic> {
+    traffic.lock().unwrap_or_else(PoisonError::into_inner)
+}
+
 pub struct MeteredTransport<T> {
     inner: T,
     rtt: Duration,
-    counters: Rc<Counters>,
+    counters: Arc<Counters>,
 }
 
 impl<T> MeteredTransport<T> {
-    pub fn new(inner: T, rtt: Duration, counters: Rc<Counters>) -> Self {
+    pub fn new(inner: T, rtt: Duration, counters: Arc<Counters>) -> Self {
         Self {
             inner,
             rtt,
@@ -103,19 +107,20 @@ impl<T: Transport> Transport for MeteredTransport<T> {
         self.stall();
         let fetched = self.inner.get(request)?;
 
-        let mut traffic = counter.get();
-        traffic.round_trips += 1;
-        if matches!(fetched, Fetched::NotModified) {
-            traffic.revalidations += 1;
+        {
+            let mut traffic = lock(counter);
+            traffic.round_trips += 1;
+            if matches!(fetched, Fetched::NotModified) {
+                traffic.revalidations += 1;
+            }
         }
-        counter.set(traffic);
 
         if let Fetched::Fresh(response) = &fetched
             && request.accept.is_none()
         {
             self.counters
                 .tarball_bytes
-                .set(self.counters.tarball_bytes.get() + response.body.len() as u64);
+                .fetch_add(response.body.len() as u64, Ordering::Relaxed);
         }
         Ok(fetched)
     }

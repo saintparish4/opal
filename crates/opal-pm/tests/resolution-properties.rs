@@ -21,7 +21,7 @@
 //! bottom to say so out loud.
 
 use std::collections::{BTreeMap, BTreeSet};
-use std::rc::Rc;
+use std::sync::Arc;
 
 use opal_pm::link::{self, PlanOptions};
 use opal_pm::manifest::Manifest;
@@ -66,17 +66,17 @@ struct Plan {
 }
 
 struct Universe {
-    packuments: BTreeMap<String, Rc<Packument>>,
+    packuments: BTreeMap<String, Arc<Packument>>,
     root: Manifest,
     /// Every name some manifest declared as an `optionalDependency`.
     optional: BTreeSet<String>,
 }
 
 impl Registry for Universe {
-    fn packument(&self, name: &str) -> Result<Rc<Packument>, RegistryError> {
+    fn packument(&self, name: &str) -> Result<Arc<Packument>, RegistryError> {
         self.packuments
             .get(name)
-            .map(Rc::clone)
+            .map(Arc::clone)
             .ok_or_else(|| RegistryError::NotFound(name.to_string()))
     }
 
@@ -143,7 +143,7 @@ impl Plan {
             });
             packuments.insert(
                 name(package),
-                Rc::new(Packument::parse(
+                Arc::new(Packument::parse(
                     &name(package),
                     &serde_json::to_vec(&document).expect("serializable"),
                 )),
