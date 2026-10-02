@@ -23,10 +23,16 @@ within one run, never across runs.
 Needs Python 3.9+, network access, and node plus every tool being compared on
 PATH (`--tools` picks a subset). yarn is Yarn 1 (classic). The README's numbers
 launched pnpm as `node <pnpm.mjs>`; see --pnpm below. Raw samples are written
-next to --work as JSON.
+next to --work as JSON, in /tmp by default: copy them somewhere that outlives a
+reboot before publishing a table from them, or the table can't be recomputed.
+
+`opal --version` is the same for a release and for any local build of that
+version, so the SHA-256 of the binary that ran is recorded too. For a release
+binary it should equal `sha256sum` of the `opal` inside the release archive.
 """
 
 import argparse
+import hashlib
 import json
 import os
 import platform
@@ -246,6 +252,10 @@ def main():
                    if shutil.which("free") else ""),
         "node": subprocess.run(["node", "--version"], capture_output=True, text=True).stdout.strip(),
         "versions": {},
+        "opal_binary": {
+            "path": str(Path(args.opal).resolve()),
+            "sha256": hashlib.sha256(Path(args.opal).resolve().read_bytes()).hexdigest(),
+        },
         "rounds": rounds,
     }
     for name in names:

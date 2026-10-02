@@ -11,7 +11,7 @@ Opal is an all-in-one toolkit for JavaScript and TypeScript projects, built to c
 
 At its core is `opal-core`, a module graph engine written in Rust. It works out what every file imports and where each import resolves, then caches that answer by content hash, so the next run over unchanged files is a cache hit. Every tool Opal adds is meant to share that one graph instead of carrying its own resolver.
 
-The first of those tools is the package manager, and it works today. It picks the same versions npm would, lays out `node_modules` the way npm does, and links every file in from a single content-addressed store shared by all the projects on your machine.
+The first of those tools is the package manager, and it works today. It picks the versions npm would, with a few [documented differences](#limitations), lays out `node_modules` the way npm does, and links every file in from a single content-addressed store shared by all the projects on your machine.
 
 ```bash
 opal install                     # install the dependencies in package.json

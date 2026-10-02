@@ -109,7 +109,12 @@ jobs:
   # No noise threshold has been agreed, so nothing here can fail the build on a
   # measurement, and `continue-on-error` keeps a broken harness from blocking
   # a merge. Each run's numbers go to the job summary, and as JSON to an
-  # artifact, one record per simulated latency.
+  # artifact, one record per run.
+  #
+  # The default workload's downloads are a round trip and no bytes, so it
+  # only shows time spent waiting on round trips. The scaffold run has a real
+  # tree's bytes and a bandwidth limit, which is what bounds a real cold
+  # install; it is the one to read for download changes.
   benchmark:
     name: Install benchmark (tracked, not gated)
     runs-on: ubuntu-latest
@@ -128,6 +133,8 @@ jobs:
           for rtt in 0 25; do
             cargo bench -p opal-pm --bench install-pipeline -- --json --rtt-ms "$rtt" > "bench/rtt-${rtt}ms.json"
           done
+          cargo bench -p opal-pm --bench install-pipeline -- --json --workload scaffold \
+            --rtt-ms 70 --bandwidth-mbit 37 --scenario cold --iterations 2 > bench/scaffold.json
       - name: Summarize
         run: |
           python3 - <<'PY' >> "$GITHUB_STEP_SUMMARY"
@@ -135,16 +142,20 @@ jobs:
           import json
 
           print("### Install benchmark (tracked, not gated)\n")
-          print("| RTT | Scenario | Median | Min | Max | Round trips |")
-          print("|---|---|---|---|---|---|")
-          for path in sorted(glob.glob("bench/*.json"), key=lambda p: json.load(open(p))["rtt_ms"]):
-              record = json.load(open(path))
+          print("| Workload | RTT | Bandwidth | Scenario | Median | Min | Max | Round trips | Transfer |")
+          print("|---|---|---|---|---|---|---|---|---|")
+          records = [json.load(open(path)) for path in glob.glob("bench/*.json")]
+          for record in sorted(records, key=lambda r: (r["workload"]["name"], r["rtt_ms"])):
+              bandwidth = record["bandwidth_mbit"]
               for scenario in record["scenarios"]:
                   wall = scenario["wall_ms"]
                   trips = scenario["packument_round_trips"] + scenario["tarball_round_trips"]
                   print(
-                      f"| {record['rtt_ms']:g} ms | {scenario['scenario']} | {wall['median']:.1f} ms "
-                      f"| {wall['min']:.1f} ms | {wall['max']:.1f} ms | {trips} |"
+                      f"| {record['workload']['name']} | {record['rtt_ms']:g} ms "
+                      f"| {f'{bandwidth} Mbit/s' if bandwidth else 'unlimited'} "
+                      f"| {scenario['scenario']} | {wall['median']:.1f} ms "
+                      f"| {wall['min']:.1f} ms | {wall['max']:.1f} ms | {trips} "
+                      f"| {scenario['transfer_ms']:.0f} ms |"
                   )
           PY
       - name: Upload

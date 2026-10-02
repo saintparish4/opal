@@ -227,18 +227,23 @@ impl FixtureRegistry {
         format!("file://{}", self.directory.display())
     }
 
-    pub fn publish(&mut self, package: Package) -> &mut Self {
+    pub fn publish(&mut self, mut package: Package) -> &mut Self {
         let tarball = package.tarball();
         let integrity = Integrity::of(Algorithm::Sha512, &tarball);
         let file_name = format!("{}-{}.tgz", package.name.replace('/', "_"), package.version);
         let path = self.directory.join("tarballs").join(file_name);
         std::fs::write(&path, &tarball).expect("write tarball");
 
+        // The packument needs only the manifest from here on. Keeping the
+        // files would hold every published byte in memory, which a benchmark
+        // registry of real-sized packages cannot afford.
+        package.files = Vec::new();
+        let name = package.name.clone();
         self.published
-            .entry(package.name.clone())
+            .entry(name.clone())
             .or_default()
-            .push((package.clone(), integrity, path));
-        self.write_packument(&package.name);
+            .push((package, integrity, path));
+        self.write_packument(&name);
         self
     }
 

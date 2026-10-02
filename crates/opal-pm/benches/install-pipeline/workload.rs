@@ -13,6 +13,15 @@
 //!   rather than hoist everything flat. A tree where every package has exactly
 //!   one parent cannot produce that no matter how the pins fall.
 //!
+//! Size matters too, for a different question. The default workload's files
+//! are padding that gzip reduces to nothing, so a download costs a round trip
+//! and no transfer, and the benchmark can only show time spent waiting on
+//! round trips. Measured on the Next.js scaffold (2026-10-01), that is not
+//! what bounds a real cold install: 359 tarballs are 157 MB on the wire and
+//! unpack to 21,676 files and 544 MB, and downloading them 16 at a time took
+//! 34s with no install work at all. [`Shape::scaffold`] reproduces those
+//! totals, and with `--bandwidth-mbit` the benchmark prices the transfer.
+//!
 //! Only the newest version of each package carries a file payload. Older
 //! versions exist to weigh down the packument, are never selected by `^1.0.0`,
 //! and would otherwise cost a gzip each at setup time for a tarball nothing
@@ -33,6 +42,15 @@ pub struct Shape {
     pub fanout: usize,
     /// Dependencies the project itself declares.
     pub roots: usize,
+    /// Bytes in each ordinary file.
+    pub file_bytes: usize,
+    /// Every nth package also ships one large file, the way a few native
+    /// binaries hold most of a real tree's bytes. Zero for none.
+    pub heavy_every: usize,
+    pub heavy_bytes: usize,
+    /// Whether file contents resist compression about as well as real
+    /// package contents do. Off, files are padding that compresses away.
+    pub dense: bool,
 }
 
 impl Default for Shape {
@@ -43,6 +61,28 @@ impl Default for Shape {
             files: 6,
             fanout: 2,
             roots: 8,
+            file_bytes: 1900,
+            heavy_every: 0,
+            heavy_bytes: 0,
+            dense: false,
+        }
+    }
+}
+
+impl Shape {
+    /// The Next.js scaffold's totals, as measured on 2026-10-01: 364
+    /// packages, about 21,700 files, about 540 MB unpacked and about 155 MB
+    /// of tarballs. The real tree's three largest tarballs are 33 to 42 MB;
+    /// here the weight is spread evenly over 52 packages instead.
+    pub fn scaffold() -> Self {
+        Self {
+            packages: 364,
+            files: 59,
+            file_bytes: 2_000,
+            heavy_every: 7,
+            heavy_bytes: 9_600_000,
+            dense: true,
+            ..Self::default()
         }
     }
 }
@@ -51,8 +91,6 @@ impl Default for Shape {
 /// tree contains duplicates and the linker has to nest. A tree that hoists
 /// perfectly flat is not a tree anyone installs.
 const PIN_EVERY: usize = 7;
-
-const FILE_PADDING: usize = 1900;
 
 pub struct Workload {
     pub shape: Shape,
@@ -144,9 +182,15 @@ fn publish(shape: &Shape, index: usize, version: usize) -> Package {
         let contents = format!(
             "// {} file {file}\n{}\n",
             name(index),
-            "x".repeat(FILE_PADDING)
+            payload(shape, index, file, shape.file_bytes)
         );
         package = package.file(&format!("lib/mod-{file}.js"), &contents);
+    }
+    if shape.heavy_every > 0 && index.is_multiple_of(shape.heavy_every) {
+        package = package.file(
+            "build/native.node",
+            &payload(shape, index, shape.files, shape.heavy_bytes),
+        );
     }
     // One byte-identical file across every package, so the run also exercises
     // the cross-package sharing the CAS exists for.
@@ -157,6 +201,35 @@ fn publish(shape: &Shape, index: usize, version: usize) -> Package {
             .bin(&format!("cli-{index}"), "bin/cli.js");
     }
     package
+}
+
+/// `bytes` of file content: padding, or text that gzip can only shrink to
+/// about 29% of its size, which is the ratio the scaffold's tarballs have
+/// (157 MB for 544 MB unpacked).
+fn payload(shape: &Shape, index: usize, file: usize, bytes: usize) -> String {
+    if !shape.dense {
+        return "x".repeat(bytes);
+    }
+    // Four symbols drawn evenly carry two bits a byte, which deflate cannot
+    // do much better than. The generator is SplitMix64, seeded per file so
+    // no two files share content.
+    const SYMBOLS: [u8; 4] = *b"acgt";
+    let mut state = (index as u64) << 32 | file as u64;
+    let mut text = Vec::with_capacity(bytes);
+    while text.len() < bytes {
+        state = state.wrapping_add(0x9E37_79B9_7F4A_7C15);
+        let mut mixed = state;
+        mixed = (mixed ^ (mixed >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
+        mixed = (mixed ^ (mixed >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
+        mixed ^= mixed >> 31;
+        for pair in 0..32 {
+            if text.len() == bytes {
+                break;
+            }
+            text.push(SYMBOLS[(mixed >> (pair * 2)) as usize & 3]);
+        }
+    }
+    String::from_utf8(text).expect("ASCII")
 }
 
 fn bytes_in(directory: &Path) -> u64 {

@@ -64,6 +64,13 @@ usage: cargo bench -p opal-pm --bench install-pipeline -- [options]
   --roots N        dependencies the project declares (default 8)
   --iterations N   timed runs per scenario (default 5)
   --rtt-ms N       simulated per-request round-trip latency (default 0)
+  --bandwidth-mbit N
+                   simulated link speed, shared by every request (default:
+                   unlimited, so a download costs a round trip and nothing more)
+  --workload NAME  default, or scaffold: the Next.js scaffold's package count,
+                   file count, and bytes (about 155 MB of tarballs). Pair it
+                   with --rtt-ms and --bandwidth-mbit; give it before any of
+                   --packages, --files and the rest, which then adjust it
   --scenario LIST  comma-separated subset of cold,resolve,link,noop
   --json           emit one JSON record instead of a report
   --no-packument-cache
@@ -120,6 +127,9 @@ struct Options {
     shape: Shape,
     iterations: usize,
     rtt: Duration,
+    /// Bytes per second through one link that every request shares.
+    bandwidth: Option<u64>,
+    workload: &'static str,
     scenarios: Vec<Scenario>,
     json: bool,
     /// Off measures what an install cost before metadata was kept between
@@ -134,6 +144,8 @@ impl Default for Options {
             shape: Shape::default(),
             iterations: 5,
             rtt: Duration::ZERO,
+            bandwidth: None,
+            workload: "default",
             scenarios: Scenario::ALL.to_vec(),
             json: false,
             packument_cache: true,
@@ -210,6 +222,20 @@ fn parse_arguments(arguments: impl Iterator<Item = String>) -> Result<Option<Opt
             "--roots" => options.shape.roots = number()?,
             "--iterations" => options.iterations = number()?,
             "--rtt-ms" => options.rtt = Duration::from_millis(number()? as u64),
+            "--bandwidth-mbit" => {
+                let megabits = number()?;
+                if megabits == 0 {
+                    return Err("--bandwidth-mbit must be at least 1".to_string());
+                }
+                options.bandwidth = Some(megabits as u64 * 125_000);
+            }
+            "--workload" => {
+                (options.workload, options.shape) = match value.as_str() {
+                    "default" => ("default", Shape::default()),
+                    "scaffold" => ("scaffold", Shape::scaffold()),
+                    _ => return Err(format!("unknown workload {value:?}")),
+                };
+            }
             "--scenario" => {
                 options.scenarios = value
                     .split(',')
@@ -263,9 +289,16 @@ impl Sandbox {
     /// The client an `opal install` would build: metadata cached under this
     /// sandbox's cache root, unless the run is measuring what life was like
     /// without it.
-    fn registry(&self, workload: &Workload, options: &Options, rtt: Duration) -> Client {
+    fn registry(
+        &self,
+        workload: &Workload,
+        options: &Options,
+        rtt: Duration,
+        bandwidth: Option<u64>,
+    ) -> Client {
         let counters = Arc::new(Counters::default());
-        let transport = MeteredTransport::new(HttpTransport::new(), rtt, Arc::clone(&counters));
+        let transport =
+            MeteredTransport::new(HttpTransport::new(), rtt, bandwidth, Arc::clone(&counters));
         let mut registry =
             NpmRegistry::with_transport(workload.registry_url(), Box::new(transport));
         if options.packument_cache {
@@ -276,6 +309,7 @@ impl Sandbox {
             registry,
             counters,
             rtt,
+            bandwidth,
         }
     }
 
@@ -307,11 +341,12 @@ struct Client {
     registry: NpmRegistry,
     counters: Arc<Counters>,
     rtt: Duration,
+    bandwidth: Option<u64>,
 }
 
 impl Client {
     fn meter(&self) -> Meter {
-        self.counters.meter(self.rtt)
+        self.counters.meter(self.rtt, self.bandwidth)
     }
 }
 
@@ -343,10 +378,11 @@ fn measure(scenario: Scenario, workload: &Workload, options: &Options) -> Measur
     // makes it warm. A cold one gets a new one each time.
     let warm = scenario.warm().then(|| {
         let sandbox = Sandbox::new(workload);
-        // Untimed and unlatched, but through the same client, so whatever a
+        // Untimed, with no latency and no bandwidth limit, but through the
+        // same client, so whatever a
         // real first install would leave behind — a warm store, and now warm
         // metadata — is what the timed runs start from.
-        let client = sandbox.registry(workload, options, Duration::ZERO);
+        let client = sandbox.registry(workload, options, Duration::ZERO, None);
         sandbox.install(&client.registry);
         sandbox
     });
@@ -369,7 +405,7 @@ fn measure(scenario: Scenario, workload: &Workload, options: &Options) -> Measur
         // is per-process and a reused one would hand the second iteration a
         // warm memory no real `opal install` ever starts with. What *does*
         // carry over is the on-disk cache, which is the point.
-        let client = sandbox.registry(workload, options, options.rtt);
+        let client = sandbox.registry(workload, options, options.rtt, options.bandwidth);
         let started = Instant::now();
         let report = sandbox.install(&client.registry);
         wall.push(started.elapsed());
@@ -390,8 +426,8 @@ fn report(workload: &Workload, options: &Options, setup: Duration, measurements:
     let shape = &workload.shape;
     println!("opal install — Phase 1 benchmark\n");
     println!(
-        "workload   {} packages, {} versions each, {} files per package",
-        shape.packages, shape.versions, shape.files,
+        "workload   {}: {} packages, {} versions each, {} files per package",
+        options.workload, shape.packages, shape.versions, shape.files,
     );
     println!(
         "tree       {} placements under node_modules",
@@ -409,6 +445,13 @@ fn report(workload: &Workload, options: &Options, setup: Duration, measurements:
         "latency    {} simulated per round-trip",
         duration(options.rtt)
     );
+    match options.bandwidth {
+        Some(rate) => println!(
+            "bandwidth  {} Mbit/s simulated, shared by every request",
+            rate / 125_000
+        ),
+        None => println!("bandwidth  unlimited: a download costs a round trip and nothing more"),
+    }
     println!(
         "samples    {} iterations per scenario\n",
         options.iterations
@@ -428,6 +471,13 @@ fn report(workload: &Workload, options: &Options, setup: Duration, measurements:
             duration(measurement.min()),
             duration(measurement.max()),
         );
+        let timings = &measurement.report.timings;
+        println!(
+            "  phases     resolve {}, fetch {}, link {} (last iteration)",
+            duration(timings.resolve),
+            duration(timings.fetch),
+            duration(timings.link),
+        );
         println!(
             "  registry   {} packument round-trips ({} revalidated), {} tarballs, {}",
             meter.packuments.round_trips,
@@ -441,6 +491,14 @@ fn report(workload: &Workload, options: &Options, setup: Duration, measurements:
                 duration(meter.stalled()),
                 meter.packuments.round_trips + meter.tarballs.round_trips,
                 percent(meter.stalled(), measurement.median()),
+            );
+        }
+        if !meter.transfer().is_zero() {
+            println!(
+                "  transfer   {} to move {} at this bandwidth, however many requests overlap ({}% of wall)",
+                duration(meter.transfer()),
+                bytes(meter.packument_bytes + meter.tarball_bytes),
+                percent(meter.transfer(), measurement.median()),
             );
         }
         println!(
@@ -484,7 +542,14 @@ fn json(
                     "min": millis(measurement.min()),
                     "max": millis(measurement.max()),
                 },
+                "phases_ms": {
+                    "resolve": millis(measurement.report.timings.resolve),
+                    "fetch": millis(measurement.report.timings.fetch),
+                    "link": millis(measurement.report.timings.link),
+                },
                 "stalled_ms": millis(meter.stalled()),
+                "transfer_ms": millis(meter.transfer()),
+                "packument_bytes": meter.packument_bytes,
                 "packument_round_trips": meter.packuments.round_trips,
                 "packument_revalidations": meter.packuments.revalidations,
                 "tarball_round_trips": meter.tarballs.round_trips,
@@ -506,6 +571,11 @@ fn json(
 
     serde_json::json!({
         "workload": {
+            "name": options.workload,
+            "file_bytes": workload.shape.file_bytes,
+            "heavy_every": workload.shape.heavy_every,
+            "heavy_bytes": workload.shape.heavy_bytes,
+            "dense": workload.shape.dense,
             "packages": workload.shape.packages,
             "versions": workload.shape.versions,
             "files": workload.shape.files,
@@ -517,6 +587,7 @@ fn json(
         },
         "iterations": options.iterations,
         "rtt_ms": millis(options.rtt),
+        "bandwidth_mbit": options.bandwidth.map(|rate| rate / 125_000),
         "scenarios": scenarios,
     })
     .to_string()

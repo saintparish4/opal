@@ -34,11 +34,11 @@ The two projects:
 
 ## Results: 2026-09-26, opal 0.3.0
 
-Tool versions: opal 0.3.0 (the `opal-linux-x64` asset from the GitHub Release, checked against `SHA256SUMS`), npm 11.17.0, pnpm 11.17.0, yarn 1.22.22, bun 1.3.14, Node 24.19.0. Each cell is the median, with min–max in parentheses; the fastest median is in bold. All 250 runs on each machine passed.
+Tool versions: opal 0.3.0 (the `opal-linux-x64` asset from the GitHub Release, checked against `SHA256SUMS`), npm 11.17.0, pnpm 11.17.0, yarn 1.22.22, bun 1.3.14, Node 24.19.0. Each cell is the median, with min–max in parentheses; the fastest median is in bold. Each machine made 160 runs (5 tools × 16 rounds × 2 projects), and all of them passed.
 
 ### Laptop: AMD Ryzen 5 5625U (8 threads), 16 GB RAM, Linux under WSL2
 
-These are the numbers the README quotes.
+These are the numbers the README quotes. Every cell here was recomputed from the run's raw samples.
 
 **express** (68 packages)
 
@@ -63,6 +63,8 @@ These are the numbers the README quotes.
 ### Desktop: Intel Core i9-9900K (16 threads), 16 GB RAM, Linux under WSL2
 
 Measured the same day on a different network. The same release asset was installed with `install.sh` and `OPAL_VERSION=v0.3.0`.
+
+This machine's raw samples were not kept. The tables below were copied from the harness's printed summary, so they can't be recomputed, and the upper ends of the README's ranges (7× on a cold install, 13× on CI) come from them.
 
 **express** (68 packages)
 
@@ -108,7 +110,9 @@ python3 benchmarks/compare-pms.py next --opal "$(command -v opal)" \
 - `--rounds cold=3,ci=3,warm=5,noop=5` changes how many rounds each scenario gets.
 - `--work DIR` sets the scratch directory (default `/tmp/opal-compare`).
 
-Raw samples for every run are written next to `--work` as JSON. For numbers comparable with the tables above, use a release binary rather than a local build.
+Raw samples for every run are written next to `--work` as JSON. That is under `/tmp` by default, so copy the file somewhere permanent before publishing a table from it.
+
+For numbers comparable with the tables above, use a release binary rather than a local build. `opal --version` can't tell the two apart, so the harness also records the SHA-256 of the binary it ran (`opal_binary` in the JSON); for a release it equals `sha256sum` of the `opal` inside the release archive. The 2026-09-26 runs predate that field.
 
 ## The internal install benchmark
 
@@ -119,3 +123,15 @@ cargo bench -p opal-pm --bench install-pipeline -- --rtt-ms 25 --scenario cold
 ```
 
 Its scenarios are `cold`, `resolve`, `link`, and `noop`. CI runs it on every push and posts the numbers to the job summary (the "Install benchmark (tracked, not gated)" job). It never fails a build, because benchmarks are noisier than tests.
+
+It has two workloads, and they answer different questions:
+
+- **The default** is 64 small packages whose files compress to almost nothing, so a download costs one round trip and no transfer time. It shows time spent waiting on round trips and local work, and nothing about download size. A change that overlaps requests looks several times better here than it is on a real network: parallel fetching measured 6.8× on this workload and about 2.4× on the real Next.js tree.
+- **`--workload scaffold`** has the Next.js scaffold's totals, measured on 2026-10-01: 364 packages, about 20,000 files, about 540 MB unpacked, and about 153 MiB of tarballs. Pair it with `--bandwidth-mbit`, which charges every response's bytes against one link that all requests share, so overlapping requests can't shorten the transfer:
+
+  ```sh
+  cargo bench -p opal-pm --bench install-pipeline -- --workload scaffold \
+    --rtt-ms 70 --bandwidth-mbit 37 --scenario cold --iterations 2
+  ```
+
+  37 Mbit/s and 70 ms are what one network measured on one afternoon (157 MB in 34s over 16 connections), not constants; set them to the network you care about. At those values the benchmark's fetch took 41s where the real tree's took 43–44s the same afternoon. It still leaves out what a single connection can carry, so it flatters one-at-a-time downloads, and generating the fixture takes one to two minutes.

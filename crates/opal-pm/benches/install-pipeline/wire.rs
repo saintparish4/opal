@@ -12,10 +12,18 @@
 //! expose. The stall is a real `sleep`, not an arithmetic adjustment at the
 //! end, so that concurrent fetching shows up here as wall time *below*
 //! `round_trips * rtt` rather than needing a different model.
+//!
+//! Latency is half of a network. The other half is that bytes take time to
+//! arrive, and they share one link however many requests are open: sixteen
+//! downloads at once do not move sixteen times the data. With a bandwidth
+//! set, every response body is charged against one shared pipe, so
+//! concurrency can overlap the waiting but never the transfer. Without that
+//! floor a parallel fetcher measures several times faster here than it is on
+//! a real network.
 
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use opal_pm::registry::{Fetched, RegistryError, Request, Transport};
 
@@ -34,10 +42,23 @@ pub struct Meter {
     pub packuments: Traffic,
     pub tarballs: Traffic,
     pub tarball_bytes: u64,
+    pub packument_bytes: u64,
     pub rtt: Duration,
+    /// Bytes per second through the shared pipe, if one was simulated.
+    pub bandwidth: Option<u64>,
 }
 
 impl Meter {
+    /// How long this install's bytes took to arrive, which no amount of
+    /// concurrency shortens. Zero when no bandwidth was simulated.
+    pub fn transfer(&self) -> Duration {
+        self.bandwidth.map_or(Duration::ZERO, |rate| {
+            Duration::from_secs_f64(
+                (self.packument_bytes + self.tarball_bytes) as f64 / rate as f64,
+            )
+        })
+    }
+
     /// What this install's round-trips would cost taken one at a time. Wall
     /// time below it is the evidence that they overlapped.
     pub fn stalled(&self) -> Duration {
@@ -52,15 +73,18 @@ pub struct Counters {
     packuments: Mutex<Traffic>,
     tarballs: Mutex<Traffic>,
     tarball_bytes: AtomicU64,
+    packument_bytes: AtomicU64,
 }
 
 impl Counters {
-    pub fn meter(&self, rtt: Duration) -> Meter {
+    pub fn meter(&self, rtt: Duration, bandwidth: Option<u64>) -> Meter {
         Meter {
             packuments: *lock(&self.packuments),
             tarballs: *lock(&self.tarballs),
             tarball_bytes: self.tarball_bytes.load(Ordering::Relaxed),
+            packument_bytes: self.packument_bytes.load(Ordering::Relaxed),
             rtt,
+            bandwidth,
         }
     }
 }
@@ -72,16 +96,40 @@ fn lock(traffic: &Mutex<Traffic>) -> MutexGuard<'_, Traffic> {
 pub struct MeteredTransport<T> {
     inner: T,
     rtt: Duration,
+    bandwidth: Option<u64>,
+    /// When the shared pipe finishes the transfers already queued on it.
+    pipe_free: Mutex<Instant>,
     counters: Arc<Counters>,
 }
 
 impl<T> MeteredTransport<T> {
-    pub fn new(inner: T, rtt: Duration, counters: Arc<Counters>) -> Self {
+    pub fn new(inner: T, rtt: Duration, bandwidth: Option<u64>, counters: Arc<Counters>) -> Self {
         Self {
             inner,
             rtt,
+            bandwidth,
+            pipe_free: Mutex::new(Instant::now()),
             counters,
         }
+    }
+
+    /// Waits for `bytes` to come through the pipe every request shares.
+    ///
+    /// Transfers queue one behind another, which finishes the whole batch at
+    /// the same moment as sharing the link evenly would, and that total is
+    /// what an install's wall time depends on.
+    fn transfer(&self, bytes: usize) {
+        let Some(rate) = self.bandwidth else { return };
+        let needed = Duration::from_secs_f64(bytes as f64 / rate as f64);
+        let done = {
+            let mut free = self
+                .pipe_free
+                .lock()
+                .unwrap_or_else(PoisonError::into_inner);
+            *free = (*free).max(Instant::now()) + needed;
+            *free
+        };
+        std::thread::sleep(done.saturating_duration_since(Instant::now()));
     }
 
     fn stall(&self) {
@@ -115,12 +163,14 @@ impl<T: Transport> Transport for MeteredTransport<T> {
             }
         }
 
-        if let Fetched::Fresh(response) = &fetched
-            && request.accept.is_none()
-        {
-            self.counters
-                .tarball_bytes
-                .fetch_add(response.body.len() as u64, Ordering::Relaxed);
+        if let Fetched::Fresh(response) = &fetched {
+            let counter = if request.accept.is_some() {
+                &self.counters.packument_bytes
+            } else {
+                &self.counters.tarball_bytes
+            };
+            counter.fetch_add(response.body.len() as u64, Ordering::Relaxed);
+            self.transfer(response.body.len());
         }
         Ok(fetched)
     }
