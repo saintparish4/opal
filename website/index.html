@@ -1,0 +1,307 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Opal — a JavaScript toolkit built on one module graph</title>
+  <meta name="description" content="Opal is an all-in-one toolkit for JavaScript and TypeScript, shipped as one binary. Its package manager works today: npm-compatible installs from a shared content-addressed store, crash-safe by design.">
+  <meta property="og:title" content="Opal">
+  <meta property="og:description" content="An all-in-one JavaScript toolkit built on one module graph. The package manager works today.">
+  <meta property="og:image" content="assets/opal-social-light.png">
+  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0d0a0c" media="(prefers-color-scheme: dark)">
+  <link rel="icon" href="assets/favicon.ico" sizes="any">
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=Martian+Mono:wdth,wght@75..112.5,400..700&display=swap">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+
+  <a class="banner" href="https://github.com/saintparish4/opal/commits/master">Parallel downloads have landed on master <span>— shipping in the next release →</span></a>
+
+  <header class="nav">
+    <div class="wrap nav-row">
+      <a class="logo" href="#top" aria-label="Opal home">
+        <picture>
+          <source media="(prefers-color-scheme: dark)" srcset="assets/opal-logo-horizontal-white.svg">
+          <img src="assets/opal-logo-horizontal-ink.svg" alt="Opal" width="118" height="40">
+        </picture>
+      </a>
+      <nav aria-label="Primary">
+        <a href="#tools">Tools</a>
+        <a href="#minute">Quickstart</a>
+        <a href="#install-bench">Benchmarks</a>
+        <a href="#limits">Limits</a>
+      </nav>
+      <div class="nav-end">
+        <a class="icon-link" href="https://github.com/saintparish4/opal">GitHub</a>
+        <a class="btn" href="#install">Install</a>
+      </div>
+    </div>
+  </header>
+
+  <main id="main">
+    <!-- ───────── hero ───────── -->
+    <section class="wrap hero" id="top">
+      <div class="hero-copy">
+        <a class="pill" href="https://github.com/saintparish4/opal/releases/tag/v0.3.1"><b>Beta</b> Opal v0.3.1 released →</a>
+        <h1>Opal is a <em>crash&#8209;safe</em> JavaScript toolkit. One graph.</h1>
+        <p class="lede">A package manager today, with a runtime, bundler and test runner planned, in a single binary. Use <a href="#minute"><code>opal install</code></a> in an existing Node.js project: it installs what npm would, from one store shared by every project.</p>
+
+        <div id="install">
+          <p class="label">Install Opal v0.3.1</p>
+          <div class="slab">
+            <code id="install-command">curl -fsSL https://raw.githubusercontent.com/saintparish4/opal/master/install.sh | bash</code>
+            <button class="copy" data-copy="install-command" aria-label="Copy the install command">Copy</button>
+          </div>
+          <div class="os-row">
+            <div class="chips" role="tablist" aria-label="Operating system">
+              <button role="tab" id="tab-unix" aria-controls="panel-unix" aria-selected="true">macOS &amp; Linux</button>
+              <button role="tab" id="tab-windows" aria-controls="panel-windows" aria-selected="false" tabindex="-1">Windows</button>
+            </div>
+            <a class="quiet" href="https://github.com/saintparish4/opal/blob/master/install.sh">View install script ↗</a>
+          </div>
+          <p class="fine" role="tabpanel" id="panel-unix" aria-labelledby="tab-unix">Linux x64 and arm64 (glibc 2.39 for v0.3.1), macOS x64 and Apple Silicon. Checked against the release's SHA256 checksums.</p>
+          <p class="fine" role="tabpanel" id="panel-windows" aria-labelledby="tab-windows" hidden>On Windows, Opal runs inside WSL2: open a WSL terminal and run the same command. Native Windows isn't supported yet.</p>
+        </div>
+        <a class="next" href="#minute">Then follow the quickstart →</a>
+      </div>
+
+      <div class="chart-card" id="hero-chart">
+        <div class="chart-tabs" role="tablist" aria-label="Scenario">
+          <button role="tab" data-scenario="warm" aria-selected="true">reinstall</button>
+          <button role="tab" data-scenario="noop" aria-selected="false" tabindex="-1">nothing to do</button>
+          <button role="tab" data-scenario="cold" aria-selected="false" tabindex="-1">first install</button>
+          <button role="tab" data-scenario="ci" aria-selected="false" tabindex="-1">ci</button>
+        </div>
+        <div class="chart-body">
+          <div class="chart-head">
+            <h2>Installing a Next.js app</h2>
+            <p class="chart-note" id="hero-caption"></p>
+          </div>
+          <ol class="bars" id="hero-bars" aria-live="polite"></ol>
+          <p class="chart-foot">Next.js 16.3.2 defaults · about 360 packages · Ryzen 5 5625U, Linux under WSL2 · install scripts off for every tool · median of 3 or 5 · measured 2026-09-26 with opal 0.3.0 <a href="https://github.com/saintparish4/opal/blob/master/benchmarks/BENCHMARKS.md">method</a></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ───────── tested on ───────── -->
+    <section class="wrap strip" aria-label="Validated on">
+      <p class="label">Validated on</p>
+      <ul>
+        <li>Next.js</li><li>express</li><li>webpack</li><li>jest</li><li>vite</li><li>typescript</li><li>esbuild</li><li>@babel/core</li><li>chalk</li><li>glob</li>
+      </ul>
+    </section>
+
+    <!-- ───────── four tools ───────── -->
+    <section class="wrap block" id="tools">
+      <div class="block-head split">
+        <h2>Four tools, one graph.<br><span>One works today.</span></h2>
+        <p class="aside"><code>opal install</code> drops into an existing Node.js project. No runtime switch required.</p>
+      </div>
+      <div class="tools">
+        <article class="tool">
+          <span class="sticker live">Works today</span>
+          <h3>Package manager</h3>
+          <p class="replaces">alongside <span>npm</span> · <span>pnpm</span> · <span>yarn</span></p>
+          <p>npm-compatible resolution, a reviewable lockfile, and a hoisted <code>node_modules</code> hardlinked from one shared store.</p>
+          <code class="cli">$ opal install</code>
+        </article>
+        <article class="tool">
+          <span class="sticker">Planned</span>
+          <h3>Runtime</h3>
+          <p class="replaces">will replace <span>node</span></p>
+          <p>JavaScript and TypeScript on V8, loading modules through the same resolver the package manager uses.</p>
+          <code class="cli off">opal run · not built yet</code>
+        </article>
+        <article class="tool">
+          <span class="sticker">Planned</span>
+          <h3>Bundler</h3>
+          <p class="replaces">will replace <span>esbuild</span> · <span>webpack</span></p>
+          <p>Tree-shaking and minification over the shared graph, with outputs cached by the hash of their inputs.</p>
+          <code class="cli off">opal build · not built yet</code>
+        </article>
+        <article class="tool">
+          <span class="sticker">Planned</span>
+          <h3>Test runner</h3>
+          <p class="replaces">will replace <span>jest</span> · <span>vitest</span></p>
+          <p>Test discovery through the shared graph, with assertions and a reporter, running on Opal's own runtime.</p>
+          <code class="cli off">opal test · not built yet</code>
+        </article>
+      </div>
+    </section>
+
+    <!-- ───────── a minute with opal ───────── -->
+    <section class="wrap block minute" id="minute">
+      <div class="minute-copy">
+        <p class="label">A minute with Opal</p>
+        <h2>One binary, four commands.</h2>
+        <p class="lede">Install, re-run, lock it down for CI, check the store, and upgrade. Every step below is a real command with real output — click one.</p>
+        <ol class="steps" role="tablist" aria-label="Steps" aria-orientation="vertical">
+          <li><button role="tab" data-step="0" aria-selected="true">
+            <span class="n">01</span><span class="t">Install dependencies</span>
+            <code>$ opal install</code>
+            <span class="d">Resolves <b>package.json</b>, writes <b>opal.lock</b> before it downloads anything, then links the tree.</span>
+          </button></li>
+          <li><button role="tab" data-step="1" aria-selected="false" tabindex="-1">
+            <span class="n">02</span><span class="t">Run it again</span>
+            <code>$ opal install</code>
+            <span class="d">The linker compares the lockfile with what's on disk and applies only the difference.</span>
+          </button></li>
+          <li><button role="tab" data-step="2" aria-selected="false" tabindex="-1">
+            <span class="n">03</span><span class="t">Lock it down in CI</span>
+            <code>$ opal install --frozen-lockfile</code>
+            <span class="d">Installs exactly what <b>opal.lock</b> records, and fails instead of rewriting it.</span>
+          </button></li>
+          <li><button role="tab" data-step="3" aria-selected="false" tabindex="-1">
+            <span class="n">04</span><span class="t">Check the shared store</span>
+            <code>$ opal cache verify</code>
+            <span class="d">Every file is stored once under the BLAKE3 hash of its contents. Verify re-hashes all of it.</span>
+          </button></li>
+          <li><button role="tab" data-step="4" aria-selected="false" tabindex="-1">
+            <span class="n">05</span><span class="t">Stay current</span>
+            <code>$ opal upgrade</code>
+            <span class="d">Checks the new binary against the release's checksums and runs it once before replacing the old one.</span>
+          </button></li>
+        </ol>
+      </div>
+      <div class="terminal" aria-live="polite">
+        <div class="terminal-bar"><span>● ● ●</span><span>~/my-app — opal</span><span id="step-count">01 / 05</span></div>
+        <pre id="terminal-out"></pre>
+        <p class="terminal-foot"><span>Output from real runs on a 364-package Next.js app. Hover to pause.</span><button id="replay" type="button">↻ replay</button></p>
+      </div>
+    </section>
+
+    <!-- ───────── latest release ───────── -->
+    <section class="wrap block release">
+      <div>
+        <p class="label"><b class="tag">v0.3.1</b> Latest release · September 2026</p>
+        <h2>Cleaner install output. opal upgrade. Honest errors.</h2>
+        <p class="lede">v0.3.1 reworks what an install prints, adds a command that upgrades the binary in place, and says plainly when <code>opal.lock</code> is missing. The install path itself is unchanged from v0.3.0.</p>
+        <div class="actions">
+          <a class="btn" href="https://github.com/saintparish4/opal/releases/tag/v0.3.1">Read the release notes →</a>
+          <code class="cli">$ opal upgrade</code>
+        </div>
+      </div>
+      <ul class="notes">
+        <li>A thin download bar in opal colours, and a spinner with a timer for resolving and linking</li>
+        <li>A one-line summary, with one detail line only when it matters</li>
+        <li>Packages skipped for other platforms are reported as one line, not sixty-six</li>
+        <li>Warnings print last, so they aren't scrolled away</li>
+        <li><code>opal upgrade</code> installs the latest or a named version, checked against SHA256SUMS and run once before it replaces anything</li>
+        <li><code>--frozen-lockfile</code> with no <code>opal.lock</code> now says how to create one</li>
+        <li class="more"><a href="https://github.com/saintparish4/opal/releases">All releases →</a></li>
+      </ul>
+    </section>
+
+    <!-- ───────── trust ───────── -->
+    <section class="wrap block">
+      <div class="block-head">
+        <p class="label dot">Tested, not claimed</p>
+        <h2>Built to be trusted first.</h2>
+        <p class="lede">A package manager that is fast and occasionally wrong is not fast. These are the properties Opal tests for, with the numbers from the test runs.</p>
+      </div>
+      <div class="facts">
+        <article>
+          <p class="figure">432<span>/433</span></p>
+          <h3>The versions npm picks</h3>
+          <p>On a 364-package Next.js app, 432 of npm's 433 package versions are identical. The differences are documented, and a CI job fails if a new one appears.</p>
+        </article>
+        <article>
+          <p class="figure">332<span>kills</span></p>
+          <h3>Kill it anywhere</h3>
+          <p>Every write is atomic and the linker is a reconciler. In one soak, 332 SIGKILLs interrupted a running install; re-running converged on a clean tree every time.</p>
+        </article>
+        <article>
+          <p class="figure">15<span>MB</span></p>
+          <h3>Small while it works</h3>
+          <p>Peak memory installing express was 15 MB, against 153 MB for npm and 40 MB for bun. Opal used the least of the five on every cold install measured.</p>
+        </article>
+        <article>
+          <p class="figure">1<span>store</span></p>
+          <h3>One copy of every file</h3>
+          <p>Packages are verified against the registry's integrity hash, stored once per machine, and hardlinked into each project.</p>
+        </article>
+      </div>
+    </section>
+
+    <!-- ───────── install benchmarks ───────── -->
+    <section class="wrap block" id="install-bench">
+      <div class="block-head split">
+        <div>
+          <p class="label dot">opal install</p>
+          <h2>Fastest where you reinstall. Not yet where you download.</h2>
+          <p class="lede">Cold cache, CI, a reinstall and a no-op, on a Next.js app and on express, against npm, pnpm, yarn and bun at their defaults. Opal's losses are on the same page as its wins.</p>
+        </div>
+        <div class="actions">
+          <a class="btn" href="#install">opal install →</a>
+          <a class="btn outline" href="https://github.com/saintparish4/opal/blob/master/benchmarks/BENCHMARKS.md">Method &amp; raw numbers</a>
+        </div>
+      </div>
+      <div class="grid-charts" id="grid-charts"></div>
+      <p class="fine wide">Measured 2026-09-26 on an AMD Ryzen 5 5625U (8 threads, 16 GB, Linux under WSL2) with opal 0.3.0, npm 11.17.0, pnpm 11.17.0, yarn 1.22.22 and bun 1.3.14. The released v0.3.1 has the same install path and downloads one package at a time, which is what the first-install and CI charts show. Parallel downloads are merged and ship in the next release.</p>
+    </section>
+
+    <!-- ───────── limits ───────── -->
+    <section class="wrap block" id="limits">
+      <div class="block-head">
+        <p class="label dot">Read before you switch</p>
+        <h2>What it doesn't do yet.</h2>
+        <p class="lede">Worth knowing before you point Opal at a project. The first three are asserted by tests, so the suite says what doesn't work as plainly as what does.</p>
+      </div>
+      <ul class="limits">
+        <li><strong>Install scripts don't run.</strong> Packages that ship prebuilt binaries work. A package that compiles with <code>node-gyp</code> installs but isn't built, and <code>opal install</code> names it every time.</li>
+        <li><strong>Peer dependencies aren't installed.</strong> They are recorded, not added to the tree the way npm 7 and later add them.</li>
+        <li><strong><code>git:</code> and <code>file:</code> dependencies are refused.</strong> Dependencies come from a registry only.</li>
+        <li><strong>No <code>add</code>, <code>remove</code> or <code>update</code>.</strong> Edit <code>package.json</code> and run <code>opal install</code>. Commands that aren't built aren't in the binary.</li>
+        <li><strong>First installs are slow in v0.3.1.</strong> It downloads one package at a time, 4–7× slower than npm on a cold install.</li>
+        <li><strong>Linux needs a recent glibc.</strong> v0.3.1's binaries need glibc 2.39 (Ubuntu 24.04 or newer); the next release goes back to 2.34. Alpine and other musl distributions aren't supported.</li>
+      </ul>
+      <a class="next" href="https://github.com/saintparish4/opal#limitations">The full list of limitations →</a>
+    </section>
+
+    <!-- ───────── closing ───────── -->
+    <section class="wrap block closing">
+      <h2>Try it on a project you can reinstall.</h2>
+      <p class="lede">Opal is pre-1.0. The lockfile format can change between minor versions.</p>
+      <div class="slab">
+        <code id="install-command-end">curl -fsSL https://raw.githubusercontent.com/saintparish4/opal/master/install.sh | bash</code>
+        <button class="copy" data-copy="install-command-end" aria-label="Copy the install command">Copy</button>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap footer-grid">
+      <div>
+        <img src="assets/opal-logo-horizontal-white.svg" alt="Opal" width="118" height="40">
+        <p>One binary for JavaScript, built on one module graph. MIT licensed, written in Rust.</p>
+      </div>
+      <nav aria-label="Project">
+        <p class="label">Project</p>
+        <a href="https://github.com/saintparish4/opal">Source</a>
+        <a href="https://github.com/saintparish4/opal/releases">Releases</a>
+        <a href="https://github.com/saintparish4/opal/issues">Issues</a>
+      </nav>
+      <nav aria-label="Read">
+        <p class="label">Read</p>
+        <a href="https://github.com/saintparish4/opal#usage">Usage</a>
+        <a href="https://github.com/saintparish4/opal/blob/master/benchmarks/BENCHMARKS.md">Benchmarks</a>
+        <a href="https://github.com/saintparish4/opal#limitations">Limitations</a>
+      </nav>
+      <nav aria-label="Build">
+        <p class="label">Build</p>
+        <a href="https://github.com/saintparish4/opal/blob/master/CONTRIBUTING.md">Contributing</a>
+        <a href="https://github.com/saintparish4/opal/blob/master/install.sh">Install script</a>
+        <a href="https://github.com/saintparish4/opal/blob/master/LICENSE">License</a>
+      </nav>
+    </div>
+  </footer>
+
+  <script src="main.js"></script>
+</body>
+</html>
