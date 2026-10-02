@@ -109,8 +109,9 @@ python3 benchmarks/compare-pms.py next --opal "$(command -v opal)" \
 - `--tools opal,npm` compares a subset of the tools.
 - `--rounds cold=3,ci=3,warm=5,noop=5` changes how many rounds each scenario gets.
 - `--work DIR` sets the scratch directory (default `/tmp/opal-compare`).
+- `--results DIR` sets where the raw samples go (default `benchmarks/results/`).
 
-Raw samples for every run are written next to `--work` as JSON. That is under `/tmp` by default, so copy the file somewhere permanent before publishing a table from it.
+Raw samples for every run are written to `benchmarks/results/` as JSON, one file per run. A table published here from now on is committed together with the file it was computed from, so anyone can recompute it. The tables above predate that: the laptop's samples were kept outside the repository and the desktop's were not kept.
 
 For numbers comparable with the tables above, use a release binary rather than a local build. `opal --version` can't tell the two apart, so the harness also records the SHA-256 of the binary it ran (`opal_binary` in the JSON); for a release it equals `sha256sum` of the `opal` inside the release archive. The 2026-09-26 runs predate that field.
 

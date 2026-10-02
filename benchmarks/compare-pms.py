@@ -23,8 +23,10 @@ within one run, never across runs.
 Needs Python 3.9+, network access, and node plus every tool being compared on
 PATH (`--tools` picks a subset). yarn is Yarn 1 (classic). The README's numbers
 launched pnpm as `node <pnpm.mjs>`; see --pnpm below. Raw samples are written
-next to --work as JSON, in /tmp by default: copy them somewhere that outlives a
-reboot before publishing a table from them, or the table can't be recomputed.
+as JSON to benchmarks/results/ (--results), beside this script, so a published
+table can be committed together with the samples it was computed from. The
+file records the path of the opal binary it ran, so run a binary that sits
+somewhere you are happy to publish.
 
 `opal --version` is the same for a release and for any local build of that
 version, so the SHA-256 of the binary that ran is recorded too. For a release
@@ -224,6 +226,7 @@ def main():
     parser.add_argument("--tools", default="opal,npm,pnpm,yarn,bun")
     parser.add_argument("--rounds", default="")
     parser.add_argument("--work", default="/tmp/opal-compare")
+    parser.add_argument("--results", default=str(Path(__file__).resolve().parent / "results"))
     args = parser.parse_args()
 
     rounds = dict(DEFAULT_ROUNDS)
@@ -306,7 +309,9 @@ def main():
                       f"{rss:6.0f} MB  {sample['packages']:4} pkgs  {status}  "
                       f"{sample.get('summary', '')}", flush=True)
 
-    out = work.parent / f"{args.project}-{datetime.now():%Y%m%d-%H%M%S}.json"
+    results_dir = Path(args.results)
+    results_dir.mkdir(parents=True, exist_ok=True)
+    out = results_dir / f"{args.project}-{datetime.now():%Y%m%d-%H%M%S}.json"
     out.write_text(json.dumps({"meta": meta, "results": results}, indent=2))
 
     ran = [s for s in SCENARIOS if rounds.get(s, 0)]
