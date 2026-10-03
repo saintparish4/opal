@@ -20,6 +20,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::integrity::{Integrity, IntegrityError};
 use crate::locks::CacheLock;
+use crate::parallel;
 use crate::semver::Version;
 
 /// Tarball downloaded, integrity not yet checked.
@@ -29,6 +30,11 @@ pub const FAULT_BEFORE_VERIFY: FaultPoint = FaultPoint::new("pm-before-verify");
 /// known before anything is written. Above it, streaming wins: the peak
 /// cost of buffering stops being worth one avoided fsync.
 const BUFFERED_ENTRY_BYTES: u64 = 8 * 1024 * 1024;
+
+/// How many buffered bytes wait to be stored before the decoder stops and
+/// stores them. This, not the package's size, is what an ingest holds in
+/// memory — and sixteen packages are being ingested at once.
+const BATCH_BYTES: u64 = BUFFERED_ENTRY_BYTES;
 
 /// Which ceiling a tarball ran into.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -165,6 +171,15 @@ pub struct PackageStore {
     root: PathBuf,
     pointers: PathBuf,
     limits: Limits,
+    ingest_threads: usize,
+}
+
+/// A tar entry read into memory, waiting to be stored.
+struct Buffered {
+    path: NormalizedPath,
+    executable: bool,
+    size: u64,
+    bytes: Vec<u8>,
 }
 
 impl PackageStore {
@@ -177,7 +192,16 @@ impl PackageStore {
             root,
             pointers,
             limits: Limits::default(),
+            ingest_threads: parallel::workers(),
         })
+    }
+
+    /// How many threads store one package's files. One makes ingest a plain
+    /// loop, which is what a test comparing the two needs.
+    #[must_use]
+    pub fn with_ingest_threads(mut self, threads: usize) -> Self {
+        self.ingest_threads = threads.max(1);
+        self
     }
 
     /// Tightens what a tarball is allowed to unpack to. The defaults are sized
@@ -307,6 +331,10 @@ impl PackageStore {
         })?;
 
         let mut files = BTreeMap::new();
+        let mut batch: Vec<Buffered> = Vec::new();
+        let mut batch_bytes: u64 = 0;
+        let mut entries_seen: usize = 0;
+        let mut announced_mid_extract = false;
         let mut unpacked: u64 = 0;
         let too_large = |what: Ceiling, limit: u64| PackageError::TooLarge {
             name: name.to_string(),
@@ -346,9 +374,11 @@ impl PackageStore {
                     self.limits.unpacked_bytes,
                 ));
             }
-            if files.len() >= self.limits.entries {
+            if entries_seen >= self.limits.entries {
                 return Err(too_large(Ceiling::Entries, self.limits.entries as u64));
             }
+            entries_seen += 1;
+            let executable = mode & 0o111 != 0;
 
             // Buffered rather than streamed, so the CAS can check whether it
             // already holds these bytes before writing any. Duplicate files are
@@ -356,7 +386,11 @@ impl PackageStore {
             // `package.json` shapes — and every one it recognizes here skips an
             // fsync. Anything larger keeps streaming: the win is not worth
             // holding a 10 MB native binary in memory to get it.
-            let hash = if size <= BUFFERED_ENTRY_BYTES {
+            if size <= BUFFERED_ENTRY_BYTES {
+                if batch_bytes + size > BATCH_BYTES {
+                    self.store_batch(&mut batch, &mut files)?;
+                    batch_bytes = 0;
+                }
                 let mut bytes = Vec::with_capacity(size as usize);
                 entry
                     .read_to_end(&mut bytes)
@@ -365,21 +399,36 @@ impl PackageStore {
                         version: version.clone(),
                         source,
                     })?;
-                self.cas.put(&bytes)?
-            } else {
-                self.cas.put_reader(&mut entry)?
-            };
-            files.insert(
-                path,
-                PackageFile {
-                    hash,
-                    executable: mode & 0o111 != 0,
+                batch_bytes += size;
+                batch.push(Buffered {
+                    path,
+                    executable,
                     size,
-                },
-            );
-            if files.len() == 1 {
+                    bytes,
+                });
+            } else {
+                // A path may appear twice in a tarball and the later entry
+                // wins, so what was read before this one is recorded first.
+                self.store_batch(&mut batch, &mut files)?;
+                batch_bytes = 0;
+                let hash = self.cas.put_reader(&mut entry)?;
+                files.insert(
+                    path,
+                    PackageFile {
+                        hash,
+                        executable,
+                        size,
+                    },
+                );
+            }
+            if !files.is_empty() && !announced_mid_extract {
+                announced_mid_extract = true;
                 fault::checkpoint(FAULT_MID_EXTRACT);
             }
+        }
+        self.store_batch(&mut batch, &mut files)?;
+        if !files.is_empty() && !announced_mid_extract {
+            fault::checkpoint(FAULT_MID_EXTRACT);
         }
 
         if files.is_empty() {
@@ -401,6 +450,49 @@ impl PackageStore {
         write_atomic(&pointer, format!("{hash}\n").as_bytes(), None)
             .map_err(|source| PackageError::io(pointer, source))?;
         Ok(hash)
+    }
+
+    /// Stores the buffered entries and records them, leaving `batch` empty.
+    ///
+    /// A package's files are stored several at a time because each store ends
+    /// in an fsync, and a filesystem journal commits the fsyncs it is handed
+    /// together: one thread storing `next`'s 8,520 files waits out a commit per
+    /// file, where several threads share each commit. Every write underneath
+    /// is content-addressed, so two threads storing at once cannot disturb
+    /// each other, and the order they finish in reaches nothing: the entries
+    /// are recorded in tarball order, into a sorted map.
+    fn store_batch(
+        &self,
+        batch: &mut Vec<Buffered>,
+        files: &mut BTreeMap<NormalizedPath, PackageFile>,
+    ) -> Result<(), PackageError> {
+        if batch.is_empty() {
+            return Ok(());
+        }
+        let positions: Vec<usize> = (0..batch.len()).collect();
+        let stored = parallel::each(
+            &positions,
+            self.ingest_threads.min(batch.len()),
+            Vec::new,
+            |position, stored: &mut Vec<(usize, ContentHash)>| {
+                stored.push((*position, self.cas.put(&batch[*position].bytes)?));
+                Ok::<(), PackageError>(())
+            },
+        )?;
+
+        let mut hashes: Vec<(usize, ContentHash)> = stored.into_iter().flatten().collect();
+        hashes.sort_unstable_by_key(|(position, _)| *position);
+        for (entry, (_, hash)) in batch.drain(..).zip(hashes) {
+            files.insert(
+                entry.path,
+                PackageFile {
+                    hash,
+                    executable: entry.executable,
+                    size: entry.size,
+                },
+            );
+        }
+        Ok(())
     }
 }
 
@@ -597,6 +689,75 @@ mod tests {
             .ingest("demo", &Version::new(1, 0, 0), &integrity, &bytes)
             .unwrap();
         assert_eq!(first, second);
+    }
+
+    #[test]
+    fn test_ingest_on_many_threads_matches_one_thread() {
+        // Big enough to be stored as more than one batch.
+        let blocks: Vec<Vec<u8>> = (0..4u8).map(|fill| vec![fill; 3 * 1024 * 1024]).collect();
+        let small: Vec<(String, Vec<u8>)> = (0..200)
+            .map(|n| {
+                (
+                    format!("package/lib/{n}.js"),
+                    format!("export default {n};\n").into_bytes(),
+                )
+            })
+            .collect();
+        let mut files: Vec<(&str, &[u8], u32)> = vec![
+            ("package/a.bin", &blocks[0], 0o644),
+            ("package/b.bin", &blocks[1], 0o755),
+        ];
+        files.extend(
+            small
+                .iter()
+                .map(|(path, bytes)| (path.as_str(), bytes.as_slice(), 0o644)),
+        );
+        files.push(("package/c.bin", &blocks[2], 0o644));
+        files.push(("package/d.bin", &blocks[3], 0o644));
+        let bytes = tarball(&files);
+        let integrity = Integrity::of(crate::integrity::Algorithm::Sha512, &bytes);
+        let version = Version::new(1, 0, 0);
+
+        let (_one_directory, one) = store();
+        let (_many_directory, many) = store();
+        let serial = one
+            .with_ingest_threads(1)
+            .ingest("demo", &version, &integrity, &bytes)
+            .unwrap();
+        let threaded = many.with_ingest_threads(8);
+        let parallel = threaded
+            .ingest("demo", &version, &integrity, &bytes)
+            .unwrap();
+
+        assert_eq!(serial, parallel);
+        let index = threaded.read_index(&parallel).unwrap();
+        assert_eq!(index.files.len(), 204);
+        assert!(index.file("b.bin").unwrap().executable);
+        assert!(threaded.cas().audit().unwrap().is_clean());
+    }
+
+    #[test]
+    fn test_the_later_of_two_entries_for_one_path_wins_on_any_thread_count() {
+        let mut files: Vec<(&str, &[u8], u32)> = Vec::new();
+        for _ in 0..50 {
+            files.push(("package/index.js", b"early", 0o644));
+            files.push(("package/other.js", b"other", 0o644));
+        }
+        files.push(("package/index.js", b"late", 0o755));
+        let bytes = tarball(&files);
+        let integrity = Integrity::of(crate::integrity::Algorithm::Sha512, &bytes);
+
+        for threads in [1, 8] {
+            let (_directory, store) = store();
+            let store = store.with_ingest_threads(threads);
+            let hash = store
+                .ingest("demo", &Version::new(1, 0, 0), &integrity, &bytes)
+                .unwrap();
+            let index = store.read_index(&hash).unwrap();
+            let file = index.file("index.js").unwrap();
+            assert_eq!(store.cas().read(&file.hash).unwrap(), b"late");
+            assert!(file.executable);
+        }
     }
 
     #[test]
