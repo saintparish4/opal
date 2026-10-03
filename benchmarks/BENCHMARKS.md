@@ -36,7 +36,7 @@ The two projects:
 
 Tool versions: opal 0.3.0 (the `opal-linux-x64` asset from the GitHub Release, checked against `SHA256SUMS`), npm 11.17.0, pnpm 11.17.0, yarn 1.22.22, bun 1.3.14, Node 24.19.0. Each cell is the median, with min–max in parentheses; the fastest median is in bold. Each machine made 160 runs (5 tools × 16 rounds × 2 projects), and all of them passed.
 
-### Laptop: AMD Ryzen 5 5625U (8 threads), 16 GB RAM, Linux under WSL2
+### Laptop: AMD Ryzen 5 5625U (WSL limited to 8 of 12 threads), 16 GB RAM, Linux under WSL2
 
 These are the numbers the README quotes. Every cell here was recomputed from the run's raw samples.
 

@@ -90,7 +90,7 @@ Opal against npm, pnpm, yarn, and bun, each installing the same `package.json`. 
 - **warm**: a lockfile and a cache, but no `node_modules` (a reinstall on your machine)
 - **noop**: everything already installed
 
-Each number is the median of 3 runs (cold, ci) or 5 (warm, noop); fastest in bold. Every tool gets its own copy of the project and its own empty cache, the tools take turns so a network swing hits all of them, and install scripts are off for all five. Machine: AMD Ryzen 5 5625U (8 threads), 16 GB RAM, Linux under WSL2, Node 24.19.0.
+Each number is the median of 3 runs (cold, ci) or 5 (warm, noop); fastest in bold. Every tool gets its own copy of the project and its own empty cache, the tools take turns so a network swing hits all of them, and install scripts are off for all five. Machine: AMD Ryzen 5 5625U (WSL limited to 8 of 12 threads), 16 GB RAM, Linux under WSL2, Node 24.19.0.
 
 **express** (68 packages)
 
