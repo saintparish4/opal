@@ -1,7 +1,8 @@
-// Medians from benchmarks/BENCHMARKS.md (laptop, 2026-09-26, opal 0.3.0).
-// Times in seconds. Keep in step with that file.
+// Medians from the preliminary section of benchmarks/BENCHMARKS.md (laptop,
+// 2026-10-03, an unreleased build of master at 2ba79e2). Times in seconds.
+// Keep in step with that file.
 const TOOLS = [
-  { name: "opal", version: "v0.3.0" },
+  { name: "opal", version: "master" },
   { name: "npm", version: "v11.17.0" },
   { name: "pnpm", version: "v11.17.0" },
   { name: "yarn", version: "v1.22.22" },
@@ -9,16 +10,16 @@ const TOOLS = [
 ];
 const BENCH = {
   next: {
-    cold: [124.59, 29.44, 22.42, 59.98, 19.27],
-    ci: [100.81, 16.25, 17.15, 53.9, 13.52],
-    warm: [1.08, 13.46, 2.7, 6.7, 1.32],
-    noop: [0.096, 0.734, 0.595, 0.414, 0.022],
+    cold: [30.35, 33.03, 25.18, 57.7, 20.09],
+    ci: [24.02, 15.27, 19.19, 48.04, 14.85],
+    warm: [0.951, 11.87, 2.47, 5.63, 1.17],
+    noop: [0.083, 0.628, 0.519, 0.363, 0.021],
   },
   express: {
-    cold: [8.24, 1.88, 1.45, 1.71, 0.519],
-    ci: [5.55, 1.04, 1.25, 1.32, 0.328],
-    warm: [0.101, 0.636, 0.788, 0.598, 0.077],
-    noop: [0.021, 0.355, 0.505, 0.29, 0.011],
+    cold: [0.946, 1.69, 1.35, 1.59, 0.605],
+    ci: [0.499, 1.01, 1.27, 1.23, 0.327],
+    warm: [0.093, 0.648, 0.818, 0.585, 0.078],
+    noop: [0.016, 0.357, 0.502, 0.295, 0.011],
   },
 };
 const CAPTIONS = {
@@ -77,6 +78,9 @@ function drawBars(list, project, scenario, withVersions) {
 function againstNpm(project, scenario) {
   const [opal, npm] = BENCH[project][scenario];
   const ratio = opal < npm ? npm / opal : opal / npm;
+  // Medians this close come from ranges that overlap (Next.js first install:
+  // opal 29.88–34.51s, npm 32.35–33.29s), so neither tool is called faster.
+  if (ratio < 1.1) return { text: "level with npm", faster: false };
   const shown = ratio >= 10 ? Math.round(ratio) : ratio.toFixed(1);
   return { text: `${shown}× ${opal < npm ? "faster" : "slower"} than npm`, faster: opal < npm };
 }

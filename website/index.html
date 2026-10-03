@@ -21,7 +21,7 @@
 <body>
   <a class="skip" href="#main">Skip to content</a>
 
-  <a class="banner" href="https://github.com/saintparish4/opal/commits/master">Parallel downloads have landed on master <span>— shipping in the next release →</span></a>
+  <a class="banner" href="https://github.com/saintparish4/opal/commits/master">Opal v0.4.0 is coming soon <span>— parallel downloads and faster first installs →</span></a>
 
   <header class="nav">
     <div class="wrap nav-row">
@@ -84,16 +84,29 @@
             <p class="chart-note" id="hero-caption"></p>
           </div>
           <ol class="bars" id="hero-bars" aria-live="polite"></ol>
-          <p class="chart-foot">Next.js 16.3.2 defaults · about 360 packages · Ryzen 5 5625U, Linux under WSL2 · install scripts off for every tool · median of 3 or 5 · measured 2026-09-26 with opal 0.3.0 <a href="https://github.com/saintparish4/opal/blob/master/benchmarks/BENCHMARKS.md">method</a></p>
+          <p class="chart-foot"><b class="tag">Preliminary</b> Next.js 16.3.2 defaults · about 360 packages · Ryzen 5 5625U, Linux under WSL2 · install scripts off for every tool · median of 3 or 5 · measured 2026-10-03 with an unreleased build of master, ahead of v0.4.0 · one machine so far, so these numbers may change · v0.3.1, the release you can install today, is slower on a first install and in CI <a href="https://github.com/saintparish4/opal/blob/master/benchmarks/BENCHMARKS.md">method</a></p>
         </div>
       </div>
     </section>
 
     <!-- ───────── tested on ───────── -->
-    <section class="wrap strip" aria-label="Validated on">
-      <p class="label">Validated on</p>
+    <!-- Marks are from Simple Icons 16.33.0 (CC0). The logos remain their
+         owners' trademarks: this strip says Opal's installs were tested on
+         these packages, not that the projects use or endorse Opal. chalk and
+         glob have no mark in that set. -->
+    <section class="wrap strip" aria-label="Installs tested on">
+      <p class="label">Installs tested on</p>
       <ul>
-        <li>Next.js</li><li>express</li><li>webpack</li><li>jest</li><li>vite</li><li>typescript</li><li>esbuild</li><li>@babel/core</li><li>chalk</li><li>glob</li>
+        <li><span class="mark" aria-hidden="true" style="--mark: url(assets/logos/nextdotjs.svg)"></span>Next.js</li>
+        <li><span class="mark" aria-hidden="true" style="--mark: url(assets/logos/express.svg)"></span>express</li>
+        <li><span class="mark" aria-hidden="true" style="--mark: url(assets/logos/webpack.svg)"></span>webpack</li>
+        <li><span class="mark" aria-hidden="true" style="--mark: url(assets/logos/jest.svg)"></span>jest</li>
+        <li><span class="mark" aria-hidden="true" style="--mark: url(assets/logos/vite.svg)"></span>vite</li>
+        <li><span class="mark" aria-hidden="true" style="--mark: url(assets/logos/typescript.svg)"></span>typescript</li>
+        <li><span class="mark" aria-hidden="true" style="--mark: url(assets/logos/esbuild.svg)"></span>esbuild</li>
+        <li><span class="mark" aria-hidden="true" style="--mark: url(assets/logos/babel.svg)"></span>@babel/core</li>
+        <li>chalk</li>
+        <li>glob</li>
       </ul>
     </section>
 
@@ -217,9 +230,9 @@
           <p>Every write is atomic and the linker is a reconciler. In one soak, 332 SIGKILLs interrupted a running install; re-running converged on a clean tree every time.</p>
         </article>
         <article>
-          <p class="figure">15<span>MB</span></p>
+          <p class="figure">31<span>MB</span></p>
           <h3>Small while it works</h3>
-          <p>Peak memory installing express was 15 MB, against 153 MB for npm and 40 MB for bun. Opal used the least of the five on every cold install measured.</p>
+          <p>Peak memory installing express was 31 MB, against 154 MB for npm and 41 MB for bun: the least of the five. On a Next.js app it was second lowest, 499 MB against npm's 432 MB. Same preliminary run as the charts below.</p>
         </article>
         <article>
           <p class="figure">1<span>store</span></p>
@@ -233,7 +246,7 @@
     <section class="wrap block" id="install-bench">
       <div class="block-head split">
         <div>
-          <p class="label dot">opal install</p>
+          <p class="label dot">opal install <b class="tag">Preliminary</b></p>
           <h2>Fastest where you reinstall. Not yet where you download.</h2>
           <p class="lede">Cold cache, CI, a reinstall and a no-op, on a Next.js app and on express, against npm, pnpm, yarn and bun at their defaults. Opal's losses are on the same page as its wins.</p>
         </div>
@@ -243,7 +256,7 @@
         </div>
       </div>
       <div class="grid-charts" id="grid-charts"></div>
-      <p class="fine wide">Measured 2026-09-26 on an AMD Ryzen 5 5625U (WSL limited to 8 of 12 threads, 16 GB, Linux under WSL2) with opal 0.3.0, npm 11.17.0, pnpm 11.17.0, yarn 1.22.22 and bun 1.3.14. The released v0.3.1 has the same install path and downloads one package at a time, which is what the first-install and CI charts show. Parallel downloads are merged and ship in the next release.</p>
+      <p class="fine wide"><b class="tag">Preliminary</b> Measured 2026-10-03 on an AMD Ryzen 5 5625U (WSL limited to 8 of 12 threads, 16 GB, Linux under WSL2) with an unreleased build of Opal (master at <a href="https://github.com/saintparish4/opal/commit/2ba79e2">2ba79e2</a>), npm 11.17.0, pnpm 11.17.0, yarn 1.22.22 and bun 1.3.14. This is one machine so far, and the numbers may change before v0.4.0 is released. v0.3.1, the release you can install today, downloads one package at a time and is 4–7× slower than npm on a first install; its numbers and the <a href="https://github.com/saintparish4/opal/tree/master/benchmarks/results">raw samples</a> for these charts are in the benchmark notes.</p>
     </section>
 
     <!-- ───────── limits ───────── -->
@@ -258,7 +271,7 @@
         <li><strong>Peer dependencies aren't installed.</strong> They are recorded, not added to the tree the way npm 7 and later add them.</li>
         <li><strong><code>git:</code> and <code>file:</code> dependencies are refused.</strong> Dependencies come from a registry only.</li>
         <li><strong>No <code>add</code>, <code>remove</code> or <code>update</code>.</strong> Edit <code>package.json</code> and run <code>opal install</code>. Commands that aren't built aren't in the binary.</li>
-        <li><strong>First installs are slow in v0.3.1.</strong> It downloads one package at a time, 4–7× slower than npm on a cold install.</li>
+        <li><strong>First installs are slow in v0.3.1.</strong> It downloads one package at a time, 4–7× slower than npm on a cold install. The fix is on master and ships in v0.4.0.</li>
         <li><strong>Linux needs a recent glibc.</strong> v0.3.1's binaries need glibc 2.39 (Ubuntu 24.04 or newer); the next release goes back to 2.34. Alpine and other musl distributions aren't supported.</li>
       </ul>
       <a class="next" href="https://github.com/saintparish4/opal#limitations">The full list of limitations →</a>

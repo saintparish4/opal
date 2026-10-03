@@ -252,7 +252,9 @@ h3 { font-family: var(--display); font-stretch: 87.5%; font-weight: 700; font-si
 /* ---- validated-on strip ---- */
 .strip { display: flex; flex-wrap: wrap; align-items: center; gap: 14px 34px; padding-block: 28px; border-block: 1px solid var(--line); }
 .strip ul { display: flex; flex-wrap: wrap; gap: 10px 30px; }
-.strip li { font-family: var(--display); font-stretch: 90%; font-weight: 700; font-size: 1.05rem; color: var(--muted); letter-spacing: -0.01em; }
+.strip li { font-family: var(--display); font-stretch: 90%; font-weight: 700; font-size: 1.05rem; color: var(--muted); letter-spacing: -0.01em; display: inline-flex; align-items: center; gap: 8px; }
+/* A mask, not an <img>, so each mark takes the text colour in both themes. */
+.mark { width: 1.15em; height: 1.15em; background: currentColor; -webkit-mask: var(--mark) center / contain no-repeat; mask: var(--mark) center / contain no-repeat; }
 
 /* ---- blocks ---- */
 .block { padding-block: 96px; }
