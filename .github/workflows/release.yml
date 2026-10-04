@@ -4,6 +4,10 @@ on:
   push:
     tags:
       - "v*"
+  # A dry run: builds, packages, and checksums all four targets from any
+  # branch and publishes nothing. A pushed tag can't be moved, so a build that
+  # breaks only here costs a version number unless it is found first.
+  workflow_dispatch:
 
 env:
   CARGO_TERM_COLOR: always
@@ -12,8 +16,10 @@ env:
   # states the same number.
   MAX_GLIBC: "2.34"
 
+# The build jobs run every dependency's build script, so their token can't
+# write to the repository. Only the publish job asks for more.
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   build:
@@ -43,7 +49,11 @@ jobs:
             target: aarch64-apple-darwin
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          # By default the token stays in .git/config for the rest of the job,
+          # where a build script could read it.
+          persist-credentials: false
 
       # Toolchain, channel, and components are pinned in rust-toolchain.toml.
       - name: Install Rust toolchain
@@ -61,13 +71,11 @@ jobs:
         run: |
           echo "CARGO_TARGET_$(echo ${{ matrix.target }} | tr '[:lower:]-' '[:upper:]_')_LINKER=${{ matrix.linker }}" >> "$GITHUB_ENV"
 
-      - name: Cache cargo
-        uses: Swatinem/rust-cache@v2
-        with:
-          key: ${{ matrix.target }}
-
+      # No cargo cache, unlike CI: a release binary is compiled from source and
+      # from the committed lockfile, never on top of an earlier run's target
+      # directory. A clean build takes about a minute per target.
       - name: Build
-        run: cargo build --release -p opal-cli --target ${{ matrix.target }}
+        run: cargo build --release --locked -p opal-cli --target ${{ matrix.target }}
 
       # Nothing else notices when the requirement rises: the build passes and
       # the binary runs on the runner. readelf, not objdump, because it reads
@@ -91,7 +99,7 @@ jobs:
           shasum -a 256 "$archive" > "${archive}.sha256"
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: ${{ env.BIN_NAME }}-${{ matrix.asset }}
           path: |
@@ -103,9 +111,11 @@ jobs:
     name: Publish release
     needs: build
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Download artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           path: dist
           merge-multiple: true
@@ -115,10 +125,20 @@ jobs:
       - name: Build combined checksum file
         run: cat dist/*.sha256 > dist/SHA256SUMS
 
+      # The archives crossed from the build jobs to this one as artifacts.
+      # This is the check install.sh makes, run before anyone can download.
+      - name: Verify checksums
+        run: cd dist && sha256sum --check --strict SHA256SUMS
+
+      # gh rather than an action, so nothing third-party runs with the write
+      # token. It uploads to a draft and publishes last, so a release is never
+      # visible with files missing, and it refuses a tag that already has a
+      # release rather than replacing that release's files.
       - name: Publish GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: |
-            dist/*.tar.gz
-            dist/SHA256SUMS
-          generate_release_notes: true
+        if: github.event_name == 'push'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" dist/*.tar.gz dist/SHA256SUMS \
+            --title "$GITHUB_REF_NAME" --generate-notes --verify-tag
