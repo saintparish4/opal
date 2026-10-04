@@ -20,7 +20,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       # Toolchain, channel, and components (rustfmt, clippy) are pinned in
       # rust-toolchain.toml — `rustup show` installs whatever it declares
@@ -57,7 +57,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Install Rust toolchain
         run: rustup show
       - name: Cache cargo
@@ -70,7 +70,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Install Rust toolchain
         run: rustup show
       - name: Cache cargo
@@ -78,7 +78,7 @@ jobs:
       # The installed tree has to run, not merely exist, so this job needs a
       # Node to run it with.
       - name: Install Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: "22"
       - name: Execute
@@ -93,13 +93,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Install Rust toolchain
         run: rustup show
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
       - name: Install Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: "22"
       - name: Cross-check
@@ -113,7 +113,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Install Rust toolchain
         run: rustup show
       - name: Cache cargo
@@ -141,7 +141,7 @@ jobs:
     continue-on-error: true
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Install Rust toolchain
         run: rustup show
       - name: Cache cargo
@@ -179,7 +179,7 @@ jobs:
                   )
           PY
       - name: Upload
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: install-benchmark
           path: bench/*.json
