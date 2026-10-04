@@ -105,31 +105,35 @@ function drawGrid() {
   );
 }
 
-// Real output, captured from v0.3.1's install path on a 364-package Next.js
-// app with stderr not a terminal, which is where the one-line-per-stage
-// output comes from. Each entry is [text, pause before it in ms].
+// Real output, captured 2026-10-04 from an unreleased build of master at
+// efe3d07 on a 364-package Next.js app, with stderr not a terminal, which is
+// where the one-line-per-stage output comes from. The charts show master too,
+// and v0.3.1's two-minute first install beside them read as a contradiction.
+// Warnings are left out, and `opal upgrade` is v0.3.1's line: it reports the
+// released version, which hasn't changed. Each entry is [text, pause before
+// it in ms, "done" for the line that reports the result].
 const STEPS = [
   { command: "opal install", lines: [
     ["Resolving dependencies", 350],
     ["Installing 364 packages", 900],
     ["Linking 364 packages", 1100],
-    ["364 packages installed in 2m00s  (resolve 29.0s, fetch 1m30s, link 1.0s)", 500],
+    ["364 packages installed in 25.9s  (resolve 5.3s, fetch 19.6s, link 942ms)", 500, "done"],
     ["skipped 66 optional packages built for other platforms", 120],
   ] },
   { command: "opal install", lines: [
     ["Installing 364 packages", 250],
     ["Linking 364 packages", 200],
-    ["364 packages already installed (452ms)", 250],
+    ["364 packages already installed (518ms)", 250, "done"],
     ["skipped 66 optional packages built for other platforms", 120],
   ] },
   { command: "opal install --frozen-lockfile", lines: [
     ["Installing 364 packages", 250],
-    ["Linking 364 packages", 350],
-    ["364 packages already installed (1.9s)", 400],
+    ["Linking 364 packages", 200],
+    ["364 packages already installed (522ms)", 250, "done"],
     ["skipped 66 optional packages built for other platforms", 120],
   ] },
-  { command: "opal cache verify", lines: [["all objects match their hash keys", 1100]] },
-  { command: "opal upgrade", lines: [["opal 0.3.1 is already installed", 700]] },
+  { command: "opal cache verify", lines: [["all objects match their hash keys", 1100, "done"]] },
+  { command: "opal upgrade", lines: [["opal 0.3.1 is already installed", 700, "done"]] },
 ];
 
 const stepTabs = [...document.querySelectorAll("[data-step]")];
@@ -161,6 +165,19 @@ function markStep(index) {
     `${String(index + 1).padStart(2, "0")} / ${String(STEPS.length).padStart(2, "0")}`;
 }
 
+// A result line leads with its package count in bold; every other line is dim.
+function outputLine(text, kind) {
+  if (kind !== "done") return element("span", "dim", text);
+  const line = element("span", "done");
+  const count = text.match(/^\d+ packages/);
+  if (!count) {
+    line.textContent = text;
+    return line;
+  }
+  line.append(element("b", "", count[0]), text.slice(count[0].length));
+  return line;
+}
+
 // Types the command, plays its output a line at a time, then moves on.
 async function playStep(index, thenContinue = true) {
   const run = ++playback;
@@ -175,7 +192,7 @@ async function playStep(index, thenContinue = true) {
   if (stillMotion) {
     typed.textContent = command;
     caret.remove();
-    out.append("\n", element("span", "dim", lines.map(([text]) => text).join("\n")));
+    lines.forEach(([text, , kind]) => out.append("\n", outputLine(text, kind)));
     return;
   }
 
@@ -185,9 +202,11 @@ async function playStep(index, thenContinue = true) {
     if (!(await wait(38, run))) return;
   }
   caret.remove();
-  for (const [text, pause] of lines) {
+  for (const [text, pause, kind] of lines) {
     if (!(await wait(pause, run))) return;
-    out.append("\n", element("span", "dim line", text));
+    const line = outputLine(text, kind);
+    line.classList.add("line");
+    out.append("\n", line);
   }
   out.append("\n", element("span", "prompt", "$ "), element("span", "caret"));
   if (!thenContinue) return;

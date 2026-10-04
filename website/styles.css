@@ -321,14 +321,17 @@ h3 { font-family: var(--display); font-stretch: 87.5%; font-weight: 700; font-si
 .terminal { background: #0e0e0e; color: #f0f0f0; position: sticky; top: 84px; }
 .terminal-bar { display: flex; justify-content: space-between; gap: 12px; padding: 12px 18px; border-bottom: 1px solid #2a2a2a; font-family: var(--mono); font-size: 0.6rem; color: #808080; }
 .terminal pre { min-height: 250px; padding: 24px 22px; font-family: var(--mono); font-size: 0.74rem; line-height: 1.9; white-space: pre-wrap; overflow-wrap: anywhere; }
-.terminal .prompt { color: #80e8cc; }
-.terminal .dim { color: #b4b4b4; }
+.terminal .prompt { color: cornflowerblue; }
+.terminal .dim { color: #8f8f8f; }
+.terminal .done { color: #f0f0f0; }
+.terminal .done b { font-weight: 700; }
 .terminal .line { animation: line-in 0.18s ease-out; }
 .caret { display: inline-block; width: 0.6em; height: 1.1em; vertical-align: -0.2em; background: #f0f0f0; animation: blink 1s steps(1) infinite; }
 @keyframes blink { 50% { opacity: 0; } }
 @keyframes line-in { from { opacity: 0; transform: translateY(3px); } }
 @media (prefers-reduced-motion: reduce) { .caret, .terminal .line { animation: none; } }
 .terminal-foot { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 18px; border-top: 1px solid #2a2a2a; font-family: var(--mono); font-size: 0.6rem; color: #808080; }
+.terminal-foot .tag { background: #f0f0f0; color: #0e0e0e; }
 
 /* ---- release ---- */
 .release { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 56px; align-items: start; }
