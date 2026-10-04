@@ -16,7 +16,7 @@ blake3 = "1.8.6"
 oxc_allocator = "0.145.0"
 oxc_ast = "0.145.0"
 oxc_ast_visit = "0.145.0"
-oxc_parser = "0.145.0"
+oxc_parser = "0.152.0"
 oxc_span = "0.145.0"
 serde = { version = "1.0", features = ["derive"] }
 # `raw_value` keeps a packument's version bodies as unparsed slices: a
