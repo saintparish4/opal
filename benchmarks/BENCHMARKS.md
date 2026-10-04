@@ -35,11 +35,15 @@ The two projects:
 
 ## Preliminary: 2026-10-03, unreleased master build
 
-These tables are for a build of `master` at [`2ba79e2`](https://github.com/saintparish4/opal/commit/2ba79e2), which adds parallel downloads and stores one package's files on several threads. It is not a release: v0.3.1 is still what the install script gives you, and its numbers are the 2026-09-26 tables below. The build reports `opal 0.3.1`; the SHA-256 of the binary that ran is `322e439b446b20fee317defc146773e1ac085226d95adabc13c579dc7f642ab2`.
+These tables are for a build of `master` that adds parallel downloads and stores one package's files on several threads. It is not a release: v0.3.1 is still what the install script gives you, and its numbers are the 2026-09-26 tables below. The build reports `opal 0.3.1`.
 
-One machine so far (the laptop), so treat these as preliminary. They will be replaced by a run against the v0.4.0 release binary on both machines.
+Both machines have run it, but the build is unreleased, so treat these as preliminary. They will be replaced by a run against the v0.4.0 release binary on both machines.
 
-Tool versions as in the 2026-09-26 run. All 160 runs passed. Raw samples: [`results/express-20261003-095838.json`](./results/express-20261003-095838.json) and [`results/next-20261003-101640.json`](./results/next-20261003-101640.json).
+Tool versions as in the 2026-09-26 run. Each machine made 160 runs, and all of them passed.
+
+### Laptop: AMD Ryzen 5 5625U (WSL limited to 8 of 12 threads), 16 GB RAM, Linux under WSL2
+
+Built at [`2ba79e2`](https://github.com/saintparish4/opal/commit/2ba79e2). The SHA-256 of the binary that ran is `322e439b446b20fee317defc146773e1ac085226d95adabc13c579dc7f642ab2`. Raw samples: [`results/express-20261003-095838.json`](./results/express-20261003-095838.json) and [`results/next-20261003-101640.json`](./results/next-20261003-101640.json).
 
 **express** (68 packages)
 
@@ -61,11 +65,37 @@ Tool versions as in the 2026-09-26 run. All 160 runs passed. Raw samples: [`resu
 | yarn 1.22.22 | 57.70s (55.94–59.82s) | 48.04s (47.97–51.51s) | 5.63s (5.34–6.12s) | 363ms (358–373ms) | 650 MB | 365 |
 | bun 1.3.14 | **20.09s** (19.71–21.72s) | **14.85s** (14.55–15.00s) | 1.17s (1.15–1.29s) | **21ms** (21–22ms) | 574 MB | 365 |
 
-- **express:** Opal is ahead of npm, pnpm, and yarn in every scenario and behind bun in every scenario. On a cold install bun's range spans Opal's.
-- **Next.js cold:** level with npm (the ranges overlap), behind pnpm and bun.
-- **Next.js ci:** 1.6× slower than npm and bun, 1.25× slower than pnpm.
-- **Next.js warm:** the fastest of the five.
-- **Memory:** the least of the five on express, second to npm on Next.js.
+### Desktop: Intel Core i9-9900K (16 threads), 16 GB RAM, Linux under WSL2
+
+Measured the same day. Built on that machine at [`ea72765`](https://github.com/saintparish4/opal/commit/ea72765), which is the same code: the one commit after `2ba79e2` changes only these notes and the site. It is a separate build, so its SHA-256 differs: `a797cbd9c5459cbd7e69b7b48cd10938ed37cf015c0235a81bdff7dc83c684c8`. Raw samples: [`results/express-20261003-182856.json`](./results/express-20261003-182856.json) and [`results/next-20261003-184524.json`](./results/next-20261003-184524.json).
+
+**express** (68 packages)
+
+| | cold | ci | warm | noop | Peak memory (cold) |
+|---|---|---|---|---|---|
+| opal master | 877ms (864–962ms) | **509ms** (488–522ms) | 103ms (103–150ms) | 21ms (21–37ms) | **36 MB** |
+| npm 11.17.0 | 1.55s (1.46–1.77s) | 942ms (902ms–1.00s) | 600ms (589–631ms) | 313ms (303–318ms) | 158 MB |
+| pnpm 11.17.0 | 1.24s (1.18–1.29s) | 1.10s (1.07–1.10s) | 785ms (744–928ms) | 436ms (421–446ms) | 416 MB |
+| yarn 1.22.22 | 1.51s (1.48–1.53s) | 1.24s (1.24–1.30s) | 549ms (527–621ms) | 241ms (236–247ms) | 163 MB |
+| bun 1.3.14 | **385ms** (381ms–1.27s) | 612ms (452–638ms) | **42ms** (41–42ms) | **6ms** (6–6ms) | 39 MB |
+
+**Next.js 16.3.2**
+
+| | cold | ci | warm | noop | Peak memory (cold) | Packages installed |
+|---|---|---|---|---|---|---|
+| opal master | 26.10s (24.76–26.45s) | 20.74s (20.26–30.91s) | **652ms** (647–929ms) | 67ms (67–77ms) | 495 MB | 364 |
+| npm 11.17.0 | 28.83s (27.62–29.03s) | 15.62s (14.99–15.74s) | 13.37s (13.22–14.19s) | 621ms (606–669ms) | **441 MB** | 359 |
+| pnpm 11.17.0 | 19.07s (18.71–19.49s) | 15.19s (14.52–16.03s) | 1.81s (1.79–2.93s) | 468ms (447–478ms) | 1,950 MB | 354 |
+| yarn 1.22.22 | 56.72s (56.14–60.07s) | 50.61s (48.51–54.80s) | 6.55s (6.39–9.66s) | 339ms (329–360ms) | 630 MB | 365 |
+| bun 1.3.14 | **17.81s** (16.64–18.18s) | **12.89s** (12.22–13.12s) | 668ms (641–677ms) | **16ms** (16–16ms) | 712 MB | 365 |
+
+### What the preliminary numbers show
+
+- **express:** on both machines Opal is ahead of npm, pnpm, and yarn in every scenario, and behind bun on warm and noop. On a cold install bun's median is lower, but its range spans Opal's on both machines. On ci bun is ahead on the laptop; on the desktop Opal's median is lower (509ms against 612ms) and bun's range spans Opal's.
+- **Next.js cold:** ahead of npm on the desktop (26.10s against 28.83s, and the ranges don't overlap), level with it on the laptop (the ranges overlap). Behind pnpm by 1.2–1.4× and bun by 1.5× on both.
+- **Next.js ci:** behind npm, pnpm, and bun on both machines: 1.3–1.6× slower than npm, 1.25–1.4× slower than pnpm, 1.6× slower than bun. One of the desktop's three Opal runs took 30.91s, nearly all of the extra in the download; the median is unaffected.
+- **Next.js warm:** the fastest of the five on the laptop. On the desktop it is level with bun (652ms against 668ms, and the ranges overlap) and ahead of the other three.
+- **Memory:** the least of the five on express, second to npm on Next.js, on both machines.
 
 ## Results: 2026-09-26, opal 0.3.0
 
