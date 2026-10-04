@@ -105,6 +105,26 @@ jobs:
       - name: Cross-check
         run: cargo test -p opal-pm --test npm-cross-check -- --ignored --nocapture
 
+  # `deny.toml`: licenses a static MIT binary can carry, crates.io as the only
+  # source, and the crates the design rules out. Advisories are left to
+  # audit.yml, so the result depends on the tree alone and can gate a merge.
+  dependency-policy:
+    name: Dependency policy (cargo-deny)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install Rust toolchain
+        run: rustup show
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+      # Pinned for the same reason: a new cargo-deny release must not be able
+      # to fail a pull request that didn't touch a dependency.
+      - name: Install cargo-deny
+        run: cargo install --locked cargo-deny@0.20.2
+      - name: Check
+        run: cargo deny --locked check bans licenses sources
+
   # `testing_strategy.md` §7: record every run's numbers, never gate on them.
   # No noise threshold has been agreed, so nothing here can fail the build on a
   # measurement, and `continue-on-error` keeps a broken harness from blocking

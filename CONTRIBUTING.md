@@ -57,6 +57,8 @@ One of those tests kills installs at random moments. If it fails, it prints an `
 
 If you change how the cache decides what's stale (CAS key derivation, integrity checks, or invalidation), add or update the tests in `crates/opal-core/tests/cache-invalidation.rs`. A bug there doesn't crash; it silently serves stale output.
 
+CI also checks the dependency tree against [`deny.toml`](./deny.toml): permissive licenses only, crates.io as the only source, and no async runtime or OpenSSL. If you add or change a dependency, run it yourself with `cargo deny check bans licenses sources` (install it with `cargo install --locked cargo-deny`).
+
 Commit messages use `<type>: <subject>`, where the type is `feat`, `fix`, `perf`, `refactor`, `test`, `docs`, or `chore`, and the subject is imperative with no trailing period. A `perf` commit cites the benchmark that justifies it.
 
 ## More tests

@@ -1,0 +1,46 @@
+# CI runs `cargo deny check bans licenses sources`. Advisories are left out on
+# purpose: a new one is news about the outside world, and it would turn an
+# unrelated pull request red. cargo-audit checks those on a schedule instead
+# (.github/workflows/audit.yml).
+
+[graph]
+# The four targets a release is built for. A dependency compiled only for
+# Windows never reaches a shipped binary.
+targets = [
+    "x86_64-unknown-linux-gnu",
+    "aarch64-unknown-linux-gnu",
+    "x86_64-apple-darwin",
+    "aarch64-apple-darwin",
+]
+all-features = true
+
+[licenses]
+# Opal ships as one statically linked MIT binary, so a dependency's license
+# has to permit that without adding terms of its own: no copyleft.
+allow = [
+    "MIT",
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    "Unicode-3.0",
+    "CDLA-Permissive-2.0",
+]
+
+[bans]
+# A ban covers the whole tree, so these also catch a dependency that brings
+# one in through a default feature.
+deny = [
+    { crate = "tokio", reason = "HTTP is blocking and concurrency is OS threads; there is no async runtime in the install pipeline" },
+    { crate = "openssl-sys", reason = "the binary has no OpenSSL system dependency; TLS is rustls" },
+    { crate = "native-tls", reason = "the binary has no OpenSSL system dependency; TLS is rustls" },
+]
+
+[sources]
+# crates.io versions can't be changed after publishing. A git dependency or
+# another registry gives no such guarantee.
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
+allow-git = []

@@ -1,0 +1,29 @@
+version: 2
+
+updates:
+  - package-ecosystem: cargo
+    directory: "/"
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: chore
+    groups:
+      # The oxc crates share one version and only build together. A new parser
+      # can also read the same source differently, which is a
+      # MEMO_FORMAT_VERSION question, so it stays out of the routine group.
+      oxc:
+        patterns: ["oxc_*"]
+      # Patch only: Dependabot calls 0.11 -> 0.12 a minor update, and for a
+      # 0.x crate that one is breaking.
+      patch:
+        update-types: [patch]
+
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: chore
+    groups:
+      actions:
+        patterns: ["*"]

@@ -1,0 +1,40 @@
+name: Audit
+
+on:
+  # An advisory is published against a lockfile that hasn't changed, so this
+  # runs on a clock as well as when the dependency tree changes. It is not a
+  # required check: a new advisory shouldn't block an unrelated pull request.
+  schedule:
+    - cron: "23 5 * * *"
+  push:
+    branches: [master]
+    paths: ["Cargo.lock", "**/Cargo.toml", ".github/workflows/audit.yml"]
+  pull_request:
+    branches: [master]
+    paths: ["Cargo.lock", "**/Cargo.toml", ".github/workflows/audit.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  advisories:
+    name: Advisories (cargo-audit)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install Rust toolchain
+        run: rustup show
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+      # Pinned so the cached binary is reused. Unpinned, every run rebuilds it
+      # once a newer release exists, because the cache key (the lockfile)
+      # hasn't changed and the new binary is never saved.
+      - name: Install cargo-audit
+        run: cargo install --locked cargo-audit@0.22.2
+      - name: Audit
+        run: cargo audit
