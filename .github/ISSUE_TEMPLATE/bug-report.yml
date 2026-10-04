@@ -1,0 +1,64 @@
+name: Bug report
+description: Opal did something wrong, such as a failed install, a wrong version, or a crash.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **A security problem doesn't go here.** Report it privately, as [SECURITY.md](https://github.com/saintparish4/opal/blob/master/SECURITY.md) describes.
+
+        The README's [Limitations](https://github.com/saintparish4/opal#limitations) lists what Opal is known not to do yet, such as running install scripts. If yours is there, a feature request saying what it blocks for you is more use than a bug report.
+  - type: dropdown
+    id: kind
+    attributes:
+      label: What went wrong
+      description: A failed install and a package that installs but doesn't run are different bugs, so this decides where the report goes.
+      options:
+        - "`opal install` failed"
+        - The install finished, but a package doesn't run
+        - Opal picked different versions than npm
+        - Opal crashed or hung
+        - "`opal upgrade` or the install script"
+        - Something else
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Opal version
+      description: What `opal --version` prints. If you built it from source, add the commit.
+      placeholder: opal 0.3.1
+    validations:
+      required: true
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      description: Native Windows isn't supported yet. If you run Opal under WSL2, pick WSL2.
+      options:
+        - Linux x64
+        - Linux arm64
+        - WSL2
+        - macOS (Apple silicon)
+        - macOS (Intel)
+    validations:
+      required: true
+  - type: textarea
+    id: manifest
+    attributes:
+      label: package.json
+      description: The smallest `package.json` that shows the problem. One dependency is ideal.
+      render: json
+  - type: textarea
+    id: output
+    attributes:
+      label: What you ran, and what it printed
+      description: The command and its full output. For a crash, run it again with `RUST_BACKTRACE=1` and paste that.
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What should have happened
+      description: If npm, pnpm, or yarn handles the same `package.json`, say which one and what it does.

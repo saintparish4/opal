@@ -1,0 +1,28 @@
+name: Feature request
+description: Something Opal doesn't do yet, or should do differently.
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        The README's [Limitations](https://github.com/saintparish4/opal#limitations) lists what is already known to be missing. If yours is there, say what it blocks for you: that helps decide what gets built first.
+
+        A change to the lockfile format, the cache layout, or how versions are resolved is discussed in an issue like this one before anyone writes a pull request for it.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What are you trying to do?
+      description: The project or task this came up in, and where Opal gets in the way.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What should Opal do?
+    validations:
+      required: true
+  - type: textarea
+    id: today
+    attributes:
+      label: How do you get by today?
+      description: A workaround, or another tool. What npm, pnpm, yarn, or bun do here is useful to know.
