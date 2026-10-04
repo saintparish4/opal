@@ -298,7 +298,7 @@ impl<'a> Resolver<'a> {
         let allocator = Allocator::default();
         let parsed = Parser::new(&allocator, &source, source_type).parse();
 
-        if parsed.panicked {
+        if parsed.fatal_error {
             self.builder
                 .add_diagnostic(path, "parser could not recover; imports may be missing");
         } else if !parsed.diagnostics.is_empty() {

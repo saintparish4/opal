@@ -15,8 +15,15 @@ updates:
         patterns: ["oxc_*"]
       # Patch only: Dependabot calls 0.11 -> 0.12 a minor update, and for a
       # 0.x crate that one is breaking.
+      #
+      # The exclusion is what keeps the oxc group alive. A crate that matches
+      # two groups goes to the one Dependabot ranks more specific, and it ranks
+      # `update-types` above `patterns`: without it this group claims the oxc
+      # crates, drops their minor bumps as not-a-patch, and each one gets its
+      # own pull request that can't build.
       patch:
         update-types: [patch]
+        exclude-patterns: ["oxc_*"]
 
   - package-ecosystem: github-actions
     directory: "/"
