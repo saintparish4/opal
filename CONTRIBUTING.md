@@ -61,6 +61,8 @@ CI also checks the dependency tree against [`deny.toml`](./deny.toml): permissiv
 
 Commit messages use `<type>: <subject>`, where the type is `feat`, `fix`, `perf`, `refactor`, `test`, `docs`, or `chore`, and the subject is imperative with no trailing period. A `perf` commit cites the benchmark that justifies it.
 
+A change someone using Opal would notice gets a line in [`CHANGELOG.md`](./CHANGELOG.md), in the section at the top for the release it will ship in. A change to behaviour people may depend on, or to the `opal.lock` format, goes under **Breaking**. Each release's notes are taken from that file.
+
 ## More tests
 
 These need extra setup, so `cargo test` skips them. Each has its own CI job.

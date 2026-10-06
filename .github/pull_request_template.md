@@ -6,6 +6,7 @@
 
 - [ ] The three commands under [Before you open a pull request](https://github.com/saintparish4/opal/blob/master/CONTRIBUTING.md#before-you-open-a-pull-request) pass
 - [ ] New or changed behavior has a test
+- [ ] A change someone using Opal would notice has a line in `CHANGELOG.md`
 
 ## Say so if this pull request
 

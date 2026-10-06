@@ -74,7 +74,7 @@ It downloads the release for your platform from GitHub, checks it against the re
 
 If the new version changed the lockfile format, the next `opal install` in each project re-resolves `opal.lock` and says so. Commit the rewritten file, because `opal install --frozen-lockfile` refuses to rewrite it and CI fails until you do. An older Opal can't read a lockfile written by a newer one.
 
-There's no canary channel; every release is a tagged [GitHub Release](https://github.com/saintparish4/opal/releases). To run unreleased changes from `master`, build from source.
+There's no canary channel; every release is a tagged [GitHub Release](https://github.com/saintparish4/opal/releases), and what changed in each is in [CHANGELOG.md](./CHANGELOG.md). To run unreleased changes from `master`, build from source.
 
 ## Usage
 
