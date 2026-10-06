@@ -36,7 +36,7 @@
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
-use opal_core::atomic::write_atomic;
+use opal_core::atomic::write_atomic_via;
 use opal_core::fault::FaultPoint;
 
 use crate::integrity::Integrity;
@@ -113,12 +113,33 @@ pub fn read(path: &Path) -> Result<Option<Resolution>, LockfileError> {
 /// Writes atomically: a crash mid-resolution leaves the previous lockfile
 /// untouched, never a torn one.
 pub fn write(path: &Path, resolution: &Resolution) -> Result<(), LockfileError> {
-    write_atomic(
+    write_rendered(path, &render(resolution)?)
+}
+
+/// [`write`], for a caller that has to know the lockfile renders before it
+/// writes something else that only makes sense alongside it.
+pub fn write_rendered(path: &Path, rendered: &str) -> Result<(), LockfileError> {
+    write_atomic_via(
         path,
-        render(resolution)?.as_bytes(),
+        &temp_path(path),
+        rendered.as_bytes(),
         Some(FAULT_BEFORE_RENAME),
     )
     .map_err(|source| LockfileError::io(path, source))
+}
+
+/// The file a lockfile at `path` is written to before it is renamed into
+/// place: `opal.lock.tmp`, beside it.
+///
+/// One fixed name, where every other atomic write in opal takes a unique
+/// one, because this one lands in the user's project. A kill mid-write
+/// leaves it behind, and a name that says whose it is can be cleaned up by
+/// the next install; a unique one would sit in `git status` for good. The
+/// project lock is what makes one name enough.
+pub fn temp_path(path: &Path) -> PathBuf {
+    let mut name = path.file_name().unwrap_or_default().to_os_string();
+    name.push(".tmp");
+    path.with_file_name(name)
 }
 
 /// Refuses a value the format cannot hold.

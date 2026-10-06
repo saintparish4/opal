@@ -15,6 +15,10 @@
 //! time; the level is then resolved one request after another, exactly as if
 //! nothing had been fetched ahead. The order selections are made in is the
 //! result, so that order never depends on which response arrived first.
+//!
+//! A resolve that replaces a lockfile starts from it ([`Seed`]): a request
+//! the lockfile already answered gets that answer again, and only what the
+//! manifest newly asks for is answered by the registry.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::convert::Infallible;
@@ -24,6 +28,7 @@ use std::sync::Arc;
 use crate::integrity::Integrity;
 use crate::manifest::{DependencyClass, Manifest, Spec};
 use crate::parallel;
+use crate::progress::{Progress, Silent};
 use crate::registry::{Packument, Registry, RegistryError, VersionMetadata};
 use crate::semver::{Range, Version};
 
@@ -212,25 +217,192 @@ impl Default for ResolveOptions {
     }
 }
 
+/// What a resolve starts from besides the manifest.
+///
+/// Without one, every requirement is answered by the registry as it stands
+/// today, so a lockfile re-resolved after any edit to `package.json` comes
+/// back with every package the registry has moved since it was written.
+/// Adding one dependency to a five-week-old Next.js lockfile changed 63 of
+/// its 435 packages that way. npm and bun both keep what is locked instead.
+#[derive(Default)]
+pub struct Seed<'a> {
+    /// The lockfile being replaced. A requirement it answered is answered
+    /// the same way again, and one it never saw takes a version it holds
+    /// before the registry is asked for a new one.
+    pub locked: Option<&'a Resolution>,
+    /// Root requirements the caller has already resolved, by the name the
+    /// project requires them under. `opal add` names a package to get what
+    /// the registry has now, so these are never answered from `locked`, and
+    /// every other requirement on that package moves to the same version
+    /// wherever its range allows, so naming a package does not leave a
+    /// second copy of it behind.
+    pub pinned: BTreeMap<String, Version>,
+}
+
 pub fn resolve(
     registry: &dyn Registry,
     root: &Manifest,
     options: &ResolveOptions,
 ) -> Result<Resolution, ResolveError> {
+    resolve_reporting(registry, root, options, &Silent)
+}
+
+/// [`resolve`], saying how far it has got. What is reported never feeds back
+/// into a decision, so the resolution is the same one `resolve` returns.
+pub fn resolve_reporting(
+    registry: &dyn Registry,
+    root: &Manifest,
+    options: &ResolveOptions,
+    progress: &dyn Progress,
+) -> Result<Resolution, ResolveError> {
+    resolve_from(registry, root, options, &Seed::default(), progress)
+}
+
+/// [`resolve_reporting`], keeping what `seed` already settled.
+///
+/// The seed is an input like the manifest is: the same manifest, seed, and
+/// registry give the same resolution, and a resolution seeded with itself
+/// under an unchanged manifest comes back as it was.
+pub fn resolve_from(
+    registry: &dyn Registry,
+    root: &Manifest,
+    options: &ResolveOptions,
+    seed: &Seed<'_>,
+    progress: &dyn Progress,
+) -> Result<Resolution, ResolveError> {
     Resolver {
         registry,
+        progress,
         selected: BTreeMap::new(),
         packages: BTreeMap::new(),
         expanded: BTreeSet::new(),
         skipped: Vec::new(),
         root_versions: BTreeMap::new(),
         refused: BTreeMap::new(),
+        kept: Kept::of(seed, root, options),
+        pinned: &seed.pinned,
     }
     .run(root, options)
 }
 
+/// The version a package named on the command line installs at.
+///
+/// Asked of the registry and never of a lockfile. A bare name means the
+/// `latest` tag, as it does to npm, deprecated or not: the user named the
+/// package, so the tag is the answer and the warning is theirs to read.
+pub fn named(
+    registry: &dyn Registry,
+    name: &str,
+    spec: Option<&Spec>,
+) -> Result<Version, ResolveError> {
+    let package = match spec {
+        Some(Spec::Alias { package, .. }) => package.as_str(),
+        _ => name,
+    };
+    let packument = registry.packument(package)?;
+    let tagged = |tag: &str| {
+        packument
+            .dist_tags
+            .get(tag)
+            .and_then(|version| packument.version(version))
+    };
+    let chosen = match spec {
+        Some(Spec::Range(range) | Spec::Alias { range, .. }) => pick(&packument, range),
+        Some(Spec::Tag(tag)) => tagged(tag),
+        Some(Spec::Unsupported(spec)) => {
+            return Err(ResolveError::UnsupportedSpec {
+                name: name.to_string(),
+                spec: spec.clone(),
+            });
+        }
+        None => tagged("latest").or_else(|| {
+            packument
+                .versions()
+                .rev()
+                .find_map(|version| packument.version(version))
+        }),
+    };
+    chosen
+        .map(|metadata| metadata.version)
+        .ok_or_else(|| ResolveError::NoMatchingVersion {
+            name: name.to_string(),
+            spec: spec.map_or_else(|| "latest".to_string(), Spec::to_string),
+            available: packument.published(),
+        })
+}
+
+/// What a replaced lockfile settled, as the resolver consults it.
+#[derive(Default)]
+struct Kept<'a> {
+    /// Each root requirement the manifest still declares as the lockfile
+    /// recorded it, as (name, spec), with the version it resolved to.
+    roots: BTreeMap<(String, String), Version>,
+    packages: Option<&'a BTreeMap<PackageId, ResolvedPackage>>,
+    /// Every locked version of each package, for a request the lockfile
+    /// never saw. All of them, including one only a removed requirement led
+    /// to: npm and bun both answer a new request from whatever the lockfile
+    /// holds, and a version nothing asks for again is simply not selected.
+    versions: BTreeMap<&'a str, BTreeSet<&'a Version>>,
+    /// package -> the version a pinned root resolved it to.
+    named: BTreeMap<String, Version>,
+}
+
+impl<'a> Kept<'a> {
+    fn of(seed: &Seed<'a>, root: &Manifest, options: &ResolveOptions) -> Self {
+        let mut kept = Self::default();
+        for requirement in root.installable(options.include_development) {
+            let Some(version) = seed.pinned.get(&requirement.name) else {
+                continue;
+            };
+            let package = match &requirement.spec {
+                Spec::Alias { package, .. } => package,
+                _ => &requirement.name,
+            };
+            // Two names pinned onto one package at different versions is an
+            // alias beside the package itself; the higher is the one other
+            // requirements are moved to.
+            kept.named
+                .entry(package.clone())
+                .and_modify(|named| *named = version.clone().max(named.clone()))
+                .or_insert_with(|| version.clone());
+        }
+
+        let Some(locked) = seed.locked else {
+            return kept;
+        };
+        kept.packages = Some(&locked.packages);
+        for id in locked.packages.keys() {
+            kept.versions
+                .entry(id.name.as_str())
+                .or_default()
+                .insert(&id.version);
+        }
+        for requirement in root.installable(options.include_development) {
+            let spec = requirement.spec.to_string();
+            let recorded = locked
+                .requirements
+                .iter()
+                .find(|record| record.name == requirement.name && record.spec == spec);
+            if let Some(RequirementRecord {
+                version: Some(version),
+                ..
+            }) = recorded
+            {
+                kept.roots
+                    .insert((requirement.name.clone(), spec), version.clone());
+            }
+        }
+        kept
+    }
+
+    fn package(&self, id: &PackageId) -> Option<&'a ResolvedPackage> {
+        self.packages?.get(id)
+    }
+}
+
 struct Resolver<'a> {
     registry: &'a dyn Registry,
+    progress: &'a dyn Progress,
     /// name -> versions chosen so far, highest last.
     selected: BTreeMap<String, BTreeSet<Version>>,
     packages: BTreeMap<PackageId, ResolvedPackage>,
@@ -243,6 +415,8 @@ struct Resolver<'a> {
     /// package -> the error a fetch ahead of its level came back with, held
     /// until the sequential pass reaches that package.
     refused: BTreeMap<String, RegistryError>,
+    kept: Kept<'a>,
+    pinned: &'a BTreeMap<String, Version>,
 }
 
 /// One unit of work: resolve `name @ spec`, requested by `parent`.
@@ -303,11 +477,21 @@ impl<'a> Resolver<'a> {
         // One level at a time, each in the order it was queued, with the next
         // level collected behind it: the order a single first-in, first-out
         // queue would give.
+        let mut known = 0;
         while !level.is_empty() {
-            self.fetch_ahead(&level, options.concurrent_requests);
+            let unseen = self.fetch_ahead(&level, options.concurrent_requests);
+            // Each name nothing has selected yet is about to add a package.
+            // A second version of a name already selected adds one too, and
+            // only shows once it is chosen, hence the `max` in the loop.
+            // Held to its own high-water mark so the total never steps back
+            // while the count is still climbing.
+            known = known.max(self.packages.len() + unseen);
 
             for request in std::mem::take(&mut level) {
-                let Some(version) = self.select(&request)? else {
+                let selected = self.select(&request)?;
+                let settled = self.packages.len();
+                self.progress.resolving(settled, known.max(settled));
+                let Some(version) = selected else {
                     continue;
                 };
                 let id = PackageId::new(request.package.clone(), version);
@@ -356,6 +540,11 @@ impl<'a> Resolver<'a> {
             }
         }
 
+        // The estimate can end above what was found (an optional package the
+        // registry doesn't have never arrives), so the last word is the count.
+        let total = self.packages.len();
+        self.progress.resolving(total, total);
+
         for requirement in &mut requirements {
             requirement.version = self
                 .root_versions
@@ -384,7 +573,9 @@ impl<'a> Resolver<'a> {
     /// Only packages nothing has selected yet are fetched. The first request
     /// for one of those always asks the registry, so this never makes a
     /// request the sequential pass would not have made.
-    fn fetch_ahead(&mut self, level: &[Request], threads: usize) {
+    ///
+    /// Returns how many such packages the level names, fetched ahead or not.
+    fn fetch_ahead(&mut self, level: &[Request], threads: usize) -> usize {
         let wanted: BTreeSet<&str> = level
             .iter()
             .filter(|request| !matches!(request.spec, Spec::Unsupported(_)))
@@ -394,7 +585,7 @@ impl<'a> Resolver<'a> {
         let wanted: Vec<&str> = wanted.into_iter().collect();
         let threads = threads.min(wanted.len());
         if threads < 2 {
-            return;
+            return wanted.len();
         }
 
         let registry = self.registry;
@@ -410,6 +601,7 @@ impl<'a> Resolver<'a> {
             },
         );
         self.refused.extend(refused.into_iter().flatten());
+        wanted.len()
     }
 
     fn packument(&mut self, package: &str) -> Result<Arc<Packument>, RegistryError> {
@@ -442,6 +634,31 @@ impl<'a> Resolver<'a> {
             }
         };
 
+        // An answer already given comes before reuse. Reuse would move an
+        // edge the lockfile settled onto whichever satisfying version this
+        // run selected first, and a lockfile seeded with itself would stop
+        // coming back the same.
+        let mut packument = None;
+        if let Some(version) = self.answered(request, range.as_ref()) {
+            let selected = self
+                .selected
+                .get(&request.package)
+                .is_some_and(|versions| versions.contains(&version));
+            if selected {
+                return Ok(Some(version));
+            }
+            let Some(offered) = self.packument_for(request)? else {
+                return Ok(None);
+            };
+            // A version the registry has withdrawn is not kept: its edges
+            // would read as none, and its dependencies would drop out of the
+            // tree without a word. The request is answered afresh instead.
+            if let Some(metadata) = offered.version(&version) {
+                return Ok(Some(self.record(request, metadata)));
+            }
+            packument = Some(offered);
+        }
+
         // Reuse before fetching: an already-selected version that satisfies the
         // range keeps the tree flat and the install small.
         if let Some(range) = &range
@@ -451,22 +668,36 @@ impl<'a> Resolver<'a> {
             return Ok(Some(reused.clone()));
         }
 
-        let packument = match self.packument(&request.package) {
-            Ok(packument) => packument,
-            Err(RegistryError::NotFound(name)) if request.optional => {
-                self.skipped.push((name, "not in the registry".to_string()));
-                return Ok(None);
-            }
-            Err(error) => return Err(error.into()),
+        let packument = match packument {
+            Some(packument) => packument,
+            None => match self.packument_for(request)? {
+                Some(packument) => packument,
+                None => return Ok(None),
+            },
         };
 
-        let chosen = match (&range, &request.spec) {
-            (Some(range), _) => pick(&packument, range),
-            (None, Spec::Tag(tag)) => packument
+        // What reuse would have found had the lockfile's packages been
+        // selected already. They are selected level by level like everything
+        // else, so a new request can arrive before the version it should
+        // share.
+        let kept = range.as_ref().and_then(|range| {
+            self.kept
+                .versions
+                .get(request.package.as_str())?
+                .iter()
+                .rev()
+                .filter(|version| range.satisfies(version))
+                .find_map(|version| packument.version(version))
+        });
+
+        let chosen = match (kept, &range, &request.spec) {
+            (Some(kept), _, _) => Some(kept),
+            (None, Some(range), _) => pick(&packument, range),
+            (None, None, Spec::Tag(tag)) => packument
                 .dist_tags
                 .get(tag)
                 .and_then(|version| packument.version(version)),
-            (None, _) => None,
+            (None, None, _) => None,
         };
         let Some(metadata) = chosen else {
             if request.optional {
@@ -483,23 +714,80 @@ impl<'a> Resolver<'a> {
             });
         };
 
+        Ok(Some(self.record(request, metadata)))
+    }
+
+    /// The version this request was already given: by the caller for a root
+    /// it resolved itself, or by the lockfile being replaced for a request
+    /// that lockfile answered and the manifest still makes.
+    fn answered(&self, request: &Request, range: Option<&Range>) -> Option<Version> {
+        if request.parent.is_none()
+            && let Some(pinned) = self.pinned.get(&request.name)
+        {
+            return Some(pinned.clone());
+        }
+        // Ahead of the lockfile's own answer: the package was named to get
+        // this version, and a dependent left on the old one would keep a
+        // second copy in the tree for no reason its range gives.
+        if let Some(range) = range
+            && let Some(named) = self.kept.named.get(&request.package)
+            && range.satisfies(named)
+        {
+            return Some(named.clone());
+        }
+        let spec = request.spec.to_string();
+        match &request.parent {
+            None => self.kept.roots.get(&(request.name.clone(), spec)).cloned(),
+            Some(parent) => self
+                .kept
+                .package(parent)?
+                .dependencies
+                .iter()
+                .find(|edge| edge.name == request.name && edge.spec == spec)
+                .map(|edge| edge.version.clone()),
+        }
+    }
+
+    /// The packument a request is answered from, or `None` once an optional
+    /// dependency the registry does not have is recorded as skipped.
+    fn packument_for(&mut self, request: &Request) -> Result<Option<Arc<Packument>>, ResolveError> {
+        match self.packument(&request.package) {
+            Ok(packument) => Ok(Some(packument)),
+            Err(RegistryError::NotFound(name)) if request.optional => {
+                self.skipped.push((name, "not in the registry".to_string()));
+                Ok(None)
+            }
+            Err(error) => Err(error.into()),
+        }
+    }
+
+    fn record(&mut self, request: &Request, metadata: VersionMetadata) -> Version {
         let version = metadata.version.clone();
         let id = PackageId::new(request.package.clone(), version.clone());
+        let kept = &self.kept;
         self.packages
             .entry(id.clone())
-            .or_insert_with(|| ResolvedPackage {
-                id,
-                tarball: metadata.tarball,
-                integrity: metadata.integrity,
-                dependencies: Vec::new(),
-                os: metadata.manifest.os,
-                cpu: metadata.manifest.cpu,
+            .or_insert_with(|| match kept.package(&id) {
+                // The lockfile's record, not the registry's, so the integrity
+                // a download is checked against stays the one that was locked.
+                Some(locked) => ResolvedPackage {
+                    dependencies: Vec::new(),
+                    ..(*locked).clone()
+                },
+                None => ResolvedPackage {
+                    id,
+                    tarball: metadata.tarball,
+                    integrity: metadata.integrity,
+                    dependencies: Vec::new(),
+                    os: metadata.manifest.os,
+                    cpu: metadata.manifest.cpu,
+                },
             });
         self.selected
             .entry(request.package.clone())
             .or_default()
             .insert(version.clone());
-        Ok(Some(version))
+        version
     }
 
     fn dependencies_of(

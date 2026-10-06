@@ -27,7 +27,7 @@ body:
     attributes:
       label: Opal version
       description: What `opal --version` prints. If you built it from source, add the commit.
-      placeholder: opal 0.3.1
+      placeholder: opal 0.4.0
     validations:
       required: true
   - type: dropdown

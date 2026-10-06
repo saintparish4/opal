@@ -1,0 +1,25 @@
+# Tokens for `cargo +nightly fuzz run edit -- -dict=edit.dict`.
+# The four groups an edit reads, and one that only looks like one.
+"\"dependencies\""
+"\"devDependencies\""
+"\"optionalDependencies\""
+"\"peerDependencies\""
+"\"bundleDependencies\""
+# The names and ranges the target edits with, so a manifest can hold them.
+"\"a\""
+"\"ms\""
+"\"left-pad\""
+"\"@scope/pkg\""
+"\"z.z\""
+"\"^1.2.3\""
+"npm:other@^4.0.0"
+# JSON, written the ways a rewrite could mangle.
+"{}"
+"[]"
+"null"
+"1e3"
+"\\u00e9"
+"\\/"
+"\x0d\x0a"
+"\x09"
+"\xef\xbb\xbf"

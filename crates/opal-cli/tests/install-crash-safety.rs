@@ -7,6 +7,11 @@
 //! mid-verify, mid-rename, mid-link, mid-lockfile-write. Those are only the
 //! stages someone thought to instrument, so one test also kills at random
 //! moments to find the ones nobody did.
+//!
+//! `opal add` and `opal remove` write one file more, `package.json`, and
+//! write it before `opal.lock`. Their tests hold the two states a kill can
+//! leave between those writes: neither file changed, or the manifest ahead
+//! of the lockfile, which a plain `opal install` finishes.
 
 use std::collections::BTreeMap;
 use std::io::{BufRead, BufReader, Read as _};
@@ -19,6 +24,10 @@ use opal_core::hash::ContentHash;
 use opal_pm::fixtures::{FixtureRegistry, Package, write_project};
 
 const OPAL: &str = env!("CARGO_BIN_EXE_opal");
+
+/// Reached only by a run that edits `package.json`: the new manifest is
+/// written and not yet renamed into place.
+const BEFORE_MANIFEST_RENAME: &str = "pm-before-manifest-rename";
 
 /// Every stage a kill can land in, named by the code under test.
 const FAULT_POINTS: &[&str] = &[
@@ -144,9 +153,14 @@ impl World {
     }
 
     fn command(&self) -> Command {
+        self.opal(&["install"])
+    }
+
+    /// `opal <arguments>` against this world's project, cache, and registry.
+    fn opal(&self, arguments: &[&str]) -> Command {
         let mut command = Command::new(OPAL);
         command
-            .arg("install")
+            .args(arguments)
             .arg("--root")
             .arg(&self.project)
             .arg("--cache-dir")
@@ -157,21 +171,30 @@ impl World {
     }
 
     fn install(&self) {
-        let output = self.command().output().expect("run opal install");
+        self.run(&["install"]);
+    }
+
+    fn run(&self, arguments: &[&str]) {
+        let output = self.opal(arguments).output().expect("run opal");
         assert!(
             output.status.success(),
-            "install failed: {}",
+            "opal {arguments:?} failed: {}",
             String::from_utf8_lossy(&output.stderr)
         );
     }
 
-    /// Runs an install that parks at `point`, and SIGKILLs it there.
+    fn install_killed_at(&self, point: &str) -> bool {
+        self.killed_at(&["install"], point)
+    }
+
+    /// Runs `opal <arguments>` so that it parks at `point`, and SIGKILLs it
+    /// there.
     ///
     /// Returns whether the point was reached — a stage can legitimately not
     /// occur on a given run, and a test that assumed otherwise would be lying.
-    fn install_killed_at(&self, point: &str) -> bool {
+    fn killed_at(&self, arguments: &[&str], point: &str) -> bool {
         let mut child = self
-            .command()
+            .opal(arguments)
             .env(FAULT_ENV, point)
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
@@ -204,8 +227,12 @@ impl World {
     /// install finished before its kill arrived would pass as a soak of
     /// kills that interrupted nothing.
     fn install_killed_after(&self, delay: Duration) -> Landed {
+        self.killed_after(&["install"], delay)
+    }
+
+    fn killed_after(&self, arguments: &[&str], delay: Duration) -> Landed {
         let mut child = self
-            .command()
+            .opal(arguments)
             .stdout(Stdio::null())
             .stderr(Stdio::piped())
             .spawn()
@@ -218,8 +245,9 @@ impl World {
             return Landed::AfterFinishing;
         }
 
-        // Stderr is not a terminal here, so each stage announced itself on a
-        // line of its own, and the last one printed is the stage that died.
+        // Stderr is not a terminal here, so progress is whole lines, and
+        // there are two: one as the command starts, one when a resolve ends.
+        // The last one read is as closely as a kill can be placed.
         let mut announced = String::new();
         let _ = child
             .stderr
@@ -228,14 +256,13 @@ impl World {
             .read_to_string(&mut announced);
         let stage = announced.lines().rev().find_map(|line| {
             [
-                ("Resolving", Landed::Resolving),
-                ("Installing", Landed::Fetching),
-                ("Linking", Landed::Linking),
+                ("opal ", Landed::Started),
+                ("Resolving", Landed::AfterResolving),
             ]
             .into_iter()
             .find_map(|(prefix, landed)| line.starts_with(prefix).then_some(landed))
         });
-        stage.unwrap_or(Landed::BeforeAnyStage)
+        stage.unwrap_or(Landed::BeforeAnyOutput)
     }
 
     /// Starts an install and waits for it to park at `point`, leaving it alive
@@ -284,13 +311,36 @@ impl World {
         output.status.success()
     }
 
+    fn manifest(&self) -> String {
+        std::fs::read_to_string(self.project.join("package.json")).expect("package.json")
+    }
+
+    fn lockfile(&self) -> String {
+        std::fs::read_to_string(self.project.join("opal.lock")).unwrap_or_default()
+    }
+
+    /// What is in the project directory itself, by name.
+    fn in_the_project_root(&self) -> Vec<String> {
+        let mut names: Vec<String> = std::fs::read_dir(&self.project)
+            .expect("list the project")
+            .filter_map(Result::ok)
+            .map(|entry| entry.file_name().to_string_lossy().to_string())
+            .collect();
+        names.sort();
+        names
+    }
+
     /// Everything an install is responsible for, in a comparable form.
     fn snapshot(&self) -> BTreeMap<String, String> {
         let mut entries = BTreeMap::new();
+        // By name, so a temp file a killed write left in the project and
+        // nothing cleared afterwards is a difference like any other.
         entries.insert(
-            "opal.lock".to_string(),
-            std::fs::read_to_string(self.project.join("opal.lock")).unwrap_or_default(),
+            "(the project root)".to_string(),
+            self.in_the_project_root().join(" "),
         );
+        entries.insert("package.json".to_string(), self.manifest());
+        entries.insert("opal.lock".to_string(), self.lockfile());
         walk(
             &self.project.join("node_modules"),
             &self.project,
@@ -466,11 +516,13 @@ impl SplitMix64 {
 /// Where in an install a timed kill arrived.
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 enum Landed {
-    /// Starting up, reading the manifest and lockfile, or taking the locks.
-    BeforeAnyStage,
-    Resolving,
-    Fetching,
-    Linking,
+    /// Before the first line, which the command prints as it starts.
+    BeforeAnyOutput,
+    /// Anywhere up to the end of a resolve. A run the lockfile answers
+    /// resolves nothing, so for one of those this is anywhere at all.
+    Started,
+    /// Fetching or linking, in a run that resolved.
+    AfterResolving,
     /// The install had already exited, so the kill interrupted nothing.
     AfterFinishing,
 }
@@ -577,6 +629,262 @@ fn test_a_killed_install_never_leaves_a_torn_lockfile() {
             .expect("parse")
             .is_some()
     );
+}
+
+/// What a project that only depends on `a` gains: a package with a bin to
+/// link, and one whose `shared@2` has to nest beside `a`'s `shared@1`.
+const ADDED: &[&str] = &["add", "b", "tool"];
+const BEFORE_ADDING: &[(&str, &str)] = &[("a", "^1.0.0")];
+
+/// A world installed with [`BEFORE_ADDING`], and not yet changed.
+fn world_before_adding(fixtures: &Fixtures) -> World {
+    let world = World::depending_on(fixtures, BEFORE_ADDING);
+    world.install();
+    world
+}
+
+#[test]
+fn test_a_kill_before_the_manifest_is_renamed_leaves_both_files_as_they_were() {
+    let fixtures = Fixtures::new();
+    let reference = world_before_adding(&fixtures);
+    reference.run(ADDED);
+
+    let world = world_before_adding(&fixtures);
+    let before = (world.manifest(), world.lockfile());
+    assert!(
+        world.killed_at(ADDED, BEFORE_MANIFEST_RENAME),
+        "the manifest rewrite was never reached"
+    );
+
+    assert_eq!(
+        (world.manifest(), world.lockfile()),
+        before,
+        "a kill before either rename must change neither file"
+    );
+    // What the kill does leave is the file it was about to rename, under a
+    // name that says whose it is.
+    assert_eq!(
+        world.in_the_project_root(),
+        [
+            "node_modules",
+            "opal.lock",
+            "package.json",
+            "package.json.opal-tmp"
+        ]
+    );
+    world.run(ADDED);
+    assert_eq!(world.snapshot(), reference.snapshot());
+}
+
+#[test]
+fn test_the_next_run_clears_what_a_killed_write_left_in_the_project() {
+    let fixtures = Fixtures::new();
+    let untouched = world_before_adding(&fixtures);
+
+    // Killed with `package.json.opal-tmp` written. A plain install has no
+    // reason to write the manifest, so nothing but a sweep would remove it.
+    let world = world_before_adding(&fixtures);
+    assert!(world.killed_at(ADDED, BEFORE_MANIFEST_RENAME));
+    world.install();
+    assert_eq!(world.snapshot(), untouched.snapshot());
+
+    // Killed with `opal.lock.tmp` written, on a first install.
+    let world = World::depending_on(&fixtures, BEFORE_ADDING);
+    assert!(world.install_killed_at("pm-before-lockfile-rename"));
+    assert_eq!(
+        world.in_the_project_root(),
+        ["node_modules", "opal.lock.tmp", "package.json"]
+    );
+    world.install();
+    assert_eq!(world.snapshot(), untouched.snapshot());
+}
+
+#[test]
+fn test_a_kill_between_the_manifest_and_the_lockfile_is_finished_by_a_plain_install() {
+    let fixtures = Fixtures::new();
+    let reference = world_before_adding(&fixtures);
+    reference.run(ADDED);
+
+    let world = world_before_adding(&fixtures);
+    let locked_before = world.lockfile();
+    assert!(
+        world.killed_at(ADDED, "pm-before-lockfile-rename"),
+        "the lockfile rewrite was never reached"
+    );
+
+    // The one state the write order allows in between: the manifest already
+    // asks for the new packages, and the lockfile is whole and still the old
+    // one. Never the reverse, which the next install would quietly undo.
+    assert_eq!(world.manifest(), reference.manifest());
+    assert_eq!(world.lockfile(), locked_before);
+
+    world.install();
+    assert_eq!(
+        world.snapshot(),
+        reference.snapshot(),
+        "a plain install did not finish what the killed add started"
+    );
+}
+
+#[test]
+fn test_an_add_killed_at_any_stage_converges() {
+    let fixtures = Fixtures::new();
+    let reference = world_before_adding(&fixtures);
+    reference.run(ADDED);
+    let expected = reference.snapshot();
+
+    let mut reached_any = false;
+    for point in std::iter::once(&BEFORE_MANIFEST_RENAME).chain(FAULT_POINTS) {
+        // Repeating the command is always a way to recover. A plain install
+        // is one too, once the manifest holds the change.
+        for recovery in [ADDED, &["install"]] {
+            let world = world_before_adding(&fixtures);
+            let reached = world.killed_at(ADDED, point);
+            reached_any |= reached;
+            assert!(world.cache_is_clean(), "{point}: cache failed verification");
+            if recovery == ["install"] && world.manifest() != reference.manifest() {
+                continue;
+            }
+
+            world.run(recovery);
+            assert!(
+                world.cache_is_clean(),
+                "{point}: cache dirty after recovery"
+            );
+            assert_eq!(
+                world.snapshot(),
+                expected,
+                "{point}: `opal {recovery:?}` did not converge on the clean state"
+            );
+        }
+    }
+    assert!(
+        reached_any,
+        "no fault point was reached — the pipeline moved out from under this test"
+    );
+}
+
+#[test]
+fn test_a_remove_killed_at_any_stage_converges() {
+    const REMOVED: &[&str] = &["remove", "b", "tool"];
+    let fixtures = Fixtures::new();
+    let reference = World::new(&fixtures);
+    reference.install();
+    reference.run(REMOVED);
+    let expected = reference.snapshot();
+
+    let mut reached_any = false;
+    for point in std::iter::once(&BEFORE_MANIFEST_RENAME).chain(FAULT_POINTS) {
+        let world = World::new(&fixtures);
+        world.install();
+        reached_any |= world.killed_at(REMOVED, point);
+        assert!(world.cache_is_clean(), "{point}: cache failed verification");
+
+        // Once the manifest no longer lists them, removing them again is an
+        // error by design, and a plain install is what finishes the job.
+        if world.manifest() == reference.manifest() {
+            world.install();
+        } else {
+            world.run(REMOVED);
+        }
+        assert_eq!(
+            world.snapshot(),
+            expected,
+            "{point}: re-running did not converge on the clean state"
+        );
+    }
+    assert!(
+        reached_any,
+        "no fault point was reached — the pipeline moved out from under this test"
+    );
+}
+
+#[test]
+fn test_adds_killed_at_random_moments_converge() {
+    // Replay a failure with the OPAL_CHAOS_SEED it prints; run longer with
+    // OPAL_CHAOS_TRIALS.
+    let seed = env_number("OPAL_CHAOS_SEED").unwrap_or_else(|| {
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map(|elapsed| elapsed.as_nanos() as u64)
+            .unwrap_or_default()
+    });
+    let trials = env_number("OPAL_CHAOS_TRIALS").unwrap_or(12);
+    let mut random = SplitMix64(seed);
+
+    const ADDED: &[&str] = &["add", "b", "tool", "x", "y", "z"];
+    let fixtures = Fixtures::chaos();
+    let reference = world_before_adding(&fixtures);
+    let started = Instant::now();
+    reference.run(ADDED);
+    let window = started.elapsed().as_micros() as u64 * 5 / 4;
+    let expected = reference.snapshot();
+    let mut landed: BTreeMap<Landed, usize> = BTreeMap::new();
+
+    for trial in 0..trials {
+        let world = world_before_adding(&fixtures);
+        let delays: Vec<Duration> = (0..1 + random.below(3))
+            .map(|_| Duration::from_micros(random.below(window)))
+            .collect();
+        let context = format!("OPAL_CHAOS_SEED={seed}, trial {trial}, killed after {delays:?}");
+
+        for delay in &delays {
+            *landed.entry(world.killed_after(ADDED, *delay)).or_default() += 1;
+            assert!(
+                world.cache_is_clean(),
+                "{context}: cache failed verification"
+            );
+            // Whenever the kill landed, both files are whole: each is
+            // replaced by one rename or not at all.
+            serde_json::from_str::<serde_json::Value>(&world.manifest())
+                .unwrap_or_else(|error| panic!("{context}: package.json is torn: {error}"));
+            opal_pm::lockfile::read(&world.project.join("opal.lock"))
+                .unwrap_or_else(|error| panic!("{context}: opal.lock is torn: {error}"));
+        }
+        world.run(ADDED);
+        assert_eq!(
+            world.snapshot(),
+            expected,
+            "{context}: re-running did not converge on the clean state"
+        );
+    }
+
+    let kills: usize = landed.values().sum();
+    let interrupted = kills - landed.get(&Landed::AfterFinishing).copied().unwrap_or(0);
+    println!(
+        "OPAL_CHAOS_SEED={seed}: {kills} kills over {trials} trials, {interrupted} interrupted a running add: {landed:?}"
+    );
+    assert!(
+        interrupted > 0,
+        "OPAL_CHAOS_SEED={seed}: all {kills} kills arrived after the add had finished"
+    );
+}
+
+#[test]
+fn test_concurrent_adds_both_land() {
+    let fixtures = Fixtures::new();
+    let reference = world_before_adding(&fixtures);
+    reference.run(ADDED);
+    let expected = reference.snapshot();
+
+    // Each reads `package.json`, edits what it read, and writes it back. Read
+    // before the lock is held, the second to finish would write a manifest
+    // without the first one's package in it.
+    for _ in 0..8 {
+        let world = world_before_adding(&fixtures);
+        let first = world.opal(&["add", "b"]).spawn().expect("spawn first");
+        let second = world.opal(&["add", "tool"]).spawn().expect("spawn second");
+
+        let outputs = [first, second].map(|child| child.wait_with_output().expect("wait"));
+        for output in &outputs {
+            assert!(
+                output.status.success(),
+                "a racing add failed: {}",
+                String::from_utf8_lossy(&output.stderr)
+            );
+        }
+        assert_eq!(world.snapshot(), expected);
+    }
 }
 
 #[test]

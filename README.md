@@ -1,7 +1,7 @@
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset=".github/assets/opal-logo-horizontal-white.svg">
-    <img src=".github/assets/opal-logo-horizontal-ink.svg" alt="Opal" width="400">
+    <source media="(prefers-color-scheme: dark)" srcset=".github/assets/opal-horizontal-paper.svg">
+    <img src=".github/assets/opal-horizontal-ink.svg" alt="Opal" width="400">
   </picture>
 </p>
 
@@ -15,6 +15,9 @@ The first of those tools is the package manager, and it works today. It picks th
 
 ```bash
 opal install                     # install the dependencies in package.json
+opal add express                 # add a dependency (also: opal install express)
+opal add -D typescript@^5        # add a devDependency at a range you choose
+opal remove express              # remove one
 ```
 
 The `opal` command-line tool also lets you inspect a project's module graph and the shared store. Installs are crash-safe: if one is killed partway through, running `opal install` again finishes the job.
@@ -75,15 +78,36 @@ There's no canary channel; every release is a tagged [GitHub Release](https://gi
 
 ## Usage
 
-Opal has four commands today: `opal install`, `opal graph`, `opal cache`, and `opal upgrade`. Run `opal <command> --help` to see their flags.
+Opal has six commands today: `opal install`, `opal add`, `opal remove`, `opal graph`, `opal cache`, and `opal upgrade`. Run `opal <command> --help` to see their flags.
 
 Commit `opal.lock`. In CI, run `opal install --frozen-lockfile`, which installs exactly what `opal.lock` records and fails instead of changing it.
 
-`add`, `remove`, `update`, `why`, `outdated`, `audit`, and `publish` aren't implemented yet, so the binary doesn't have them. A command that exists and does nothing is worse than one that doesn't exist.
+### Adding and removing dependencies
+
+`opal add <package>` writes the dependency to `package.json`, updates `opal.lock`, and installs it. `opal install <package>` does the same thing. `opal remove <package>` (or `opal rm`) takes it out of every dependency group and out of `node_modules`.
+
+```bash
+opal add express                 # the latest release, saved as a ^ range on it
+opal add express@4.21.2          # a version you typed is saved as typed: 4.21.2
+opal add 'express@^4.0.0'        # and so is a range: ^4.0.0
+opal add -D vitest               # devDependencies (-O for optionalDependencies)
+opal add -E zod                  # the exact version instead of a ^ range
+opal add old-ms@npm:ms@^2.0.0    # an alias
+```
+
+- **Only what you name moves.** Every other package keeps the version in `opal.lock`, even when the registry has something newer. The same holds after you edit `package.json` by hand and run `opal install`.
+- **A package you name gets what the registry has now**, and anything else that depends on it moves to that same version when its range allows, so you don't end up with two copies.
+- **`package.json` keeps its formatting.** Indentation, line endings, key order, and everything outside the dependency group being edited are written back as they were. The edited group is sorted by name.
+- **Nothing is written unless the change resolves.** A mistyped package name or a range nothing satisfies leaves `package.json` and `opal.lock` untouched. So does `opal remove` of a name that isn't a dependency, which is an error and not a silent success.
+- **To re-resolve everything from scratch**, delete `opal.lock` and run `opal install`.
+
+Not supported yet, and planned for v0.5.0: `--peer`, `--global`, `git:` and `file:` specifiers, and `opal add` in a directory that has no `package.json`.
+
+`update`, `why`, `outdated`, `audit`, and `publish` aren't implemented yet, so the binary doesn't have them. A command that exists and does nothing is worse than one that doesn't exist.
 
 ## Benchmarks
 
-Opal against npm, pnpm, yarn, and bun, each installing the same `package.json`. Measured 2026-09-26 with [`benchmarks/compare-pms.py`](./benchmarks/compare-pms.py), in four scenarios:
+Opal against npm, pnpm, yarn, and bun, each installing the same `package.json`. Measured 2026-10-05 with [`benchmarks/compare-pms.py`](./benchmarks/compare-pms.py). Four of its six scenarios are shown here:
 
 - **cold**: no lockfile, cache, or `node_modules` (a first install)
 - **ci**: a lockfile, but no cache or `node_modules` (a fresh CI runner)
@@ -92,47 +116,48 @@ Opal against npm, pnpm, yarn, and bun, each installing the same `package.json`. 
 
 Each number is the median of 3 runs (cold, ci) or 5 (warm, noop); fastest in bold. Every tool gets its own copy of the project and its own empty cache, the tools take turns so a network swing hits all of them, and install scripts are off for all five. Machine: AMD Ryzen 5 5625U (WSL limited to 8 of 12 threads), 16 GB RAM, Linux under WSL2, Node 24.19.0.
 
+These were measured with a build of the v0.4.0 source made before the release was tagged, not with the release binary. They will be re-measured with the release binary on two machines.
+
 **express** (68 packages)
 
 | | cold | ci | warm | noop | Peak memory (cold) |
 |---|---|---|---|---|---|
-| opal 0.3.0 | 8.24s | 5.55s | 101ms | 21ms | **15 MB** |
-| npm 11.17.0 | 1.88s | 1.04s | 636ms | 355ms | 153 MB |
-| pnpm 11.17.0 | 1.45s | 1.25s | 788ms | 505ms | 329 MB |
-| yarn 1.22.22 | 1.71s | 1.32s | 598ms | 290ms | 160 MB |
-| bun 1.3.14 | **519ms** | **328ms** | **77ms** | **11ms** | 40 MB |
+| opal 0.4.0 | 964ms | **546ms** | 103ms | 26ms | 33 MB |
+| npm 12.0.2 | 1.60s | 906ms | 600ms | 347ms | 162 MB |
+| pnpm 11.21.0 | 1.32s | 1.03s | 732ms | 449ms | 329 MB |
+| yarn 1.22.22 | 1.60s | 1.16s | 528ms | 256ms | 161 MB |
+| bun 1.4.2 | **617ms** | 733ms | **62ms** | **6ms** | **26 MB** |
 
 **Next.js 16.3.2**, the `create-next-app` defaults (about 360 packages)
 
 | | cold | ci | warm | noop | Peak memory (cold) |
 |---|---|---|---|---|---|
-| opal 0.3.0 | 124.59s | 100.81s | **1.08s** | 96ms | **285 MB** |
-| npm 11.17.0 | 29.44s | 16.25s | 13.46s | 734ms | 416 MB |
-| pnpm 11.17.0 | 22.42s | 17.15s | 2.70s | 595ms | 1,884 MB |
-| yarn 1.22.22 | 59.98s | 53.90s | 6.70s | 414ms | 633 MB |
-| bun 1.3.14 | **19.27s** | **13.52s** | 1.32s | **22ms** | 565 MB |
+| opal 0.4.0 | 29.34s | 22.32s | **874ms** | 72ms | 475 MB |
+| npm 12.0.2 | 26.37s | **12.79s** | 10.80s | 625ms | 437 MB |
+| pnpm 11.21.0 | 21.51s | 17.72s | 2.23s | 465ms | 1,917 MB |
+| yarn 1.22.22 | 59.26s | 53.13s | 5.48s | 349ms | 659 MB |
+| bun 1.4.2 | **20.02s** | 14.46s | 1.08s | **16ms** | **241 MB** |
 
-Across both machines (the second is an Intel Core i9-9900K, 16 threads):
-
-- **First installs and CI are where Opal loses.** It's 4–7× slower than npm on a cold install and 5–13× slower on CI, because it downloads packages one at a time. The gap is widest on Next.js's large downloads, and it depends on the network. Parallel downloads are the next thing being built.
-- **Reinstalls are where it wins.** A warm install is 6× faster than npm on express and 12–18× on Next.js, where it's roughly tied with bun. A no-op install is 17–18× (express) and 8–10× (Next.js) faster than npm; bun is faster still.
-- **It uses the least memory of the five** on every cold install.
+- **Reinstalls are where it wins.** A warm install is 6× faster than npm on express and 12× on Next.js, where it is level with bun (one of Opal's five runs took 1.86s). A no-op install is 13× (express) and 9× (Next.js) faster than npm; bun is faster still.
+- **A first install of a large app is level with npm and behind pnpm and bun.** On Next.js, Opal's cold install took 29.34s against npm's 26.37s, and their ranges overlap; pnpm is 1.4× faster and bun 1.5×. On express, Opal is ahead of npm, pnpm, and yarn.
+- **CI on a large app is where it loses.** With a lockfile and an empty cache, Opal is 1.7× slower than npm on Next.js, 1.3× slower than pnpm, and 1.5× slower than bun. Nearly all of that install is the download. v0.3.0, which downloaded one package at a time, was 6–13× slower than npm on this install.
+- **Memory:** bun uses the least on both projects. Opal is second on express and third on Next.js.
 - On Next.js, opal, yarn, and bun also download six musl builds that npm and pnpm skip (see [Limitations](#limitations)), which adds to their cold and CI times.
 
 Absolute times vary between sessions and machines, so compare tools within one table rather than across tables.
 
-The full method, min–max ranges, the second machine's tables, and how to reproduce every number are in [benchmarks/BENCHMARKS.md](./benchmarks/BENCHMARKS.md).
+The full method, min–max ranges, the other two scenarios (CI with a restored cache, adding a package), disk usage, earlier releases' tables, and how to reproduce every number are in [benchmarks/BENCHMARKS.md](./benchmarks/BENCHMARKS.md).
 
 ## Limitations
 
 Worth knowing before you point Opal at a project:
 
-- **First installs and CI installs are slower than npm's**, 4–7× on a cold install and up to 13× on CI in the [benchmarks](#benchmarks), because packages download one at a time. Linking already runs in parallel; parallel downloads are next.
+- **CI installs of a large app are slower than npm's**: 1.7× on a Next.js app with a lockfile and an empty cache in the [benchmarks](#benchmarks). Downloads run 16 at a time since v0.4.0, and the download is still nearly all of that install.
+- **`opal add` and `opal remove` ask the registry about every package in the tree**, not only the one being changed. On a Next.js app (418 package names) an add takes about half a second when that metadata was fetched in the last five minutes, about 2s when it is older and has to be rechecked, and 5–7s when it isn't cached at all, as on a machine that installed from a lockfile. npm takes under a second in each case.
 - **Lifecycle scripts (`preinstall`/`install`/`postinstall`) do not run.** Packages shipping prebuilt binaries (`esbuild`, `sharp`, `@next/swc`) work; a package that needs `node-gyp` to compile at install time installs but does not build. `opal install` says so on every run: it names each dependency whose install scripts were skipped (including native addons that declare none and rely on npm running `node-gyp rebuild` for their `binding.gyp`), and the project's own lifecycle scripts, `prepare` included.
 - **`libc` isn't checked.** On Linux with glibc (most distributions), Opal also installs the musl builds of native packages, which npm and pnpm skip. On a Next.js app that's six extra packages and 124 MB, 91 MB of it `@next/swc-linux-x64-musl`. A glibc system doesn't use them, but they cost download time and disk.
 - **Peers are recorded and classified, never auto-installed.**
 - **Versions can differ slightly from npm's.** Opal reuses a version already in the tree whenever it satisfies a range, where npm sometimes adds a newer copy: on a Next.js app, that's one package (`postcss` 8.5.23, where npm also installs 8.5.28). Opal doesn't prefer versions whose `engines` match your Node, which npm does. And it doesn't honor `bundleDependencies`: packages a dependency ships inside its own tarball are also resolved and downloaded from the registry, though Node still loads the bundled copy.
-- **Changing `package.json` re-resolves the whole tree.** Adding one dependency can move unrelated packages to newer versions, where npm keeps each locked version that still satisfies its range.
 - **`package-lock.json` is ignored.** In a project npm already installed, the first `opal install` resolves every version and downloads every package again.
 - **`git:` and `file:` specifiers are unsupported** and reported as such; dependencies come from a registry only.
 - **If your project and cache sit on different filesystems** (a project on `/mnt/c` under WSL2 with the default cache, for instance), every file is copied instead of hardlinked and the install warns. Keep both on the same filesystem, or set `OPAL_CACHE_DIR` to a directory on the project's filesystem to move the shared store there.

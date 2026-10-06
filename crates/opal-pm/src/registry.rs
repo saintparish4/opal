@@ -55,8 +55,21 @@ pub enum RegistryError {
     NotCached(String),
 }
 
+/// Hears a response body arrive, for a caller that wants to show it arriving.
+///
+/// `Sync` because the transport that calls it is shared between threads. It
+/// only ever hears; nothing it is told changes what is downloaded.
+pub trait BodyObserver: Sync {
+    /// A response has begun. `total` is its `Content-Length` when the server
+    /// sent one. A retried request begins again, and so does the count.
+    fn started(&self, total: Option<u64>);
+
+    /// `bytes` more of the body are here.
+    fn received(&self, bytes: u64);
+}
+
 /// One request to whatever is standing in for the network.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy)]
 pub struct Request<'a> {
     pub url: &'a str,
     /// Set for metadata, absent for tarballs — which is also how a caller can
@@ -64,6 +77,10 @@ pub struct Request<'a> {
     pub accept: Option<&'a str>,
     /// Revalidates rather than re-downloads when the server agrees.
     pub etag: Option<&'a str>,
+    /// Told about the body as it is read. Carried on the request so that a
+    /// transport wrapped around another (retries, the benchmark's meter)
+    /// passes it down without knowing it exists.
+    pub observer: Option<&'a dyn BodyObserver>,
 }
 
 #[derive(Clone, Debug)]
@@ -139,7 +156,7 @@ impl Transport for HttpTransport {
         match request.url.strip_prefix("file://") {
             // A local file has no validators and no staleness worth modelling.
             Some(path) => Ok(Fetched::Fresh(Response {
-                body: read_file(request.url, path)?,
+                body: read_file(request.url, path, request.observer)?,
                 etag: None,
                 max_age: None,
             })),
@@ -341,6 +358,16 @@ pub trait Registry: Sync {
     fn packument(&self, name: &str) -> Result<Arc<Packument>, RegistryError>;
     fn tarball(&self, url: &str) -> Result<Vec<u8>, RegistryError>;
 
+    /// [`Registry::tarball`], reporting the download to `observer` as it
+    /// happens. A registry with no wire to watch reports nothing.
+    fn tarball_observed(
+        &self,
+        url: &str,
+        _observer: &dyn BodyObserver,
+    ) -> Result<Vec<u8>, RegistryError> {
+        self.tarball(url)
+    }
+
     /// A packument if one is already here, and never a request.
     ///
     /// For facts worth reporting but not worth waiting for — a deprecation
@@ -471,6 +498,7 @@ impl NpmRegistry {
             url,
             accept: Some(ABBREVIATED_PACKUMENT),
             etag: cached.as_ref().and_then(|record| record.etag.as_deref()),
+            observer: None,
         };
         let fetched = match self.transport.get(&request) {
             Ok(fetched) => fetched,
@@ -533,6 +561,24 @@ impl Registry for NpmRegistry {
     }
 
     fn tarball(&self, url: &str) -> Result<Vec<u8>, RegistryError> {
+        self.fetch_tarball(url, None)
+    }
+
+    fn tarball_observed(
+        &self,
+        url: &str,
+        observer: &dyn BodyObserver,
+    ) -> Result<Vec<u8>, RegistryError> {
+        self.fetch_tarball(url, Some(observer))
+    }
+}
+
+impl NpmRegistry {
+    fn fetch_tarball(
+        &self,
+        url: &str,
+        observer: Option<&dyn BodyObserver>,
+    ) -> Result<Vec<u8>, RegistryError> {
         // Offline is offline. The store already answered "do I have this"
         // before the pipeline asked for a tarball at all, so reaching here
         // means it is genuinely missing and there is no local way to get it.
@@ -545,6 +591,7 @@ impl Registry for NpmRegistry {
             url,
             accept: None,
             etag: None,
+            observer,
         })? {
             Fetched::Fresh(response) => Ok(response.body),
             Fetched::NotModified => Err(RegistryError::Transport {
@@ -555,7 +602,11 @@ impl Registry for NpmRegistry {
     }
 }
 
-fn read_file(url: &str, path: &str) -> Result<Vec<u8>, RegistryError> {
+fn read_file(
+    url: &str,
+    path: &str,
+    observer: Option<&dyn BodyObserver>,
+) -> Result<Vec<u8>, RegistryError> {
     let file = std::fs::File::open(path).map_err(|source| match source.kind() {
         std::io::ErrorKind::NotFound => RegistryError::Status {
             url: url.to_string(),
@@ -566,7 +617,10 @@ fn read_file(url: &str, path: &str) -> Result<Vec<u8>, RegistryError> {
             message: source.to_string(),
         },
     })?;
-    read_chunked(url, file)
+    if let Some(observer) = observer {
+        observer.started(file.metadata().ok().map(|metadata| metadata.len()));
+    }
+    read_chunked(url, file, observer)
 }
 
 fn read_http(agent: &ureq::Agent, request: &Request<'_>) -> Result<Fetched, RegistryError> {
@@ -605,8 +659,12 @@ fn read_http(agent: &ureq::Agent, request: &Request<'_>) -> Result<Fetched, Regi
     let max_age = header(&response, "cache-control")
         .as_deref()
         .and_then(max_age_of);
+    if let Some(observer) = request.observer {
+        let total = header(&response, "content-length").and_then(|length| length.parse().ok());
+        observer.started(total);
+    }
     Ok(Fetched::Fresh(Response {
-        body: read_chunked(url, response.body_mut().as_reader())?,
+        body: read_chunked(url, response.body_mut().as_reader(), request.observer)?,
         etag,
         max_age,
     }))
@@ -643,7 +701,11 @@ fn max_age_of(value: &str) -> Option<Duration> {
 }
 
 /// Reads in chunks so the download has an interruptible midpoint.
-fn read_chunked(url: &str, mut reader: impl Read) -> Result<Vec<u8>, RegistryError> {
+fn read_chunked(
+    url: &str,
+    mut reader: impl Read,
+    observer: Option<&dyn BodyObserver>,
+) -> Result<Vec<u8>, RegistryError> {
     let mut bytes = Vec::new();
     let mut buffer = vec![0u8; CHUNK_BYTES];
     let mut first = true;
@@ -658,6 +720,9 @@ fn read_chunked(url: &str, mut reader: impl Read) -> Result<Vec<u8>, RegistryErr
             break;
         }
         bytes.extend_from_slice(&buffer[..read]);
+        if let Some(observer) = observer {
+            observer.received(read as u64);
+        }
         if first {
             first = false;
             fault::checkpoint(FAULT_MID_DOWNLOAD);
@@ -792,6 +857,7 @@ mod tests {
             url: "https://registry.example/demo",
             accept: None,
             etag: None,
+            observer: None,
         })
     }
 

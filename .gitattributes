@@ -46,3 +46,6 @@ node_modules/**    -diff linguist-vendored
 base/**          export-ignore
 .gitattributes   export-ignore
 .gitignore       export-ignore
+
+# --- Fuzz seeds: inputs are exact bytes (a CRLF or a BOM is the point of a seed) ---
+fuzz/seeds/**  -text

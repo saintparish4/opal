@@ -192,7 +192,15 @@ impl Manifest {
             path: path.display().to_string(),
             source,
         })?;
-        let value: Value = serde_json::from_str(&text).map_err(|source| ManifestError::Json {
+        Self::parse(path, &text)
+    }
+
+    /// A manifest from text already read; `path` only names it in an error.
+    pub fn parse(path: &Path, text: &str) -> Result<Self, ManifestError> {
+        // Editors on Windows still write a byte-order mark, which JSON does
+        // not allow and npm reads past.
+        let text = text.strip_prefix('\u{feff}').unwrap_or(text);
+        let value: Value = serde_json::from_str(text).map_err(|source| ManifestError::Json {
             path: path.display().to_string(),
             source,
         })?;
@@ -385,6 +393,18 @@ mod tests {
 
     fn manifest(json: serde_json::Value) -> Manifest {
         Manifest::from_value(&json)
+    }
+
+    #[test]
+    fn test_a_byte_order_mark_is_read_past() {
+        let manifest = Manifest::parse(
+            Path::new("package.json"),
+            "\u{feff}{ \"name\": \"app\", \"dependencies\": { \"ms\": \"^2.0.0\" } }",
+        )
+        .expect("a manifest behind a byte-order mark parses");
+
+        assert_eq!(manifest.name.as_deref(), Some("app"));
+        assert_eq!(manifest.class_of("ms"), Some(DependencyClass::Runtime));
     }
 
     #[test]

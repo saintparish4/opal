@@ -210,6 +210,7 @@ fn fetch(
         url,
         accept,
         etag: None,
+        observer: None,
     };
     match transport.get(&request)? {
         Fetched::Fresh(response) => Ok(response.body),

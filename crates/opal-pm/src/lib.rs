@@ -1,4 +1,5 @@
 pub mod diagnose;
+pub mod edit;
 #[cfg(feature = "fixtures")]
 pub mod fixtures;
 pub mod gc;

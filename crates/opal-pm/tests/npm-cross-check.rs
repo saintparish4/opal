@@ -40,16 +40,29 @@
 //! A `known_difference` test failing means the difference grew, shrank, or
 //! was fixed. Whichever it is, it's a decision about that difference and an
 //! edit to the expectation, not a retry.
+//!
+//! **A locked project is a different question from a fresh one.** Everything
+//! above resolves a manifest from nothing. `opal add` and `opal remove` start
+//! from a lockfile, and what they must agree with npm about is what *stays*:
+//! the last test walks one project through a sequence of changes with both
+//! tools, installing for real, and compares the trees after every step.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::io::Write as _;
 use std::process::{Command, Stdio};
 
+use opal_core::cache::CacheRoot;
+use opal_pm::edit::AddRequest;
+use opal_pm::install::{self, Change, InstallOptions};
+use opal_pm::lockfile;
 use opal_pm::manifest::{Manifest, Spec};
+use opal_pm::package::PackageStore;
+use opal_pm::progress::Silent;
+use opal_pm::projects::ProjectIndex;
 use opal_pm::registry::{NpmRegistry, Packument};
 use opal_pm::resolve::{self, Resolution, ResolveOptions};
 use opal_pm::semver::{Range, Version};
-use serde_json::Value;
+use serde_json::{Value, json};
 
 /// npm lockfile v3 `packages`: `""` is the project, every other key a
 /// `node_modules` placement.
@@ -673,4 +686,218 @@ fn test_npm_pick_manifest_agrees_on_version_preference() {
         failures.len(),
         failures[..failures.len().min(20)].join("\n  ")
     );
+}
+
+/// One project, changed step by step by both tools.
+struct Twins {
+    directory: tempfile::TempDir,
+    store: PackageStore,
+    projects: ProjectIndex,
+}
+
+/// One change to a project, as each tool is told to make it.
+enum Step {
+    /// `package.json` rewritten by hand, then a plain install.
+    Edit(Value),
+    Add(&'static str),
+    Remove(&'static str),
+}
+
+impl Twins {
+    fn new() -> Self {
+        let directory = tempfile::tempdir().expect("temp dir");
+        let cache = CacheRoot::at(directory.path().join("cache"));
+        let store = PackageStore::open(cache.open_cas().expect("cas"), cache.path())
+            .expect("package store");
+        let projects = ProjectIndex::new(cache.path().join("projects")).expect("project index");
+        for tool in ["npm", "opal"] {
+            std::fs::create_dir_all(directory.path().join(tool)).expect("create project");
+        }
+        Self {
+            directory,
+            store,
+            projects,
+        }
+    }
+
+    fn project(&self, tool: &str) -> std::path::PathBuf {
+        self.directory.path().join(tool)
+    }
+
+    fn npm(&self, arguments: &[&str]) {
+        let output = Command::new("npm")
+            .current_dir(self.project("npm"))
+            .args(arguments)
+            // Scripts off and peers recorded, which is what opal does. The
+            // tree is installed for real: npm reads `node_modules` as well
+            // as its lockfile when deciding what to keep.
+            .args([
+                "--ignore-scripts",
+                "--legacy-peer-deps",
+                "--prefer-online",
+                "--no-audit",
+                "--no-fund",
+            ])
+            .output()
+            .expect("run npm; these tests need it on PATH");
+        assert!(
+            output.status.success(),
+            "npm {arguments:?} failed: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+    }
+
+    fn opal(&self, change: Option<Change>) {
+        let registry = NpmRegistry::discover();
+        let (project, options) = (self.project("opal"), InstallOptions::default());
+        let report = match &change {
+            Some(change) => install::change(
+                &project,
+                change,
+                &registry,
+                &self.store,
+                &self.projects,
+                &options,
+                &Silent,
+            ),
+            None => install::install(
+                &project,
+                &registry,
+                &self.store,
+                &self.projects,
+                &options,
+                &Silent,
+            ),
+        };
+        report.unwrap_or_else(|error| panic!("opal failed: {error}"));
+    }
+
+    fn take(&self, step: &Step) {
+        match step {
+            Step::Edit(manifest) => {
+                for tool in ["npm", "opal"] {
+                    std::fs::write(
+                        self.project(tool).join("package.json"),
+                        serde_json::to_vec_pretty(manifest).expect("serializable"),
+                    )
+                    .expect("write package.json");
+                }
+                self.npm(&["install"]);
+                self.opal(None);
+            }
+            Step::Add(argument) => {
+                self.npm(&["install", argument]);
+                self.opal(Some(Change::Add {
+                    requests: vec![AddRequest::parse(argument).expect("a well-formed request")],
+                    group: None,
+                    exact: false,
+                }));
+            }
+            Step::Remove(name) => {
+                self.npm(&["uninstall", name]);
+                self.opal(Some(Change::Remove {
+                    names: vec![(*name).to_string()],
+                }));
+            }
+        }
+    }
+
+    /// Every `name@version` npm's lockfile places, wherever it places it.
+    fn npm_tree(&self) -> BTreeSet<String> {
+        let lock: Value = serde_json::from_slice(
+            &std::fs::read(self.project("npm").join("package-lock.json"))
+                .expect("package-lock.json"),
+        )
+        .expect("lockfile JSON");
+        lock["packages"]
+            .as_object()
+            .expect("a lockfile v3 `packages` map")
+            .iter()
+            .filter_map(|(placement, entry)| {
+                let (_, name) = placement.rsplit_once("node_modules/")?;
+                Some(format!("{name}@{}", entry["version"].as_str()?))
+            })
+            .collect()
+    }
+
+    fn opal_tree(&self) -> BTreeSet<String> {
+        lockfile::read(&lockfile::path_in(&self.project("opal")))
+            .expect("opal.lock parses")
+            .expect("opal.lock exists")
+            .packages
+            .keys()
+            .map(ToString::to_string)
+            .collect()
+    }
+
+    fn declared(&self, tool: &str, name: &str) -> Value {
+        let manifest: Value = serde_json::from_slice(
+            &std::fs::read(self.project(tool).join("package.json")).expect("package.json"),
+        )
+        .expect("package.json parses");
+        manifest["dependencies"][name].clone()
+    }
+}
+
+/// The versions here are pinned low on purpose. `ansi-styles` has a 4.3.0 and
+/// `ms` a 2.1.3, so at every step there is a newer version each tool could
+/// move to, and the test is that neither moves anything it was not told to.
+#[test]
+#[ignore = "reaches the public registry and needs npm"]
+fn test_npm_agrees_at_every_step_of_changing_a_locked_project() {
+    let steps = [
+        (
+            "a pinned install",
+            Step::Edit(json!({
+                "name": "locked",
+                "version": "1.0.0",
+                "dependencies": { "ansi-styles": "4.1.0", "chalk": "4.1.0", "ms": "2.0.0" }
+            })),
+        ),
+        (
+            "a pin loosened by hand keeps its version",
+            Step::Edit(json!({
+                "name": "locked",
+                "version": "1.0.0",
+                "dependencies": { "ansi-styles": "4.1.0", "chalk": "4.1.0", "ms": "^2.0.0" }
+            })),
+        ),
+        (
+            "removing a root leaves what another package still needs where it was",
+            Step::Remove("ansi-styles"),
+        ),
+        (
+            "adding something unrelated moves nothing",
+            Step::Add("is-number"),
+        ),
+        ("naming a package that is present moves it", Step::Add("ms")),
+        (
+            "moving a package by name leaves its dependencies where they were",
+            Step::Add("chalk@4.1.2"),
+        ),
+        (
+            "naming a dependency moves its dependents to the same copy",
+            Step::Add("ansi-styles@4.2.0"),
+        ),
+    ];
+
+    let twins = Twins::new();
+    println!("npm {}", npm_version());
+    for (what, step) in &steps {
+        twins.take(step);
+        let (npm, opal) = (twins.npm_tree(), twins.opal_tree());
+        println!(
+            "{what}: {}",
+            opal.iter().cloned().collect::<Vec<_>>().join(" ")
+        );
+        assert_eq!(opal, npm, "{what}: opal (left) and npm (right) disagree");
+    }
+
+    // A bare name is saved the same way by both. A typed version is not, on
+    // purpose: npm widens `chalk@4.1.2` to `^4.1.2`, and opal keeps the pin.
+    for name in ["is-number", "ms"] {
+        assert_eq!(twins.declared("opal", name), twins.declared("npm", name));
+    }
+    assert_eq!(twins.declared("npm", "chalk"), "^4.1.2");
+    assert_eq!(twins.declared("opal", "chalk"), "4.1.2");
 }

@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Blog — Opal</title>
+  <meta name="description" content="Release notes and writing about Opal, a JavaScript toolkit built on one module graph.">
+  <meta property="og:title" content="Opal blog">
+  <meta property="og:description" content="Release notes and writing about Opal.">
+  <meta property="og:image" content="../assets/opal-banner-light.jpg">
+  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0d0a0c" media="(prefers-color-scheme: dark)">
+  <link rel="icon" href="../assets/favicon.ico" sizes="any">
+  <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=Martian+Mono:wdth,wght@75..112.5,400..700&display=swap">
+  <link rel="alternate" type="application/rss+xml" title="Opal blog" href="rss.xml">
+  <link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+
+  <header class="nav">
+    <div class="wrap nav-row">
+      <a class="logo" href="../#top" aria-label="Opal home">
+        <picture>
+          <source media="(prefers-color-scheme: dark)" srcset="../assets/opal-horizontal-paper.svg">
+          <img src="../assets/opal-horizontal-ink.svg" alt="Opal" width="160" height="44">
+        </picture>
+      </a>
+      <nav aria-label="Primary">
+        <a href="../#tools">Tools</a>
+        <a href="../#minute">Quickstart</a>
+        <a href="../#install-bench">Benchmarks</a>
+        <a href="../#limits">Limits</a>
+        <a href="./" aria-current="page">Blog</a>
+      </nav>
+      <button class="search-box" type="button" data-search aria-label="Search">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M20 20l-4.8-4.8"/></svg>
+        <span>Search sections and posts…</span>
+        <kbd aria-label="Slash">/</kbd>
+      </button>
+      <div class="nav-end">
+        <button class="search-icon" type="button" data-search aria-label="Search">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M20 20l-4.8-4.8"/></svg>
+        </button>
+        <a class="icon-link" href="https://github.com/saintparish4/opal" aria-label="Opal on GitHub">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 19c-4.3 1.4 -4.3 -2.5 -6 -3m12 5v-3.5c0 -1 .1 -1.4 -.5 -2c2.8 -.3 5.5 -1.4 5.5 -6a4.6 4.6 0 0 0 -1.3 -3.2a4.2 4.2 0 0 0 -.1 -3.2s-1.1 -.3 -3.5 1.3a12.3 12.3 0 0 0 -6.2 0c-2.4 -1.6 -3.5 -1.3 -3.5 -1.3a4.2 4.2 0 0 0 -.1 3.2a4.6 4.6 0 0 0 -1.3 3.2c0 4.6 2.7 5.7 5.5 6c-.6 .6 -.6 1.2 -.5 2v3.5"/></svg>
+        </a>
+        <!-- The Discord invite isn't set yet. -->
+        <a class="icon-link" href="../404.html?missing=Discord" aria-label="Opal on Discord">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 12a1 1 0 1 0 2 0a1 1 0 0 0 -2 0"/><path d="M14 12a1 1 0 1 0 2 0a1 1 0 0 0 -2 0"/><path d="M15.5 17c0 1 1.5 3 2 3c1.5 0 2.833 -1.667 3.5 -3c.667 -1.667 .5 -5.833 -1.5 -11.5c-1.457 -1.015 -3 -1.34 -4.5 -1.5l-.972 1.923a11.913 11.913 0 0 0 -4.053 0l-.975 -1.923c-1.5 .16 -3.043 .485 -4.5 1.5c-2 5.667 -2.167 9.833 -1.5 11.5c.667 1.333 2 3 3.5 3c.5 0 2 -2 2 -3"/><path d="M7 16.5c3.5 1 6.5 1 10 0"/></svg>
+        </a>
+        <a class="btn" href="../#install">Install</a>
+        <button class="menu-button" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="mobile-menu">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="square" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+        </button>
+      </div>
+    </div>
+    <div class="wrap mobile-menu" id="mobile-menu" hidden>
+      <nav aria-label="Menu">
+        <a href="../#tools">Tools</a>
+        <a href="../#minute">Quickstart</a>
+        <a href="../#install-bench">Benchmarks</a>
+        <a href="../#limits">Limits</a>
+        <a href="./" aria-current="page">Blog</a>
+      </nav>
+      <div class="mobile-menu-end">
+        <a class="menu-icon" href="https://github.com/saintparish4/opal" aria-label="Opal on GitHub"> <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 19c-4.3 1.4 -4.3 -2.5 -6 -3m12 5v-3.5c0 -1 .1 -1.4 -.5 -2c2.8 -.3 5.5 -1.4 5.5 -6a4.6 4.6 0 0 0 -1.3 -3.2a4.2 4.2 0 0 0 -.1 -3.2s-1.1 -.3 -3.5 1.3a12.3 12.3 0 0 0 -6.2 0c-2.4 -1.6 -3.5 -1.3 -3.5 -1.3a4.2 4.2 0 0 0 -.1 3.2a4.6 4.6 0 0 0 -1.3 3.2c0 4.6 2.7 5.7 5.5 6c-.6 .6 -.6 1.2 -.5 2v3.5"/></svg> GitHub</a>
+        <a class="menu-icon" href="../404.html?missing=Discord" aria-label="Opal on Discord"> <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 12a1 1 0 1 0 2 0a1 1 0 0 0 -2 0"/><path d="M14 12a1 1 0 1 0 2 0a1 1 0 0 0 -2 0"/><path d="M15.5 17c0 1 1.5 3 2 3c1.5 0 2.833 -1.667 3.5 -3c.667 -1.667 .5 -5.833 -1.5 -11.5c-1.457 -1.015 -3 -1.34 -4.5 -1.5l-.972 1.923a11.913 11.913 0 0 0 -4.053 0l-.975 -1.923c-1.5 .16 -3.043 .485 -4.5 1.5c-2 5.667 -2.167 9.833 -1.5 11.5c.667 1.333 2 3 3.5 3c.5 0 2 -2 2 -3"/><path d="M7 16.5c3.5 1 6.5 1 10 0"/></svg> Discord</a>
+      </div>
+    </div>
+  </header>
+
+  <main id="main">
+    <section class="wrap blog">
+      <div class="blog-top">
+        <h1>Blog</h1>
+        <a class="label rss" href="rss.xml">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true"><path d="M4 11h3.5l5.5 5.5V20"/><path d="M4 4h8l8 8v8"/><rect x="4" y="18" width="2" height="2" fill="currentColor"/></svg>
+          RSS
+        </a>
+      </div>
+
+      <a class="post-feature" href="opal-v0.3.1/">
+        <p class="label"><b class="tag">Latest</b> <time datetime="2026-09-27">September 27, 2026</time> · Release</p>
+        <h2>Opal v0.3.1</h2>
+        <p class="lede">Reworks what an install prints, adds <code>opal upgrade</code> to replace the binary in place, and says plainly when <code>opal.lock</code> is missing. The install path itself is unchanged from v0.3.0.</p>
+        <p class="post-by">Sharif</p>
+        <span class="post-go" aria-hidden="true">→</span>
+      </a>
+
+      <div class="post-count"><p class="label">Every post so far is a release</p><p class="label">5 posts</p></div>
+
+      <div class="post-year">
+        <h2>2026</h2>
+        <ol class="posts">
+          <li>
+            <time datetime="2026-09-19">Sep 19, 2026</time>
+            <div>
+              <h3><a href="opal-v0.3.0/">Opal v0.3.0</a> <span class="post-kind">Release</span></h3>
+              <p>Opal now installs the versions npm would: on a Next.js scaffold, 432 of npm's 433 package versions match. Linking runs in parallel, about 2.7× faster than v0.2.1, and an install names every package whose install scripts it didn't run.</p>
+              <p class="post-by">Sharif</p>
+            </div>
+          </li>
+          <li>
+            <time datetime="2026-08-29">Aug 29, 2026</time>
+            <div>
+              <h3><a href="opal-v0.2.1/">Opal v0.2.1</a> <span class="post-kind">Release</span></h3>
+              <p>A performance fix for one finding: a 367-package Next.js install spent most of its time parsing package metadata it never used. Version bodies are now parsed on demand, which took an offline install from 128.6s to 37.7s.</p>
+              <p class="post-by">Sharif</p>
+            </div>
+          </li>
+          <li>
+            <time datetime="2026-08-29">Aug 29, 2026</time>
+            <div>
+              <h3><a href="opal-v0.2.0/">Opal v0.2.0</a> <span class="post-kind">Release</span></h3>
+              <p>Correctness, speed, and visibility across the package manager. Four bugs fixed here produced a wrong <code>node_modules</code> without ever failing an install. <code>opal.lock</code> is now v3.</p>
+              <p class="post-by">Sharif</p>
+            </div>
+          </li>
+          <li>
+            <time datetime="2026-08-22">Aug 22, 2026</time>
+            <div>
+              <h3><a href="opal-v0.1.0/">Opal v0.1.0</a> <span class="post-kind">Release</span></h3>
+              <p>The first release: <code>opal install</code>, with prebuilt binaries for Linux and macOS and an install script.</p>
+              <p class="post-by">Sharif</p>
+            </div>
+          </li>
+        </ol>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap footer-grid">
+      <div class="footer-brand">
+        <a href="../" aria-label="Opal home"><img src="../assets/opal-horizontal-paper.svg" alt="Opal" width="160" height="44"></a>
+        <p>One binary for JavaScript, built on one module graph. An Opal × Bluesky Labs project.</p>
+        <div class="footer-social">
+          <a href="https://github.com/saintparish4/opal" aria-label="GitHub"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 19c-4.3 1.4 -4.3 -2.5 -6 -3m12 5v-3.5c0 -1 .1 -1.4 -.5 -2c2.8 -.3 5.5 -1.4 5.5 -6a4.6 4.6 0 0 0 -1.3 -3.2a4.2 4.2 0 0 0 -.1 -3.2s-1.1 -.3 -3.5 1.3a12.3 12.3 0 0 0 -6.2 0c-2.4 -1.6 -3.5 -1.3 -3.5 -1.3a4.2 4.2 0 0 0 -.1 3.2a4.6 4.6 0 0 0 -1.3 3.2c0 4.6 2.7 5.7 5.5 6c-.6 .6 -.6 1.2 -.5 2v3.5"/></svg></a>
+          <a href="../404.html?missing=Discord" aria-label="Discord"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 12a1 1 0 1 0 2 0a1 1 0 0 0 -2 0"/><path d="M14 12a1 1 0 1 0 2 0a1 1 0 0 0 -2 0"/><path d="M15.5 17c0 1 1.5 3 2 3c1.5 0 2.833 -1.667 3.5 -3c.667 -1.667 .5 -5.833 -1.5 -11.5c-1.457 -1.015 -3 -1.34 -4.5 -1.5l-.972 1.923a11.913 11.913 0 0 0 -4.053 0l-.975 -1.923c-1.5 .16 -3.043 .485 -4.5 1.5c-2 5.667 -2.167 9.833 -1.5 11.5c.667 1.333 2 3 3.5 3c.5 0 2 -2 2 -3"/><path d="M7 16.5c3.5 1 6.5 1 10 0"/></svg></a>
+          <a href="../404.html?missing=X+(Twitter)" aria-label="X (Twitter)"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4l11.733 16h4.267l-11.733 -16z"/><path d="M4 20l6.768 -6.768m2.46 -2.46l6.772 -6.772"/></svg></a>
+          <a href="../blog/rss.xml" aria-label="RSS feed"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true"><path d="M4 11h3.5l5.5 5.5V20"/><path d="M4 4h8l8 8v8"/><rect x="4" y="18" width="2" height="2" fill="currentColor"/></svg></a>
+        </div>
+      </div>
+      <!-- A link to 404.html?missing=… is a page that doesn't exist yet. It
+           keeps its place here so the footer's shape doesn't change when the
+           page is written; only the href does. -->
+      <nav aria-label="Product">
+        <p class="label">Product</p>
+        <a href="../404.html?missing=Documentation">Documentation</a>
+        <a href="../404.html?missing=Guides">Guides</a>
+        <a href="../404.html?missing=API+Reference">API Reference</a>
+        <a href="../blog/">Blog</a>
+        <a href="../#install">Install</a>
+      </nav>
+      <nav aria-label="Toolkit">
+        <p class="label">Toolkit</p>
+        <a href="../404.html?missing=Runtime">Runtime</a>
+        <a href="../#tools">Package manager</a>
+        <a href="../404.html?missing=Test+runner">Test runner</a>
+        <a href="../404.html?missing=Bundler">Bundler</a>
+      </nav>
+      <nav aria-label="Community">
+        <p class="label">Community</p>
+        <a href="https://github.com/saintparish4/opal">GitHub</a>
+        <a href="../404.html?missing=Discord">Discord</a>
+        <a href="../404.html?missing=X+(Twitter)">X (Twitter)</a>
+        <a href="../404.html?missing=Merch">Merch</a>
+      </nav>
+      <nav aria-label="Company">
+        <p class="label">Company</p>
+        <a href="../404.html?missing=Opal+×+Bluesky+Labs">Opal × Bluesky Labs</a>
+        <a href="../404.html?missing=Press+kit">Press kit</a>
+        <a href="https://github.com/saintparish4/opal/blob/master/LICENSE">License</a>
+      </nav>
+    </div>
+    <div class="wrap footer-base">
+      <p>Mined with <span class="heart" aria-label="love">♥</span> in NYC · © 2026 Bluesky Labs</p>
+    </div>
+  </footer>
+  <script src="../nav.js"></script>
+</body>
+</html>

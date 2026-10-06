@@ -1,0 +1,1313 @@
+{
+  "meta": {
+    "project": "express",
+    "date": "2026-10-04T17:43:46",
+    "host": "Linux 6.6.87.2-microsoft-standard-WSL2, 8 threads",
+    "memory": "               total        used        free      shared  buff/cache   available\nMem:           15994        1082       12449           3        2709       14912\nSwap:           8192           0        8192\n",
+    "node": "v24.19.0",
+    "versions": {
+      "opal": "0.3.1",
+      "npm": "11.17.0",
+      "pnpm": "11.17.0",
+      "yarn": "1.22.22",
+      "bun": "1.3.14"
+    },
+    "opal_binary": {
+      "path": "/home/saint/opal-bench/10d96c0-dirty/opal",
+      "sha256": "8fd770fea77a5124d3d250138a13b1a6cec105ad5e5645eaaff8bf205b928a95"
+    },
+    "rounds": {
+      "cold": 3,
+      "ci": 3,
+      "warm": 5,
+      "ci-cached": 5,
+      "noop": 5,
+      "add": 3
+    },
+    "commands": {
+      "opal": "/home/saint/opal-bench/10d96c0-dirty/opal install --cache-dir <work>/cache/opal",
+      "npm": "npm install --cache <work>/cache/npm --ignore-scripts --no-audit --no-fund --no-update-notifier",
+      "pnpm": "node /home/saint/.cache/node/corepack/v1/pnpm/11.17.0/bin/pnpm.mjs install --store-dir <work>/cache/pnpm-store --cache-dir <work>/cache/pnpm-cache --ignore-scripts --config.update-notifier=false",
+      "yarn": "yarn install --cache-folder <work>/cache/yarn --ignore-scripts --non-interactive",
+      "bun": "bun install --ignore-scripts"
+    }
+  },
+  "results": [
+    {
+      "scenario": "cold",
+      "round": 1,
+      "tool": "opal",
+      "wall": 0.8653459029992518,
+      "rss_mb": 31.50390625,
+      "exit": 0,
+      "runs": true,
+      "packages": 68,
+      "summary": "68 packages installed [849ms]  (resolve 458ms, fetch 317ms, link 67ms)"
+    },
+    {
+      "scenario": "cold",
+      "round": 1,
+      "tool": "npm",
+      "wall": 1.7656075019995114,
+      "rss_mb": 153.109375,
+      "exit": 0,
+      "runs": true,
+      "packages": 68
+    },
+    {
+      "scenario": "cold",
+      "round": 1,
+      "tool": "pnpm",
+      "wall": 1.4802964780001275,
+      "rss_mb": 328.9375,
+      "exit": 0,
+      "runs": true,
+      "packages": 66
+    },
+    {
+      "scenario": "cold",
+      "round": 1,
+      "tool": "yarn",
+      "wall": 1.5402277610000965,
+      "rss_mb": 161.51171875,
+      "exit": 0,
+      "runs": true,
+      "packages": 66
+    },
+    {
+      "scenario": "cold",
+      "round": 1,
+      "tool": "bun",
+      "wall": 1.2996292300003915,
+      "rss_mb": 40.2421875,
+      "exit": 0,
+      "runs": true,
+      "packages": 68
+    },
+    {
+      "scenario": "cold",
+      "round": 2,
+      "tool": "npm",
+      "wall": 1.573204674000408,
+      "rss_mb": 147.36328125,
+      "exit": 0,
+      "runs": true,
+      "packages": 68
+    },
+    {
+      "scenario": "cold",
+      "round": 2,
+      "tool": "pnpm",
+      "wall": 1.3132729859999017,
+      "rss_mb": 327.7734375,
+      "exit": 0,
+      "runs": true,
+      "packages": 66
+    },
+    {
+      "scenario": "cold",
+      "round": 2,
+      "tool": "yarn",
+      "wall": 1.6567277229996762,
+      "rss_mb": 160.98046875,
+      "exit": 0,
+      "runs": true,
+      "packages": 66
+    },
+    {
+      "scenario": "cold",
+      "round": 2,
+      "tool": "bun",
+      "wall": 1.0795535900006143,
+      "rss_mb": 39.5,
+      "exit": 0,
+      "runs": true,
+      "packages": 68
+    },
+    {
+      "scenario": "cold",
+      "round": 2,
+      "tool": "opal",
+      "wall": 0.8785184799999115,
+      "rss_mb": 30.9765625,
+      "exit": 0,
+      "runs": true,
+      "packages": 68,
+      "summary": "68 packages installed [853ms]  (resolve 459ms, fetch 320ms, link 67ms)"
+    },
+    {
+      "scenario": "cold",
+      "round": 3,
+      "tool": "pnpm",
+      "wall": 1.2608424760001071,
+      "rss_mb": 328.21484375,
+      "exit": 0,
+      "runs": true,
+      "packages": 66
+    },
+    {
+      "scenario": "cold",
+      "round": 3,
+      "tool": "yarn",
+      "wall": 1.444360964000225,
+      "rss_mb": 161.109375,
+      "exit": 0,
+      "runs": true,
+      "packages": 66
+    },
+    {
+      "scenario": "cold",
+      "round": 3,
+      "tool": "bun",
+      "wall": 0.41938432400002057,
+      "rss_mb": 40.375,
+      "exit": 0,
+      "runs": true,
+      "packages": 68
+    },
+    {
+      "scenario": "cold",
+      "round": 3,
+      "tool": "opal",
+      "wall": 0.8304429769996204,
+      "rss_mb": 33.6796875,
+      "exit": 0,
+      "runs": true,
+      "packages": 68,
+      "summary": "68 packages installed [807ms]  (resolve 417ms, fetch 317ms, link 66ms)"
+    },
+    {
+      "scenario": "cold",
+      "round": 3,
+      "tool": "npm",
+      "wall": 1.5345222630003263,
+      "rss_mb": 153.140625,
+      "exit": 0,
+      "runs": true,
+      "packages": 68
+    },
+    {
+      "scenario": "ci",
+      "round": 1,
+      "tool": "opal",
+      "wall": 0.445259881000311,
+      "rss_mb": 29.79296875,
+      "exit": 0,
+      "runs": true,
+      "packages": 68,
+      "summary": "68 packages installed [425ms]  (fetch 353ms, link 66ms)"
+    },
+    {
+      "scenario": "ci",
+      "round": 1,
+      "tool": "npm",
+      "wall": 0.8457110680001279,
+      "rss_mb": 130.29296875,
+      "exit": 0,
+      "runs": true,
+      "packages": 68
+    },
+    {
+      "scenario": "ci",
+      "round": 1,
+      "tool": "pnpm",
+      "wall": 1.0612988630000473,
+      "rss_mb": 336.71875,
+      "exit": 0,
+      "runs": true,
+      "packages": 66
+    },
+    {
+      "scenario": "ci",
+      "round": 1,
+      "tool": "yarn",
+      "wall": 1.10060432300088,
+      "rss_mb": 144.0859375,
+      "exit": 0,
+      "runs": true,
+      "packages": 66
+    },
+    {
+      "scenario": "ci",
+      "round": 1,
+      "tool": "bun",
+      "wall": 0.20509062499968422,
+      "rss_mb": 25.875,
+      "exit": 0,
+      "runs": true,
+      "packages": 68
+    },
+    {
+      "scenario": "ci",
+      "round": 2,
+      "tool": "npm",
+      "wall": 0.8665150570004698,
+      "rss_mb": 131.71484375,
+      "exit": 0,
+      "runs": true,
+      "packages": 68
+    },
+    {
+      "scenario": "ci",
+      "round": 2,
+      "tool": "pnpm",
+      "wall": 1.1529788199995892,
+      "rss_mb": 335.15234375,
+      "exit": 0,
+      "runs": true,
+      "packages": 66
+    },
+    {
+      "scenario": "ci",
+      "round": 2,
+      "tool": "yarn",
+      "wall": 1.2752302730004885,
+      "rss_mb": 144.36328125,
+      "exit": 0,
+      "runs": true,
+      "packages": 66
+    },
+    {
+      "scenario": "ci",
+      "round": 2,
+      "tool": "bun",
+      "wall": 0.21756507499958389,
+      "rss_mb": 25.875,
+      "exit": 0,
+      "runs": true,
+      "packages": 68
+    },
+    {
+      "scenario": "ci",
+      "round": 2,
+      "tool": "opal",
+      "wall": 0.4583386009999231,
+      "rss_mb": 28.984375,
+      "exit": 0,
+      "runs": true,
+      "packages": 68,
+      "summary": "68 packages installed [434ms]  (fetch 358ms, link 70ms)"
+    },
+    {
+      "scenario": "ci",
+      "round": 3,
+      "tool": "pnpm",
+      "wall": 1.085531845999867,
+      "rss_mb": 335.5234375,
+      "exit": 0,
+      "runs": true,
+      "packages": 66
+    },
+    {
+      "scenario": "ci",
+      "round": 3,
+      "tool": "yarn",
+      "wall": 1.1517730069999743,
+      "rss_mb": 144.0859375,
+      "exit": 0,
+      "runs": true,
+      "packages": 66
+    },
+    {
+      "scenario": "ci",
+      "round": 3,
+      "tool": "bun",
+      "wall": 0.28198083200004476,
+      "rss_mb": 25.875,
+      "exit": 0,
+      "runs": true,
+      "packages": 68
+    },
+    {
+      "scenario": "ci",
+      "round": 3,
+      "tool": "opal",
+      "wall": 0.451341167999999,
+      "rss_mb": 28.84765625,
+      "exit": 0,
+      "runs": true,
+      "packages": 68,
+      "summary": "68 packages installed [427ms]  (fetch 357ms, link 64ms)"
+    },
+    {
+      "scenario": "ci",
+      "round": 3,
+      "tool": "npm",
+      "wall": 0.8617287850001958,
+      "rss_mb": 130.11328125,
+      "exit": 0,
+      "runs": true,
+      "packages": 68
+    },
+    {
+      "scenario": "warm",
+      "round": 1,
+      "tool": "opal",
+      "wall": 0.08180887100024847,
+      "rss_mb": 25.875,
+      "exit": 0,
+      "runs": true,
+      "packages": 68,
+      "summary": "68 packages installed [78ms]  (fetch 1ms, link 66ms)"
+    },
+    {
+      "scenario": "warm",
+      "round": 1,
+      "tool": "npm",
+      "wall": 0.5753212299996449,
+      "rss_mb": 108.90234375,
+      "exit": 0,
+      "runs": true,
+      "packages": 68
+    },
+    {
+      "scenario": "warm",
+      "round": 1,
+      "tool": "pnpm",
+      "wall": 0.6796658229995955,
+      "rss_mb": 273.93359375,
+      "exit": 0,
+      "runs": true,
+      "packages": 66
+    },
+    {
+      "scenario": "warm",
+      "round": 1,
+      "tool": "yarn",
+      "wall": 0.5354687929993815,
+      "rss_mb": 120.796875,
+      "exit": 0,
+      "runs": true,
+      "packages": 66
+    },
+    {
+      "scenario": "warm",
+      "round": 1,
+      "tool": "bun",
+      "wall": 0.06683104100011406,
+      "rss_mb": 25.875,
+      "exit": 0,
+      "runs": true,
+      "packages": 68
+    },
+    {
+      "scenario": "warm",
+      "round": 2,
+      "tool": "npm",
+      "wall": 0.5756112389999544,
+      "rss_mb": 108.2734375,
+      "exit": 0,
+      "runs": true,
+      "packages": 68
+    },
+    {
+      "scenario": "warm",
+      "round": 2,
+      "tool": "pnpm",
+      "wall": 0.6687946050005849,
+      "rss_mb": 273.98046875,
+      "exit": 0,
+      "runs": true,
+      "packages": 66
+    },
+    {
+      "scenario": "warm",
+      "round": 2,
+      "tool": "yarn",
+      "wall": 0.5458229349997055,
+      "rss_mb": 119.96875,
+      "exit": 0,
+      "runs": true,
+      "packages": 66
+    },
+    {
+      "scenario": "warm",
+      "round": 2,
+      "tool": "bun",
+      "wall": 0.06677644599949417,
+      "rss_mb": 25.875,
+      "exit": 0,
+      "runs": true,
+      "packages": 68
+    },
+    {
+      "scenario": "warm",
+      "round": 2,
+      "tool": "opal",
+      "wall": 0.08668115000000398,
+      "rss_mb": 25.875,
+      "exit": 0,
+      "runs": true,
+      "packages": 68,
+      "summary": "68 packages installed [80ms]  (fetch 1ms, link 66ms)"
+    },
+    {
+      "scenario": "warm",
+      "round": 3,
+      "tool": "pnpm",
+      "wall": 0.7051010589993894,
+      "rss_mb": 274.26171875,
+      "exit": 0,
+      "runs": true,
+      "packages": 66
+    },
+    {
+      "scenario": "warm",
+      "round": 3,
+      "tool": "yarn",
+      "wall": 0.5295467619998817,
+      "rss_mb": 119.9140625,
+      "exit": 0,
+      "runs": true,
+      "packages": 66
+    },
+    {
+      "scenario": "warm",
+      "round": 3,
+      "tool": "bun",
+      "wall": 0.06726476999938313,
+      "rss_mb": 25.875,
+      "exit": 0,
+      "runs": true,
+      "packages": 68
+    },
+    {
+      "scenario": "warm",
+      "round": 3,
+      "tool": "opal",
+      "wall": 0.09173334600018279,
+      "rss_mb": 25.875,
+      "exit": 0,
+      "runs": true,
+      "packages": 68,
+      "summary": "68 packages installed [85ms]  (fetch 1ms, link 71ms)"
+    },
+    {
+      "scenario": "warm",
+      "round": 3,
+      "tool": "npm",
+      "wall": 0.5650916690001395,
+      "rss_mb": 109.4375,
+      "exit": 0,
+      "runs": true,
+      "packages": 68
+    },
+    {
+      "scenario": "warm",
+      "round": 4,
+      "tool": "yarn",
+      "wall": 0.5045460119999916,
+      "rss_mb": 119.5234375,
+      "exit": 0,
+      "runs": true,
+      "packages": 66
+    },
+    {
+      "scenario": "warm",
+      "round": 4,
+      "tool": "bun",
+      "wall": 0.06690171500031283,
+      "rss_mb": 25.875,
+      "exit": 0,
+      "runs": true,
+      "packages": 68
+    },
+    {
+      "scenario": "warm",
+      "round": 4,
+      "tool": "opal",
+      "wall": 0.08154596999975183,
+      "rss_mb": 25.875,
+      "exit": 0,
+      "runs": true,
+      "packages": 68,
+      "summary": "68 packages installed [78ms]  (fetch 1ms, link 64ms)"
+    },
+    {
+      "scenario": "warm",
+      "round": 4,
+      "tool": "npm",
+      "wall": 0.5606100770000921,
+      "rss_mb": 108.0,
+      "exit": 0,
+      "runs": true,
+      "packages": 68
+    },
+    {
+      "scenario": "warm",
+      "round": 4,
+      "tool": "pnpm",
+      "wall": 0.678599691999807,
+      "rss_mb": 273.6796875,
+      "exit": 0,
+      "runs": true,
+      "packages": 66
+    },
+    {
+      "scenario": "warm",
+      "round": 5,
+      "tool": "bun",
+      "wall": 0.06731959999979154,
+      "rss_mb": 25.875,
+      "exit": 0,
+      "runs": true,
+      "packages": 68
+    },
+    {
+      "scenario": "warm",
+      "round": 5,
+      "tool": "opal",
+      "wall": 0.0918288789998769,
+      "rss_mb": 25.875,
+      "exit": 0,
+      "runs": true,
+      "packages": 68,
+      "summary": "68 packages installed [87ms]  (fetch 1ms, link 74ms)"
+    },
+    {
+      "scenario": "warm",
+      "round": 5,
+      "tool": "npm",
+      "wall": 0.5708950170001117,
+      "rss_mb": 108.859375,
+      "exit": 0,
+      "runs": true,
+      "packages": 68
+    },
+    {
+      "scenario": "warm",
+      "round": 5,
+      "tool": "pnpm",
+      "wall": 0.7258555429998523,
+      "rss_mb": 273.8203125,
+      "exit": 0,
+      "runs": true,
+      "packages": 66
+    },
+    {
+      "scenario": "warm",
+      "round": 5,
+      "tool": "yarn",
+      "wall": 0.5297716170007334,
+      "rss_mb": 119.2578125,
+      "exit": 0,
+      "runs": true,
+      "packages": 66
+    },
+    {
+      "scenario": "ci-cached",
+      "round": 1,
+      "tool": "opal",
+      "wall": 0.12211165000007895,
+      "rss_mb": 25.875,
+      "exit": 0,
+      "runs": true,
+      "packages": 68,
+      "summary": "68 packages installed [116ms]  (fetch 1ms, link 100ms)"
+    },
+    {
+      "scenario": "ci-cached",
+      "round": 1,
+      "tool": "npm",
+      "wall": 0.5600152690003597,
+      "rss_mb": 109.14453125,
+      "exit": 0,
+      "runs": true,
+      "packages": 68
+    },
+    {
+      "scenario": "ci-cached",
+      "round": 1,
+      "tool": "pnpm",
+      "wall": 0.6795061550001265,
+      "rss_mb": 273.859375,
+      "exit": 0,
+      "runs": true,
+      "packages": 66
+    },
+    {
+      "scenario": "ci-cached",
+      "round": 1,
+      "tool": "yarn",
+      "wall": 0.5353835979994983,
+      "rss_mb": 120.33203125,
+      "exit": 0,
+      "runs": true,
+      "packages": 66
+    },
+    {
+      "scenario": "ci-cached",
+      "round": 1,
+      "tool": "bun",
+      "wall": 0.06676564499957749,
+      "rss_mb": 25.875,
+      "exit": 0,
+      "runs": true,
+      "packages": 68
+    },
+    {
+      "scenario": "ci-cached",
+      "round": 2,
+      "tool": "npm",
+      "wall": 0.5548657919998732,
+      "rss_mb": 110.078125,
+      "exit": 0,
+      "runs": true,
+      "packages": 68
+    },
+    {
+      "scenario": "ci-cached",
+      "round": 2,
+      "tool": "pnpm",
+      "wall": 0.6613571669995508,
+      "rss_mb": 274.484375,
+      "exit": 0,
+      "runs": true,
+      "packages": 66
+    },
+    {
+      "scenario": "ci-cached",
+      "round": 2,
+      "tool": "yarn",
+      "wall": 0.5151776709999467,
+      "rss_mb": 120.76953125,
+      "exit": 0,
+      "runs": true,
+      "packages": 66
+    },
+    {
+      "scenario": "ci-cached",
+      "round": 2,
+      "tool": "bun",
+      "wall": 0.06677111799945123,
+      "rss_mb": 25.875,
+      "exit": 0,
+      "runs": true,
+      "packages": 68
+    },
+    {
+      "scenario": "ci-cached",
+      "round": 2,
+      "tool": "opal",
+      "wall": 0.08168442799978948,
+      "rss_mb": 25.875,
+      "exit": 0,
+      "runs": true,
+      "packages": 68,
+      "summary": "68 packages installed [74ms]  (fetch 1ms, link 61ms)"
+    },
+    {
+      "scenario": "ci-cached",
+      "round": 3,
+      "tool": "pnpm",
+      "wall": 0.6463972909996301,
+      "rss_mb": 273.77734375,
+      "exit": 0,
+      "runs": true,
+      "packages": 66
+    },
+    {
+      "scenario": "ci-cached",
+      "round": 3,
+      "tool": "yarn",
+      "wall": 0.51468247899993,
+      "rss_mb": 120.72265625,
+      "exit": 0,
+      "runs": true,
+      "packages": 66
+    },
+    {
+      "scenario": "ci-cached",
+      "round": 3,
+      "tool": "bun",
+      "wall": 0.06689452800037543,
+      "rss_mb": 25.875,
+      "exit": 0,
+      "runs": true,
+      "packages": 68
+    },
+    {
+      "scenario": "ci-cached",
+      "round": 3,
+      "tool": "opal",
+      "wall": 0.08157903300070757,
+      "rss_mb": 25.875,
+      "exit": 0,
+      "runs": true,
+      "packages": 68,
+      "summary": "68 packages installed [79ms]  (fetch 1ms, link 65ms)"
+    },
+    {
+      "scenario": "ci-cached",
+      "round": 3,
+      "tool": "npm",
+      "wall": 0.519477206999909,
+      "rss_mb": 108.5859375,
+      "exit": 0,
+      "runs": true,
+      "packages": 68
+    },
+    {
+      "scenario": "ci-cached",
+      "round": 4,
+      "tool": "yarn",
+      "wall": 0.5088957819998541,
+      "rss_mb": 119.31640625,
+      "exit": 0,
+      "runs": true,
+      "packages": 66
+    },
+    {
+      "scenario": "ci-cached",
+      "round": 4,
+      "tool": "bun",
+      "wall": 0.06680347900055494,
+      "rss_mb": 25.875,
+      "exit": 0,
+      "runs": true,
+      "packages": 68
+    },
+    {
+      "scenario": "ci-cached",
+      "round": 4,
+      "tool": "opal",
+      "wall": 0.08671991800019896,
+      "rss_mb": 25.875,
+      "exit": 0,
+      "runs": true,
+      "packages": 68,
+      "summary": "68 packages installed [79ms]  (fetch 1ms, link 65ms)"
+    },
+    {
+      "scenario": "ci-cached",
+      "round": 4,
+      "tool": "npm",
+      "wall": 0.5546934419999161,
+      "rss_mb": 108.09375,
+      "exit": 0,
+      "runs": true,
+      "packages": 68
+    },
+    {
+      "scenario": "ci-cached",
+      "round": 4,
+      "tool": "pnpm",
+      "wall": 0.6852240090001942,
+      "rss_mb": 274.05078125,
+      "exit": 0,
+      "runs": true,
+      "packages": 66
+    },
+    {
+      "scenario": "ci-cached",
+      "round": 5,
+      "tool": "bun",
+      "wall": 0.06694949400025507,
+      "rss_mb": 25.875,
+      "exit": 0,
+      "runs": true,
+      "packages": 68
+    },
+    {
+      "scenario": "ci-cached",
+      "round": 5,
+      "tool": "opal",
+      "wall": 0.08667747100025736,
+      "rss_mb": 25.875,
+      "exit": 0,
+      "runs": true,
+      "packages": 68,
+      "summary": "68 packages installed [81ms]  (fetch 1ms, link 67ms)"
+    },
+    {
+      "scenario": "ci-cached",
+      "round": 5,
+      "tool": "npm",
+      "wall": 0.5753358269994351,
+      "rss_mb": 109.28515625,
+      "exit": 0,
+      "runs": true,
+      "packages": 68
+    },
+    {
+      "scenario": "ci-cached",
+      "round": 5,
+      "tool": "pnpm",
+      "wall": 0.6895267720001357,
+      "rss_mb": 273.59375,
+      "exit": 0,
+      "runs": true,
+      "packages": 66
+    },
+    {
+      "scenario": "ci-cached",
+      "round": 5,
+      "tool": "yarn",
+      "wall": 0.5253784779997659,
+      "rss_mb": 118.703125,
+      "exit": 0,
+      "runs": true,
+      "packages": 66
+    },
+    {
+      "scenario": "noop",
+      "round": 1,
+      "tool": "opal",
+      "wall": 0.015574380000543897,
+      "rss_mb": 25.875,
+      "exit": 0,
+      "runs": true,
+      "packages": 68,
+      "summary": "68 packages already installed [12ms]"
+    },
+    {
+      "scenario": "noop",
+      "round": 1,
+      "tool": "npm",
+      "wall": 0.3212343029999829,
+      "rss_mb": 96.75,
+      "exit": 0,
+      "runs": true,
+      "packages": 68
+    },
+    {
+      "scenario": "noop",
+      "round": 1,
+      "tool": "pnpm",
+      "wall": 0.45433934699940437,
+      "rss_mb": 135.51953125,
+      "exit": 0,
+      "runs": true,
+      "packages": 66
+    },
+    {
+      "scenario": "noop",
+      "round": 1,
+      "tool": "yarn",
+      "wall": 0.255644303999361,
+      "rss_mb": 107.8359375,
+      "exit": 0,
+      "runs": true,
+      "packages": 66
+    },
+    {
+      "scenario": "noop",
+      "round": 1,
+      "tool": "bun",
+      "wall": 0.011184621999746014,
+      "rss_mb": 25.875,
+      "exit": 0,
+      "runs": true,
+      "packages": 68
+    },
+    {
+      "scenario": "noop",
+      "round": 2,
+      "tool": "npm",
+      "wall": 0.31642812499922,
+      "rss_mb": 96.1796875,
+      "exit": 0,
+      "runs": true,
+      "packages": 68
+    },
+    {
+      "scenario": "noop",
+      "round": 2,
+      "tool": "pnpm",
+      "wall": 0.4433482439999352,
+      "rss_mb": 135.3125,
+      "exit": 0,
+      "runs": true,
+      "packages": 66
+    },
+    {
+      "scenario": "noop",
+      "round": 2,
+      "tool": "yarn",
+      "wall": 0.2559458480000103,
+      "rss_mb": 108.42578125,
+      "exit": 0,
+      "runs": true,
+      "packages": 66
+    },
+    {
+      "scenario": "noop",
+      "round": 2,
+      "tool": "bun",
+      "wall": 0.01107975900049496,
+      "rss_mb": 25.875,
+      "exit": 0,
+      "runs": true,
+      "packages": 68
+    },
+    {
+      "scenario": "noop",
+      "round": 2,
+      "tool": "opal",
+      "wall": 0.015690303000155836,
+      "rss_mb": 25.875,
+      "exit": 0,
+      "runs": true,
+      "packages": 68,
+      "summary": "68 packages already installed [12ms]"
+    },
+    {
+      "scenario": "noop",
+      "round": 3,
+      "tool": "pnpm",
+      "wall": 0.44924760699996114,
+      "rss_mb": 135.7890625,
+      "exit": 0,
+      "runs": true,
+      "packages": 66
+    },
+    {
+      "scenario": "noop",
+      "round": 3,
+      "tool": "yarn",
+      "wall": 0.24985386299977108,
+      "rss_mb": 107.65234375,
+      "exit": 0,
+      "runs": true,
+      "packages": 66
+    },
+    {
+      "scenario": "noop",
+      "round": 3,
+      "tool": "bun",
+      "wall": 0.010933744999420014,
+      "rss_mb": 25.875,
+      "exit": 0,
+      "runs": true,
+      "packages": 68
+    },
+    {
+      "scenario": "noop",
+      "round": 3,
+      "tool": "opal",
+      "wall": 0.020712457000627182,
+      "rss_mb": 25.875,
+      "exit": 0,
+      "runs": true,
+      "packages": 68,
+      "summary": "68 packages already installed [13ms]"
+    },
+    {
+      "scenario": "noop",
+      "round": 3,
+      "tool": "npm",
+      "wall": 0.3116347280001719,
+      "rss_mb": 96.94921875,
+      "exit": 0,
+      "runs": true,
+      "packages": 68
+    },
+    {
+      "scenario": "noop",
+      "round": 4,
+      "tool": "yarn",
+      "wall": 0.2553891649995421,
+      "rss_mb": 108.58984375,
+      "exit": 0,
+      "runs": true,
+      "packages": 66
+    },
+    {
+      "scenario": "noop",
+      "round": 4,
+      "tool": "bun",
+      "wall": 0.01114816500012239,
+      "rss_mb": 25.875,
+      "exit": 0,
+      "runs": true,
+      "packages": 68
+    },
+    {
+      "scenario": "noop",
+      "round": 4,
+      "tool": "opal",
+      "wall": 0.01566803700006858,
+      "rss_mb": 25.875,
+      "exit": 0,
+      "runs": true,
+      "packages": 68,
+      "summary": "68 packages already installed [11ms]"
+    },
+    {
+      "scenario": "noop",
+      "round": 4,
+      "tool": "npm",
+      "wall": 0.31622099000014714,
+      "rss_mb": 96.75,
+      "exit": 0,
+      "runs": true,
+      "packages": 68
+    },
+    {
+      "scenario": "noop",
+      "round": 4,
+      "tool": "pnpm",
+      "wall": 0.4387647920002564,
+      "rss_mb": 135.328125,
+      "exit": 0,
+      "runs": true,
+      "packages": 66
+    },
+    {
+      "scenario": "noop",
+      "round": 5,
+      "tool": "bun",
+      "wall": 0.011128198999358574,
+      "rss_mb": 25.875,
+      "exit": 0,
+      "runs": true,
+      "packages": 68
+    },
+    {
+      "scenario": "noop",
+      "round": 5,
+      "tool": "opal",
+      "wall": 0.015610556999490655,
+      "rss_mb": 25.875,
+      "exit": 0,
+      "runs": true,
+      "packages": 68,
+      "summary": "68 packages already installed [11ms]"
+    },
+    {
+      "scenario": "noop",
+      "round": 5,
+      "tool": "npm",
+      "wall": 0.3116076289998091,
+      "rss_mb": 96.94921875,
+      "exit": 0,
+      "runs": true,
+      "packages": 68
+    },
+    {
+      "scenario": "noop",
+      "round": 5,
+      "tool": "pnpm",
+      "wall": 0.4444473800003834,
+      "rss_mb": 135.21875,
+      "exit": 0,
+      "runs": true,
+      "packages": 66
+    },
+    {
+      "scenario": "noop",
+      "round": 5,
+      "tool": "yarn",
+      "wall": 0.2554959480003163,
+      "rss_mb": 108.64453125,
+      "exit": 0,
+      "runs": true,
+      "packages": 66
+    },
+    {
+      "scenario": "add",
+      "round": 1,
+      "tool": "opal",
+      "wall": 0.5395929679998517,
+      "rss_mb": 25.875,
+      "exit": 0,
+      "runs": true,
+      "packages": 69,
+      "summary": "69 packages installed [531ms]  (resolve 464ms, fetch 54ms, link 6ms)",
+      "added": "mitt@3.0.1"
+    },
+    {
+      "scenario": "add",
+      "round": 1,
+      "tool": "npm",
+      "wall": 0.49502295999991475,
+      "rss_mb": 101.23828125,
+      "exit": 0,
+      "runs": true,
+      "packages": 69,
+      "added": "mitt@3.0.1"
+    },
+    {
+      "scenario": "add",
+      "round": 1,
+      "tool": "pnpm",
+      "wall": 0.8090829559996564,
+      "rss_mb": 313.9296875,
+      "exit": 0,
+      "runs": true,
+      "packages": 67,
+      "added": "mitt@3.0.1"
+    },
+    {
+      "scenario": "add",
+      "round": 1,
+      "tool": "yarn",
+      "wall": 0.5452609059993847,
+      "rss_mb": 124.23046875,
+      "exit": 0,
+      "runs": true,
+      "packages": 67,
+      "added": "mitt@3.0.1"
+    },
+    {
+      "scenario": "add",
+      "round": 1,
+      "tool": "bun",
+      "wall": 0.14347491700027604,
+      "rss_mb": 25.875,
+      "exit": 0,
+      "runs": true,
+      "packages": 69,
+      "added": "mitt@3.0.1"
+    },
+    {
+      "scenario": "add",
+      "round": 2,
+      "tool": "npm",
+      "wall": 0.6575335070001529,
+      "rss_mb": 104.20703125,
+      "exit": 0,
+      "runs": true,
+      "packages": 70,
+      "added": "dayjs@1.11.13"
+    },
+    {
+      "scenario": "add",
+      "round": 2,
+      "tool": "pnpm",
+      "wall": 0.9092929210000875,
+      "rss_mb": 321.3671875,
+      "exit": 0,
+      "runs": true,
+      "packages": 68,
+      "added": "dayjs@1.11.13"
+    },
+    {
+      "scenario": "add",
+      "round": 2,
+      "tool": "yarn",
+      "wall": 1.1043735190005464,
+      "rss_mb": 136.83984375,
+      "exit": 0,
+      "runs": true,
+      "packages": 68,
+      "added": "dayjs@1.11.13"
+    },
+    {
+      "scenario": "add",
+      "round": 2,
+      "tool": "bun",
+      "wall": 0.19492956799967942,
+      "rss_mb": 25.875,
+      "exit": 0,
+      "runs": true,
+      "packages": 70,
+      "added": "dayjs@1.11.13"
+    },
+    {
+      "scenario": "add",
+      "round": 2,
+      "tool": "opal",
+      "wall": 0.4576629610000964,
+      "rss_mb": 25.875,
+      "exit": 0,
+      "runs": true,
+      "packages": 70,
+      "summary": "70 packages installed [454ms]  (resolve 106ms, fetch 310ms, link 31ms)",
+      "added": "dayjs@1.11.13"
+    },
+    {
+      "scenario": "add",
+      "round": 3,
+      "tool": "pnpm",
+      "wall": 0.8319899810003335,
+      "rss_mb": 316.1484375,
+      "exit": 0,
+      "runs": true,
+      "packages": 69,
+      "added": "kleur@4.1.5"
+    },
+    {
+      "scenario": "add",
+      "round": 3,
+      "tool": "yarn",
+      "wall": 0.5804935960004514,
+      "rss_mb": 125.4375,
+      "exit": 0,
+      "runs": true,
+      "packages": 69,
+      "added": "kleur@4.1.5"
+    },
+    {
+      "scenario": "add",
+      "round": 3,
+      "tool": "bun",
+      "wall": 0.1233170040004552,
+      "rss_mb": 25.875,
+      "exit": 0,
+      "runs": true,
+      "packages": 71,
+      "added": "kleur@4.1.5"
+    },
+    {
+      "scenario": "add",
+      "round": 3,
+      "tool": "opal",
+      "wall": 0.16820255599941447,
+      "rss_mb": 25.875,
+      "exit": 0,
+      "runs": true,
+      "packages": 71,
+      "summary": "71 packages installed [160ms]  (resolve 95ms, fetch 52ms, link 6ms)",
+      "added": "kleur@4.1.5"
+    },
+    {
+      "scenario": "add",
+      "round": 3,
+      "tool": "npm",
+      "wall": 0.47441170000001875,
+      "rss_mb": 101.109375,
+      "exit": 0,
+      "runs": true,
+      "packages": 71,
+      "added": "kleur@4.1.5"
+    }
+  ],
+  "disk": {
+    "opal": {
+      "node_modules": 4546560,
+      "cache": 7995392,
+      "project_and_cache": 8822784,
+      "second_project_adds": 827392,
+      "second_install_exit": 0
+    },
+    "npm": {
+      "node_modules": 4530176,
+      "cache": 2244608,
+      "project_and_cache": 6774784,
+      "second_project_adds": 4530176,
+      "second_install_exit": 0
+    },
+    "pnpm": {
+      "node_modules": 4886528,
+      "cache": 6930432,
+      "project_and_cache": 8097792,
+      "second_project_adds": 1167360,
+      "second_install_exit": 0
+    },
+    "yarn": {
+      "node_modules": 4411392,
+      "cache": 6492160,
+      "project_and_cache": 10903552,
+      "second_project_adds": 4411392,
+      "second_install_exit": 0
+    },
+    "bun": {
+      "node_modules": 4423680,
+      "cache": 4714496,
+      "project_and_cache": 5263360,
+      "second_project_adds": 548864,
+      "second_install_exit": 0
+    }
+  }
+}

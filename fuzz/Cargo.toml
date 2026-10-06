@@ -53,3 +53,10 @@ path = "fuzz_targets/resolver.rs"
 test = false
 doc = false
 bench = false
+
+[[bin]]
+name = "edit"
+path = "fuzz_targets/edit.rs"
+test = false
+doc = false
+bench = false

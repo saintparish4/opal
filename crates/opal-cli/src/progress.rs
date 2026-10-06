@@ -1,19 +1,22 @@
 //! Rendering an install's progress, and only ever on a terminal.
 //!
-//! Two renderers behind one trait. On a TTY, a stage line and a bar that
-//! advances in place. Everywhere else — a pipe, a CI log, the crash-safety
+//! Two renderers behind one trait. On a TTY, lines that redraw in place.
+//! Everywhere else — a pipe, a CI log, the crash-safety
 //! suite — plain newline-terminated lines, because `fault.rs` announces itself
 //! on stderr and a test reads those announcements a line at a time. A bar
 //! redrawing over that would append a marker mid-line and the scan would miss
 //! it.
 //!
-//! The terminal look is "play of colour", after the gemstone: the download bar
-//! is a thin line whose filled part runs through an opal's hues. The colours
-//! are fixed to their position and nothing glows or sweeps, so the bar only
-//! moves when a package lands; the elapsed time ticks on its own, so a single
-//! large tarball still visibly makes progress. Colour is decoration only; every
-//! glyph reads the same without it, so `NO_COLOR` and terminals without colour
-//! lose nothing but the hue.
+//! On a terminal, resolving and linking are each one spinner line. Fetching is
+//! a spinner line counting packages, with a bar under it for every tarball in
+//! flight: its name, a thirty-cell line, and bytes against the total. The
+//! look is uv's. A bar exists for as long as its download does, so sixteen at
+//! once is the most there can be, and small packages come and go faster than
+//! they can be read; what holds still long enough to see is whatever is slow,
+//! which is what a progress display is for.
+//!
+//! Colour is decoration only. Without it the bar's unfilled part is blank
+//! instead of dim, so the fill still shows.
 //!
 //! Every line stops one column short of the terminal's width. A line that
 //! fills the last column wraps early in some terminals, and indicatif's next
@@ -25,46 +28,77 @@
 
 use std::fmt;
 use std::io::{self, IsTerminal};
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Mutex, MutexGuard, PoisonError};
 use std::time::Duration;
 
 use console::Term;
-use indicatif::{ProgressBar, ProgressDrawTarget, ProgressState, ProgressStyle, TermLike};
+use indicatif::{
+    MultiProgress, ProgressBar, ProgressDrawTarget, ProgressState, ProgressStyle, TermLike,
+};
 use opal_pm::progress::{Progress, Stage};
 use opal_pm::resolve::PackageId;
 
+use crate::style::Paint;
+
 pub fn reporter() -> Box<dyn Progress> {
     if std::io::stderr().is_terminal() {
+        // indicatif colours a template through `console`, which decides from
+        // stdout. Everything drawn here goes to stderr, so `opal install >
+        // result.txt` would otherwise lose the bars' colour with nothing on
+        // the terminal having changed.
+        console::set_colors_enabled(Paint::for_stderr().is_on());
         Box::new(Bar::new(ColourSupport::from_env()))
     } else {
-        Box::new(Lines)
+        Box::new(Lines::default())
     }
 }
 
-fn describe(stage: Stage) -> String {
-    match stage {
-        Stage::Resolving => "Resolving dependencies".to_string(),
-        Stage::Fetching { packages } => format!("Installing {packages} packages"),
-        Stage::Linking { packages } => format!("Linking {packages} packages"),
-    }
-}
-
-/// The non-terminal renderer: one line per stage, nothing per package.
+/// The non-terminal renderer: one line for what was resolved, and nothing per
+/// package.
 ///
 /// Per-package output is what a bar is for. A CI log does not want 440 lines of
 /// it, and a fault-injection test wants as little interleaving as it can get.
-struct Lines;
+/// Fetching and linking get no line: the summary counts the packages and
+/// gives each phase its time.
+#[derive(Default)]
+struct Lines {
+    /// The latest counts resolution reported. A line can't be redrawn, so they
+    /// are held until the resolve is over and printed once, as its result.
+    resolved: Mutex<Option<(usize, usize)>>,
+}
 
 impl Progress for Lines {
     fn stage(&self, stage: Stage) {
-        eprintln!("{}", describe(stage));
+        // Fetching is the first stage after a resolve, and so the first
+        // moment its count is final.
+        if !matches!(stage, Stage::Fetching { .. }) {
+            return;
+        }
+        let resolved = self
+            .resolved
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .take();
+        if let Some((settled, known)) = resolved {
+            eprintln!("Resolving [{settled}/{known}]");
+        }
+    }
+
+    fn resolving(&self, settled: usize, known: usize) {
+        *self.resolved.lock().unwrap_or_else(PoisonError::into_inner) = Some((settled, known));
     }
 }
 
-/// One bar at a time, replaced as the pipeline moves between stages.
+/// What is on screen for the stage the pipeline is in.
 struct Bar {
     colour: ColourSupport,
-    current: Mutex<Option<ProgressBar>>,
+    current: Mutex<Option<Drawn>>,
+}
+
+enum Drawn {
+    Spinner(ProgressBar),
+    Downloads(Downloads),
 }
 
 /// Redraw interval. Also the spinner's frame length, so it turns at an even
@@ -75,10 +109,214 @@ const TICK: Duration = Duration::from_millis(80);
 /// rotation.
 const SPINNER: [char; 10] = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
 
-/// The elapsed time is what shows a long resolve is still working: resolution
-/// reports nothing per package, so on a large tree the timer is all that moves.
+/// The elapsed time ticks on its own, so a line whose message has stopped
+/// changing (one slow packument, a large link) still shows it is working.
 const SPINNER_TEMPLATE: &str = "{opal_spinner} {prefix:.bold}{msg:.dim}  {opal_elapsed}";
-const DOWNLOAD_TEMPLATE: &str = "{prefix:.bold}  {opal_bar}  {opal_details}  {wide_msg:.dim}";
+
+/// A download whose size the server did not state has no fraction to draw.
+const UNSIZED_TEMPLATE: &str = "{wide_msg:.dim} ....";
+
+/// Names are padded to the longest one seen, and never to less than this, so
+/// the bars start in one column and don't shift for every short name.
+const NAME_WIDTH_MIN: usize = 20;
+const BAR_CELLS: usize = 30;
+/// `181.85 KiB/1023.99 KiB`: a side is eleven columns at its widest.
+const BYTES_CELLS: usize = 11 + 1 + 11;
+/// What is shown when the terminal's width can't be read, as in a test.
+const COLUMNS_ASSUMED: usize = 100;
+
+/// The widths of one download line's name and bar.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct Layout {
+    name: usize,
+    bar: usize,
+}
+
+impl Layout {
+    /// A line has to fit the terminal: one that wraps takes two rows, and the
+    /// rows under it are then redrawn in the wrong place. The bar gives way
+    /// first, down to ten cells, and then the name is cut short.
+    fn fitting(columns: usize, longest_name: usize) -> Self {
+        let spaces = 2;
+        let bar = columns
+            .saturating_sub(NAME_WIDTH_MIN + spaces + BYTES_CELLS)
+            .clamp(10, BAR_CELLS);
+        let room = columns.saturating_sub(bar + spaces + BYTES_CELLS).max(1);
+        Self {
+            name: longest_name.max(NAME_WIDTH_MIN).min(room),
+            bar,
+        }
+    }
+}
+
+/// One download's line: its name, a line that fills, and bytes of the total.
+fn transfer_template(layout: Layout) -> String {
+    let Layout { name, bar } = layout;
+    format!(
+        "{{msg:{name}!.dim}} {{bar:{bar}.green/black.dim}} \
+         {{binary_bytes:>7}}/{{binary_total_bytes:7}}"
+    )
+}
+
+/// The filled and unfilled parts are the same dash, told apart by colour.
+/// Without colour the unfilled part is left blank.
+fn transfer_chars(colour: ColourSupport) -> &'static str {
+    match colour {
+        ColourSupport::Off => "- ",
+        ColourSupport::Palette256 | ColourSupport::TrueColour => "--",
+    }
+}
+
+fn transfer_style(layout: Layout, sized: bool, colour: ColourSupport) -> ProgressStyle {
+    if !sized {
+        return ProgressStyle::with_template(UNSIZED_TEMPLATE)
+            .unwrap_or_else(|_| ProgressStyle::default_bar());
+    }
+    ProgressStyle::with_template(&transfer_template(layout))
+        .unwrap_or_else(|_| ProgressStyle::default_bar())
+        .progress_chars(transfer_chars(colour))
+}
+
+/// Where a download of `total` bytes goes among those already shown: smaller
+/// above larger, so the long ones settle at the bottom and stay put, and one
+/// of unstated size last.
+fn slot_for(shown: &[Option<u64>], total: Option<u64>) -> usize {
+    let size = |total: Option<u64>| total.unwrap_or(u64::MAX);
+    shown.partition_point(|other| size(*other) <= size(total))
+}
+
+/// The fetching stage: a line counting packages, and a bar per download.
+struct Downloads {
+    multi: MultiProgress,
+    root: ProgressBar,
+    packages: usize,
+    done: usize,
+    /// In the order they are drawn, which is ascending by size.
+    transfers: Vec<Transfer>,
+    longest_name: usize,
+    /// Absent when nothing is drawn, as in a test.
+    term: Option<Term>,
+    colour: ColourSupport,
+}
+
+struct Transfer {
+    id: PackageId,
+    total: Option<u64>,
+    bar: ProgressBar,
+}
+
+impl Downloads {
+    fn new(
+        packages: usize,
+        colour: ColourSupport,
+        counting: ProgressStyle,
+        term: Option<Term>,
+    ) -> Self {
+        let multi = MultiProgress::with_draw_target(match &term {
+            Some(_) => short_of_the_edge(),
+            None => ProgressDrawTarget::hidden(),
+        });
+        let root = multi.add(
+            ProgressBar::with_draw_target(None, ProgressDrawTarget::hidden())
+                .with_style(counting)
+                .with_prefix("downloading"),
+        );
+        let downloads = Self {
+            multi,
+            root,
+            packages,
+            done: 0,
+            transfers: Vec::new(),
+            longest_name: 0,
+            term,
+            colour,
+        };
+        downloads.root.set_message(downloads.count());
+        downloads.root.enable_steady_tick(TICK);
+        downloads
+    }
+
+    fn count(&self) -> String {
+        format!("  [{}/{}]", self.done, self.packages)
+    }
+
+    /// Measured each time it is asked, so a resized window is fitted from the
+    /// next download on.
+    fn layout(&self) -> Layout {
+        let columns = self.term.as_ref().map_or(COLUMNS_ASSUMED, usable_columns);
+        Layout::fitting(columns, self.longest_name)
+    }
+
+    fn start(&mut self, id: &PackageId, total: Option<u64>) {
+        // A retried request starts over, on the line it already has.
+        if let Some(retried) = self.transfers.iter().find(|transfer| &transfer.id == id) {
+            retried.bar.set_position(0);
+            if let Some(total) = total {
+                retried.bar.set_length(total);
+            }
+            return;
+        }
+
+        let name = id.name.clone();
+        let before = self.layout();
+        self.longest_name = self.longest_name.max(console::measure_text_width(&name));
+        let layout = self.layout();
+        let bar = ProgressBar::with_draw_target(total, ProgressDrawTarget::hidden())
+            .with_style(transfer_style(layout, total.is_some(), self.colour))
+            .with_message(name);
+        let shown: Vec<Option<u64>> = self.transfers.iter().map(|other| other.total).collect();
+        let index = slot_for(&shown, total);
+        // The counting line is the first, so every bar sits one below its
+        // place in the list.
+        let bar = self.multi.insert(index + 1, bar);
+        self.transfers.insert(
+            index,
+            Transfer {
+                id: id.clone(),
+                total,
+                bar,
+            },
+        );
+        // A longer name moves the column every bar starts in.
+        if layout != before {
+            for transfer in &self.transfers {
+                transfer.bar.set_style(transfer_style(
+                    layout,
+                    transfer.total.is_some(),
+                    self.colour,
+                ));
+            }
+        }
+    }
+
+    fn advance(&self, id: &PackageId, bytes: u64) {
+        if let Some(transfer) = self.transfers.iter().find(|transfer| &transfer.id == id) {
+            transfer.bar.inc(bytes);
+        }
+    }
+
+    /// A package answered by the store never had a bar, and still counts.
+    fn complete(&mut self, id: &PackageId) {
+        if let Some(index) = self
+            .transfers
+            .iter()
+            .position(|transfer| &transfer.id == id)
+        {
+            let transfer = self.transfers.remove(index);
+            transfer.bar.finish_and_clear();
+            self.multi.remove(&transfer.bar);
+        }
+        self.done += 1;
+        self.root.set_message(self.count());
+    }
+
+    fn clear(self) {
+        for transfer in &self.transfers {
+            transfer.bar.finish_and_clear();
+        }
+        self.root.finish_and_clear();
+    }
+}
 
 impl Bar {
     fn new(colour: ColourSupport) -> Self {
@@ -88,15 +326,16 @@ impl Bar {
         }
     }
 
-    fn current(&self) -> MutexGuard<'_, Option<ProgressBar>> {
-        // A bar is only ever swapped whole, so a poisoned lock still holds a
-        // usable one, and progress output is no reason to end an install.
+    fn current(&self) -> MutexGuard<'_, Option<Drawn>> {
+        // What is drawn is only ever swapped whole, so a poisoned lock still
+        // holds something usable, and progress output is no reason to end an
+        // install.
         self.current.lock().unwrap_or_else(PoisonError::into_inner)
     }
 
-    fn spinner(&self, label: &'static str, detail: String) -> ProgressBar {
+    fn spinner_style(&self) -> ProgressStyle {
         let colour = self.colour;
-        let style = ProgressStyle::with_template(SPINNER_TEMPLATE)
+        ProgressStyle::with_template(SPINNER_TEMPLATE)
             .unwrap_or_else(|_| ProgressStyle::default_spinner())
             .with_key(
                 "opal_spinner",
@@ -109,149 +348,180 @@ impl Bar {
                 |state: &ProgressState, out: &mut dyn fmt::Write| {
                     let _ = write!(out, "{DIM}{}{RESET}", format_elapsed(state.elapsed()));
                 },
-            );
+            )
+    }
+
+    fn spinner(&self, label: &'static str, detail: String) -> ProgressBar {
         // The `with_` builders set a field without drawing; `set_prefix` and
         // `set_message` each draw, and the first of them would show a line
         // missing the other.
-        ProgressBar::with_draw_target(None, short_of_the_edge())
-            .with_style(style)
+        let spinner = ProgressBar::with_draw_target(None, short_of_the_edge())
+            .with_style(self.spinner_style())
             .with_prefix(label)
-            .with_message(detail)
+            .with_message(detail);
+        spinner.enable_steady_tick(TICK);
+        spinner
     }
 
-    fn downloads(&self, packages: usize) -> ProgressBar {
-        let colour = self.colour;
-        let term = Term::stderr();
-        let style = ProgressStyle::with_template(DOWNLOAD_TEMPLATE)
-            .unwrap_or_else(|_| ProgressStyle::default_bar())
-            .with_key(
-                "opal_bar",
-                move |state: &ProgressState, out: &mut dyn fmt::Write| {
-                    // Measured on every frame, so a resized window gets a bar
-                    // that fits it.
-                    let cells = bar_cells(term.size().1);
-                    draw_bar(out, f64::from(state.fraction()), cells, colour);
-                },
-            )
-            .with_key(
-                "opal_details",
-                |state: &ProgressState, out: &mut dyn fmt::Write| {
-                    let total = state.len().unwrap_or(0);
-                    let elapsed = format_elapsed(state.elapsed());
-                    let _ = write!(out, "{DIM}{}/{total}  {elapsed}{RESET}", state.pos());
-                },
-            );
-        ProgressBar::with_draw_target(Some(packages as u64), short_of_the_edge())
-            .with_style(style)
-            .with_prefix("downloading")
+    fn downloads(&self, packages: usize) -> Downloads {
+        Downloads::new(
+            packages,
+            self.colour,
+            self.spinner_style(),
+            Some(Term::stderr()),
+        )
     }
 }
 
 impl Progress for Bar {
     fn stage(&self, stage: Stage) {
         // A spinner draws the moment its steady tick starts, so the previous
-        // bar has to be gone first. Cleared afterwards, the new line has
+        // lines have to be gone first. Cleared afterwards, the new line has
         // already wrapped below the old full-width one, the clear lands on the
-        // new line, and the old bar stays on screen.
+        // new line, and the old one stays on screen.
         self.finished();
         // Neither resolving nor linking knows its own size as it goes —
         // resolution discovers the tree, and the reconciler's work depends on
         // what it finds on disk — so a spinner is the honest shape for both.
+        // Resolving adds a count beside it, whose total grows as it goes.
         let next = match stage {
-            Stage::Resolving => self.spinner("resolving", String::new()),
-            Stage::Fetching { packages } => self.downloads(packages),
+            Stage::Resolving => Drawn::Spinner(self.spinner("resolving", String::new())),
+            Stage::Fetching { packages } => Drawn::Downloads(self.downloads(packages)),
             Stage::Linking { packages } => {
-                self.spinner("linking", format!("  {packages} packages"))
+                Drawn::Spinner(self.spinner("linking", format!("  {packages} packages")))
             }
         };
-        next.enable_steady_tick(TICK);
         *self.current() = Some(next);
     }
 
+    fn resolving(&self, settled: usize, known: usize) {
+        if let Some(Drawn::Spinner(spinner)) = self.current().as_ref() {
+            spinner.set_message(format!("  [{settled}/{known}]"));
+        }
+    }
+
+    fn download_started(&self, id: &PackageId, total: Option<u64>) {
+        if let Some(Drawn::Downloads(downloads)) = self.current().as_mut() {
+            downloads.start(id, total);
+        }
+    }
+
+    fn downloaded(&self, id: &PackageId, bytes: u64) {
+        if let Some(Drawn::Downloads(downloads)) = self.current().as_ref() {
+            downloads.advance(id, bytes);
+        }
+    }
+
     fn fetched(&self, id: &PackageId, _from_store: bool) {
-        if let Some(bar) = self.current().as_ref() {
-            bar.set_message(id.name.clone());
-            bar.inc(1);
+        if let Some(Drawn::Downloads(downloads)) = self.current().as_mut() {
+            downloads.complete(id);
         }
     }
 
     fn finished(&self) {
-        let finished = self.current().take();
-        if let Some(bar) = finished {
-            bar.finish_and_clear();
+        match self.current().take() {
+            Some(Drawn::Spinner(spinner)) => spinner.finish_and_clear(),
+            Some(Drawn::Downloads(downloads)) => downloads.clear(),
+            None => {}
         }
     }
 }
 
 fn short_of_the_edge() -> ProgressDrawTarget {
-    ProgressDrawTarget::term_like_with_hz(Box::new(ShortOfTheEdge(Term::stderr())), 20)
+    ProgressDrawTarget::term_like_with_hz(Box::new(ShortOfTheEdge::new(Term::stderr())), 20)
+}
+
+/// How many columns a line may use: one fewer than the terminal has.
+fn usable_columns(term: &Term) -> usize {
+    usize::from(term.size().1.saturating_sub(1))
 }
 
 /// Stderr's terminal, reported one column narrower than it is, so that
-/// indicatif's `wide_` elements never fill the last column.
+/// nothing indicatif draws ever fills the last column.
+///
+/// indicatif does not end a line itself. It pads each one to the width it was
+/// told and counts on the terminal wrapping to the next row, which a line one
+/// column short never does: a second line would start on the same row as the
+/// first. So the break is made here, when text arrives and the row is full.
 #[derive(Debug)]
-struct ShortOfTheEdge(Term);
+struct ShortOfTheEdge {
+    term: Term,
+    /// Columns written on the row the cursor is on.
+    column: AtomicUsize,
+}
+
+impl ShortOfTheEdge {
+    fn new(term: Term) -> Self {
+        Self {
+            term,
+            column: AtomicUsize::new(0),
+        }
+    }
+}
 
 impl TermLike for ShortOfTheEdge {
     fn width(&self) -> u16 {
-        self.0.size().1.saturating_sub(1)
+        self.term.size().1.saturating_sub(1)
     }
 
     fn height(&self) -> u16 {
-        self.0.size().0
+        self.term.size().0
     }
 
     fn move_cursor_up(&self, n: usize) -> io::Result<()> {
-        self.0.move_cursor_up(n)
+        self.term.move_cursor_up(n)
     }
 
     fn move_cursor_down(&self, n: usize) -> io::Result<()> {
-        self.0.move_cursor_down(n)
+        self.term.move_cursor_down(n)
     }
 
     fn move_cursor_right(&self, n: usize) -> io::Result<()> {
-        self.0.move_cursor_right(n)
+        self.term.move_cursor_right(n)
     }
 
     fn move_cursor_left(&self, n: usize) -> io::Result<()> {
-        self.0.move_cursor_left(n)
+        self.term.move_cursor_left(n)
     }
 
     fn write_line(&self, s: &str) -> io::Result<()> {
-        self.0.write_line(s)
+        self.column.store(0, Ordering::Relaxed);
+        self.term.write_line(s)
     }
 
     fn write_str(&self, s: &str) -> io::Result<()> {
-        self.0.write_str(s)
+        if s == "\r" {
+            self.column.store(0, Ordering::Relaxed);
+            return self.term.write_str(s);
+        }
+        let width = console::measure_text_width(s);
+        if width == 0 {
+            return self.term.write_str(s);
+        }
+        if self.column.load(Ordering::Relaxed) >= usize::from(self.width()) {
+            self.term.write_str("\r\n")?;
+            self.column.store(0, Ordering::Relaxed);
+        }
+        self.column.fetch_add(width, Ordering::Relaxed);
+        self.term.write_str(s)
     }
 
     fn clear_line(&self) -> io::Result<()> {
-        self.0.clear_line()
+        // Clearing also returns the cursor to the first column.
+        self.column.store(0, Ordering::Relaxed);
+        self.term.clear_line()
     }
 
     fn flush(&self) -> io::Result<()> {
-        self.0.flush()
+        self.term.flush()
     }
 }
 
 type Rgb = (u8, u8, u8);
 
-/// The hues an opal throws as it turns: sky, mint, lavender, rose, peach.
-const OPAL: [Rgb; 5] = [
-    (120, 196, 255),
-    (128, 232, 204),
-    (186, 168, 255),
-    (255, 178, 204),
-    (255, 214, 168),
-];
-/// The spinner holds one colour, the gradient's first, so the only motion on
-/// the line is the rotation.
-const SPINNER_COLOUR: Rgb = OPAL[0];
-
-/// The bar is a thin line, filled and unfilled alike; colour tells them apart.
-const LINE: char = '─';
-/// Without colour the unfilled part is dashed, so the fill still shows.
-const DASHED: char = '╌';
+/// Sky, the first of the hues an opal throws as it turns. The spinner holds
+/// this one colour, so the only motion on its line is the rotation.
+const SPINNER_COLOUR: Rgb = (120, 196, 255);
 
 const DIM: &str = "\x1b[2m";
 const RESET: &str = "\x1b[0m";
@@ -311,54 +581,6 @@ fn to_256((r, g, b): Rgb) -> u8 {
     16 + 36 * level(r) + 6 * level(g) + level(b)
 }
 
-fn mix(from: Rgb, to: Rgb, amount: f64) -> Rgb {
-    let channel =
-        |a: u8, b: u8| (f64::from(a) + (f64::from(b) - f64::from(a)) * amount).round() as u8;
-    (
-        channel(from.0, to.0),
-        channel(from.1, to.1),
-        channel(from.2, to.2),
-    )
-}
-
-/// A colour along the gradient. Wraps, so the drift can run forever.
-fn opal_at(position: f64) -> Rgb {
-    let scaled = position.rem_euclid(1.0) * OPAL.len() as f64;
-    let index = scaled.floor() as usize;
-    mix(
-        OPAL[index % OPAL.len()],
-        OPAL[(index + 1) % OPAL.len()],
-        scaled.fract(),
-    )
-}
-
-/// The bar gives way to the package name in a narrow terminal and stops
-/// growing in a wide one.
-fn bar_cells(columns: u16) -> usize {
-    usize::from(columns).saturating_sub(60).clamp(10, 40)
-}
-
-fn draw_bar(out: &mut dyn fmt::Write, fraction: f64, cells: usize, colour: ColourSupport) {
-    let filled = filled_cells(fraction, cells);
-    for cell in 0..filled {
-        // Across 90% of the gradient, so the two ends of a full bar don't meet
-        // in the same colour.
-        colour.paint(opal_at(cell as f64 / cells as f64 * 0.9), out);
-        let _ = out.write_char(LINE);
-    }
-    let rail = match colour {
-        ColourSupport::Off => DASHED,
-        ColourSupport::Palette256 | ColourSupport::TrueColour => LINE,
-    };
-    let unfilled: String = std::iter::repeat_n(rail, cells - filled).collect();
-    let _ = write!(out, "{RESET}{DIM}{unfilled}{RESET}");
-}
-
-/// Whole cells only: a half-cell glyph softens the leading edge.
-fn filled_cells(fraction: f64, cells: usize) -> usize {
-    ((fraction.clamp(0.0, 1.0) * cells as f64).round() as usize).min(cells)
-}
-
 fn draw_spinner(out: &mut dyn fmt::Write, seconds: f64, colour: ColourSupport) {
     let frame = SPINNER[(seconds / TICK.as_secs_f64()) as usize % SPINNER.len()];
     colour.paint(SPINNER_COLOUR, out);
@@ -377,19 +599,6 @@ fn format_elapsed(elapsed: Duration) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    fn bar(fraction: f64, cells: usize, colour: ColourSupport) -> String {
-        let mut out = String::new();
-        draw_bar(&mut out, fraction, cells, colour);
-        out
-    }
-
-    fn glyphs(drawn: &str) -> String {
-        drawn
-            .chars()
-            .filter(|c| matches!(c, '━' | '╸' | '─' | '╌'))
-            .collect()
-    }
 
     #[test]
     fn test_no_color_turns_colour_off_whatever_the_terminal_supports() {
@@ -429,51 +638,6 @@ mod tests {
     }
 
     #[test]
-    fn test_the_bar_is_exactly_its_cell_count_wide() {
-        for colour in [
-            ColourSupport::Off,
-            ColourSupport::Palette256,
-            ColourSupport::TrueColour,
-        ] {
-            for fraction in [0.0, 0.01, 0.35, 0.5, 0.99, 1.0] {
-                assert_eq!(
-                    glyphs(&bar(fraction, 24, colour)).chars().count(),
-                    24,
-                    "{colour:?} at {fraction}"
-                );
-            }
-        }
-    }
-
-    #[test]
-    fn test_the_fill_rounds_to_whole_cells() {
-        assert_eq!(filled_cells(0.34, 10), 3);
-        assert_eq!(filled_cells(0.36, 10), 4);
-        assert_eq!(filled_cells(0.0, 10), 0);
-        assert_eq!(filled_cells(1.0, 10), 10);
-    }
-
-    #[test]
-    fn test_without_colour_the_unfilled_part_is_dashed() {
-        assert_eq!(glyphs(&bar(0.34, 10, ColourSupport::Off)), "───╌╌╌╌╌╌╌");
-    }
-
-    #[test]
-    fn test_a_full_bar_has_nothing_unfilled() {
-        assert_eq!(glyphs(&bar(1.0, 8, ColourSupport::Off)), "────────");
-    }
-
-    #[test]
-    fn test_a_cell_keeps_its_colour_as_the_bar_fills() {
-        // The same cell is painted the same colour at any fill, so the filled
-        // part never shifts or shimmers between frames.
-        let first = bar(0.25, 20, ColourSupport::TrueColour);
-        let later = bar(0.75, 20, ColourSupport::TrueColour);
-        let head = |drawn: &str| drawn.split('─').take(5).collect::<Vec<_>>().join("─");
-        assert_eq!(head(&first), head(&later));
-    }
-
-    #[test]
     fn test_the_spinner_turns_one_step_per_tick() {
         let tick = TICK.as_secs_f64();
         for step in 0..SPINNER.len() * 2 {
@@ -498,54 +662,14 @@ mod tests {
     }
 
     #[test]
-    fn test_resolving_and_linking_show_their_elapsed_time() {
+    fn test_spinner_lines_show_their_elapsed_time() {
         assert!(SPINNER_TEMPLATE.ends_with("{opal_elapsed}"));
-    }
-
-    #[test]
-    fn test_the_download_line_has_no_leading_glyph() {
-        assert!(DOWNLOAD_TEMPLATE.starts_with("{prefix"));
-    }
-
-    #[test]
-    fn test_the_line_is_thin_in_every_mode() {
-        for colour in [
-            ColourSupport::Off,
-            ColourSupport::Palette256,
-            ColourSupport::TrueColour,
-        ] {
-            let drawn = bar(0.5, 20, colour);
-            assert!(
-                !drawn.contains('━') && !drawn.contains('╸'),
-                "{colour:?} drew a heavy segment: {drawn:?}"
-            );
-        }
-    }
-
-    #[test]
-    fn test_colour_off_writes_no_colour_codes() {
-        let drawn = bar(0.6, 20, ColourSupport::Off);
-        assert!(!drawn.contains("\x1b[38;"), "{drawn:?}");
-    }
-
-    #[test]
-    fn test_the_gradient_wraps_around() {
-        assert_eq!(opal_at(0.0), OPAL[0]);
-        assert_eq!(opal_at(1.0), OPAL[0]);
-        assert_eq!(opal_at(-0.2), opal_at(0.8));
     }
 
     #[test]
     fn test_256_colour_maps_to_the_cube_corners() {
         assert_eq!(to_256((0, 0, 0)), 16);
         assert_eq!(to_256((255, 255, 255)), 231);
-    }
-
-    #[test]
-    fn test_the_bar_gives_way_in_a_narrow_terminal() {
-        assert_eq!(bar_cells(40), 10);
-        assert_eq!(bar_cells(80), 20);
-        assert_eq!(bar_cells(200), 40);
     }
 
     #[test]
@@ -558,6 +682,90 @@ mod tests {
     #[test]
     fn test_the_templates_parse() {
         assert!(ProgressStyle::with_template(SPINNER_TEMPLATE).is_ok());
-        assert!(ProgressStyle::with_template(DOWNLOAD_TEMPLATE).is_ok());
+        assert!(ProgressStyle::with_template(UNSIZED_TEMPLATE).is_ok());
+        let layout = Layout::fitting(COLUMNS_ASSUMED, 0);
+        assert!(ProgressStyle::with_template(&transfer_template(layout)).is_ok());
+    }
+
+    #[test]
+    fn test_a_download_line_is_a_name_a_thirty_cell_bar_and_bytes() {
+        assert_eq!(
+            transfer_template(Layout { name: 24, bar: 30 }),
+            "{msg:24!.dim} {bar:30.green/black.dim} {binary_bytes:>7}/{binary_total_bytes:7}"
+        );
+    }
+
+    #[test]
+    fn test_a_download_line_never_outgrows_the_terminal() {
+        let width = |layout: Layout| layout.name + 1 + layout.bar + 1 + BYTES_CELLS;
+        for columns in [40, 60, 79, 100, 200] {
+            for longest in [3, 20, 37, 90] {
+                let layout = Layout::fitting(columns, longest);
+                assert!(width(layout) <= columns, "{columns} columns: {layout:?}");
+            }
+        }
+    }
+
+    #[test]
+    fn test_the_bar_gives_way_before_the_name_is_cut() {
+        assert_eq!(Layout::fitting(100, 37), Layout { name: 37, bar: 30 });
+        assert_eq!(Layout::fitting(60, 12), Layout { name: 20, bar: 15 });
+        assert_eq!(Layout::fitting(60, 37), Layout { name: 20, bar: 15 });
+        assert_eq!(Layout::fitting(48, 37), Layout { name: 13, bar: 10 });
+    }
+
+    #[test]
+    fn test_without_colour_the_unfilled_part_is_blank() {
+        assert_eq!(transfer_chars(ColourSupport::Off), "- ");
+        assert_eq!(transfer_chars(ColourSupport::TrueColour), "--");
+    }
+
+    #[test]
+    fn test_downloads_are_listed_smallest_first() {
+        let shown = [Some(10), Some(500), Some(9_000)];
+        assert_eq!(slot_for(&shown, Some(1)), 0);
+        assert_eq!(slot_for(&shown, Some(700)), 2);
+        assert_eq!(slot_for(&shown, Some(50_000)), 3);
+        // Equal sizes keep the order they arrived in.
+        assert_eq!(slot_for(&shown, Some(500)), 2);
+    }
+
+    #[test]
+    fn test_a_download_of_unstated_size_goes_last() {
+        assert_eq!(slot_for(&[Some(10), None], Some(u64::MAX - 1)), 1);
+        assert_eq!(slot_for(&[Some(10), Some(20)], None), 2);
+    }
+
+    #[test]
+    fn test_a_finished_download_gives_up_its_line_and_is_counted() {
+        let colour = ColourSupport::Off;
+        let mut downloads = Downloads::new(3, colour, Bar::new(colour).spinner_style(), None);
+        let id = |name: &str| {
+            let version = opal_pm::semver::Version::parse("1.0.0").expect("a version");
+            PackageId::new(name.to_string(), version)
+        };
+
+        downloads.start(&id("big"), Some(9_000));
+        downloads.start(&id("a-package-with-a-rather-long-name"), Some(10));
+        let names: Vec<&str> = downloads
+            .transfers
+            .iter()
+            .map(|transfer| transfer.id.name.as_str())
+            .collect();
+        assert_eq!(names, ["a-package-with-a-rather-long-name", "big"]);
+        assert_eq!(downloads.layout(), Layout { name: 33, bar: 30 });
+
+        downloads.advance(&id("big"), 4_000);
+        assert_eq!(downloads.transfers[1].bar.position(), 4_000);
+        // A retry starts the same line over.
+        downloads.start(&id("big"), Some(9_000));
+        assert_eq!(downloads.transfers.len(), 2);
+        assert_eq!(downloads.transfers[1].bar.position(), 0);
+
+        downloads.complete(&id("big"));
+        // Answered by the store: never had a line, still one of the three.
+        downloads.complete(&id("stored"));
+        assert_eq!(downloads.transfers.len(), 1);
+        assert_eq!(downloads.count(), "  [2/3]");
     }
 }

@@ -1,0 +1,269 @@
+{
+  "meta": {
+    "project": "next",
+    "date": "2026-10-04T17:33:21",
+    "host": "Linux 6.6.87.2-microsoft-standard-WSL2, 8 threads",
+    "seed": 2645184248,
+    "trials": 12,
+    "opal_binary": {
+      "path": "/home/saint/opal-bench/10d96c0-dirty/opal",
+      "sha256": "8fd770fea77a5124d3d250138a13b1a6cec105ad5e5645eaaff8bf205b928a95"
+    },
+    "opal_version": "opal 0.3.1",
+    "clean_install_seconds": 25.139,
+    "reference_paths": 23743
+  },
+  "summary": {
+    "kills": 27,
+    "interrupted": 19,
+    "landed": {
+      "fetching": 14,
+      "resolving": 4,
+      "finished": 8,
+      "linking": 1
+    },
+    "trials_converged": 12
+  },
+  "trials": [
+    {
+      "trial": 1,
+      "kills": [
+        {
+          "after_seconds": 8.242,
+          "landed": "fetching"
+        },
+        {
+          "after_seconds": 1.429,
+          "landed": "fetching"
+        },
+        {
+          "after_seconds": 13.934,
+          "landed": "fetching"
+        }
+      ],
+      "recovery_exit": 0,
+      "cache_verified": true,
+      "runs": true,
+      "differing_paths": 0,
+      "differences": [],
+      "converged": true
+    },
+    {
+      "trial": 2,
+      "kills": [
+        {
+          "after_seconds": 3.404,
+          "landed": "resolving"
+        }
+      ],
+      "recovery_exit": 0,
+      "cache_verified": true,
+      "runs": true,
+      "differing_paths": 0,
+      "differences": [],
+      "converged": true
+    },
+    {
+      "trial": 3,
+      "kills": [
+        {
+          "after_seconds": 1.687,
+          "landed": "resolving"
+        },
+        {
+          "after_seconds": 26.79,
+          "landed": "finished"
+        },
+        {
+          "after_seconds": 22.888,
+          "landed": "finished"
+        }
+      ],
+      "recovery_exit": 0,
+      "cache_verified": true,
+      "runs": true,
+      "differing_paths": 0,
+      "differences": [],
+      "converged": true
+    },
+    {
+      "trial": 4,
+      "kills": [
+        {
+          "after_seconds": 20.009,
+          "landed": "fetching"
+        }
+      ],
+      "recovery_exit": 0,
+      "cache_verified": true,
+      "runs": true,
+      "differing_paths": 0,
+      "differences": [],
+      "converged": true
+    },
+    {
+      "trial": 5,
+      "kills": [
+        {
+          "after_seconds": 2.266,
+          "landed": "resolving"
+        },
+        {
+          "after_seconds": 8.414,
+          "landed": "fetching"
+        }
+      ],
+      "recovery_exit": 0,
+      "cache_verified": true,
+      "runs": true,
+      "differing_paths": 0,
+      "differences": [],
+      "converged": true
+    },
+    {
+      "trial": 6,
+      "kills": [
+        {
+          "after_seconds": 15.522,
+          "landed": "fetching"
+        },
+        {
+          "after_seconds": 0.668,
+          "landed": "fetching"
+        },
+        {
+          "after_seconds": 28.737,
+          "landed": "finished"
+        }
+      ],
+      "recovery_exit": 0,
+      "cache_verified": true,
+      "runs": true,
+      "differing_paths": 0,
+      "differences": [],
+      "converged": true
+    },
+    {
+      "trial": 7,
+      "kills": [
+        {
+          "after_seconds": 15.519,
+          "landed": "fetching"
+        },
+        {
+          "after_seconds": 5.97,
+          "landed": "fetching"
+        }
+      ],
+      "recovery_exit": 0,
+      "cache_verified": true,
+      "runs": true,
+      "differing_paths": 0,
+      "differences": [],
+      "converged": true
+    },
+    {
+      "trial": 8,
+      "kills": [
+        {
+          "after_seconds": 16.117,
+          "landed": "fetching"
+        },
+        {
+          "after_seconds": 29.733,
+          "landed": "finished"
+        },
+        {
+          "after_seconds": 12.617,
+          "landed": "finished"
+        }
+      ],
+      "recovery_exit": 0,
+      "cache_verified": true,
+      "runs": true,
+      "differing_paths": 0,
+      "differences": [],
+      "converged": true
+    },
+    {
+      "trial": 9,
+      "kills": [
+        {
+          "after_seconds": 22.833,
+          "landed": "fetching"
+        },
+        {
+          "after_seconds": 0.983,
+          "landed": "fetching"
+        },
+        {
+          "after_seconds": 8.379,
+          "landed": "finished"
+        }
+      ],
+      "recovery_exit": 0,
+      "cache_verified": true,
+      "runs": true,
+      "differing_paths": 0,
+      "differences": [],
+      "converged": true
+    },
+    {
+      "trial": 10,
+      "kills": [
+        {
+          "after_seconds": 4.046,
+          "landed": "resolving"
+        },
+        {
+          "after_seconds": 20.494,
+          "landed": "linking"
+        }
+      ],
+      "recovery_exit": 0,
+      "cache_verified": true,
+      "runs": true,
+      "differing_paths": 0,
+      "differences": [],
+      "converged": true
+    },
+    {
+      "trial": 11,
+      "kills": [
+        {
+          "after_seconds": 21.787,
+          "landed": "fetching"
+        }
+      ],
+      "recovery_exit": 0,
+      "cache_verified": true,
+      "runs": true,
+      "differing_paths": 0,
+      "differences": [],
+      "converged": true
+    },
+    {
+      "trial": 12,
+      "kills": [
+        {
+          "after_seconds": 16.918,
+          "landed": "fetching"
+        },
+        {
+          "after_seconds": 22.414,
+          "landed": "finished"
+        },
+        {
+          "after_seconds": 8.972,
+          "landed": "finished"
+        }
+      ],
+      "recovery_exit": 0,
+      "cache_verified": true,
+      "runs": true,
+      "differing_paths": 0,
+      "differences": [],
+      "converged": true
+    }
+  ]
+}

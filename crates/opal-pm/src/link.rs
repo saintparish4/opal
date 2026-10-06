@@ -88,6 +88,8 @@ pub type Fetched = BTreeMap<PackageId, FetchedPackage>;
 #[derive(Debug, Default, PartialEq, Eq)]
 pub struct LinkReport {
     pub added: usize,
+    /// The placements `added` counts, sorted.
+    pub added_paths: Vec<NormalizedPath>,
     pub removed: usize,
     pub unchanged: usize,
     pub files_linked: usize,
@@ -104,6 +106,7 @@ impl LinkReport {
     /// shared and no lock sits in the per-file path.
     fn absorb(&mut self, other: Self) {
         self.added += other.added;
+        self.added_paths.extend(other.added_paths);
         self.removed += other.removed;
         self.unchanged += other.unchanged;
         self.files_linked += other.files_linked;
@@ -264,6 +267,11 @@ fn slot_for(directory: &NormalizedPath, name: &str) -> NormalizedPath {
     directory.join(NODE_MODULES).join(name)
 }
 
+/// Where the project's own dependency `name` is placed.
+pub(crate) fn root_slot(name: &str) -> NormalizedPath {
+    slot_for(&NormalizedPath::new("."), name)
+}
+
 /// Every directory that could host this package, from the project root down to
 /// the package that depends on it.
 fn owning_directories(owner: &NormalizedPath) -> Vec<NormalizedPath> {
@@ -369,6 +377,7 @@ pub fn reconcile(
                     .ok_or_else(|| LinkError::NotFetched { id: (*id).clone() })?;
                 materialize(project_root, path, package, cas, report)?;
                 report.added += 1;
+                report.added_paths.push((*path).clone());
                 Ok(())
             },
         )?;
@@ -379,6 +388,8 @@ pub fn reconcile(
         fault::checkpoint(FAULT_BETWEEN_PACKAGES);
     }
 
+    // Threads report in whichever order they finish.
+    report.added_paths.sort();
     write_bin_directories(project_root, layout, fetched, cas, &mut report)?;
     Ok(report)
 }

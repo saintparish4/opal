@@ -633,8 +633,17 @@ fn test_production_install_skips_dev_dependencies() {
 #[derive(Default)]
 struct Recorder {
     stages: Mutex<Vec<Stage>>,
+    resolving: Mutex<Vec<(usize, usize)>>,
+    downloads: Mutex<std::collections::BTreeMap<String, Download>>,
     fetched: Mutex<Vec<(String, bool)>>,
     finished: AtomicBool,
+}
+
+#[derive(Clone, Default)]
+struct Download {
+    /// The size each attempt announced.
+    announced: Vec<Option<u64>>,
+    received: u64,
 }
 
 impl Recorder {
@@ -654,6 +663,24 @@ impl Recorder {
 impl opal_pm::progress::Progress for Recorder {
     fn stage(&self, stage: Stage) {
         self.stages.lock().unwrap().push(stage);
+    }
+
+    fn resolving(&self, settled: usize, known: usize) {
+        self.resolving.lock().unwrap().push((settled, known));
+    }
+
+    fn download_started(&self, id: &opal_pm::resolve::PackageId, total: Option<u64>) {
+        let mut downloads = self.downloads.lock().unwrap();
+        downloads
+            .entry(id.name.clone())
+            .or_default()
+            .announced
+            .push(total);
+    }
+
+    fn downloaded(&self, id: &opal_pm::resolve::PackageId, bytes: u64) {
+        let mut downloads = self.downloads.lock().unwrap();
+        downloads.entry(id.name.clone()).or_default().received += bytes;
     }
 
     fn fetched(&self, id: &opal_pm::resolve::PackageId, from_store: bool) {
@@ -709,6 +736,122 @@ fn test_the_pipeline_reports_each_stage_once_and_every_package() {
     let reported = second.fetched();
     assert_eq!(reported.len(), 2);
     assert!(reported.iter().all(|(_, from_store)| *from_store));
+}
+
+#[test]
+fn test_resolving_counts_up_to_the_size_of_the_tree() {
+    let mut sandbox = Sandbox::new();
+    sandbox
+        .registry
+        .publish(Package::new("c", "1.0.0"))
+        .publish(Package::new("b", "1.0.0").dependency("c", "^1.0.0"))
+        .publish(Package::new("a", "1.0.0").dependency("b", "^1.0.0"));
+    sandbox.project(serde_json::json!({ "dependencies": { "a": "^1.0.0", "c": "^1.0.0" } }));
+
+    let recorder = Recorder::default();
+    sandbox.install_reporting(&recorder).expect("install");
+
+    let reported = recorder.resolving.lock().unwrap().clone();
+    assert_eq!(reported.last(), Some(&(3, 3)), "{reported:?}");
+    assert!(
+        reported.iter().all(|(settled, known)| settled <= known),
+        "more settled than known: {reported:?}"
+    );
+    assert!(
+        reported
+            .windows(2)
+            .all(|pair| pair[0].0 <= pair[1].0 && pair[0].1 <= pair[1].1),
+        "a count went backwards: {reported:?}"
+    );
+
+    // The lockfile answers the second run, so nothing is resolved.
+    let second = Recorder::default();
+    sandbox.install_reporting(&second).expect("second install");
+    assert!(second.resolving.lock().unwrap().is_empty());
+}
+
+#[test]
+fn test_a_download_reports_its_size_and_every_byte_of_it() {
+    let mut sandbox = Sandbox::new();
+    sandbox
+        .registry
+        .publish(Package::new("b", "1.0.0").file("index.js", "module.exports = 'b';\n"))
+        .publish(Package::new("a", "1.0.0").dependency("b", "^1.0.0"));
+    sandbox.project(serde_json::json!({ "dependencies": { "a": "^1.0.0" } }));
+
+    let first = Recorder::default();
+    sandbox.install_reporting(&first).expect("install");
+
+    let downloads = first.downloads.lock().unwrap().clone();
+    assert_eq!(downloads.keys().collect::<Vec<_>>(), ["a", "b"]);
+    for (name, download) in &downloads {
+        assert_eq!(download.announced.len(), 1, "{name} started more than once");
+        let total = download.announced[0].expect("a file has a length");
+        assert!(total > 0, "{name} announced an empty tarball");
+        assert_eq!(
+            download.received, total,
+            "{name}: bytes reported against size"
+        );
+    }
+
+    // The store answers the second run, so nothing is downloaded to report.
+    let second = Recorder::default();
+    sandbox.install_reporting(&second).expect("second install");
+    assert!(second.downloads.lock().unwrap().is_empty());
+}
+
+fn names(added: &[(String, opal_pm::resolve::PackageId)]) -> Vec<String> {
+    added
+        .iter()
+        .map(|(name, id)| format!("{name}@{}", id.version))
+        .collect()
+}
+
+#[test]
+fn test_a_run_reports_the_direct_dependencies_it_added() {
+    let mut sandbox = Sandbox::new();
+    sandbox
+        .registry
+        .publish(Package::new("shared", "1.0.0"))
+        .publish(Package::new("tool", "2.0.0"))
+        .publish(Package::new("a", "1.0.0").dependency("shared", "^1.0.0"));
+    sandbox.project(serde_json::json!({
+        "dependencies": { "a": "^1.0.0" },
+        "devDependencies": { "tool": "^2.0.0" }
+    }));
+
+    // `shared` is hoisted beside them and was added too, but the project
+    // never asked for it.
+    let first = sandbox.install().expect("install");
+    assert_eq!(names(&first.added_direct), ["a@1.0.0", "tool@2.0.0"]);
+
+    let unchanged = sandbox.install().expect("second install");
+    assert!(unchanged.added_direct.is_empty(), "{unchanged:?}");
+
+    std::fs::remove_dir_all(sandbox.path("node_modules/tool")).expect("remove");
+    let repaired = sandbox.install().expect("third install");
+    assert_eq!(names(&repaired.added_direct), ["tool@2.0.0"]);
+}
+
+#[test]
+fn test_a_production_run_reports_no_dev_dependency_as_added() {
+    let mut sandbox = Sandbox::new();
+    sandbox
+        .registry
+        .publish(Package::new("a", "1.0.0"))
+        .publish(Package::new("tool", "2.0.0"));
+    sandbox.project(serde_json::json!({
+        "dependencies": { "a": "^1.0.0" },
+        "devDependencies": { "tool": "^2.0.0" }
+    }));
+
+    let options = InstallOptions {
+        include_development: false,
+        ..InstallOptions::default()
+    };
+    let report = sandbox.install_with(&options).expect("install");
+
+    assert_eq!(names(&report.added_direct), ["a@1.0.0"]);
 }
 
 #[test]

@@ -1,0 +1,5 @@
+{
+	"dependencies": {"ms": "1", "a": "2"},
+	"devDependencies": {"ms": "1"},
+	"peerDependencies": {"ms": "*"}
+}

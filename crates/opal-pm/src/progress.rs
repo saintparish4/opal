@@ -28,14 +28,28 @@ pub enum Stage {
 /// implementation only overrides the ones it renders.
 ///
 /// `Sync` because packages are fetched on several threads, and each one calls
-/// [`Progress::fetched`] itself. `stage` and `finished` are only ever called
-/// from the thread running the install.
+/// the download hooks and [`Progress::fetched`] itself. The rest are only ever
+/// called from the thread running the install.
 pub trait Progress: Sync {
     fn stage(&self, _stage: Stage) {}
 
-    /// One package's contents are in the store. `from_store` distinguishes a
-    /// cache hit from a download, which is the difference between a fast tick
-    /// and a slow one.
+    /// Resolution has chosen `settled` packages out of the `known` it can see
+    /// from here. `known` is a lower bound that grows as the tree is walked:
+    /// a package's own dependencies are unknown until it is chosen. The last
+    /// call of a resolve reports the two equal, at the size of the tree.
+    fn resolving(&self, _settled: usize, _known: usize) {}
+
+    /// A package's tarball has started arriving. `total` is its size when the
+    /// server said. A download that is retried starts again, with its count
+    /// back at nothing.
+    fn download_started(&self, _id: &PackageId, _total: Option<u64>) {}
+
+    /// `bytes` more of that tarball are here.
+    fn downloaded(&self, _id: &PackageId, _bytes: u64) {}
+
+    /// One package's contents are in the store, which ends any download it
+    /// had. `from_store` distinguishes a cache hit from a download, which is
+    /// the difference between a fast tick and a slow one.
     fn fetched(&self, _id: &PackageId, _from_store: bool) {}
 
     /// The last stage is done and nothing further will be reported.
