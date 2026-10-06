@@ -1,0 +1,1145 @@
+{
+  "meta": {
+    "project": "express",
+    "date": "2026-10-06T00:23:36",
+    "host": "Linux 6.6.87.2-microsoft-standard-WSL2, 8 threads",
+    "seed": 3839760018,
+    "trials": 60,
+    "opal_binary": {
+      "path": "/home/saint/opal-bench/v0.4.0/opal",
+      "sha256": "61595255213c9aeb7ef54a29a33604dc37540bf19a60f0fe8c8ab84c7af94540"
+    },
+    "opal_version": "opal 0.4.0",
+    "clean_install_seconds": 0.88,
+    "reference_paths": 803
+  },
+  "summary": {
+    "kills": 114,
+    "interrupted": 75,
+    "landed": {
+      "resolving": 38,
+      "fetching": 30,
+      "finished": 39,
+      "linking": 7
+    },
+    "trials_converged": 60
+  },
+  "trials": [
+    {
+      "trial": 1,
+      "kills": [
+        {
+          "after_seconds": 0.256,
+          "landed": "resolving"
+        }
+      ],
+      "recovery_exit": 0,
+      "cache_verified": true,
+      "runs": true,
+      "differing_paths": 0,
+      "differences": [],
+      "converged": true
+    },
+    {
+      "trial": 2,
+      "kills": [
+        {
+          "after_seconds": 0.229,
+          "landed": "resolving"
+        },
+        {
+          "after_seconds": 0.095,
+          "landed": "resolving"
+        },
+        {
+          "after_seconds": 0.375,
+          "landed": "fetching"
+        }
+      ],
+      "recovery_exit": 0,
+      "cache_verified": true,
+      "runs": true,
+      "differing_paths": 0,
+      "differences": [],
+      "converged": true
+    },
+    {
+      "trial": 3,
+      "kills": [
+        {
+          "after_seconds": 0.145,
+          "landed": "resolving"
+        }
+      ],
+      "recovery_exit": 0,
+      "cache_verified": true,
+      "runs": true,
+      "differing_paths": 0,
+      "differences": [],
+      "converged": true
+    },
+    {
+      "trial": 4,
+      "kills": [
+        {
+          "after_seconds": 0.886,
+          "landed": "finished"
+        }
+      ],
+      "recovery_exit": 0,
+      "cache_verified": true,
+      "runs": true,
+      "differing_paths": 0,
+      "differences": [],
+      "converged": true
+    },
+    {
+      "trial": 5,
+      "kills": [
+        {
+          "after_seconds": 0.733,
+          "landed": "fetching"
+        },
+        {
+          "after_seconds": 0.944,
+          "landed": "finished"
+        }
+      ],
+      "recovery_exit": 0,
+      "cache_verified": true,
+      "runs": true,
+      "differing_paths": 0,
+      "differences": [],
+      "converged": true
+    },
+    {
+      "trial": 6,
+      "kills": [
+        {
+          "after_seconds": 0.828,
+          "landed": "fetching"
+        },
+        {
+          "after_seconds": 0.176,
+          "landed": "linking"
+        },
+        {
+          "after_seconds": 0.459,
+          "landed": "finished"
+        }
+      ],
+      "recovery_exit": 0,
+      "cache_verified": true,
+      "runs": true,
+      "differing_paths": 0,
+      "differences": [],
+      "converged": true
+    },
+    {
+      "trial": 7,
+      "kills": [
+        {
+          "after_seconds": 0.613,
+          "landed": "fetching"
+        },
+        {
+          "after_seconds": 0.325,
+          "landed": "linking"
+        },
+        {
+          "after_seconds": 0.281,
+          "landed": "finished"
+        }
+      ],
+      "recovery_exit": 0,
+      "cache_verified": true,
+      "runs": true,
+      "differing_paths": 0,
+      "differences": [],
+      "converged": true
+    },
+    {
+      "trial": 8,
+      "kills": [
+        {
+          "after_seconds": 0.966,
+          "landed": "finished"
+        }
+      ],
+      "recovery_exit": 0,
+      "cache_verified": true,
+      "runs": true,
+      "differing_paths": 0,
+      "differences": [],
+      "converged": true
+    },
+    {
+      "trial": 9,
+      "kills": [
+        {
+          "after_seconds": 1.064,
+          "landed": "finished"
+        },
+        {
+          "after_seconds": 0.707,
+          "landed": "finished"
+        },
+        {
+          "after_seconds": 0.608,
+          "landed": "finished"
+        }
+      ],
+      "recovery_exit": 0,
+      "cache_verified": true,
+      "runs": true,
+      "differing_paths": 0,
+      "differences": [],
+      "converged": true
+    },
+    {
+      "trial": 10,
+      "kills": [
+        {
+          "after_seconds": 0.35,
+          "landed": "resolving"
+        },
+        {
+          "after_seconds": 0.038,
+          "landed": "resolving"
+        }
+      ],
+      "recovery_exit": 0,
+      "cache_verified": true,
+      "runs": true,
+      "differing_paths": 0,
+      "differences": [],
+      "converged": true
+    },
+    {
+      "trial": 11,
+      "kills": [
+        {
+          "after_seconds": 0.496,
+          "landed": "fetching"
+        },
+        {
+          "after_seconds": 0.369,
+          "landed": "linking"
+        },
+        {
+          "after_seconds": 0.362,
+          "landed": "finished"
+        }
+      ],
+      "recovery_exit": 0,
+      "cache_verified": true,
+      "runs": true,
+      "differing_paths": 0,
+      "differences": [],
+      "converged": true
+    },
+    {
+      "trial": 12,
+      "kills": [
+        {
+          "after_seconds": 0.216,
+          "landed": "resolving"
+        }
+      ],
+      "recovery_exit": 0,
+      "cache_verified": true,
+      "runs": true,
+      "differing_paths": 0,
+      "differences": [],
+      "converged": true
+    },
+    {
+      "trial": 13,
+      "kills": [
+        {
+          "after_seconds": 0.264,
+          "landed": "resolving"
+        },
+        {
+          "after_seconds": 0.594,
+          "landed": "resolving"
+        }
+      ],
+      "recovery_exit": 0,
+      "cache_verified": true,
+      "runs": true,
+      "differing_paths": 0,
+      "differences": [],
+      "converged": true
+    },
+    {
+      "trial": 14,
+      "kills": [
+        {
+          "after_seconds": 0.841,
+          "landed": "linking"
+        }
+      ],
+      "recovery_exit": 0,
+      "cache_verified": true,
+      "runs": true,
+      "differing_paths": 0,
+      "differences": [],
+      "converged": true
+    },
+    {
+      "trial": 15,
+      "kills": [
+        {
+          "after_seconds": 0.268,
+          "landed": "resolving"
+        },
+        {
+          "after_seconds": 0.26,
+          "landed": "resolving"
+        },
+        {
+          "after_seconds": 0.942,
+          "landed": "finished"
+        }
+      ],
+      "recovery_exit": 0,
+      "cache_verified": true,
+      "runs": true,
+      "differing_paths": 0,
+      "differences": [],
+      "converged": true
+    },
+    {
+      "trial": 16,
+      "kills": [
+        {
+          "after_seconds": 0.702,
+          "landed": "fetching"
+        },
+        {
+          "after_seconds": 0.728,
+          "landed": "fetching"
+        }
+      ],
+      "recovery_exit": 0,
+      "cache_verified": true,
+      "runs": true,
+      "differing_paths": 0,
+      "differences": [],
+      "converged": true
+    },
+    {
+      "trial": 17,
+      "kills": [
+        {
+          "after_seconds": 0.859,
+          "landed": "fetching"
+        },
+        {
+          "after_seconds": 1.056,
+          "landed": "finished"
+        },
+        {
+          "after_seconds": 0.872,
+          "landed": "finished"
+        }
+      ],
+      "recovery_exit": 0,
+      "cache_verified": true,
+      "runs": true,
+      "differing_paths": 0,
+      "differences": [],
+      "converged": true
+    },
+    {
+      "trial": 18,
+      "kills": [
+        {
+          "after_seconds": 0.387,
+          "landed": "resolving"
+        }
+      ],
+      "recovery_exit": 0,
+      "cache_verified": true,
+      "runs": true,
+      "differing_paths": 0,
+      "differences": [],
+      "converged": true
+    },
+    {
+      "trial": 19,
+      "kills": [
+        {
+          "after_seconds": 0.438,
+          "landed": "resolving"
+        },
+        {
+          "after_seconds": 0.837,
+          "landed": "finished"
+        },
+        {
+          "after_seconds": 0.321,
+          "landed": "finished"
+        }
+      ],
+      "recovery_exit": 0,
+      "cache_verified": true,
+      "runs": true,
+      "differing_paths": 0,
+      "differences": [],
+      "converged": true
+    },
+    {
+      "trial": 20,
+      "kills": [
+        {
+          "after_seconds": 0.805,
+          "landed": "resolving"
+        }
+      ],
+      "recovery_exit": 0,
+      "cache_verified": true,
+      "runs": true,
+      "differing_paths": 0,
+      "differences": [],
+      "converged": true
+    },
+    {
+      "trial": 21,
+      "kills": [
+        {
+          "after_seconds": 0.881,
+          "landed": "linking"
+        },
+        {
+          "after_seconds": 1.093,
+          "landed": "finished"
+        },
+        {
+          "after_seconds": 0.409,
+          "landed": "finished"
+        }
+      ],
+      "recovery_exit": 0,
+      "cache_verified": true,
+      "runs": true,
+      "differing_paths": 0,
+      "differences": [],
+      "converged": true
+    },
+    {
+      "trial": 22,
+      "kills": [
+        {
+          "after_seconds": 0.357,
+          "landed": "resolving"
+        },
+        {
+          "after_seconds": 0.825,
+          "landed": "linking"
+        }
+      ],
+      "recovery_exit": 0,
+      "cache_verified": true,
+      "runs": true,
+      "differing_paths": 0,
+      "differences": [],
+      "converged": true
+    },
+    {
+      "trial": 23,
+      "kills": [
+        {
+          "after_seconds": 0.457,
+          "landed": "fetching"
+        },
+        {
+          "after_seconds": 0.634,
+          "landed": "finished"
+        }
+      ],
+      "recovery_exit": 0,
+      "cache_verified": true,
+      "runs": true,
+      "differing_paths": 0,
+      "differences": [],
+      "converged": true
+    },
+    {
+      "trial": 24,
+      "kills": [
+        {
+          "after_seconds": 0.961,
+          "landed": "resolving"
+        },
+        {
+          "after_seconds": 0.497,
+          "landed": "fetching"
+        }
+      ],
+      "recovery_exit": 0,
+      "cache_verified": true,
+      "runs": true,
+      "differing_paths": 0,
+      "differences": [],
+      "converged": true
+    },
+    {
+      "trial": 25,
+      "kills": [
+        {
+          "after_seconds": 0.617,
+          "landed": "fetching"
+        }
+      ],
+      "recovery_exit": 0,
+      "cache_verified": true,
+      "runs": true,
+      "differing_paths": 0,
+      "differences": [],
+      "converged": true
+    },
+    {
+      "trial": 26,
+      "kills": [
+        {
+          "after_seconds": 1.0,
+          "landed": "finished"
+        },
+        {
+          "after_seconds": 0.668,
+          "landed": "finished"
+        },
+        {
+          "after_seconds": 0.883,
+          "landed": "finished"
+        }
+      ],
+      "recovery_exit": 0,
+      "cache_verified": true,
+      "runs": true,
+      "differing_paths": 0,
+      "differences": [],
+      "converged": true
+    },
+    {
+      "trial": 27,
+      "kills": [
+        {
+          "after_seconds": 0.576,
+          "landed": "fetching"
+        },
+        {
+          "after_seconds": 0.497,
+          "landed": "fetching"
+        },
+        {
+          "after_seconds": 0.336,
+          "landed": "finished"
+        }
+      ],
+      "recovery_exit": 0,
+      "cache_verified": true,
+      "runs": true,
+      "differing_paths": 0,
+      "differences": [],
+      "converged": true
+    },
+    {
+      "trial": 28,
+      "kills": [
+        {
+          "after_seconds": 0.956,
+          "landed": "finished"
+        },
+        {
+          "after_seconds": 0.306,
+          "landed": "finished"
+        },
+        {
+          "after_seconds": 1.062,
+          "landed": "finished"
+        }
+      ],
+      "recovery_exit": 0,
+      "cache_verified": true,
+      "runs": true,
+      "differing_paths": 0,
+      "differences": [],
+      "converged": true
+    },
+    {
+      "trial": 29,
+      "kills": [
+        {
+          "after_seconds": 0.674,
+          "landed": "fetching"
+        }
+      ],
+      "recovery_exit": 0,
+      "cache_verified": true,
+      "runs": true,
+      "differing_paths": 0,
+      "differences": [],
+      "converged": true
+    },
+    {
+      "trial": 30,
+      "kills": [
+        {
+          "after_seconds": 0.652,
+          "landed": "fetching"
+        }
+      ],
+      "recovery_exit": 0,
+      "cache_verified": true,
+      "runs": true,
+      "differing_paths": 0,
+      "differences": [],
+      "converged": true
+    },
+    {
+      "trial": 31,
+      "kills": [
+        {
+          "after_seconds": 0.253,
+          "landed": "resolving"
+        }
+      ],
+      "recovery_exit": 0,
+      "cache_verified": true,
+      "runs": true,
+      "differing_paths": 0,
+      "differences": [],
+      "converged": true
+    },
+    {
+      "trial": 32,
+      "kills": [
+        {
+          "after_seconds": 0.845,
+          "landed": "linking"
+        },
+        {
+          "after_seconds": 1.081,
+          "landed": "finished"
+        }
+      ],
+      "recovery_exit": 0,
+      "cache_verified": true,
+      "runs": true,
+      "differing_paths": 0,
+      "differences": [],
+      "converged": true
+    },
+    {
+      "trial": 33,
+      "kills": [
+        {
+          "after_seconds": 0.914,
+          "landed": "finished"
+        },
+        {
+          "after_seconds": 0.647,
+          "landed": "finished"
+        }
+      ],
+      "recovery_exit": 0,
+      "cache_verified": true,
+      "runs": true,
+      "differing_paths": 0,
+      "differences": [],
+      "converged": true
+    },
+    {
+      "trial": 34,
+      "kills": [
+        {
+          "after_seconds": 0.641,
+          "landed": "fetching"
+        },
+        {
+          "after_seconds": 0.165,
+          "landed": "fetching"
+        }
+      ],
+      "recovery_exit": 0,
+      "cache_verified": true,
+      "runs": true,
+      "differing_paths": 0,
+      "differences": [],
+      "converged": true
+    },
+    {
+      "trial": 35,
+      "kills": [
+        {
+          "after_seconds": 0.86,
+          "landed": "resolving"
+        }
+      ],
+      "recovery_exit": 0,
+      "cache_verified": true,
+      "runs": true,
+      "differing_paths": 0,
+      "differences": [],
+      "converged": true
+    },
+    {
+      "trial": 36,
+      "kills": [
+        {
+          "after_seconds": 0.161,
+          "landed": "resolving"
+        },
+        {
+          "after_seconds": 0.964,
+          "landed": "finished"
+        }
+      ],
+      "recovery_exit": 0,
+      "cache_verified": true,
+      "runs": true,
+      "differing_paths": 0,
+      "differences": [],
+      "converged": true
+    },
+    {
+      "trial": 37,
+      "kills": [
+        {
+          "after_seconds": 0.7,
+          "landed": "fetching"
+        },
+        {
+          "after_seconds": 0.92,
+          "landed": "finished"
+        }
+      ],
+      "recovery_exit": 0,
+      "cache_verified": true,
+      "runs": true,
+      "differing_paths": 0,
+      "differences": [],
+      "converged": true
+    },
+    {
+      "trial": 38,
+      "kills": [
+        {
+          "after_seconds": 1.043,
+          "landed": "finished"
+        },
+        {
+          "after_seconds": 0.665,
+          "landed": "finished"
+        }
+      ],
+      "recovery_exit": 0,
+      "cache_verified": true,
+      "runs": true,
+      "differing_paths": 0,
+      "differences": [],
+      "converged": true
+    },
+    {
+      "trial": 39,
+      "kills": [
+        {
+          "after_seconds": 0.163,
+          "landed": "resolving"
+        },
+        {
+          "after_seconds": 0.094,
+          "landed": "resolving"
+        }
+      ],
+      "recovery_exit": 0,
+      "cache_verified": true,
+      "runs": true,
+      "differing_paths": 0,
+      "differences": [],
+      "converged": true
+    },
+    {
+      "trial": 40,
+      "kills": [
+        {
+          "after_seconds": 0.609,
+          "landed": "fetching"
+        },
+        {
+          "after_seconds": 0.435,
+          "landed": "finished"
+        }
+      ],
+      "recovery_exit": 0,
+      "cache_verified": true,
+      "runs": true,
+      "differing_paths": 0,
+      "differences": [],
+      "converged": true
+    },
+    {
+      "trial": 41,
+      "kills": [
+        {
+          "after_seconds": 0.002,
+          "landed": "resolving"
+        }
+      ],
+      "recovery_exit": 0,
+      "cache_verified": true,
+      "runs": true,
+      "differing_paths": 0,
+      "differences": [],
+      "converged": true
+    },
+    {
+      "trial": 42,
+      "kills": [
+        {
+          "after_seconds": 0.175,
+          "landed": "resolving"
+        }
+      ],
+      "recovery_exit": 0,
+      "cache_verified": true,
+      "runs": true,
+      "differing_paths": 0,
+      "differences": [],
+      "converged": true
+    },
+    {
+      "trial": 43,
+      "kills": [
+        {
+          "after_seconds": 0.353,
+          "landed": "resolving"
+        },
+        {
+          "after_seconds": 0.306,
+          "landed": "fetching"
+        }
+      ],
+      "recovery_exit": 0,
+      "cache_verified": true,
+      "runs": true,
+      "differing_paths": 0,
+      "differences": [],
+      "converged": true
+    },
+    {
+      "trial": 44,
+      "kills": [
+        {
+          "after_seconds": 0.689,
+          "landed": "fetching"
+        },
+        {
+          "after_seconds": 0.857,
+          "landed": "finished"
+        }
+      ],
+      "recovery_exit": 0,
+      "cache_verified": true,
+      "runs": true,
+      "differing_paths": 0,
+      "differences": [],
+      "converged": true
+    },
+    {
+      "trial": 45,
+      "kills": [
+        {
+          "after_seconds": 0.721,
+          "landed": "resolving"
+        }
+      ],
+      "recovery_exit": 0,
+      "cache_verified": true,
+      "runs": true,
+      "differing_paths": 0,
+      "differences": [],
+      "converged": true
+    },
+    {
+      "trial": 46,
+      "kills": [
+        {
+          "after_seconds": 0.7,
+          "landed": "fetching"
+        },
+        {
+          "after_seconds": 0.335,
+          "landed": "finished"
+        }
+      ],
+      "recovery_exit": 0,
+      "cache_verified": true,
+      "runs": true,
+      "differing_paths": 0,
+      "differences": [],
+      "converged": true
+    },
+    {
+      "trial": 47,
+      "kills": [
+        {
+          "after_seconds": 0.063,
+          "landed": "resolving"
+        },
+        {
+          "after_seconds": 0.344,
+          "landed": "resolving"
+        },
+        {
+          "after_seconds": 0.48,
+          "landed": "fetching"
+        }
+      ],
+      "recovery_exit": 0,
+      "cache_verified": true,
+      "runs": true,
+      "differing_paths": 0,
+      "differences": [],
+      "converged": true
+    },
+    {
+      "trial": 48,
+      "kills": [
+        {
+          "after_seconds": 0.853,
+          "landed": "resolving"
+        },
+        {
+          "after_seconds": 1.063,
+          "landed": "finished"
+        }
+      ],
+      "recovery_exit": 0,
+      "cache_verified": true,
+      "runs": true,
+      "differing_paths": 0,
+      "differences": [],
+      "converged": true
+    },
+    {
+      "trial": 49,
+      "kills": [
+        {
+          "after_seconds": 0.39,
+          "landed": "resolving"
+        }
+      ],
+      "recovery_exit": 0,
+      "cache_verified": true,
+      "runs": true,
+      "differing_paths": 0,
+      "differences": [],
+      "converged": true
+    },
+    {
+      "trial": 50,
+      "kills": [
+        {
+          "after_seconds": 0.046,
+          "landed": "resolving"
+        }
+      ],
+      "recovery_exit": 0,
+      "cache_verified": true,
+      "runs": true,
+      "differing_paths": 0,
+      "differences": [],
+      "converged": true
+    },
+    {
+      "trial": 51,
+      "kills": [
+        {
+          "after_seconds": 0.575,
+          "landed": "fetching"
+        },
+        {
+          "after_seconds": 0.255,
+          "landed": "fetching"
+        }
+      ],
+      "recovery_exit": 0,
+      "cache_verified": true,
+      "runs": true,
+      "differing_paths": 0,
+      "differences": [],
+      "converged": true
+    },
+    {
+      "trial": 52,
+      "kills": [
+        {
+          "after_seconds": 0.776,
+          "landed": "resolving"
+        },
+        {
+          "after_seconds": 0.844,
+          "landed": "finished"
+        }
+      ],
+      "recovery_exit": 0,
+      "cache_verified": true,
+      "runs": true,
+      "differing_paths": 0,
+      "differences": [],
+      "converged": true
+    },
+    {
+      "trial": 53,
+      "kills": [
+        {
+          "after_seconds": 0.458,
+          "landed": "resolving"
+        }
+      ],
+      "recovery_exit": 0,
+      "cache_verified": true,
+      "runs": true,
+      "differing_paths": 0,
+      "differences": [],
+      "converged": true
+    },
+    {
+      "trial": 54,
+      "kills": [
+        {
+          "after_seconds": 0.305,
+          "landed": "resolving"
+        },
+        {
+          "after_seconds": 0.909,
+          "landed": "finished"
+        }
+      ],
+      "recovery_exit": 0,
+      "cache_verified": true,
+      "runs": true,
+      "differing_paths": 0,
+      "differences": [],
+      "converged": true
+    },
+    {
+      "trial": 55,
+      "kills": [
+        {
+          "after_seconds": 0.795,
+          "landed": "fetching"
+        },
+        {
+          "after_seconds": 0.048,
+          "landed": "fetching"
+        }
+      ],
+      "recovery_exit": 0,
+      "cache_verified": true,
+      "runs": true,
+      "differing_paths": 0,
+      "differences": [],
+      "converged": true
+    },
+    {
+      "trial": 56,
+      "kills": [
+        {
+          "after_seconds": 0.148,
+          "landed": "resolving"
+        },
+        {
+          "after_seconds": 0.228,
+          "landed": "resolving"
+        }
+      ],
+      "recovery_exit": 0,
+      "cache_verified": true,
+      "runs": true,
+      "differing_paths": 0,
+      "differences": [],
+      "converged": true
+    },
+    {
+      "trial": 57,
+      "kills": [
+        {
+          "after_seconds": 0.473,
+          "landed": "fetching"
+        },
+        {
+          "after_seconds": 0.249,
+          "landed": "fetching"
+        },
+        {
+          "after_seconds": 1.064,
+          "landed": "fetching"
+        }
+      ],
+      "recovery_exit": 0,
+      "cache_verified": true,
+      "runs": true,
+      "differing_paths": 0,
+      "differences": [],
+      "converged": true
+    },
+    {
+      "trial": 58,
+      "kills": [
+        {
+          "after_seconds": 0.027,
+          "landed": "resolving"
+        }
+      ],
+      "recovery_exit": 0,
+      "cache_verified": true,
+      "runs": true,
+      "differing_paths": 0,
+      "differences": [],
+      "converged": true
+    },
+    {
+      "trial": 59,
+      "kills": [
+        {
+          "after_seconds": 1.037,
+          "landed": "finished"
+        },
+        {
+          "after_seconds": 0.269,
+          "landed": "finished"
+        }
+      ],
+      "recovery_exit": 0,
+      "cache_verified": true,
+      "runs": true,
+      "differing_paths": 0,
+      "differences": [],
+      "converged": true
+    },
+    {
+      "trial": 60,
+      "kills": [
+        {
+          "after_seconds": 0.231,
+          "landed": "resolving"
+        },
+        {
+          "after_seconds": 0.083,
+          "landed": "resolving"
+        }
+      ],
+      "recovery_exit": 0,
+      "cache_verified": true,
+      "runs": true,
+      "differing_paths": 0,
+      "differences": [],
+      "converged": true
+    }
+  ]
+}

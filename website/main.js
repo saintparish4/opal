@@ -1,8 +1,8 @@
-// Medians from the 2026-10-05 section of benchmarks/BENCHMARKS.md (laptop, a
-// build of the v0.4.0 source made before the release). Times in seconds; DISK
-// is megabytes. Keep in step with that file.
+// Medians from the 2026-10-06 section of benchmarks/BENCHMARKS.md (laptop, the
+// v0.4.0 release binary). Times in seconds; DISK is megabytes. Keep in step
+// with that file.
 const TOOLS = [
-  { name: "opal", version: "v0.4.0 pre-release" },
+  { name: "opal", version: "v0.4.0" },
   { name: "npm", version: "v12.0.2" },
   { name: "pnpm", version: "v11.21.0" },
   { name: "yarn", version: "v1.22.22" },
@@ -10,20 +10,20 @@ const TOOLS = [
 ];
 const BENCH = {
   next: {
-    cold: [29.34, 26.37, 21.51, 59.26, 20.02],
-    ci: [22.32, 12.79, 17.72, 53.13, 14.46],
-    warm: [0.874, 10.8, 2.23, 5.48, 1.08],
-    cached: [1.08, 10.66, 2.15, 5.16, 1.12],
-    noop: [0.072, 0.625, 0.465, 0.349, 0.016],
-    add: [0.847, 0.82, 3.72, 2.39, 0.163],
+    cold: [24.06, 27.58, 19.29, 53.4, 17.27],
+    ci: [18.84, 13.43, 16.07, 47.05, 11.99],
+    warm: [0.907, 10.85, 2.25, 5.41, 1.09],
+    cached: [0.915, 10.8, 2.25, 5.45, 1.09],
+    noop: [0.072, 0.633, 0.49, 0.352, 0.016],
+    add: [0.939, 0.839, 3.87, 2.44, 0.205],
   },
   express: {
-    cold: [0.964, 1.6, 1.32, 1.6, 0.617],
-    ci: [0.546, 0.906, 1.03, 1.16, 0.733],
-    warm: [0.103, 0.6, 0.732, 0.528, 0.062],
-    cached: [0.108, 0.608, 0.716, 0.519, 0.067],
-    noop: [0.026, 0.347, 0.449, 0.256, 0.006],
-    add: [0.572, 0.517, 0.848, 0.563, 0.145],
+    cold: [0.913, 1.75, 1.36, 1.55, 1.35],
+    ci: [0.491, 1.04, 1.23, 1.22, 0.175],
+    warm: [0.092, 0.643, 0.765, 0.552, 0.067],
+    cached: [0.092, 0.639, 0.778, 0.556, 0.067],
+    noop: [0.016, 0.389, 0.47, 0.266, 0.006],
+    add: [0.499, 0.531, 0.901, 0.587, 0.117],
   },
 };
 // What a second copy of the same project adds on disk, from the same cache.
@@ -32,9 +32,8 @@ const DISK = {
   express: [0.8, 4.3, 1.1, 4.2, 0.5],
 };
 // Opal's and npm's ranges overlap in BENCHMARKS.md although the medians are
-// more than a tenth apart (Next.js first install: opal 28.19–30.66s, npm
-// 24.59–29.09s; express add: opal 190–635ms, npm 517–672ms).
-const OVERLAP = new Set(["next cold", "express add"]);
+// more than a tenth apart (Next.js add: opal 585ms–5.98s, npm 792ms–1.03s).
+const OVERLAP = new Set(["next add"]);
 // The hero shows one scenario, a reinstall, for each project. The other three
 // are in the grid further down, where Opal's slower ones sit beside it.
 const HERO_SCENARIO = "warm";
@@ -174,6 +173,7 @@ const DEMO = window.OPAL_DEMO;
 const STEPS = [
   { command: "opal install", ...DEMO.install },
   { command: "opal install", lines: DEMO.again },
+  { command: "opal add zustand", lines: DEMO.add },
   { command: "opal install --frozen-lockfile", lines: DEMO.frozen },
   { command: "opal cache verify", lines: DEMO.verify },
   { command: "opal upgrade", lines: DEMO.upgrade },

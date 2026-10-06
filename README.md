@@ -107,7 +107,7 @@ Not supported yet, and planned for v0.5.0: `--peer`, `--global`, `git:` and `fil
 
 ## Benchmarks
 
-Opal against npm, pnpm, yarn, and bun, each installing the same `package.json`. Measured 2026-10-05 with [`benchmarks/compare-pms.py`](./benchmarks/compare-pms.py). Four of its six scenarios are shown here:
+Opal 0.4.0 against npm, pnpm, yarn, and bun, each installing the same `package.json`. Measured 2026-10-06 with [`benchmarks/compare-pms.py`](./benchmarks/compare-pms.py) and the release binary. Four of its six scenarios are shown here:
 
 - **cold**: no lockfile, cache, or `node_modules` (a first install)
 - **ci**: a lockfile, but no cache or `node_modules` (a fresh CI runner)
@@ -116,43 +116,43 @@ Opal against npm, pnpm, yarn, and bun, each installing the same `package.json`. 
 
 Each number is the median of 3 runs (cold, ci) or 5 (warm, noop); fastest in bold. Every tool gets its own copy of the project and its own empty cache, the tools take turns so a network swing hits all of them, and install scripts are off for all five. Machine: AMD Ryzen 5 5625U (WSL limited to 8 of 12 threads), 16 GB RAM, Linux under WSL2, Node 24.19.0.
 
-These were measured with a build of the v0.4.0 source made before the release was tagged, not with the release binary. They will be re-measured with the release binary on two machines.
-
 **express** (68 packages)
 
 | | cold | ci | warm | noop | Peak memory (cold) |
 |---|---|---|---|---|---|
-| opal 0.4.0 | 964ms | **546ms** | 103ms | 26ms | 33 MB |
-| npm 12.0.2 | 1.60s | 906ms | 600ms | 347ms | 162 MB |
-| pnpm 11.21.0 | 1.32s | 1.03s | 732ms | 449ms | 329 MB |
-| yarn 1.22.22 | 1.60s | 1.16s | 528ms | 256ms | 161 MB |
-| bun 1.4.2 | **617ms** | 733ms | **62ms** | **6ms** | **26 MB** |
+| opal 0.4.0 | **913ms** | 491ms | 92ms | 16ms | 33 MB |
+| npm 12.0.2 | 1.75s | 1.04s | 643ms | 389ms | 160 MB |
+| pnpm 11.21.0 | 1.36s | 1.23s | 765ms | 470ms | 329 MB |
+| yarn 1.22.22 | 1.55s | 1.22s | 552ms | 266ms | 161 MB |
+| bun 1.4.2 | 1.35s | **175ms** | **67ms** | **6ms** | **26 MB** |
 
 **Next.js 16.3.2**, the `create-next-app` defaults (about 360 packages)
 
 | | cold | ci | warm | noop | Peak memory (cold) |
 |---|---|---|---|---|---|
-| opal 0.4.0 | 29.34s | 22.32s | **874ms** | 72ms | 475 MB |
-| npm 12.0.2 | 26.37s | **12.79s** | 10.80s | 625ms | 437 MB |
-| pnpm 11.21.0 | 21.51s | 17.72s | 2.23s | 465ms | 1,917 MB |
-| yarn 1.22.22 | 59.26s | 53.13s | 5.48s | 349ms | 659 MB |
-| bun 1.4.2 | **20.02s** | 14.46s | 1.08s | **16ms** | **241 MB** |
+| opal 0.4.0 | 24.06s | 18.84s | **907ms** | 72ms | 491 MB |
+| npm 12.0.2 | 27.58s | 13.43s | 10.85s | 633ms | 464 MB |
+| pnpm 11.21.0 | 19.29s | 16.07s | 2.25s | 490ms | 1,794 MB |
+| yarn 1.22.22 | 53.40s | 47.05s | 5.41s | 352ms | 659 MB |
+| bun 1.4.2 | **17.27s** | **11.99s** | 1.09s | **16ms** | **216 MB** |
 
-- **Reinstalls are where it wins.** A warm install is 6× faster than npm on express and 12× on Next.js, where it is level with bun (one of Opal's five runs took 1.86s). A no-op install is 13× (express) and 9× (Next.js) faster than npm; bun is faster still.
-- **A first install of a large app is level with npm and behind pnpm and bun.** On Next.js, Opal's cold install took 29.34s against npm's 26.37s, and their ranges overlap; pnpm is 1.4× faster and bun 1.5×. On express, Opal is ahead of npm, pnpm, and yarn.
-- **CI on a large app is where it loses.** With a lockfile and an empty cache, Opal is 1.7× slower than npm on Next.js, 1.3× slower than pnpm, and 1.5× slower than bun. Nearly all of that install is the download. v0.3.0, which downloaded one package at a time, was 6–13× slower than npm on this install.
-- **Memory:** bun uses the least on both projects. Opal is second on express and third on Next.js.
+Across both machines (the second is an Intel Core i9-9900K, 16 threads):
+
+- **Reinstalls are where it wins.** A warm install is 7× faster than npm on express and 12–19× on Next.js, where it is ahead of bun on one machine and level with it on the other. A no-op install is 20–24× (express) and 9× (Next.js) faster than npm; bun is faster still.
+- **A first install of a large app is faster than npm's and slower than pnpm's and bun's.** On Next.js, Opal's cold install is 1.1–1.2× faster than npm's, and their ranges don't overlap on either machine; pnpm is 1.2–1.3× faster than Opal and bun 1.4–1.5×. On express, Opal is ahead of npm, pnpm, and yarn, and three runs don't separate it from bun.
+- **CI on a large app is where it loses.** With a lockfile and an empty cache, Opal is 1.3–1.4× slower than npm on Next.js, 1.2–1.3× slower than pnpm, and 1.6× slower than bun. Nearly all of that install is the download. v0.3.0, which downloaded one package at a time, was 6–13× slower than npm on this install.
+- **Memory:** bun uses the least on both projects. Opal is second on express and close to npm on Next.js.
 - On Next.js, opal, yarn, and bun also download six musl builds that npm and pnpm skip (see [Limitations](#limitations)), which adds to their cold and CI times.
 
 Absolute times vary between sessions and machines, so compare tools within one table rather than across tables.
 
-The full method, min–max ranges, the other two scenarios (CI with a restored cache, adding a package), disk usage, earlier releases' tables, and how to reproduce every number are in [benchmarks/BENCHMARKS.md](./benchmarks/BENCHMARKS.md).
+The full method, min–max ranges, the second machine's tables, the other two scenarios (CI with a restored cache, adding a package), disk usage, earlier releases' tables, and how to reproduce every number are in [benchmarks/BENCHMARKS.md](./benchmarks/BENCHMARKS.md).
 
 ## Limitations
 
 Worth knowing before you point Opal at a project:
 
-- **CI installs of a large app are slower than npm's**: 1.7× on a Next.js app with a lockfile and an empty cache in the [benchmarks](#benchmarks). Downloads run 16 at a time since v0.4.0, and the download is still nearly all of that install.
+- **CI installs of a large app are slower than npm's**: 1.3–1.4× on a Next.js app with a lockfile and an empty cache in the [benchmarks](#benchmarks). Downloads run 16 at a time since v0.4.0, and the download is still nearly all of that install.
 - **`opal add` and `opal remove` ask the registry about every package in the tree**, not only the one being changed. On a Next.js app (418 package names) an add takes about half a second when that metadata was fetched in the last five minutes, about 2s when it is older and has to be rechecked, and 5–7s when it isn't cached at all, as on a machine that installed from a lockfile. npm takes under a second in each case.
 - **Lifecycle scripts (`preinstall`/`install`/`postinstall`) do not run.** Packages shipping prebuilt binaries (`esbuild`, `sharp`, `@next/swc`) work; a package that needs `node-gyp` to compile at install time installs but does not build. `opal install` says so on every run: it names each dependency whose install scripts were skipped (including native addons that declare none and rely on npm running `node-gyp rebuild` for their `binding.gyp`), and the project's own lifecycle scripts, `prepare` included.
 - **`libc` isn't checked.** On Linux with glibc (most distributions), Opal also installs the musl builds of native packages, which npm and pnpm skip. On a Next.js app that's six extra packages and 124 MB, 91 MB of it `@next/swc-linux-x64-musl`. A glibc system doesn't use them, but they cost download time and disk.

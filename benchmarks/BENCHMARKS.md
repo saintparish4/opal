@@ -3,7 +3,8 @@
 Opal against npm, pnpm, yarn, and bun, each installing the same `package.json`. The [README](../README.md#benchmarks) has the headline numbers. This file has the full method, min–max ranges, both machines, and how to reproduce every table.
 
 - [Method](#method)
-- [Pre-release: 2026-10-05, opal 0.4.0 candidate build](#pre-release-2026-10-05-opal-040-candidate-build)
+- [Results: 2026-10-06, opal 0.4.0](#results-2026-10-06-opal-040)
+- [Pre-release: 2026-10-05, the same source before the tag](#pre-release-2026-10-05-the-same-source-before-the-tag)
 - [Preliminary: 2026-10-04, all six scenarios and disk usage](#preliminary-2026-10-04-all-six-scenarios-and-disk-usage)
 - [Preliminary: 2026-10-03, unreleased master build](#preliminary-2026-10-03-unreleased-master-build)
 - [Results: 2026-09-26, opal 0.3.0](#results-2026-09-26-opal-030)
@@ -42,26 +43,25 @@ The two projects:
 - **express**: `{"dependencies": {"express": "^5"}}`, 68 packages.
 - **Next.js 16.3.2**: the `package.json` that `create-next-app@16.3.2` writes, inlined in the harness verbatim. Its caret ranges still float, so a later run can resolve newer versions.
 
-## Pre-release: 2026-10-05, opal 0.4.0 candidate build
+## Results: 2026-10-06, opal 0.4.0
 
-Laptop only (AMD Ryzen 5 5625U, WSL limited to 8 of 12 threads, 16 GB RAM, Linux under WSL2), one session. The binary is a local build of the tree v0.4.0 is cut from, made before the release commit existed, so it reports `opal 0.4.0` and is not the release asset. Its SHA-256 is `112510d27266f52cdd68bbd0eb9530f4c5f3863c9cf64aeaa793856d16a60d67`. These tables will be replaced by a run against the v0.4.0 release binary on both machines.
+Tool versions: opal 0.4.0, npm 12.0.2, pnpm 11.21.0, yarn 1.22.22, bun 1.4.2, Node 24.19.0. Opal is the `opal-linux-x64` asset from the [v0.4.0 release](https://github.com/saintparish4/opal/releases/tag/v0.4.0), checked against its `SHA256SUMS`; the SHA-256 of the `opal` inside it is `61595255213c9aeb7ef54a29a33604dc37540bf19a60f0fe8c8ab84c7af94540`, and both machines ran that file. The npm, pnpm, and bun versions are the ones bun.com's own install chart names.
 
-Two things changed from the 2026-10-04 run, so don't compare the two:
+Each cell is the median, with min–max in parentheses. Each machine made 240 runs (5 tools, 24 rounds, 2 projects), and all 480 passed. The machines ran one after the other, not at the same time, so neither took bandwidth from the other.
 
-- **Tool versions**: npm 12.0.2, pnpm 11.21.0, bun 1.4.2, yarn 1.22.22, Node 24.19.0. These are the versions bun.com's own install chart names.
-- **add** runs each tool's own add command. Before, every tool got a hand-edited `package.json` and ran its plain install.
+### Laptop: AMD Ryzen 5 5625U (WSL limited to 8 of 12 threads), 16 GB RAM, Linux under WSL2
 
-Each project made 120 runs (5 tools, 24 rounds), and all 240 passed. Raw samples: [`results/express-20261005-204133.json`](./results/express-20261005-204133.json), [`results/next-20261005-210232.json`](./results/next-20261005-210232.json).
+These are the numbers the README and the site's charts show. Raw samples: [`results/express-20261006-000421.json`](./results/express-20261006-000421.json), [`results/next-20261006-002335.json`](./results/next-20261006-002335.json).
 
 **express** (68 packages)
 
 | Tool | cold | ci | warm | ci-cached | noop | add | Peak RSS (cold) |
 |---|---|---|---|---|---|---|---|
-| opal 0.4.0 | 964ms (951ms–1.40s) | 546ms (518ms–547ms) | 103ms (97ms–108ms) | 108ms (97ms–123ms) | 26ms (16ms–31ms) | 572ms (190ms–635ms) | 33 MB |
-| npm 12.0.2 | 1.60s (1.57s–1.67s) | 906ms (900ms–907ms) | 600ms (584ms–616ms) | 608ms (575ms–649ms) | 347ms (320ms–379ms) | 517ms (517ms–672ms) | 162 MB |
-| pnpm 11.21.0 | 1.32s (1.30s–1.33s) | 1.03s (1.01s–1.06s) | 732ms (683ms–736ms) | 716ms (687ms–766ms) | 449ms (415ms–460ms) | 848ms (807ms–1.01s) | 329 MB |
-| yarn 1.22.22 | 1.60s (1.50s–3.23s) | 1.16s (1.03s–1.29s) | 528ms (503ms–614ms) | 519ms (504ms–603ms) | 256ms (233ms–302ms) | 563ms (539ms–1.04s) | 161 MB |
-| bun 1.4.2 | 617ms (509ms–1.52s) | 733ms (397ms–733ms) | 62ms (61ms–67ms) | 67ms (67ms–72ms) | 6ms (6ms–11ms) | 145ms (123ms–215ms) | 26 MB |
+| opal 0.4.0 | 913ms (908ms–926ms) | 491ms (477ms–508ms) | 92ms (87ms–97ms) | 92ms (87ms–98ms) | 16ms (16ms–21ms) | 499ms (158ms–566ms) | 33 MB |
+| npm 12.0.2 | 1.75s (1.73s–1.91s) | 1.04s (990ms–1.05s) | 643ms (642ms–673ms) | 639ms (623ms–664ms) | 389ms (363ms–430ms) | 531ms (515ms–719ms) | 160 MB |
+| pnpm 11.21.0 | 1.36s (1.33s–1.39s) | 1.23s (1.22s–1.26s) | 765ms (758ms–788ms) | 778ms (734ms–810ms) | 470ms (465ms–485ms) | 901ms (883ms–977ms) | 329 MB |
+| yarn 1.22.22 | 1.55s (1.48s–1.58s) | 1.22s (1.21s–1.23s) | 552ms (541ms–571ms) | 556ms (541ms–577ms) | 266ms (260ms–276ms) | 587ms (582ms–1.12s) | 161 MB |
+| bun 1.4.2 | 1.35s (450ms–1.49s) | 175ms (174ms–1.10s) | 67ms (66ms–67ms) | 67ms (67ms–72ms) | 6ms (6ms–11ms) | 117ms (108ms–189ms) | 26 MB |
 
 | Tool | node_modules | Cache | One project, with its cache | A second copy adds |
 |---|---|---|---|---|
@@ -75,33 +75,81 @@ Each project made 120 runs (5 tools, 24 rounds), and all 240 passed. Raw samples
 
 | Tool | cold | ci | warm | ci-cached | noop | add | Peak RSS (cold) |
 |---|---|---|---|---|---|---|---|
-| opal 0.4.0 | 29.34s (28.19s–30.66s) | 22.32s (20.54s–24.13s) | 874ms (852ms–1.86s) | 1.08s (882ms–1.27s) | 72ms (67ms–82ms) | 847ms (576ms–7.11s) | 475 MB |
-| npm 12.0.2 | 26.37s (24.59s–29.09s) | 12.79s (12.60s–12.92s) | 10.80s (10.55s–11.07s) | 10.66s (10.55s–10.88s) | 625ms (580ms–630ms) | 820ms (764ms–963ms) | 437 MB |
-| pnpm 11.21.0 | 21.51s (21.30s–22.62s) | 17.72s (16.00s–18.50s) | 2.23s (2.16s–2.40s) | 2.15s (1.84s–2.28s) | 465ms (447ms–497ms) | 3.72s (3.71s–9.07s) | 1917 MB |
-| yarn 1.22.22 | 59.26s (57.94s–64.23s) | 53.13s (52.55s–54.00s) | 5.48s (5.21s–6.08s) | 5.16s (5.02s–5.32s) | 349ms (316ms–354ms) | 2.39s (2.30s–2.76s) | 659 MB |
-| bun 1.4.2 | 20.02s (19.91s–22.26s) | 14.46s (12.57s–15.93s) | 1.08s (1.04s–1.09s) | 1.12s (1.03s–1.14s) | 16ms (16ms–16ms) | 163ms (138ms–215ms) | 241 MB |
+| opal 0.4.0 | 24.06s (23.25s–24.64s) | 18.84s (18.68s–19.18s) | 907ms (863ms–949ms) | 915ms (877ms–937ms) | 72ms (66ms–77ms) | 939ms (585ms–5.98s) | 491 MB |
+| npm 12.0.2 | 27.58s (26.39s–27.69s) | 13.43s (12.94s–13.78s) | 10.85s (10.68s–11.07s) | 10.80s (10.76s–11.09s) | 633ms (617ms–654ms) | 839ms (792ms–1.03s) | 464 MB |
+| pnpm 11.21.0 | 19.29s (18.88s–19.53s) | 16.07s (15.26s–16.30s) | 2.25s (2.20s–2.29s) | 2.25s (2.21s–2.25s) | 490ms (490ms–518ms) | 3.87s (3.67s–9.06s) | 1794 MB |
+| yarn 1.22.22 | 53.40s (52.81s–54.44s) | 47.05s (46.52s–47.78s) | 5.41s (5.20s–5.47s) | 5.45s (5.33s–5.61s) | 352ms (347ms–368ms) | 2.44s (2.34s–2.89s) | 659 MB |
+| bun 1.4.2 | 17.27s (16.70s–17.48s) | 11.99s (11.76s–12.83s) | 1.09s (1.06s–1.12s) | 1.09s (1.08s–1.20s) | 16ms (16ms–16ms) | 205ms (134ms–1.17s) | 216 MB |
 
 | Tool | node_modules | Cache | One project, with its cache | A second copy adds |
 |---|---|---|---|---|
 | opal 0.4.0 | 573.5 MB | 633.8 MB | 644.3 MB | 10.5 MB |
 | npm 12.0.2 | 463.3 MB | 110.8 MB | 574.1 MB | 463.3 MB |
-| pnpm 11.21.0 | 453.8 MB | 650.2 MB | 663.9 MB | 13.7 MB |
+| pnpm 11.21.0 | 453.8 MB | 650.3 MB | 664.0 MB | 13.7 MB |
+| yarn 1.22.22 | 587.1 MB | 1972.4 MB | 2559.5 MB | 587.1 MB |
+| bun 1.4.2 | 586.0 MB | 587.7 MB | 596.0 MB | 8.3 MB |
+
+### Desktop: Intel Core i9-9900K (16 threads), 16 GB RAM, Linux under WSL2
+
+Measured in the half hour before the laptop's run. **Its raw samples are not in this repository yet.** They are on that machine, as `express-20261005-233955.json` (SHA-256 `0f0f7447cfee934dea88d9124427d3dce198667b9d5d974370bc644d207e2044`) and `next-20261005-235934.json` (SHA-256 `26d1a2da2e3d4a8c9d923c09bea2974e9f65052fa5f125c57db2004f78357045`). Until they are added, the two tables below are the harness's printed summary and can't be recomputed from here.
+
+**express** (68 packages)
+
+| Tool | cold | ci | warm | ci-cached | noop | add | Peak RSS (cold) |
+|---|---|---|---|---|---|---|---|
+| opal 0.4.0 | 887ms (826ms–895ms) | 507ms (460ms–508ms) | 87ms (87ms–92ms) | 87ms (82ms–102ms) | 16ms (16ms–21ms) | 505ms (154ms–526ms) | 37 MB |
+| npm 12.0.2 | 1.61s (1.49s–1.76s) | 908ms (903ms–908ms) | 607ms (587ms–633ms) | 628ms (582ms–639ms) | 326ms (316ms–332ms) | 474ms (459ms–689ms) | 164 MB |
+| pnpm 11.21.0 | 1.20s (1.18s–1.25s) | 1.06s (1.02s–1.08s) | 749ms (709ms–771ms) | 769ms (708ms–799ms) | 413ms (402ms–419ms) | 860ms (852ms–966ms) | 470 MB |
+| yarn 1.22.22 | 1.48s (1.45s–1.51s) | 1.18s (1.18s–1.19s) | 536ms (510ms–553ms) | 557ms (530ms–568ms) | 230ms (224ms–240ms) | 658ms (526ms–1.17s) | 159 MB |
+| bun 1.4.2 | 1.21s (496ms–1.32s) | 583ms (547ms–672ms) | 36ms (36ms–41ms) | 41ms (36ms–46ms) | 6ms (6ms–6ms) | 118ms (77ms–133ms) | 26 MB |
+
+| Tool | node_modules | Cache | One project, with its cache | A second copy adds |
+|---|---|---|---|---|
+| opal 0.4.0 | 4.3 MB | 7.6 MB | 8.4 MB | 0.8 MB |
+| npm 12.0.2 | 4.3 MB | 2.1 MB | 6.5 MB | 4.3 MB |
+| pnpm 11.21.0 | 4.7 MB | 6.6 MB | 7.7 MB | 1.1 MB |
+| yarn 1.22.22 | 4.2 MB | 6.2 MB | 10.4 MB | 4.2 MB |
+| bun 1.4.2 | 4.2 MB | 4.5 MB | 5.0 MB | 0.5 MB |
+
+**Next.js 16.3.2** (364 packages)
+
+| Tool | cold | ci | warm | ci-cached | noop | add | Peak RSS (cold) |
+|---|---|---|---|---|---|---|---|
+| opal 0.4.0 | 23.96s (22.68s–24.56s) | 18.81s (18.69s–20.20s) | 658ms (607ms–698ms) | 618ms (587ms–1.17s) | 67ms (62ms–72ms) | 915ms (506ms–5.58s) | 506 MB |
+| npm 12.0.2 | 28.02s (27.62s–29.64s) | 14.96s (14.79s–15.21s) | 12.78s (12.55s–12.95s) | 12.64s (12.56s–12.72s) | 618ms (607ms–627ms) | 751ms (745ms–980ms) | 515 MB |
+| pnpm 11.21.0 | 18.29s (18.17s–19.21s) | 14.31s (14.24s–14.60s) | 1.70s (1.68s–1.75s) | 1.71s (1.69s–1.72s) | 439ms (429ms–444ms) | 3.68s (3.55s–7.98s) | 1948 MB |
+| yarn 1.22.22 | 54.08s (52.20s–54.26s) | 47.12s (46.80s–47.28s) | 6.42s (6.38s–6.67s) | 6.36s (6.16s–6.46s) | 316ms (311ms–317ms) | 2.94s (2.86s–3.56s) | 665 MB |
+| bun 1.4.2 | 16.31s (15.63s–16.53s) | 11.55s (11.48s–14.29s) | 617ms (607ms–632ms) | 617ms (612ms–622ms) | 16ms (11ms–16ms) | 109ms (98ms–148ms) | 224 MB |
+
+| Tool | node_modules | Cache | One project, with its cache | A second copy adds |
+|---|---|---|---|---|
+| opal 0.4.0 | 573.5 MB | 633.8 MB | 644.3 MB | 10.5 MB |
+| npm 12.0.2 | 463.3 MB | 110.8 MB | 574.1 MB | 463.3 MB |
+| pnpm 11.21.0 | 453.8 MB | 650.2 MB | 664.0 MB | 13.7 MB |
 | yarn 1.22.22 | 587.1 MB | 1972.4 MB | 2559.5 MB | 587.1 MB |
 | bun 1.4.2 | 586.0 MB | 587.7 MB | 596.0 MB | 8.3 MB |
 
 ### What these show
 
-- **express:** Opal is ahead of npm, pnpm, and yarn on cold, ci, warm, ci-cached, and noop. bun is ahead on warm, ci-cached, noop, and cold; on ci Opal's median is lower (546ms against 733ms), but bun's range runs from 397ms, so that one is not settled by three rounds.
-- **Next.js cold:** level with npm (29.34s against 26.37s, and the ranges overlap), behind pnpm by 1.4× and bun by 1.5×.
-- **Next.js ci:** behind all but yarn: 1.7× slower than npm, 1.3× slower than pnpm, 1.5× slower than bun. Nearly all of a ci install is the download (21.2s of 22.3s in the median round).
-- **Next.js warm:** 874ms, against 1.08s for bun, 2.23s for pnpm, and 10.80s for npm. One of Opal's five rounds took 1.86s, so its range spans bun's; call the two level.
-- **Adding a package:** bun is well ahead on both projects. Opal's medians are level with npm's (847ms against 820ms on Next.js, 572ms against 517ms on express). **Opal's first Next.js round took 7.11s**, 6.9s of it resolving; the other two took 0.85s and 0.58s. The median hides that round, so read the range. The slow round is the first because of the state the earlier scenarios leave: ci empties each tool's cache, and an install from a lockfile fetches no registry metadata, so Opal's first add finds none cached and downloads it for all 418 package names in the tree before it resolves. Repeated by hand the same day: an add after a lockfile-only install into an empty cache took 5.4s (5.3s resolving), the next one 0.8s. An add whose cached metadata was more than five minutes old took 2.1s (1.7s resolving), and 0.7s with `--prefer-offline`.
-- **Memory:** bun 1.4.2 uses the least on both projects (26 MB and 241 MB). Opal is second on express (33 MB) and third on Next.js (475 MB, after npm's 437 MB). bun 1.3.14 measured 596 MB on the same Next.js install the day before.
-- **Disk:** unchanged from 2026-10-04. A second copy of the Next.js app costs 10.5 MB with Opal, 8.3 MB with bun, and 13.7 MB with pnpm, against 463 MB with npm and 587 MB with yarn.
+- **express:** on both machines Opal is ahead of npm, pnpm, and yarn on cold, ci, warm, ci-cached, and noop, with no overlap in their ranges, and level with npm on add. bun is ahead on warm, ci-cached, and noop. On a cold install Opal's median is lower on both machines (913ms against 1.35s, 887ms against 1.21s), but bun's fastest round is under 500ms on both, so three rounds don't settle it. On ci bun is ahead on the laptop (175ms against 491ms) and Opal is ahead on the desktop (507ms against 583ms, ranges not overlapping).
+- **Next.js cold:** ahead of npm on both machines, and the ranges don't overlap: 24.06s against 27.58s on the laptop, 23.96s against 28.02s on the desktop, which is 1.1–1.2× faster. Behind pnpm by 1.2–1.3× and bun by 1.4–1.5×.
+- **Next.js ci:** behind npm, pnpm, and bun on both machines: 1.3–1.4× slower than npm, 1.2–1.3× slower than pnpm, 1.6× slower than bun. Nearly all of a ci install is the download (17.8s of 18.8s in the laptop's median round).
+- **Next.js warm:** 12× faster than npm on the laptop and 19× on the desktop, and 2.5–2.6× faster than pnpm. Against bun it is ahead on the laptop (907ms against 1.09s, ranges not overlapping) and level on the desktop (658ms against 617ms, ranges overlapping).
+- **Nothing to do:** a no-op install is 20–24× faster than npm on express and 9× on Next.js. bun is faster still: 6ms and 16ms.
+- **Adding a package:** bun is well ahead on both projects and both machines. On Next.js Opal's median is a little behind npm's (939ms against 839ms on the laptop, 915ms against 751ms on the desktop), and their ranges overlap. **Opal's first Next.js round is slow on both machines**, 5.98s on the laptop (5.7s of it resolving) and 5.58s on the desktop; the other rounds take under a second. The median hides that round, so read the range. The slow round is the first because of the state the earlier scenarios leave: ci empties each tool's cache, and an install from a lockfile fetches no registry metadata, so Opal's first add finds none cached and downloads it for all 418 package names in the tree before it resolves. Measured by hand on 2026-10-05 with a build of the same source: an add after a lockfile-only install into an empty cache took 5.4s (5.3s resolving), the next one 0.8s. An add whose cached metadata was more than five minutes old took 2.1s (1.7s resolving), and 0.7s with `--prefer-offline`.
+- **Memory:** bun uses the least on both projects and both machines (26 MB on express; 216 MB and 224 MB on Next.js). Opal is second on express (33 MB and 37 MB). On Next.js it is close to npm: 491 MB against 464 MB on the laptop, 506 MB against 515 MB on the desktop.
+- **Disk:** the same on both machines to within 0.1 MB. A second copy of the Next.js app costs 10.5 MB with Opal, 8.3 MB with bun, and 13.7 MB with pnpm, against 463 MB with npm and 587 MB with yarn. Sharing files from one store is what the three have in common; it is not an advantage Opal has over bun or pnpm. Opal's `node_modules` is the largest of the hardlinking tools' because it installs both the glibc and musl builds of native packages.
+- **Against 0.3.0:** the laptop's Next.js cold install was 124.59s on 2026-09-26 and is 24.06s here; ci was 100.81s and is 18.84s. Those are different sessions and different versions of the other tools, so read them as the size of the change.
+
+## Pre-release: 2026-10-05, the same source before the tag
+
+The evening before the release, the laptop ran a local build of the tree v0.4.0 was cut from, with the same tool versions. It agreed with the results above on everything but one row: on a Next.js cold install Opal was level with npm (29.34s against 26.37s, ranges overlapping), where the release run has it ahead. Absolute times move between sessions, which is why tools are only compared within one run.
+
+Its raw samples are [`results/express-20261005-204133.json`](./results/express-20261005-204133.json) and [`results/next-20261005-210232.json`](./results/next-20261005-210232.json), and its tables are in this file's history at [`d036770`](https://github.com/saintparish4/opal/blob/d036770/benchmarks/BENCHMARKS.md). This is also the first run in which **add** used each tool's own add command, and the first with these tool versions.
 
 ## Preliminary: 2026-10-04, all six scenarios and disk usage
 
-Laptop only (AMD Ryzen 5 5625U, WSL limited to 8 of 12 threads, 16 GB RAM, Linux under WSL2), one session, with an unreleased build: `10d96c0` plus the install-output changes that were not yet committed. The SHA-256 of the binary is `8fd770fea77a5124d3d250138a13b1a6cec105ad5e5645eaaff8bf205b928a95`. Raw samples: [`results/express-20261004-174510.json`](./results/express-20261004-174510.json), [`results/next-20261004-180345.json`](./results/next-20261004-180345.json). These are the numbers the site's charts show.
+Laptop only (AMD Ryzen 5 5625U, WSL limited to 8 of 12 threads, 16 GB RAM, Linux under WSL2), one session, with an unreleased build: `10d96c0` plus the install-output changes that were not yet committed. The SHA-256 of the binary is `8fd770fea77a5124d3d250138a13b1a6cec105ad5e5645eaaff8bf205b928a95`. Raw samples: [`results/express-20261004-174510.json`](./results/express-20261004-174510.json), [`results/next-20261004-180345.json`](./results/next-20261004-180345.json). The tool versions were npm 11.17.0, pnpm 11.17.0, and bun 1.3.14, and every tool was given a hand-edited `package.json` for **add**, so don't compare these with the results above.
 
 **express** (68 packages)
 
@@ -150,7 +198,7 @@ Laptop only (AMD Ryzen 5 5625U, WSL limited to 8 of 12 threads, 16 GB RAM, Linux
 
 These tables are for a build of `master` that adds parallel downloads and stores one package's files on several threads. It is not a release: v0.3.1 is still what the install script gives you, and its numbers are the 2026-09-26 tables below. The build reports `opal 0.3.1`.
 
-Both machines have run it, but the build is unreleased, so treat these as preliminary. They will be replaced by a run against the v0.4.0 release binary on both machines.
+Both machines have run it, but the build is unreleased, so treat these as preliminary. The run against the v0.4.0 release binary on both machines is [above](#results-2026-10-06-opal-040).
 
 Tool versions as in the 2026-09-26 run. Each machine made 160 runs, and all of them passed.
 
@@ -290,9 +338,9 @@ python3 benchmarks/compare-pms.py next --opal "$(command -v opal)" \
 - `--work DIR` sets the scratch directory (default `/tmp/opal-compare`).
 - `--results DIR` sets where the raw samples go (default `benchmarks/results/`). The samples record the path of the Opal binary that ran, so with the default the harness refuses a binary that sits under the system's temporary folder. Keep the binary somewhere you're happy to publish, such as `~/opal-bench/`.
 
-Raw samples for every run are written to `benchmarks/results/` as JSON, one file per run. A table published here from now on is committed together with the file it was computed from, so anyone can recompute it. The tables above predate that: the laptop's samples were kept outside the repository and the desktop's were not kept.
+Raw samples for every run are written to `benchmarks/results/` as JSON, one file per run. A table published here is committed together with the file it was computed from, so anyone can recompute it. There are two exceptions. The 2026-09-26 tables predate the rule: the laptop's samples were kept outside the repository and the desktop's were not kept. And the desktop's 2026-10-06 samples exist but are still on that machine; its section says so.
 
-For numbers comparable with the tables above, use a release binary rather than a local build. `opal --version` can't tell the two apart, so the harness also records the SHA-256 of the binary it ran (`opal_binary` in the JSON); for a release it equals `sha256sum` of the `opal` inside the release archive. The 2026-09-26 runs predate that field.
+For numbers comparable with the tables above, use a release binary rather than a local build. `opal --version` can't tell the two apart, so the harness also records the SHA-256 of the binary it ran (`opal_binary` in the JSON); for a release it equals `sha256sum` of the `opal` inside the release archive. The 2026-09-26 runs predate that field. Since 0.4.0, `opal install` also names its commit on its first line.
 
 ## The kill test
 
@@ -308,9 +356,22 @@ A kill that arrives after the install has exited tested nothing, so kills are co
 
 What it doesn't cover: a kill of the machine and not the process (power loss, where what reached the disk depends on fsync), a full disk, and two installs racing. The reference and the trials resolve minutes apart against a registry that can publish in between; a release inside a floating range would show up as a lockfile difference and is reported as a failed trial, not explained away.
 
+### Results: 2026-10-06, opal 0.4.0
+
+Laptop (AMD Ryzen 5 5625U, Linux under WSL2), with the v0.4.0 release binary, straight after the comparison above. Every trial converged.
+
+| Project | Trials converged | Kills | Interrupted a running install | Resolving | Fetching | Linking | After it exited |
+|---|---|---|---|---|---|---|---|
+| express (68 packages, clean install 0.9s) | 60 of 60 | 114 | 75 | 38 | 30 | 7 | 39 |
+| Next.js (364 packages, clean install 24.1s) | 12 of 12 | 25 | 15 | 4 | 11 | 0 | 10 |
+
+Raw results: [`results/kill-express-20261006-002506.json`](./results/kill-express-20261006-002506.json), [`results/kill-next-20261006-003242.json`](./results/kill-next-20261006-003242.json).
+
+That is 90 kills that interrupted a running install, and a clean tree after every one. With the two earlier runs below, 252 kills have interrupted a real install against the public registry, and every one converged. No Next.js kill landed in linking in this run either; the fixture suite reaches linking on purpose.
+
 ### Results: 2026-10-05, opal 0.4.0 candidate build
 
-The same laptop and the same candidate build as the comparison above. Every trial converged.
+The laptop, with the local build described under [Pre-release](#pre-release-2026-10-05-the-same-source-before-the-tag). Every trial converged.
 
 | Project | Trials converged | Kills | Interrupted a running install | Resolving | Fetching | Linking | After it exited |
 |---|---|---|---|---|---|---|---|

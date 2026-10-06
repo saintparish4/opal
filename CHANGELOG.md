@@ -4,7 +4,7 @@ What changed in each Opal release, newest first.
 
 Opal is pre-1.0, so a release can change behaviour you depend on. Anything that does is under **Breaking**, and every release says whether it changes the `opal.lock` format. Dates are when the release was published. The numbers are measurements made at the time on one machine, and they compare a release with the one before it. Opal against npm, pnpm, yarn, and bun is in [benchmarks/BENCHMARKS.md](./benchmarks/BENCHMARKS.md).
 
-## 0.4.0 (not yet released)
+## [0.4.0] (2026-10-06)
 
 Parallel downloads, `opal add` and `opal remove`, and an install that shows what it is doing. No `opal.lock` format change.
 
@@ -19,7 +19,7 @@ Parallel downloads, `opal add` and `opal remove`, and an install that shows what
 
 ### Changed
 
-- **Packages download 16 at a time** instead of one at a time, and one package's files are stored on several threads. A first install of a 364-package Next.js app took about 29s where v0.3.1 took about 2m on the same machine, in separate sessions. Resolution is still sequential, so the lockfile it writes is the same.
+- **Packages download 16 at a time** instead of one at a time, and one package's files are stored on several threads. A first install of a 364-package Next.js app takes about 24s where v0.3.0 took about 2m on the same machine, in separate sessions. Resolution is still sequential, so the lockfile it writes is the same.
 - **A re-resolve keeps what is locked.** When `package.json` changes, Opal starts from the existing `opal.lock`, so adding or removing one package no longer moves the rest of the tree to newer versions. This applies to a hand edit followed by `opal install` too. Delete `opal.lock` to re-resolve from nothing.
 - The summary's total is in brackets, `364 packages installed [26.5s]`, and result lines are coloured on a terminal. Piped output has no colour and no stage lines: the header, the resolve count, and the result. A script that reads Opal's output should check it against the new format.
 - The Linux binaries are built on Ubuntu 22.04 and need glibc 2.34 again, so they run on Ubuntu 22.04, Debian 12, and RHEL 9.
@@ -137,6 +137,7 @@ The first release.
 - `opal cache verify`, `opal cache gc`, and `opal cache path` inspect and prune the shared store.
 - Prebuilt binaries for Linux and macOS, x64 and arm64, and an install script.
 
+[0.4.0]: https://github.com/saintparish4/opal/releases/tag/v0.4.0
 [0.3.1]: https://github.com/saintparish4/opal/releases/tag/v0.3.1
 [0.3.0]: https://github.com/saintparish4/opal/releases/tag/v0.3.0
 [0.2.1]: https://github.com/saintparish4/opal/releases/tag/v0.2.1

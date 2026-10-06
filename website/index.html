@@ -21,7 +21,7 @@
 <body>
   <a class="skip" href="#main">Skip to content</a>
 
-  <a class="banner" href="https://github.com/saintparish4/opal/commits/master">Opal v0.4.0 is coming soon <span>— parallel downloads, faster first installs, and opal add / opal remove →</span></a>
+  <a class="banner" href="blog/opal-v0.4.0/">Opal v0.4.0 is out <span>— parallel downloads, opal add / opal remove, and an install that shows its work →</span></a>
 
   <header class="nav">
     <div class="wrap nav-row">
@@ -79,12 +79,12 @@
     <!-- ───────── hero ───────── -->
     <section class="wrap hero" id="top">
       <div class="hero-copy">
-        <a class="pill" href="https://github.com/saintparish4/opal/releases/tag/v0.3.1"><b>Beta</b> <span>Opal v0.3.1 released →</span></a>
+        <a class="pill" href="https://github.com/saintparish4/opal/releases/tag/v0.4.0"><b>Beta</b> <span>Opal v0.4.0 released →</span></a>
         <h1>Opal is a <em>crash&#8209;safe</em> JavaScript toolkit. One graph.</h1>
         <p class="lede">A package manager today, with a runtime, bundler and test runner planned, in a single binary. Use <a href="#minute"><code>opal install</code></a> in an existing Node.js project: it installs what npm would, from one store shared by every project.</p>
 
         <div id="install">
-          <p class="label">Install Opal v0.3.1</p>
+          <p class="label">Install Opal v0.4.0</p>
           <div class="slab">
             <code id="install-command">curl -fsSL https://raw.githubusercontent.com/saintparish4/opal/master/install.sh | bash</code>
             <button class="copy" data-copy="install-command" aria-label="Copy the install command" title="Copy">
@@ -99,7 +99,7 @@
             </div>
             <a class="quiet" href="https://github.com/saintparish4/opal/blob/master/install.sh">View install script ↗</a>
           </div>
-          <p class="fine" role="tabpanel" id="panel-unix" aria-labelledby="tab-unix">Linux x64 and arm64 (glibc 2.39 for v0.3.1), macOS x64 and Apple Silicon. Checked against the release's SHA256 checksums.</p>
+          <p class="fine" role="tabpanel" id="panel-unix" aria-labelledby="tab-unix">Linux x64 and arm64 (glibc 2.34 or newer), macOS x64 and Apple Silicon. Checked against the release's SHA256 checksums.</p>
           <p class="fine" role="tabpanel" id="panel-windows" aria-labelledby="tab-windows" hidden>On Windows, Opal runs inside WSL2: open a WSL terminal and run the same command. Native Windows isn't supported yet.</p>
         </div>
         <a class="next" href="#minute">Then follow the quickstart →</a>
@@ -116,7 +116,7 @@
             <p class="chart-note" id="hero-caption"></p>
           </div>
           <ol class="bars" id="hero-bars" aria-live="polite"></ol>
-          <p class="chart-foot"><b class="tag">Preliminary</b> <span id="hero-workload">Next.js 16.3.2 defaults · about 360 packages</span> · Ryzen 5 5625U, Linux under WSL2 · install scripts off for every tool · median of 5 · measured 2026-10-05 with a pre-release build of v0.4.0 · these numbers may change · v0.3.1, the release you can install today, is slower on a first install and in CI <a href="https://github.com/saintparish4/opal/blob/master/benchmarks/BENCHMARKS.md">method</a></p>
+          <p class="chart-foot"><span id="hero-workload">Next.js 16.3.2 defaults · about 360 packages</span> · Ryzen 5 5625U, Linux under WSL2 · install scripts off for every tool · median of 5 · measured 2026-10-06 with the v0.4.0 release binary · first installs and CI are slower than this; every scenario is in the grid below <a href="https://github.com/saintparish4/opal/blob/master/benchmarks/BENCHMARKS.md">method</a></p>
         </div>
       </div>
     </section>
@@ -184,8 +184,8 @@
     <section class="wrap block minute" id="minute">
       <div class="minute-copy">
         <p class="label">A minute with Opal</p>
-        <h2>One binary, four commands.</h2>
-        <p class="lede">Install, re-run, lock it down for CI, check the store, and upgrade. Every step below is a real command with real output — click one.</p>
+        <h2>One binary, six commands.</h2>
+        <p class="lede">Install, re-run, add a package, lock it down for CI, check the store, and upgrade. Every step below is a real command with real output — click one.</p>
         <ol class="steps" role="tablist" aria-label="Steps" aria-orientation="vertical">
           <li><button role="tab" data-step="0" aria-selected="true">
             <span class="n">01</span><span class="t">Install dependencies</span>
@@ -198,48 +198,53 @@
             <span class="d">The linker compares the lockfile with what's on disk and applies only the difference.</span>
           </button></li>
           <li><button role="tab" data-step="2" aria-selected="false" tabindex="-1">
-            <span class="n">03</span><span class="t">Lock it down in CI</span>
+            <span class="n">03</span><span class="t">Add a package</span>
+            <code>$ opal add zustand</code>
+            <span class="d">Writes it to <b>package.json</b> and <b>opal.lock</b>, installs it, and leaves every other version where it was.</span>
+          </button></li>
+          <li><button role="tab" data-step="3" aria-selected="false" tabindex="-1">
+            <span class="n">04</span><span class="t">Lock it down in CI</span>
             <code>$ opal install --frozen-lockfile</code>
             <span class="d">Installs exactly what <b>opal.lock</b> records, and fails instead of rewriting it.</span>
           </button></li>
-          <li><button role="tab" data-step="3" aria-selected="false" tabindex="-1">
-            <span class="n">04</span><span class="t">Check the shared store</span>
+          <li><button role="tab" data-step="4" aria-selected="false" tabindex="-1">
+            <span class="n">05</span><span class="t">Check the shared store</span>
             <code>$ opal cache verify</code>
             <span class="d">Every file is stored once under the BLAKE3 hash of its contents. Verify re-hashes all of it.</span>
           </button></li>
-          <li><button role="tab" data-step="4" aria-selected="false" tabindex="-1">
-            <span class="n">05</span><span class="t">Stay current</span>
+          <li><button role="tab" data-step="5" aria-selected="false" tabindex="-1">
+            <span class="n">06</span><span class="t">Stay current</span>
             <code>$ opal upgrade</code>
             <span class="d">Checks the new binary against the release's checksums and runs it once before replacing the old one.</span>
           </button></li>
         </ol>
       </div>
       <div class="terminal" aria-live="polite">
-        <div class="terminal-bar"><span>● ● ●</span><span>~/my-app — opal</span><span id="step-count">01 / 05</span></div>
+        <div class="terminal-bar"><span>● ● ●</span><span>~/my-app — opal</span><span id="step-count">01 / 06</span></div>
         <pre id="terminal-out"></pre>
-        <p class="terminal-foot"><span><b class="tag">Preliminary</b> Real output from an unreleased build of master on a 364-package Next.js app, abridged and sped up. Hover to pause.</span><button id="replay" type="button">↻ replay</button></p>
+        <p class="terminal-foot"><span>Real output from Opal v0.4.0 on a 364-package Next.js app, abridged and sped up. Hover to pause.</span><button id="replay" type="button">↻ replay</button></p>
       </div>
     </section>
 
     <!-- ───────── latest release ───────── -->
     <section class="wrap block release" id="release">
       <div>
-        <p class="label"><b class="version">v0.3.1</b> Latest release · September 2026</p>
-        <h2>Cleaner install output. opal upgrade. Honest errors.</h2>
-        <p class="lede">v0.3.1 reworks what an install prints, adds a command that upgrades the binary in place, and says plainly when <code>opal.lock</code> is missing. The install path itself is unchanged from v0.3.0.</p>
+        <p class="label"><b class="version">v0.4.0</b> Latest release · October 2026</p>
+        <h2>Parallel downloads. opal add. An install that shows its work.</h2>
+        <p class="lede">v0.4.0 downloads 16 packages at a time, adds <code>opal add</code> and <code>opal remove</code>, and shows what an install is doing while it does it. The Linux binaries run on glibc 2.34 again.</p>
         <div class="actions">
-          <a class="btn" href="blog/opal-v0.3.1/">Read the release notes →</a>
+          <a class="btn" href="blog/opal-v0.4.0/">Read the release notes →</a>
           <code class="cli-pill">opal upgrade</code>
         </div>
       </div>
       <div>
         <ul class="notes">
-          <li><a href="blog/opal-v0.3.1/#what-s-new"><span>A thin download bar in opal colours, and a spinner with a timer for resolving and linking</span></a></li>
-          <li><a href="blog/opal-v0.3.1/#what-s-new"><span>A one-line summary, with one detail line only when it matters</span></a></li>
-          <li><a href="blog/opal-v0.3.1/#what-s-new"><span>Packages skipped for other platforms are reported as one line, not sixty-six</span></a></li>
-          <li><a href="blog/opal-v0.3.1/#what-s-new"><span>Warnings print last, so they aren't scrolled away</span></a></li>
-          <li><a href="blog/opal-v0.3.1/#what-s-new"><span><code>opal upgrade</code>installs the latest or a named version, checked against SHA256SUMS and run once before it replaces anything</span></a></li>
-          <li><a href="blog/opal-v0.3.1/#what-s-new"><span><code>--frozen-lockfile</code>with no <code>opal.lock</code> now says how to create one</span></a></li>
+          <li><a href="blog/opal-v0.4.0/#added"><span><code>opal add</code>, <code>opal remove</code> and <code>opal install &lt;pkg&gt;</code> change package.json, opal.lock and node_modules in one step</span></a></li>
+          <li><a href="blog/opal-v0.4.0/#changed"><span>Packages download 16 at a time, where v0.3.1 fetched one at a time</span></a></li>
+          <li><a href="blog/opal-v0.4.0/#changed"><span>Changing one dependency keeps every other locked version where it was</span></a></li>
+          <li><a href="blog/opal-v0.4.0/#added"><span>One bar per download in flight, a live resolve count, and a list of what a run added</span></a></li>
+          <li><a href="blog/opal-v0.4.0/#changed"><span>Linux binaries need glibc 2.34, so they run on Ubuntu 22.04, Debian 12 and RHEL 9</span></a></li>
+          <li><a href="blog/opal-v0.4.0/#known-issues"><span>Known issue: <code>opal add</code> asks the registry about every package in the tree</span></a></li>
         </ul>
         <a class="all-releases" href="blog/">All releases →</a>
       </div>
@@ -261,12 +266,12 @@
         <article>
           <p class="figure">332<span>kills</span></p>
           <h3>Kill it anywhere</h3>
-          <p>Every write is atomic and the linker is a reconciler. In one soak, 332 SIGKILLs interrupted a running install; re-running converged on a clean tree every time. Against the real registry, 102 more did the same across express and a Next.js app.</p>
+          <p>Every write is atomic and the linker is a reconciler. In one soak, 332 SIGKILLs interrupted a running install; re-running converged on a clean tree every time. Against the real registry, 252 more did the same across express and a Next.js app, 90 of them with the v0.4.0 binary.</p>
         </article>
         <article>
           <p class="figure">33<span>MB</span></p>
           <h3>Small while it works</h3>
-          <p>Peak memory installing express was 33 MB, against 162 MB for npm and 26 MB for bun: second lowest of the five. On a Next.js app it was third, 475 MB against bun's 241 MB and npm's 437 MB. Same preliminary run as the charts below.</p>
+          <p>Peak memory installing express was 33 MB, against 160 MB for npm and 26 MB for bun: second lowest of the five. On a Next.js app it was third, 491 MB against bun's 216 MB and npm's 464 MB. Same run as the charts below.</p>
         </article>
         <article>
           <p class="figure">1<span>store</span></p>
@@ -280,7 +285,7 @@
     <section class="wrap block" id="install-bench">
       <div class="block-head split">
         <div>
-          <p class="label dot">opal install <b class="tag">Preliminary</b></p>
+          <p class="label dot">opal install</p>
           <h2>Fastest where you reinstall. Not yet where you download.</h2>
           <p class="lede">A first install, CI with and without its cache, a reinstall, a no-op, adding one package, and what a second copy costs on disk, against npm, pnpm, yarn and bun at their defaults. Opal's losses are on the same page as its wins.</p>
         </div>
@@ -290,7 +295,7 @@
         </div>
       </div>
       <div class="grid-charts" id="grid-charts"></div>
-      <p class="fine wide"><b class="tag">Preliminary</b> Measured 2026-10-05 on an AMD Ryzen 5 5625U (WSL limited to 8 of 12 threads, 16 GB, Linux under WSL2) with a pre-release build of Opal v0.4.0, npm 12.0.2, pnpm 11.21.0, yarn 1.22.22 and bun 1.4.2. One machine and one session, and the numbers may change before v0.4.0 is released. Each tool added the package with its own add command; one of Opal's three Next.js rounds took 7.1s, which the median hides. v0.3.1, the release you can install today, downloads one package at a time and is 4–7× slower than npm on a first install; its numbers and the <a href="https://github.com/saintparish4/opal/tree/master/benchmarks/results">raw samples</a> for these charts are in the benchmark notes.</p>
+      <p class="fine wide">Measured 2026-10-06 on an AMD Ryzen 5 5625U (WSL limited to 8 of 12 threads, 16 GB, Linux under WSL2) with the v0.4.0 release binary, npm 12.0.2, pnpm 11.21.0, yarn 1.22.22 and bun 1.4.2. One machine and one session. A second machine ran the same binary: Opal stands on the same side of npm in every chart there, and on a Next.js reinstall it is level with bun where here it is ahead. Its tables are in the <a href="https://github.com/saintparish4/opal/blob/master/benchmarks/BENCHMARKS.md">benchmark notes</a>. Each tool added the package with its own add command; one of Opal's three Next.js rounds took 6.0s, which the median hides. The <a href="https://github.com/saintparish4/opal/tree/master/benchmarks/results">raw samples</a> for these charts are in the repository.</p>
     </section>
 
     <!-- ───────── limits ───────── -->
@@ -304,9 +309,9 @@
         <li><strong>Install scripts don't run.</strong> Packages that ship prebuilt binaries work. A package that compiles with <code>node-gyp</code> installs but isn't built, and <code>opal install</code> names it every time.</li>
         <li><strong>Peer dependencies aren't installed.</strong> They are recorded, not added to the tree the way npm 7 and later add them.</li>
         <li><strong><code>git:</code> and <code>file:</code> dependencies are refused.</strong> Dependencies come from a registry only. Both are planned for v0.5.0.</li>
-        <li><strong>No <code>add</code>, <code>remove</code> or <code>update</code> in v0.3.1.</strong> Edit <code>package.json</code> and run <code>opal install</code>. <code>opal add</code> and <code>opal remove</code> are coming in v0.4.0; <code>--peer</code>, <code>--global</code>, and adding to a folder with no <code>package.json</code> are planned for v0.5.0. Commands that aren't built aren't in the binary.</li>
-        <li><strong>First installs are slow in v0.3.1.</strong> It downloads one package at a time, 4–7× slower than npm on a cold install. The fix is on master and ships in v0.4.0.</li>
-        <li><strong>Linux needs a recent glibc.</strong> v0.3.1's binaries need glibc 2.39 (Ubuntu 24.04 or newer); the next release goes back to 2.34. Alpine and other musl distributions aren't supported.</li>
+        <li><strong>No <code>update</code> yet.</strong> <code>opal add</code> and <code>opal remove</code> change one dependency and keep the rest of the lockfile where it is; delete <code>opal.lock</code> to re-resolve everything. <code>--peer</code>, <code>--global</code>, and adding to a folder with no <code>package.json</code> are planned for v0.5.0. Commands that aren't built aren't in the binary.</li>
+        <li><strong>CI installs of a large app are slower than npm's.</strong> With a lockfile and an empty cache, a Next.js install is 1.3–1.4× slower than npm. Packages download 16 at a time, and the download is still nearly all of that install.</li>
+        <li><strong><code>opal add</code> asks the registry about every package.</strong> On a Next.js app an add takes half a second when that metadata is fresh, about 2s when it is over five minutes old, and 5–7s when none is cached. A fix for the middle case is planned for v0.4.1.</li>
       </ul>
       <a class="next" href="https://github.com/saintparish4/opal#limitations">The full list of limitations →</a>
     </section>
