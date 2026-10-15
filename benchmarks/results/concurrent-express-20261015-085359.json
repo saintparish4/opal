@@ -1,0 +1,561 @@
+{
+  "meta": {
+    "project": "express",
+    "date": "2026-10-15T08:53:34",
+    "host": "Linux 6.6.87.2-microsoft-standard-WSL2, 8 threads",
+    "opal_version": "0.4.0",
+    "opal_binary": {
+      "path": "/home/saint/opal-bench/3045ff6/opal",
+      "sha256": "51a82cbbe36b4bd6ab1c612d35fbdb198e21deb43f9309d4ef63a2dca3aa0d82"
+    },
+    "upstream": "https://registry.npmjs.org",
+    "n": [
+      1,
+      2,
+      4,
+      8,
+      16,
+      32
+    ],
+    "peak_memory": "GNU time, %M"
+  },
+  "rows": [
+    {
+      "n": 1,
+      "wall_s": 1.39,
+      "installs": [
+        {
+          "wall_s": 1.385,
+          "peak_mb": 25.3,
+          "exit": 0
+        }
+      ],
+      "failed": 0,
+      "peak_mb_sum": 25.3,
+      "verify_clean": true,
+      "verify_output": [
+        "613 objects, 2.2 MiB",
+        "temp files: 0",
+        "all objects match their hash keys"
+      ],
+      "trees_equal": 1,
+      "tree_differences": {},
+      "store_bytes": 10067968,
+      "requests": {
+        "packument": {
+          "requests": 65,
+          "distinct": 65,
+          "bytes": 1657834,
+          "statuses": {
+            "200": 65
+          }
+        },
+        "tarball": {
+          "requests": 65,
+          "distinct": 65,
+          "bytes": 711963,
+          "statuses": {
+            "200": 65
+          }
+        }
+      },
+      "tarballs_per_package": 1.0,
+      "packuments_per_package": 1.0
+    },
+    {
+      "n": 2,
+      "wall_s": 1.503,
+      "installs": [
+        {
+          "wall_s": 1.498,
+          "peak_mb": 23.1,
+          "exit": 0
+        },
+        {
+          "wall_s": 1.492,
+          "peak_mb": 22.8,
+          "exit": 0
+        }
+      ],
+      "failed": 0,
+      "peak_mb_sum": 45.9,
+      "verify_clean": true,
+      "verify_output": [
+        "613 objects, 2.2 MiB",
+        "temp files: 0",
+        "all objects match their hash keys"
+      ],
+      "trees_equal": 2,
+      "tree_differences": {},
+      "store_bytes": 10072064,
+      "requests": {
+        "packument": {
+          "requests": 102,
+          "distinct": 65,
+          "bytes": 2800596,
+          "statuses": {
+            "200": 102
+          }
+        },
+        "tarball": {
+          "requests": 130,
+          "distinct": 65,
+          "bytes": 1423926,
+          "statuses": {
+            "200": 130
+          }
+        }
+      },
+      "tarballs_per_package": 2.0,
+      "packuments_per_package": 1.57
+    },
+    {
+      "n": 4,
+      "wall_s": 2.023,
+      "installs": [
+        {
+          "wall_s": 1.781,
+          "peak_mb": 19.4,
+          "exit": 0
+        },
+        {
+          "wall_s": 1.753,
+          "peak_mb": 25.5,
+          "exit": 0
+        },
+        {
+          "wall_s": 1.757,
+          "peak_mb": 24.6,
+          "exit": 0
+        },
+        {
+          "wall_s": 2.018,
+          "peak_mb": 12.5,
+          "exit": 0
+        }
+      ],
+      "failed": 0,
+      "peak_mb_sum": 82.0,
+      "verify_clean": true,
+      "verify_output": [
+        "613 objects, 2.2 MiB",
+        "temp files: 0",
+        "all objects match their hash keys"
+      ],
+      "trees_equal": 4,
+      "tree_differences": {},
+      "store_bytes": 10088448,
+      "requests": {
+        "packument": {
+          "requests": 138,
+          "distinct": 65,
+          "bytes": 4088854,
+          "statuses": {
+            "200": 138
+          }
+        },
+        "tarball": {
+          "requests": 195,
+          "distinct": 65,
+          "bytes": 2135889,
+          "statuses": {
+            "200": 195
+          }
+        }
+      },
+      "tarballs_per_package": 3.0,
+      "packuments_per_package": 2.12
+    },
+    {
+      "n": 8,
+      "wall_s": 2.786,
+      "installs": [
+        {
+          "wall_s": 2.78,
+          "peak_mb": 25.6,
+          "exit": 0
+        },
+        {
+          "wall_s": 2.69,
+          "peak_mb": 26.4,
+          "exit": 0
+        },
+        {
+          "wall_s": 2.773,
+          "peak_mb": 24.6,
+          "exit": 0
+        },
+        {
+          "wall_s": 2.775,
+          "peak_mb": 23.6,
+          "exit": 0
+        },
+        {
+          "wall_s": 2.775,
+          "peak_mb": 27.4,
+          "exit": 0
+        },
+        {
+          "wall_s": 2.775,
+          "peak_mb": 13.3,
+          "exit": 0
+        },
+        {
+          "wall_s": 2.775,
+          "peak_mb": 25.9,
+          "exit": 0
+        },
+        {
+          "wall_s": 2.775,
+          "peak_mb": 28.0,
+          "exit": 0
+        }
+      ],
+      "failed": 0,
+      "peak_mb_sum": 194.8,
+      "verify_clean": true,
+      "verify_output": [
+        "613 objects, 2.2 MiB",
+        "temp files: 0",
+        "all objects match their hash keys"
+      ],
+      "trees_equal": 8,
+      "tree_differences": {},
+      "store_bytes": 10113024,
+      "requests": {
+        "packument": {
+          "requests": 213,
+          "distinct": 65,
+          "bytes": 7551273,
+          "statuses": {
+            "200": 213
+          }
+        },
+        "tarball": {
+          "requests": 418,
+          "distinct": 65,
+          "bytes": 4714182,
+          "statuses": {
+            "200": 418
+          }
+        }
+      },
+      "tarballs_per_package": 6.43,
+      "packuments_per_package": 3.28
+    },
+    {
+      "n": 16,
+      "wall_s": 3.822,
+      "installs": [
+        {
+          "wall_s": 3.184,
+          "peak_mb": 27.8,
+          "exit": 0
+        },
+        {
+          "wall_s": 3.34,
+          "peak_mb": 12.6,
+          "exit": 0
+        },
+        {
+          "wall_s": 3.312,
+          "peak_mb": 17.8,
+          "exit": 0
+        },
+        {
+          "wall_s": 3.326,
+          "peak_mb": 27.9,
+          "exit": 0
+        },
+        {
+          "wall_s": 3.817,
+          "peak_mb": 12.4,
+          "exit": 0
+        },
+        {
+          "wall_s": 3.329,
+          "peak_mb": 24.9,
+          "exit": 0
+        },
+        {
+          "wall_s": 3.552,
+          "peak_mb": 10.1,
+          "exit": 0
+        },
+        {
+          "wall_s": 3.547,
+          "peak_mb": 10.1,
+          "exit": 0
+        },
+        {
+          "wall_s": 3.533,
+          "peak_mb": 11.9,
+          "exit": 0
+        },
+        {
+          "wall_s": 3.064,
+          "peak_mb": 24.5,
+          "exit": 0
+        },
+        {
+          "wall_s": 3.331,
+          "peak_mb": 12.1,
+          "exit": 0
+        },
+        {
+          "wall_s": 3.332,
+          "peak_mb": 21.9,
+          "exit": 0
+        },
+        {
+          "wall_s": 3.557,
+          "peak_mb": 8.7,
+          "exit": 0
+        },
+        {
+          "wall_s": 3.333,
+          "peak_mb": 16.6,
+          "exit": 0
+        },
+        {
+          "wall_s": 3.333,
+          "peak_mb": 24.1,
+          "exit": 0
+        },
+        {
+          "wall_s": 3.578,
+          "peak_mb": 8.6,
+          "exit": 0
+        }
+      ],
+      "failed": 0,
+      "peak_mb_sum": 272.0,
+      "verify_clean": true,
+      "verify_output": [
+        "613 objects, 2.2 MiB",
+        "temp files: 0",
+        "all objects match their hash keys"
+      ],
+      "trees_equal": 16,
+      "tree_differences": {},
+      "store_bytes": 10141696,
+      "requests": {
+        "packument": {
+          "requests": 318,
+          "distinct": 65,
+          "bytes": 12573666,
+          "statuses": {
+            "200": 318
+          }
+        },
+        "tarball": {
+          "requests": 343,
+          "distinct": 65,
+          "bytes": 4039980,
+          "statuses": {
+            "200": 343
+          }
+        }
+      },
+      "tarballs_per_package": 5.28,
+      "packuments_per_package": 4.89
+    },
+    {
+      "n": 32,
+      "wall_s": 6.528,
+      "installs": [
+        {
+          "wall_s": 5.544,
+          "peak_mb": 9.6,
+          "exit": 0
+        },
+        {
+          "wall_s": 3.396,
+          "peak_mb": 16.5,
+          "exit": 0
+        },
+        {
+          "wall_s": 5.387,
+          "peak_mb": 8.2,
+          "exit": 0
+        },
+        {
+          "wall_s": 5.387,
+          "peak_mb": 7.8,
+          "exit": 0
+        },
+        {
+          "wall_s": 5.571,
+          "peak_mb": 13.9,
+          "exit": 0
+        },
+        {
+          "wall_s": 5.363,
+          "peak_mb": 8.2,
+          "exit": 0
+        },
+        {
+          "wall_s": 5.379,
+          "peak_mb": 10.0,
+          "exit": 0
+        },
+        {
+          "wall_s": 6.31,
+          "peak_mb": 14.4,
+          "exit": 0
+        },
+        {
+          "wall_s": 3.396,
+          "peak_mb": 12.4,
+          "exit": 0
+        },
+        {
+          "wall_s": 6.523,
+          "peak_mb": 9.7,
+          "exit": 0
+        },
+        {
+          "wall_s": 4.198,
+          "peak_mb": 12.6,
+          "exit": 0
+        },
+        {
+          "wall_s": 5.381,
+          "peak_mb": 12.4,
+          "exit": 0
+        },
+        {
+          "wall_s": 5.555,
+          "peak_mb": 9.1,
+          "exit": 0
+        },
+        {
+          "wall_s": 3.895,
+          "peak_mb": 12.5,
+          "exit": 0
+        },
+        {
+          "wall_s": 5.381,
+          "peak_mb": 11.6,
+          "exit": 0
+        },
+        {
+          "wall_s": 5.381,
+          "peak_mb": 8.3,
+          "exit": 0
+        },
+        {
+          "wall_s": 5.381,
+          "peak_mb": 8.5,
+          "exit": 0
+        },
+        {
+          "wall_s": 5.382,
+          "peak_mb": 8.0,
+          "exit": 0
+        },
+        {
+          "wall_s": 5.434,
+          "peak_mb": 8.3,
+          "exit": 0
+        },
+        {
+          "wall_s": 5.382,
+          "peak_mb": 12.4,
+          "exit": 0
+        },
+        {
+          "wall_s": 5.382,
+          "peak_mb": 12.4,
+          "exit": 0
+        },
+        {
+          "wall_s": 3.396,
+          "peak_mb": 12.2,
+          "exit": 0
+        },
+        {
+          "wall_s": 3.396,
+          "peak_mb": 12.2,
+          "exit": 0
+        },
+        {
+          "wall_s": 3.276,
+          "peak_mb": 28.4,
+          "exit": 0
+        },
+        {
+          "wall_s": 3.34,
+          "peak_mb": 22.4,
+          "exit": 0
+        },
+        {
+          "wall_s": 3.373,
+          "peak_mb": 14.0,
+          "exit": 0
+        },
+        {
+          "wall_s": 3.38,
+          "peak_mb": 27.7,
+          "exit": 0
+        },
+        {
+          "wall_s": 5.382,
+          "peak_mb": 12.4,
+          "exit": 0
+        },
+        {
+          "wall_s": 5.382,
+          "peak_mb": 12.4,
+          "exit": 0
+        },
+        {
+          "wall_s": 5.382,
+          "peak_mb": 9.7,
+          "exit": 0
+        },
+        {
+          "wall_s": 5.538,
+          "peak_mb": 9.8,
+          "exit": 0
+        },
+        {
+          "wall_s": 3.387,
+          "peak_mb": 16.6,
+          "exit": 0
+        }
+      ],
+      "failed": 0,
+      "peak_mb_sum": 404.6,
+      "verify_clean": true,
+      "verify_output": [
+        "613 objects, 2.2 MiB",
+        "temp files: 0",
+        "all objects match their hash keys"
+      ],
+      "trees_equal": 32,
+      "tree_differences": {},
+      "store_bytes": 10203136,
+      "requests": {
+        "packument": {
+          "requests": 446,
+          "distinct": 65,
+          "bytes": 20766729,
+          "statuses": {
+            "200": 446
+          }
+        },
+        "tarball": {
+          "requests": 285,
+          "distinct": 65,
+          "bytes": 3295161,
+          "statuses": {
+            "200": 285
+          }
+        }
+      },
+      "tarballs_per_package": 4.38,
+      "packuments_per_package": 6.86
+    }
+  ]
+}

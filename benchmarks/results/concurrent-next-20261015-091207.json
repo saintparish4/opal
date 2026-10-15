@@ -1,0 +1,249 @@
+{
+  "meta": {
+    "project": "next",
+    "date": "2026-10-15T09:02:15",
+    "host": "Linux 6.6.87.2-microsoft-standard-WSL2, 8 threads",
+    "opal_version": "0.4.0",
+    "opal_binary": {
+      "path": "/home/saint/opal-bench/3045ff6/opal",
+      "sha256": "51a82cbbe36b4bd6ab1c612d35fbdb198e21deb43f9309d4ef63a2dca3aa0d82"
+    },
+    "upstream": "https://registry.npmjs.org",
+    "n": [
+      1,
+      2,
+      4,
+      8
+    ],
+    "peak_memory": "GNU time, %M"
+  },
+  "rows": [
+    {
+      "n": 1,
+      "wall_s": 56.821,
+      "installs": [
+        {
+          "wall_s": 56.815,
+          "peak_mb": 500.9,
+          "exit": 0
+        }
+      ],
+      "failed": 0,
+      "peak_mb_sum": 500.9,
+      "verify_clean": true,
+      "verify_output": [
+        "18492 objects, 517.9 MiB",
+        "temp files: 0",
+        "all objects match their hash keys"
+      ],
+      "failures": {},
+      "trees_equal": 1,
+      "tree_differences": {},
+      "store_bytes": 859799552,
+      "requests": {
+        "packument": {
+          "requests": 418,
+          "distinct": 418,
+          "bytes": 193339802,
+          "statuses": {
+            "200": 418
+          }
+        },
+        "tarball": {
+          "requests": 359,
+          "distinct": 359,
+          "bytes": 157005530,
+          "statuses": {
+            "200": 359
+          }
+        }
+      },
+      "tarballs_per_package": 1.0,
+      "packuments_per_package": 1.0
+    },
+    {
+      "n": 2,
+      "wall_s": 71.366,
+      "installs": [
+        {
+          "wall_s": 71.35,
+          "peak_mb": 492.4,
+          "exit": 0
+        },
+        {
+          "wall_s": 71.361,
+          "peak_mb": 503.8,
+          "exit": 0
+        }
+      ],
+      "failed": 0,
+      "peak_mb_sum": 996.1,
+      "verify_clean": true,
+      "verify_output": [
+        "18492 objects, 517.9 MiB",
+        "temp files: 0",
+        "all objects match their hash keys"
+      ],
+      "failures": {},
+      "trees_equal": 2,
+      "tree_differences": {},
+      "store_bytes": 859811840,
+      "requests": {
+        "packument": {
+          "requests": 670,
+          "distinct": 418,
+          "bytes": 375314284,
+          "statuses": {
+            "200": 670
+          }
+        },
+        "tarball": {
+          "requests": 697,
+          "distinct": 359,
+          "bytes": 313808323,
+          "statuses": {
+            "200": 697
+          }
+        }
+      },
+      "tarballs_per_package": 1.94,
+      "packuments_per_package": 1.6
+    },
+    {
+      "n": 4,
+      "wall_s": 93.199,
+      "installs": [
+        {
+          "wall_s": 93.184,
+          "peak_mb": 490.6,
+          "exit": 0
+        },
+        {
+          "wall_s": 93.194,
+          "peak_mb": 499.4,
+          "exit": 0
+        },
+        {
+          "wall_s": 93.189,
+          "peak_mb": 483.3,
+          "exit": 0
+        },
+        {
+          "wall_s": 93.194,
+          "peak_mb": 477.5,
+          "exit": 0
+        }
+      ],
+      "failed": 0,
+      "peak_mb_sum": 1950.7,
+      "verify_clean": true,
+      "verify_output": [
+        "18492 objects, 517.9 MiB",
+        "temp files: 0",
+        "all objects match their hash keys"
+      ],
+      "failures": {},
+      "trees_equal": 4,
+      "tree_differences": {},
+      "store_bytes": 859820032,
+      "requests": {
+        "packument": {
+          "requests": 1067,
+          "distinct": 418,
+          "bytes": 624512272,
+          "statuses": {
+            "200": 1067
+          }
+        },
+        "tarball": {
+          "requests": 1265,
+          "distinct": 359,
+          "bytes": 625762991,
+          "statuses": {
+            "200": 1265
+          }
+        }
+      },
+      "tarballs_per_package": 3.52,
+      "packuments_per_package": 2.55
+    },
+    {
+      "n": 8,
+      "wall_s": 199.24,
+      "installs": [
+        {
+          "wall_s": 134.713,
+          "peak_mb": 503.4,
+          "exit": 0
+        },
+        {
+          "wall_s": 199.235,
+          "peak_mb": 472.4,
+          "exit": 0
+        },
+        {
+          "wall_s": 135.708,
+          "peak_mb": 480.6,
+          "exit": 0
+        },
+        {
+          "wall_s": 134.9,
+          "peak_mb": 497.6,
+          "exit": 0
+        },
+        {
+          "wall_s": 171.178,
+          "peak_mb": 461.5,
+          "exit": 0
+        },
+        {
+          "wall_s": 137.847,
+          "peak_mb": 451.6,
+          "exit": 0
+        },
+        {
+          "wall_s": 133.235,
+          "peak_mb": 495.5,
+          "exit": 0
+        },
+        {
+          "wall_s": 139.493,
+          "peak_mb": 453.2,
+          "exit": 0
+        }
+      ],
+      "failed": 0,
+      "peak_mb_sum": 3815.9,
+      "verify_clean": true,
+      "verify_output": [
+        "18492 objects, 517.9 MiB",
+        "temp files: 0",
+        "all objects match their hash keys"
+      ],
+      "failures": {},
+      "trees_equal": 8,
+      "tree_differences": {},
+      "store_bytes": 859844608,
+      "requests": {
+        "packument": {
+          "requests": 1025,
+          "distinct": 418,
+          "bytes": 1051039493,
+          "statuses": {
+            "200": 1025
+          }
+        },
+        "tarball": {
+          "requests": 2038,
+          "distinct": 359,
+          "bytes": 1229507983,
+          "statuses": {
+            "200": 2038
+          }
+        }
+      },
+      "tarballs_per_package": 5.68,
+      "packuments_per_package": 2.45
+    }
+  ]
+}
