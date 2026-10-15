@@ -2,8 +2,8 @@
 CLAUDE.md
 base/
 /fuzz/target
-content/
-public/
+/content/
+/public/
 .claude/
 /website/node_modules
 /website/dist
