@@ -570,6 +570,7 @@ fn json(
         .collect();
 
     serde_json::json!({
+        "commit": commit(),
         "workload": {
             "name": options.workload,
             "file_bytes": workload.shape.file_bytes,
@@ -591,6 +592,25 @@ fn json(
         "scenarios": scenarios,
     })
     .to_string()
+}
+
+/// The commit measured, so an artifact can be tied to the build it timed.
+///
+/// CI names the one it checked out. Locally it's `HEAD`, marked `-dirty` when
+/// the tree has changes, since then `HEAD` alone is not what was measured.
+fn commit() -> Option<String> {
+    if let Ok(sha) = std::env::var("GITHUB_SHA")
+        && !sha.is_empty()
+    {
+        return Some(sha);
+    }
+    let git = |arguments: &[&str]| std::process::Command::new("git").args(arguments).output();
+    let head = git(&["rev-parse", "HEAD"])
+        .ok()
+        .filter(|output| output.status.success())?;
+    let head = String::from_utf8_lossy(&head.stdout).trim().to_string();
+    let dirty = git(&["diff", "--quiet", "HEAD"]).is_ok_and(|output| !output.status.success());
+    Some(if dirty { format!("{head}-dirty") } else { head })
 }
 
 fn millis(duration: Duration) -> f64 {
