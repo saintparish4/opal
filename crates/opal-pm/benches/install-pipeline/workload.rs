@@ -31,8 +31,24 @@ use std::path::Path;
 
 use opal_pm::fixtures::{FixtureRegistry, Package};
 
+/// How packages depend on each other.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Topology {
+    /// Each package depends on a block of packages further along, plus one
+    /// member of a popular pool: a tree with a shared end.
+    Tree,
+    /// Each package depends on the next one and on `fanout - 1` more drawn
+    /// from everything after it, so most packages have many dependents.
+    Scattered,
+    /// Four dependents of one package with ranges two versions can't share.
+    Diamond,
+    /// Many dependents of a few packages, pins and ranges mixed.
+    ConflictingRanges,
+}
+
 #[derive(Clone, Copy, Debug)]
 pub struct Shape {
+    pub topology: Topology,
     pub packages: usize,
     /// Published versions per package: the packument-weight dial.
     pub versions: usize,
@@ -56,6 +72,7 @@ pub struct Shape {
 impl Default for Shape {
     fn default() -> Self {
         Self {
+            topology: Topology::Tree,
             packages: 64,
             versions: 12,
             files: 6,
@@ -85,7 +102,89 @@ impl Shape {
             ..Self::default()
         }
     }
+
+    /// `roots` packages the project depends on directly, and nothing else:
+    /// metadata, download, link, and memory as a flat function of count.
+    pub fn wide(roots: usize) -> Self {
+        Self {
+            packages: roots,
+            roots,
+            fanout: 0,
+            ..Self::default()
+        }
+    }
+
+    /// A chain `depth` packages long. Hoisting flattens real trees and none
+    /// goes much past 15 levels, so this is about traversal, not layout.
+    pub fn deep(depth: usize) -> Self {
+        Self {
+            packages: depth,
+            roots: 1,
+            fanout: 1,
+            ..Self::default()
+        }
+    }
+
+    /// About 10,000 edges onto 1,200 packages: what a shared store is for.
+    pub fn dedup_heavy() -> Self {
+        Self {
+            topology: Topology::Scattered,
+            packages: 1_200,
+            fanout: 8,
+            ..Self::default()
+        }
+    }
+
+    /// `a`, `b`, `d`, and `e` all depend on `c`, at `^1.0.0`, `^2.0.0`,
+    /// `^1.5.0`, and `^3.0.0`: which versions are kept, and where they go.
+    pub fn diamond() -> Self {
+        Self {
+            topology: Topology::Diamond,
+            packages: 5,
+            versions: 4,
+            roots: 4,
+            fanout: 1,
+            ..Self::default()
+        }
+    }
+
+    /// 200 packages depending on 5 of 10 shared ones each, one edge in four
+    /// pinned to an older version, so the linker has to nest.
+    pub fn conflicting_ranges() -> Self {
+        Self {
+            topology: Topology::ConflictingRanges,
+            packages: CONFLICT_REQUESTERS + CONFLICT_SHARED,
+            roots: CONFLICT_REQUESTERS,
+            fanout: CONFLICT_FANOUT,
+            ..Self::default()
+        }
+    }
+
+    /// The shape `--workload` names, and the name to record it under.
+    pub fn named(name: &str) -> Option<Self> {
+        let sized = |prefix: &str| {
+            name.strip_prefix(prefix)
+                .and_then(|size| size.parse::<usize>().ok())
+                .filter(|size| *size > 0)
+        };
+        Some(match name {
+            "default" => Self::default(),
+            "scaffold" => Self::scaffold(),
+            "dedup-heavy" => Self::dedup_heavy(),
+            "diamond" => Self::diamond(),
+            "conflicting-ranges" => Self::conflicting_ranges(),
+            _ => match (sized("wide-"), sized("deep-")) {
+                (Some(roots), _) => Self::wide(roots),
+                (_, Some(depth)) => Self::deep(depth),
+                _ => return None,
+            },
+        })
+    }
 }
+
+const CONFLICT_REQUESTERS: usize = 200;
+const CONFLICT_SHARED: usize = 10;
+const CONFLICT_FANOUT: usize = 5;
 
 /// One in seven edges onto the popular pool pins an exact old version, so the
 /// tree contains duplicates and the linker has to nest. A tree that hoists
@@ -107,16 +206,22 @@ impl Workload {
         let root = directory.path().join("registry");
         let mut registry = FixtureRegistry::new(&root);
 
-        for index in 0..shape.packages {
-            for version in 0..shape.versions {
-                registry.publish(publish(&shape, index, version));
+        let roots: Vec<String> = match shape.topology {
+            Topology::Tree | Topology::Scattered => {
+                for index in 0..shape.packages {
+                    for version in 0..shape.versions {
+                        registry.publish(publish(&shape, index, version));
+                    }
+                }
+                (0..shape.roots.min(shape.packages)).map(name).collect()
             }
-        }
-
-        let dependencies: serde_json::Map<String, serde_json::Value> =
-            (0..shape.roots.min(shape.packages))
-                .map(|index| (name(index), serde_json::json!("^1.0.0")))
-                .collect();
+            Topology::Diamond => publish_diamond(&shape, &mut registry),
+            Topology::ConflictingRanges => publish_conflicting(&shape, &mut registry),
+        };
+        let dependencies: serde_json::Map<String, serde_json::Value> = roots
+            .into_iter()
+            .map(|root| (root, serde_json::json!("^1.0.0")))
+            .collect();
 
         Self {
             shape,
@@ -150,15 +255,106 @@ fn popular(shape: &Shape) -> std::ops::Range<usize> {
         .saturating_sub(shape.roots.min(shape.packages))..shape.packages
 }
 
-/// Package `index` depends on a contiguous block further along the numbering,
-/// plus one member of the popular pool. Every dependency has a strictly higher
-/// index than its dependent, which makes the graph acyclic by construction.
-fn children(shape: &Shape, index: usize) -> impl Iterator<Item = usize> {
+/// Every dependency has a strictly higher index than its dependent, which
+/// makes the graph acyclic by construction.
+///
+/// In a tree, package `index` depends on a contiguous block further along the
+/// numbering, plus one member of the popular pool. Scattered, it depends on
+/// the next package, which keeps every package reachable from the roots, and
+/// on `fanout - 1` more drawn from all those after it.
+fn children(shape: &Shape, index: usize) -> Vec<usize> {
+    if shape.topology == Topology::Scattered {
+        let mut children = Vec::new();
+        let after = shape.packages.saturating_sub(index + 1);
+        if after > 0 {
+            children.push(index + 1);
+        }
+        let mut draw = 0;
+        while children.len() < shape.fanout.min(after) {
+            let child = index + 1 + (mix((index as u64) << 32 | draw) % after as u64) as usize;
+            draw += 1;
+            if !children.contains(&child) {
+                children.push(child);
+            }
+        }
+        return children;
+    }
     let pool = popular(shape);
     let start = shape.roots + index * shape.fanout;
-    let block = (start..start + shape.fanout).filter(move |child| *child < pool.start);
+    let block = (start..start + shape.fanout).filter(|child| *child < pool.start);
     let shared = pool.start + index % pool.len().max(1);
-    block.chain((index < pool.start).then_some(shared))
+    block
+        .chain((index < pool.start).then_some(shared))
+        .collect()
+}
+
+/// SplitMix64's finalizer: a fixed, well-spread function of its input, so a
+/// workload is the same on every run without carrying a random generator.
+fn mix(mut value: u64) -> u64 {
+    value = value.wrapping_add(0x9E37_79B9_7F4A_7C15);
+    value = (value ^ (value >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
+    value = (value ^ (value >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
+    value ^ (value >> 31)
+}
+
+/// A small package at `version`, with files, depending on `dependencies`.
+fn small(shape: &Shape, name: &str, version: &str, dependencies: &[(String, String)]) -> Package {
+    let mut package = Package::new(name, version);
+    for (dependency, spec) in dependencies {
+        package = package.dependency(dependency, spec);
+    }
+    for file in 0..shape.files {
+        let contents = format!(
+            "// {name}@{version} file {file}\n{}\n",
+            "x".repeat(shape.file_bytes)
+        );
+        package = package.file(&format!("lib/mod-{file}.js"), &contents);
+    }
+    package
+}
+
+fn publish_diamond(shape: &Shape, registry: &mut FixtureRegistry) -> Vec<String> {
+    for version in ["1.0.0", "1.5.0", "2.0.0", "3.0.0"] {
+        registry.publish(small(shape, "c", version, &[]));
+    }
+    let dependents = [
+        ("a", "^1.0.0"),
+        ("b", "^2.0.0"),
+        ("d", "^1.5.0"),
+        ("e", "^3.0.0"),
+    ];
+    for (dependent, range) in dependents {
+        let edge = [("c".to_string(), range.to_string())];
+        registry.publish(small(shape, dependent, "1.0.0", &edge));
+    }
+    dependents
+        .iter()
+        .map(|(dependent, _)| dependent.to_string())
+        .collect()
+}
+
+fn publish_conflicting(shape: &Shape, registry: &mut FixtureRegistry) -> Vec<String> {
+    let shared = |index: usize| format!("shared-{index}");
+    for index in 0..CONFLICT_SHARED {
+        for version in 0..shape.versions {
+            registry.publish(small(shape, &shared(index), &format!("1.0.{version}"), &[]));
+        }
+    }
+    let requester = |index: usize| format!("req-{index:03}");
+    for index in 0..CONFLICT_REQUESTERS {
+        let edges: Vec<(String, String)> = (0..CONFLICT_FANOUT)
+            .map(|k| {
+                let spec = if (index + k).is_multiple_of(4) {
+                    format!("=1.0.{}", (index + 3 * k) % shape.versions)
+                } else {
+                    "^1.0.0".to_string()
+                };
+                (shared((index + k) % CONFLICT_SHARED), spec)
+            })
+            .collect();
+        registry.publish(small(shape, &requester(index), "1.0.0", &edges));
+    }
+    (0..CONFLICT_REQUESTERS).map(requester).collect()
 }
 
 fn publish(shape: &Shape, index: usize, version: usize) -> Package {
@@ -217,11 +413,8 @@ fn payload(shape: &Shape, index: usize, file: usize, bytes: usize) -> String {
     let mut state = (index as u64) << 32 | file as u64;
     let mut text = Vec::with_capacity(bytes);
     while text.len() < bytes {
+        let mixed = mix(state);
         state = state.wrapping_add(0x9E37_79B9_7F4A_7C15);
-        let mut mixed = state;
-        mixed = (mixed ^ (mixed >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
-        mixed = (mixed ^ (mixed >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
-        mixed ^= mixed >> 31;
         for pair in 0..32 {
             if text.len() == bytes {
                 break;

@@ -67,10 +67,14 @@ usage: cargo bench -p opal-pm --bench install-pipeline -- [options]
   --bandwidth-mbit N
                    simulated link speed, shared by every request (default:
                    unlimited, so a download costs a round trip and nothing more)
-  --workload NAME  default, or scaffold: the Next.js scaffold's package count,
-                   file count, and bytes (about 155 MB of tarballs). Pair it
-                   with --rtt-ms and --bandwidth-mbit; give it before any of
-                   --packages, --files and the rest, which then adjust it
+  --workload NAME  default; scaffold, the Next.js scaffold's package count,
+                   file count, and bytes (about 155 MB of tarballs), to pair
+                   with --rtt-ms and --bandwidth-mbit; wide-N, N packages the
+                   project depends on directly; deep-N, a chain N long;
+                   dedup-heavy, about 10,000 edges onto 1,200 packages;
+                   diamond and conflicting-ranges, which ask where versions
+                   go rather than how fast. Give it before any of --packages,
+                   --files and the rest, which then adjust it
   --scenario LIST  comma-separated subset of cold,resolve,link,noop
   --json           emit one JSON record instead of a report
   --no-packument-cache
@@ -129,13 +133,16 @@ struct Options {
     rtt: Duration,
     /// Bytes per second through one link that every request shares.
     bandwidth: Option<u64>,
-    workload: &'static str,
+    workload: String,
     scenarios: Vec<Scenario>,
     json: bool,
     /// Off measures what an install cost before metadata was kept between
     /// runs. Two runs of one binary, minutes apart on one machine, is a far
     /// better before/after than two runs of two binaries.
     packument_cache: bool,
+    /// Set in the child process that measures one install's peak memory: the
+    /// sandbox it installs into, and the registry it installs from.
+    peak_of: Option<(PathBuf, String)>,
 }
 
 impl Default for Options {
@@ -145,10 +152,11 @@ impl Default for Options {
             iterations: 5,
             rtt: Duration::ZERO,
             bandwidth: None,
-            workload: "default",
+            workload: "default".to_string(),
             scenarios: Scenario::ALL.to_vec(),
             json: false,
             packument_cache: true,
+            peak_of: None,
         }
     }
 }
@@ -165,6 +173,10 @@ fn main() -> ExitCode {
             return ExitCode::FAILURE;
         }
     };
+
+    if let Some((sandbox, registry)) = &options.peak_of {
+        return peak_of(sandbox, registry, &options);
+    }
 
     let started = Instant::now();
     let workload = Workload::generate(options.shape);
@@ -230,11 +242,17 @@ fn parse_arguments(arguments: impl Iterator<Item = String>) -> Result<Option<Opt
                 options.bandwidth = Some(megabits as u64 * 125_000);
             }
             "--workload" => {
-                (options.workload, options.shape) = match value.as_str() {
-                    "default" => ("default", Shape::default()),
-                    "scaffold" => ("scaffold", Shape::scaffold()),
-                    _ => return Err(format!("unknown workload {value:?}")),
-                };
+                options.shape =
+                    Shape::named(&value).ok_or_else(|| format!("unknown workload {value:?}"))?;
+                options.workload = value;
+            }
+            // Internal: how the benchmark asks a copy of itself for one
+            // install's peak memory. See `peak_rss`.
+            "--peak-of" => {
+                let (sandbox, registry) = value.split_once('\n').ok_or_else(|| {
+                    format!("--peak-of needs a sandbox and a registry, got {value:?}")
+                })?;
+                options.peak_of = Some((PathBuf::from(sandbox), registry.to_string()));
             }
             "--scenario" => {
                 options.scenarios = value
@@ -260,7 +278,10 @@ fn parse_arguments(arguments: impl Iterator<Item = String>) -> Result<Option<Opt
 
 /// A project, a cache, and a store, all disposable.
 struct Sandbox {
-    _directory: tempfile::TempDir,
+    /// Absent in the child that measures peak memory: the sandbox is the
+    /// parent's, and so is deleting it.
+    _directory: Option<tempfile::TempDir>,
+    root: PathBuf,
     project: PathBuf,
     cache: CacheRoot,
     store: PackageStore,
@@ -270,16 +291,21 @@ struct Sandbox {
 impl Sandbox {
     fn new(workload: &Workload) -> Self {
         let directory = tempfile::tempdir().expect("temp dir");
-        let cache = CacheRoot::at(directory.path().join("cache"));
+        write_project(&directory.path().join("project"), workload.manifest.clone());
+        let mut sandbox = Self::open(directory.path());
+        sandbox._directory = Some(directory);
+        sandbox
+    }
+
+    fn open(root: &std::path::Path) -> Self {
+        let cache = CacheRoot::at(root.join("cache"));
         let store = PackageStore::open(cache.open_cas().expect("cas"), cache.path())
             .expect("package store");
         let projects = ProjectIndex::new(cache.path().join("projects")).expect("project index");
-
-        let project = directory.path().join("project");
-        write_project(&project, workload.manifest.clone());
         Self {
-            _directory: directory,
-            project,
+            _directory: None,
+            root: root.to_path_buf(),
+            project: root.join("project"),
             cache,
             store,
             projects,
@@ -291,7 +317,7 @@ impl Sandbox {
     /// without it.
     fn registry(
         &self,
-        workload: &Workload,
+        registry_url: &str,
         options: &Options,
         rtt: Duration,
         bandwidth: Option<u64>,
@@ -299,8 +325,7 @@ impl Sandbox {
         let counters = Arc::new(Counters::default());
         let transport =
             MeteredTransport::new(HttpTransport::new(), rtt, bandwidth, Arc::clone(&counters));
-        let mut registry =
-            NpmRegistry::with_transport(workload.registry_url(), Box::new(transport));
+        let mut registry = NpmRegistry::with_transport(registry_url, Box::new(transport));
         if options.packument_cache {
             registry = registry
                 .with_packument_cache(PackumentCache::new(self.cache.path().join("packuments")));
@@ -356,6 +381,9 @@ struct Measurement {
     wall: Vec<Duration>,
     report: InstallReport,
     meter: Meter,
+    /// Of one more install, in its own process. `None` where it couldn't be
+    /// measured.
+    peak_rss: Option<u64>,
 }
 
 impl Measurement {
@@ -382,7 +410,7 @@ fn measure(scenario: Scenario, workload: &Workload, options: &Options) -> Measur
         // same client, so whatever a
         // real first install would leave behind — a warm store, and now warm
         // metadata — is what the timed runs start from.
-        let client = sandbox.registry(workload, options, Duration::ZERO, None);
+        let client = sandbox.registry(workload.registry_url(), options, Duration::ZERO, None);
         sandbox.install(&client.registry);
         sandbox
     });
@@ -405,7 +433,12 @@ fn measure(scenario: Scenario, workload: &Workload, options: &Options) -> Measur
         // is per-process and a reused one would hand the second iteration a
         // warm memory no real `opal install` ever starts with. What *does*
         // carry over is the on-disk cache, which is the point.
-        let client = sandbox.registry(workload, options, options.rtt, options.bandwidth);
+        let client = sandbox.registry(
+            workload.registry_url(),
+            options,
+            options.rtt,
+            options.bandwidth,
+        );
         let started = Instant::now();
         let report = sandbox.install(&client.registry);
         wall.push(started.elapsed());
@@ -414,12 +447,81 @@ fn measure(scenario: Scenario, workload: &Workload, options: &Options) -> Measur
 
     wall.sort_unstable();
     let (report, meter) = last.expect("at least one iteration");
+
+    let cold;
+    let sandbox = match &warm {
+        Some(sandbox) => sandbox,
+        None => {
+            cold = Sandbox::new(workload);
+            &cold
+        }
+    };
+    sandbox.prepare(scenario);
+    let peak_rss = peak_rss(sandbox, workload, options);
+
     Measurement {
         scenario,
         wall,
         report,
         meter,
+        peak_rss,
     }
+}
+
+/// The peak memory of one install in `sandbox`, prepared for its scenario.
+///
+/// Measured by a copy of this benchmark that does that install and nothing
+/// else. In this process the peak would be the highest of everything it has
+/// done, generating the workload included, since `ru_maxrss` never comes
+/// down; resetting it is Linux-only (`/proc/self/clear_refs`), and memory
+/// this process freed but kept would hide what the install allocated.
+fn peak_rss(sandbox: &Sandbox, workload: &Workload, options: &Options) -> Option<u64> {
+    let mut command = std::process::Command::new(std::env::current_exe().ok()?);
+    command
+        .arg("--peak-of")
+        .arg(format!(
+            "{}\n{}",
+            sandbox.root.display(),
+            workload.registry_url()
+        ))
+        .arg("--rtt-ms")
+        .arg(options.rtt.as_millis().to_string());
+    if let Some(rate) = options.bandwidth {
+        command
+            .arg("--bandwidth-mbit")
+            .arg((rate / 125_000).to_string());
+    }
+    if !options.packument_cache {
+        command.arg("--no-packument-cache");
+    }
+    let output = command.output().ok()?;
+    if !output.status.success() {
+        eprintln!(
+            "bench: peak memory not measured: {}",
+            String::from_utf8_lossy(&output.stderr).trim()
+        );
+        return None;
+    }
+    String::from_utf8_lossy(&output.stdout).trim().parse().ok()
+}
+
+/// The child's half of [`peak_rss`]: install, then print this process's peak.
+fn peak_of(sandbox: &std::path::Path, registry_url: &str, options: &Options) -> ExitCode {
+    let sandbox = Sandbox::open(sandbox);
+    let client = sandbox.registry(registry_url, options, options.rtt, options.bandwidth);
+    sandbox.install(&client.registry);
+
+    let mut usage = std::mem::MaybeUninit::<libc::rusage>::zeroed();
+    // SAFETY: `getrusage` fills the whole struct for `RUSAGE_SELF` and
+    // touches nothing else; the zeroed value is a valid `rusage` regardless.
+    let usage = unsafe {
+        libc::getrusage(libc::RUSAGE_SELF, usage.as_mut_ptr());
+        usage.assume_init()
+    };
+    // Kilobytes on Linux, bytes on macOS.
+    let unit = if cfg!(target_os = "macos") { 1 } else { 1024 };
+    println!("{}", usage.ru_maxrss as u64 * unit);
+    ExitCode::SUCCESS
 }
 
 fn report(workload: &Workload, options: &Options, setup: Duration, measurements: &[Measurement]) {
@@ -505,6 +607,12 @@ fn report(workload: &Workload, options: &Options, setup: Duration, measurements:
             "  store      {} fetched, {} already present",
             measurement.report.fetched, measurement.report.already_stored
         );
+        if let Some(peak) = measurement.peak_rss {
+            println!(
+                "  memory     {} peak RSS, one more install in its own process",
+                bytes(peak)
+            );
+        }
         println!(
             "  link       {} added, {} unchanged, {} removed ({} hardlinked, {} copied, {} bins)",
             link.added,
@@ -555,6 +663,7 @@ fn json(
                 "tarball_round_trips": meter.tarballs.round_trips,
                 "tarball_bytes": meter.tarball_bytes,
                 "packages": measurement.report.packages,
+                "peak_rss_bytes": measurement.peak_rss,
                 "fetched": measurement.report.fetched,
                 "already_stored": measurement.report.already_stored,
                 "link": {
