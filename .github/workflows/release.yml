@@ -163,6 +163,9 @@ jobs:
           echo "requires ${needed}; the limit is GLIBC_${MAX_GLIBC}"
           [ "$(printf '%s\n' "$needed" "GLIBC_${MAX_GLIBC}" | sort -V | tail -1)" = "GLIBC_${MAX_GLIBC}" ]
 
+      # Owned by root, not by the runner's uid 1001: `install.sh` run as root,
+      # as in a Dockerfile, keeps an archive's owner on the files it unpacks.
+      # GNU tar and the macOS runners' bsdtar spell the options differently.
       - name: Package
         run: |
           set -euo pipefail
@@ -170,7 +173,20 @@ jobs:
           cp "target/${{ matrix.target }}/release/${BIN_NAME}" "$stage/"
           cp LICENSE "$stage/"
           archive="${BIN_NAME}-${{ matrix.asset }}.tar.gz"
-          tar -C "$stage" -czf "$archive" "${BIN_NAME}" LICENSE
+          if tar --version | grep -q 'GNU tar'; then
+            owner=(--owner=0 --group=0 --numeric-owner)
+          else
+            owner=(--uid 0 --gid 0 --numeric-owner)
+          fi
+          tar "${owner[@]}" -C "$stage" -czf "$archive" "${BIN_NAME}" LICENSE
+          python3 - "$archive" <<'PY'
+          import sys
+          import tarfile
+
+          wrong = [f"{m.name} ({m.uid}:{m.gid})" for m in tarfile.open(sys.argv[1]) if m.uid or m.gid]
+          if wrong:
+              sys.exit(f"not owned by root: {', '.join(wrong)}")
+          PY
           shasum -a 256 "$archive" > "${archive}.sha256"
 
       - name: Upload artifact
