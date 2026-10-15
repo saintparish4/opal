@@ -15,7 +15,7 @@ Please don't open a public issue or pull request for a security problem. Report 
 
 A useful report says:
 
-- which version (`opal --version`), and your OS and CPU
+- which build (`opal --revision`; `opal --version` on 0.4.0 and earlier), and your OS and CPU
 - what an attacker can do, and what they have to control to do it: a package, a registry response, a project's files
 - how to reproduce it. A `package.json`, a tarball, or a script is ideal.
 

@@ -26,8 +26,8 @@ body:
     id: version
     attributes:
       label: Opal version
-      description: What `opal --version` prints. If you built it from source, add the commit.
-      placeholder: opal 0.4.0
+      description: What `opal --revision` prints, which names the commit the build came from. On 0.4.0 and earlier, what `opal --version` prints.
+      placeholder: opal 0.4.1 (1a2b3c4)
     validations:
       required: true
   - type: dropdown

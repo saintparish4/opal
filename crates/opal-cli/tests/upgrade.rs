@@ -131,3 +131,28 @@ fn test_upgrade_on_the_latest_release_changes_nothing() {
     );
     assert_eq!(fs::read(&binary).expect("read binary"), before);
 }
+
+#[test]
+fn test_version_prints_exactly_what_an_older_upgrade_checks_for() {
+    // `opal upgrade` in 0.3.1 and 0.4.0 refuses a new binary unless its
+    // `--version` is exactly this, so every later release must print it.
+    assert_eq!(version_of(Path::new(OPAL)), format!("opal {CURRENT}"));
+}
+
+#[test]
+fn test_revision_names_the_version_and_the_commit() {
+    let output = Command::new(OPAL)
+        .arg("--revision")
+        .output()
+        .expect("run --revision");
+    assert!(output.status.success());
+    let printed = String::from_utf8_lossy(&output.stdout).trim().to_string();
+
+    // Built from a git checkout, as every test run is, the commit is there.
+    let commit = printed
+        .strip_prefix(&format!("opal {CURRENT} ("))
+        .and_then(|rest| rest.strip_suffix(')'))
+        .unwrap_or_else(|| panic!("unexpected --revision output: {printed:?}"));
+    assert_eq!(commit.len(), 7, "{printed:?}");
+    assert!(commit.chars().all(|c| c.is_ascii_hexdigit()), "{printed:?}");
+}

@@ -39,11 +39,20 @@ use upgrade::{Outcome, Releases};
 #[command(
     name = "opal",
     version,
-    about = "JavaScript toolkit built on one shared module graph"
+    about = "JavaScript toolkit built on one shared module graph",
+    arg_required_else_help = true,
+    args_conflicts_with_subcommands = true
 )]
 struct Cli {
+    /// Print the version and the commit this build came from
+    ///
+    /// `--version` prints the version alone and always will: `opal upgrade`
+    /// in 0.3.1 and 0.4.0 checks that a new binary prints exactly
+    /// `opal <version>`, and anything more would make it refuse.
+    #[arg(long)]
+    revision: bool,
     #[command(subcommand)]
-    command: Command,
+    command: Option<Command>,
 }
 
 #[derive(Subcommand)]
@@ -234,7 +243,13 @@ fn main() -> ExitCode {
 }
 
 fn run(cli: Cli) -> Result<ExitCode, Failure> {
-    match cli.command {
+    let Some(command) = cli.command else {
+        // With no subcommand, clap has already shown help for no arguments
+        // at all, so the flag is what's left.
+        println!("{}", revision());
+        return Ok(ExitCode::SUCCESS);
+    };
+    match command {
         Command::Graph(args) => graph(args),
         Command::Install(args) => {
             let change = adding(&args.packages, &args.save)?;
@@ -461,12 +476,22 @@ fn install_command(
     Ok(ExitCode::SUCCESS)
 }
 
-fn install_header(command: &str, paint: Paint) -> String {
+/// `0.4.1 (abc1234)`, or the version alone for a build made outside a git
+/// checkout.
+fn build() -> String {
     let version = env!("CARGO_PKG_VERSION");
-    let build = match env!("OPAL_COMMIT") {
-        "" => format!("v{version}"),
-        commit => format!("v{version} ({commit})"),
-    };
+    match env!("OPAL_COMMIT") {
+        "" => version.to_string(),
+        commit => format!("{version} ({commit})"),
+    }
+}
+
+fn revision() -> String {
+    format!("opal {}", build())
+}
+
+fn install_header(command: &str, paint: Paint) -> String {
+    let build = format!("v{}", build());
     format!(
         "{} {}",
         paint.bold(format!("opal {command}")),
