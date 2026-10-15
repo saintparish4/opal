@@ -7,18 +7,18 @@ import Base from "../layouts/Base.astro";
   ogTitle="Opal"
   ogDescription="An all-in-one JavaScript toolkit built on one module graph. The package manager works today."
 >
-  <a slot="banner" class="banner" href="/blog/opal-v0.4.0/">Opal v0.4.0 is out <span>— parallel downloads, opal add / opal remove, and an install that shows its work →</span></a>
+  <a slot="banner" class="banner" href="/blog/opal-v0.4.1/">Opal v0.4.1 is out <span>— a faster opal add, opal --revision, and a nightly framework matrix →</span></a>
 
   <main id="main">
     <!-- ───────── hero ───────── -->
     <section class="wrap hero" id="top">
       <div class="hero-copy">
-        <a class="pill" href="https://github.com/saintparish4/opal/releases/tag/v0.4.0"><b>Beta</b> <span>Opal v0.4.0 released →</span></a>
+        <a class="pill" href="https://github.com/saintparish4/opal/releases/tag/v0.4.1"><b>Beta</b> <span>Opal v0.4.1 released →</span></a>
         <h1>Opal is a <em>crash&#8209;safe</em> JavaScript toolkit. One graph.</h1>
         <p class="lede">A package manager today, with a runtime, bundler and test runner planned, in a single binary. Use <a href="#minute"><code>opal install</code></a> in an existing Node.js project: it installs what npm would, from one store shared by every project.</p>
 
         <div id="install">
-          <p class="label">Install Opal v0.4.0</p>
+          <p class="label">Install Opal v0.4.1</p>
           <div class="slab">
             <code id="install-command">curl -fsSL https://opalx.dev/install.sh | bash</code>
             <button class="copy" data-copy="install-command" aria-label="Copy the install command" title="Copy">
@@ -156,29 +156,29 @@ import Base from "../layouts/Base.astro";
       <div class="terminal" aria-live="polite">
         <div class="terminal-bar"><span>● ● ●</span><span>~/my-app — opal</span><span id="step-count">01 / 06</span></div>
         <pre id="terminal-out"></pre>
-        <p class="terminal-foot"><span>Real output from Opal v0.4.0 on a 364-package Next.js app, abridged and sped up. Hover to pause.</span><button id="replay" type="button">↻ replay</button></p>
+        <p class="terminal-foot"><span>Real output from Opal v0.4.1 on a 364-package Next.js app, abridged and sped up. Hover to pause.</span><button id="replay" type="button">↻ replay</button></p>
       </div>
     </section>
 
     <!-- ───────── latest release ───────── -->
     <section class="wrap block release" id="release">
       <div>
-        <p class="label"><b class="version">v0.4.0</b> Latest release · October 2026</p>
-        <h2>Parallel downloads. opal add. An install that shows its work.</h2>
-        <p class="lede">v0.4.0 downloads 16 packages at a time, adds <code>opal add</code> and <code>opal remove</code>, and shows what an install is doing while it does it. The Linux binaries run on glibc 2.34 again.</p>
+        <p class="label"><b class="version">v0.4.1</b> Latest release · October 2026</p>
+        <h2>A faster opal add. Checked against seven frameworks.</h2>
+        <p class="lede">v0.4.1 stops <code>opal add</code> and <code>opal remove</code> re-checking packages the lockfile already holds, names the commit a build came from, and installs, builds, and serves seven framework starters every night.</p>
         <div class="actions">
-          <a class="btn" href="/blog/opal-v0.4.0/">Read the release notes →</a>
+          <a class="btn" href="/blog/opal-v0.4.1/">Read the release notes →</a>
           <code class="cli-pill">opal upgrade</code>
         </div>
       </div>
       <div>
         <ul class="notes">
-          <li><a href="/blog/opal-v0.4.0/#added"><span><code>opal add</code>, <code>opal remove</code> and <code>opal install &lt;pkg&gt;</code> change package.json, opal.lock and node_modules in one step</span></a></li>
-          <li><a href="/blog/opal-v0.4.0/#changed"><span>Packages download 16 at a time, where v0.3.1 fetched one at a time</span></a></li>
-          <li><a href="/blog/opal-v0.4.0/#changed"><span>Changing one dependency keeps every other locked version where it was</span></a></li>
-          <li><a href="/blog/opal-v0.4.0/#added"><span>One bar per download in flight, a live resolve count, and a list of what a run added</span></a></li>
-          <li><a href="/blog/opal-v0.4.0/#changed"><span>Linux binaries need glibc 2.34, so they run on Ubuntu 22.04, Debian 12 and RHEL 9</span></a></li>
-          <li><a href="/blog/opal-v0.4.0/#known-issues"><span>Known issue: <code>opal add</code> asks the registry about every package in the tree</span></a></li>
+          <li><a href="/blog/opal-v0.4.1/#changed"><span>An add over day-old metadata on a Next.js app: 3.0s with v0.4.0, 0.56s now</span></a></li>
+          <li><a href="/blog/opal-v0.4.1/#added"><span><code>opal --revision</code> prints the version and the commit a build came from</span></a></li>
+          <li><a href="/blog/opal-v0.4.1/#added"><span>Next.js, Vite, Astro, SvelteKit, Nest and Express starters, installed by Opal and built every night</span></a></li>
+          <li><a href="/blog/opal-v0.4.1/#fixed"><span><code>install.sh</code> run as root no longer leaves the binary owned by uid 1001</span></a></li>
+          <li><a href="/blog/opal-v0.4.1/#fixed"><span>Release notes on GitHub are the changelog's section for that version</span></a></li>
+          <li><a href="/blog/opal-v0.4.1/#known-issues"><span>Known issue: a damaged metadata cache entry makes <code>opal add</code> fail until it is deleted</span></a></li>
         </ul>
         <a class="all-releases" href="/blog/">All releases →</a>
       </div>
@@ -245,7 +245,7 @@ import Base from "../layouts/Base.astro";
         <li><strong><code>git:</code> and <code>file:</code> dependencies are refused.</strong> Dependencies come from a registry only. Both are planned for v0.5.0.</li>
         <li><strong>No <code>update</code> yet.</strong> <code>opal add</code> and <code>opal remove</code> change one dependency and keep the rest of the lockfile where it is; delete <code>opal.lock</code> to re-resolve everything. <code>--peer</code>, <code>--global</code>, and adding to a folder with no <code>package.json</code> are planned for v0.5.0. Commands that aren't built aren't in the binary.</li>
         <li><strong>CI installs of a large app are slower than npm's.</strong> With a lockfile and an empty cache, a Next.js install is 1.3–1.4× slower than npm. Packages download 16 at a time, and the download is still nearly all of that install.</li>
-        <li><strong><code>opal add</code> asks the registry about every package.</strong> On a Next.js app an add takes half a second when that metadata is fresh, about 2s when it is over five minutes old, and 5–7s when none is cached. A fix for the middle case is planned for v0.4.1.</li>
+        <li><strong><code>opal add</code> with nothing cached asks the registry about every package.</strong> On a Next.js app that takes 5–7s, as on a machine that installed from a lockfile. With metadata cached, however old, an add takes about half a second.</li>
       </ul>
       <a class="next" href="https://github.com/saintparish4/opal#limitations">The full list of limitations →</a>
     </section>

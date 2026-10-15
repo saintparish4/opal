@@ -4,7 +4,7 @@
 // resolving count and then its result, not the download in between.
 window.OPAL_DEMO = {
  "install": {
-  "header": "<span class=\"t-b\">opal install</span> <span class=\"t-d\">v0.4.0 (d036770)</span>",
+  "header": "<span class=\"t-b\">opal install</span> <span class=\"t-d\">v0.4.1 (410fe22)</span>",
   "frames": [
    {
     "html": "<span class=\"t-sky\">⠹</span> <span class=\"t-b\">resolving</span>  <span class=\"t-d\">0s</span>",
@@ -19,11 +19,11 @@ window.OPAL_DEMO = {
     "ms": 240
    },
    {
-    "html": "<span class=\"t-sky\">⠸</span> <span class=\"t-b\">resolving</span><span class=\"t-d\">  [87/204]</span>  <span class=\"t-d\">4s</span>",
+    "html": "<span class=\"t-sky\">⠦</span> <span class=\"t-b\">resolving</span><span class=\"t-d\">  [209/209]</span>  <span class=\"t-d\">4s</span>",
     "ms": 240
    },
    {
-    "html": "<span class=\"t-sky\">⠋</span> <span class=\"t-b\">resolving</span><span class=\"t-d\">  [399/415]</span>  <span class=\"t-d\">5s</span>",
+    "html": "<span class=\"t-sky\">⠴</span> <span class=\"t-b\">resolving</span><span class=\"t-d\">  [425/429]</span>  <span class=\"t-d\">6s</span>",
     "ms": 240
    }
   ],
@@ -33,33 +33,33 @@ window.OPAL_DEMO = {
    "<span class=\"t-g\">+</span> <span class=\"t-b\">react-dom</span><span class=\"t-d\">@19.2.8</span>",
    "<span class=\"t-g\">+</span> <span class=\"t-b\">@tailwindcss/postcss</span><span class=\"t-d\">@4.3.3</span>",
    "<span class=\"t-g\">+</span> <span class=\"t-b\">@types/node</span><span class=\"t-d\">@20.19.43</span> <span class=\"t-d\">(+ 6 more)</span>",
-   "<span class=\"t-g\">364</span> packages installed <span class=\"t-d\">[</span><span class=\"t-b\">26.0s</span><span class=\"t-d\">]</span>  <span class=\"t-d\">(resolve 5.8s, fetch 19.2s, link 836ms)</span>",
+   "<span class=\"t-g\">364</span> packages installed <span class=\"t-d\">[</span><span class=\"t-b\">26.4s</span><span class=\"t-d\">]</span>  <span class=\"t-d\">(resolve 6.1s, fetch 19.3s, link 972ms)</span>",
    "<span class=\"t-d\">skipped 66 optional packages built for other platforms</span>"
   ]
  },
  "again": [
-  "<span class=\"t-b\">opal install</span> <span class=\"t-d\">v0.4.0 (d036770)</span>",
-  "<span class=\"t-g\">364</span> packages already installed <span class=\"t-d\">[</span><span class=\"t-b\">458ms</span><span class=\"t-d\">]</span>",
+  "<span class=\"t-b\">opal install</span> <span class=\"t-d\">v0.4.1 (410fe22)</span>",
+  "<span class=\"t-g\">364</span> packages already installed <span class=\"t-d\">[</span><span class=\"t-b\">507ms</span><span class=\"t-d\">]</span>",
   "<span class=\"t-d\">skipped 66 optional packages built for other platforms</span>"
  ],
  "add": [
-  "<span class=\"t-b\">opal add</span> <span class=\"t-d\">v0.4.0 (d036770)</span>",
+  "<span class=\"t-b\">opal add</span> <span class=\"t-d\">v0.4.1 (410fe22)</span>",
   "<span class=\"t-g\">+</span> <span class=\"t-b\">zustand</span><span class=\"t-d\">@5.0.15</span>",
-  "<span class=\"t-g\">365</span> packages installed <span class=\"t-d\">[</span><span class=\"t-b\">589ms</span><span class=\"t-d\">]</span>  <span class=\"t-d\">(resolve 457ms, fetch 73ms, link 33ms)</span>",
+  "<span class=\"t-g\">365</span> packages installed <span class=\"t-d\">[</span><span class=\"t-b\">848ms</span><span class=\"t-d\">]</span>  <span class=\"t-d\">(resolve 632ms, fetch 156ms, link 33ms)</span>",
   "<span class=\"t-d\">1 added, 364 already in place</span>",
   "<span class=\"t-d\">skipped 66 optional packages built for other platforms</span>"
  ],
  "frozen": [
-  "<span class=\"t-b\">opal install</span> <span class=\"t-d\">v0.4.0 (d036770)</span>",
-  "<span class=\"t-g\">365</span> packages already installed <span class=\"t-d\">[</span><span class=\"t-b\">449ms</span><span class=\"t-d\">]</span>",
+  "<span class=\"t-b\">opal install</span> <span class=\"t-d\">v0.4.1 (410fe22)</span>",
+  "<span class=\"t-g\">365</span> packages already installed <span class=\"t-d\">[</span><span class=\"t-b\">470ms</span><span class=\"t-d\">]</span>",
   "<span class=\"t-d\">skipped 66 optional packages built for other platforms</span>"
  ],
  "verify": [
-  "18533 objects, 517.9 MiB",
+  "18533 objects, 518.0 MiB",
   "temp files: 0",
   "all objects match their hash keys"
  ],
  "upgrade": [
-  "opal 0.4.0 is already the latest release"
+  "opal 0.4.1 is already the latest release"
  ]
 };

@@ -6,12 +6,9 @@ release: "https://github.com/saintparish4/opal/releases/tag/v0.4.0"
 lede: "Parallel downloads, `opal add` and `opal remove`, and an install that shows what it is doing. No `opal.lock` format change."
 summary: "Downloads 16 packages at a time, adds `opal add` and `opal remove`, and shows what an install is doing while it does it. The Linux binaries run on glibc 2.34 again."
 commands:
-  - title: "To install Opal"
+  - title: "To install Opal v0.4.0"
     id: post-install
-    command: "curl -fsSL https://raw.githubusercontent.com/saintparish4/opal/master/install.sh | bash"
-  - title: "To upgrade Opal"
-    id: post-upgrade
-    command: "opal upgrade"
+    command: "curl -fsSL https://raw.githubusercontent.com/saintparish4/opal/master/install.sh | OPAL_VERSION=v0.4.0 bash"
 ---
 
 ## What's new {#added}
