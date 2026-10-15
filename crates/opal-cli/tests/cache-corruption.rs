@@ -374,8 +374,8 @@ fn test_garbled_packument_record_known_gap_fails_every_add_that_keeps_the_packag
     // An add re-resolves. The record parses as a package with no versions,
     // so `leaf` can't be kept: an error, not a panic. Ageing doesn't heal it.
     // A kept package's record is read at any age, and a revalidation the
-    // server answers with 304 keeps the body, so it lasts until it is pruned
-    // after 30 days.
+    // server answers with 304 keeps the body and restarts its clock, so even
+    // `opal cache gc`'s 30-day pruning never reaches it while it is in use.
     let output = store.opal(&first, &["add", "other"]);
     assert!(!output.status.success(), "the add read a garbled record");
     assert!(stderr(&output).contains("leaf"), "{}", stderr(&output));
