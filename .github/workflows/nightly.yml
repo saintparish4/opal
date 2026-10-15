@@ -61,3 +61,83 @@ jobs:
           name: frameworks
           path: results/*.json
           if-no-files-found: warn
+
+  # `testing_strategy.md` §8 at scale: installs and adds killed at random
+  # moments against the fixture registry, each re-run until it converges on
+  # a clean install's tree. 12 trials per push; here, 1,000 each. The number
+  # to quote is the kills that interrupted a running install, not trials.
+  chaos:
+    name: Random kills (1,000 trials)
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      OPAL_CHAOS_TRIALS: "1000"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Install Rust toolchain
+        run: rustup show
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+      - name: Run
+        run: |
+          set -o pipefail
+          cargo test --all-features -p opal-cli --test install-crash-safety -- --nocapture \
+            kills_at_random_moments adds_killed_at_random_moments 2>&1 | tee chaos.log
+      # Each line carries the seed, which replays the run with OPAL_CHAOS_SEED.
+      - name: Summarize
+        if: always()
+        run: |
+          {
+            echo "### Random kills"
+            echo
+            grep -oE 'OPAL_CHAOS_SEED=[0-9]+: [0-9]+ kills over .*' chaos.log | sed 's/^/- /' || echo "No count: the tests stopped before reporting one."
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: chaos
+          path: chaos.log
+
+  # Opal's own resolver invariants over generated registries, 250,000 cases
+  # each instead of proptest's default 256. A release build with overflow
+  # checks and debug assertions kept on: about three times the cases per
+  # minute of a debug build, still panicking where a debug build would.
+  resolver-properties:
+    name: Resolver properties (250,000 cases)
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      PROPTEST_CASES: "250000"
+      CARGO_PROFILE_RELEASE_OVERFLOW_CHECKS: "true"
+      CARGO_PROFILE_RELEASE_DEBUG_ASSERTIONS: "true"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Install Rust toolchain
+        run: rustup show
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+      - name: Run
+        run: |
+          set -o pipefail
+          cargo test --release --all-features -p opal-pm --test resolution-properties 2>&1 | tee properties.log
+      - name: Summarize
+        if: always()
+        run: |
+          {
+            echo "### Resolver properties, ${PROPTEST_CASES} cases each"
+            echo
+            grep -E '^test result' properties.log || echo "No result: the suite stopped before reporting one."
+          } >> "$GITHUB_STEP_SUMMARY"
+      # A failing case is written to the regressions file. It becomes a named
+      # regression test, so keep it rather than lose it with the runner.
+      - name: Upload the failing case
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: resolution-properties-regressions
+          path: |
+            crates/opal-pm/tests/resolution-properties.proptest-regressions
+            properties.log
