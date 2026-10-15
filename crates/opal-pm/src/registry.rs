@@ -5,6 +5,7 @@
 //! crash-safety and concurrency suites — run against a fixture registry with no
 //! network and no HTTP server, exercising exactly the code path production uses.
 
+use std::collections::hash_map::Entry;
 use std::collections::{BTreeMap, HashMap};
 use std::io::Read;
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
@@ -356,6 +357,24 @@ impl Packument {
 /// `Sync` so a `&dyn Registry` can be handed to worker threads.
 pub trait Registry: Sync {
     fn packument(&self, name: &str) -> Result<Arc<Packument>, RegistryError>;
+
+    /// A packument wanted only to read versions a lockfile already settled.
+    ///
+    /// A published version's record never changes, so a cached copy of any
+    /// age answers what that caller reads: the version's dependencies, and
+    /// whether it is listed. Without this, a seeded resolve revalidated every
+    /// package in the tree once its metadata passed `max-age`, which made
+    /// `opal add` of one package take 2s on a Next.js app instead of 0.7s.
+    ///
+    /// A version missing from such a copy may only have been published after
+    /// it, so a caller asks [`Registry::packument`] before calling it
+    /// withdrawn, and asks it for anything that chooses a version. Once a copy
+    /// taken this way has been asked for with [`Registry::packument`], it is
+    /// brought current first.
+    fn settled_packument(&self, name: &str) -> Result<Arc<Packument>, RegistryError> {
+        self.packument(name)
+    }
+
     fn tarball(&self, url: &str) -> Result<Vec<u8>, RegistryError>;
 
     /// [`Registry::tarball`], reporting the download to `observer` as it
@@ -389,11 +408,20 @@ pub struct NpmRegistry {
     transport: Box<dyn Transport>,
     /// Dedupes repeat lookups inside one resolve — the resolver asks for the
     /// same name several times — and saves re-parsing what it already parsed.
-    memory: Mutex<HashMap<String, Arc<Packument>>>,
+    memory: Mutex<HashMap<String, Remembered>>,
     /// Carries metadata between runs. Absent means every run starts cold, which
     /// is what a bare `NpmRegistry::new` is for in tests.
     disk: Option<PackumentCache>,
     freshness: Freshness,
+}
+
+/// One name's packument for the rest of this run.
+#[derive(Clone)]
+struct Remembered {
+    packument: Arc<Packument>,
+    /// Taken from a record past its `max-age` without asking the registry,
+    /// which is enough to read a settled version and not enough to choose one.
+    unchecked: bool,
 }
 
 impl NpmRegistry {
@@ -448,33 +476,54 @@ impl NpmRegistry {
         }
     }
 
-    fn memory(&self) -> MutexGuard<'_, HashMap<String, Arc<Packument>>> {
+    fn memory(&self) -> MutexGuard<'_, HashMap<String, Remembered>> {
         // The lock only ever covers one map operation, which can't leave the
         // map half-updated, so a poisoned lock still guards a valid map.
         self.memory.lock().unwrap_or_else(PoisonError::into_inner)
     }
 
-    fn remembered(&self, name: &str) -> Option<Arc<Packument>> {
+    fn remembered(&self, name: &str) -> Option<Remembered> {
         self.memory().get(name).cloned()
     }
 
-    /// Keeps the first packument recorded for a name, and returns that one.
+    /// Keeps the first packument recorded for a name, and returns that one,
+    /// unless the one kept is unchecked and this one isn't.
     ///
     /// Two threads can miss on the same name and both fetch it. Holding the
     /// lock across the request would prevent that by serializing every fetch,
     /// which is the thing sharing the client exists to avoid, so the
     /// duplicate request is accepted. Keeping the first answer is what stops
     /// it from becoming two different packuments inside one resolve.
-    fn remember(&self, name: &str, packument: Packument) -> Arc<Packument> {
-        Arc::clone(
-            self.memory()
-                .entry(name.to_string())
-                .or_insert_with(|| Arc::new(packument)),
-        )
+    ///
+    /// The one exception moves only forward: an unchecked copy gives way to
+    /// the registry's current answer, never the reverse. A version that copy
+    /// listed was published and so is still listed, with the same record, in
+    /// the current one, so nothing already read from it changes.
+    fn remember(&self, name: &str, packument: Packument, unchecked: bool) -> Arc<Packument> {
+        let remembered = Remembered {
+            packument: Arc::new(packument),
+            unchecked,
+        };
+        let mut memory = self.memory();
+        match memory.entry(name.to_string()) {
+            Entry::Occupied(mut kept) => {
+                if kept.get().unchecked && !unchecked {
+                    kept.insert(remembered);
+                }
+                Arc::clone(&kept.get().packument)
+            }
+            Entry::Vacant(slot) => Arc::clone(&slot.insert(remembered).packument),
+        }
     }
 
-    /// The bytes of a packument, from the freshest place that has them.
-    fn packument_bytes(&self, name: &str, url: &str) -> Result<Vec<u8>, RegistryError> {
+    /// The bytes of a packument, from the freshest place that has them, and
+    /// whether they came from a record past its `max-age` without asking.
+    fn packument_bytes(
+        &self,
+        name: &str,
+        url: &str,
+        freshness: Freshness,
+    ) -> Result<(Vec<u8>, bool), RegistryError> {
         let cached = self
             .disk
             .as_ref()
@@ -484,14 +533,16 @@ impl NpmRegistry {
         // This is the case that turns a re-resolve from minutes into
         // milliseconds, and it is why revalidation alone is not enough — a 304
         // costs one round trip less than nothing, and round trips are the cost.
-        let usable = match (&cached, self.freshness) {
+        let usable = match (&cached, freshness) {
             (None, Freshness::Offline) => return Err(RegistryError::NotCached(name.to_string())),
             (None, _) => false,
             (Some(_), Freshness::PreferOffline | Freshness::Offline) => true,
             (Some(record), Freshness::Revalidate) => record.is_fresh(SystemTime::now()),
         };
         if usable {
-            return Ok(cached.expect("a usable record is a record").body);
+            let record = cached.expect("a usable record is a record");
+            let stale = !record.is_fresh(SystemTime::now());
+            return Ok((record.body, stale));
         }
 
         let request = Request {
@@ -535,29 +586,56 @@ impl NpmRegistry {
         }
         // Moved, not cloned: a packument is measured in megabytes, and this
         // path runs once per package in the tree.
-        Ok(record.body)
+        Ok((record.body, false))
+    }
+
+    /// Under `Revalidate`, a copy taken past its `max-age` without asking is
+    /// unchecked. Under the other policies every packument is taken that way
+    /// on purpose, so nothing is ever brought current later.
+    fn unchecked(&self, stale: bool) -> bool {
+        stale && self.freshness == Freshness::Revalidate
     }
 }
 
 impl Registry for NpmRegistry {
     fn packument(&self, name: &str) -> Result<Arc<Packument>, RegistryError> {
-        if let Some(cached) = self.remembered(name) {
-            return Ok(cached);
+        if let Some(cached) = self.remembered(name)
+            && !cached.unchecked
+        {
+            return Ok(cached.packument);
         }
         let url = self.packument_url(name);
-        let bytes = self.packument_bytes(name, &url)?;
-        Ok(self.remember(name, Packument::parse(name, &bytes)))
+        let (bytes, stale) = self.packument_bytes(name, &url, self.freshness)?;
+        Ok(self.remember(name, Packument::parse(name, &bytes), self.unchecked(stale)))
+    }
+
+    fn settled_packument(&self, name: &str) -> Result<Arc<Packument>, RegistryError> {
+        if let Some(cached) = self.remembered(name) {
+            return Ok(cached.packument);
+        }
+        let freshness = match self.freshness {
+            Freshness::Revalidate => Freshness::PreferOffline,
+            other => other,
+        };
+        let url = self.packument_url(name);
+        let (bytes, stale) = self.packument_bytes(name, &url, freshness)?;
+        Ok(self.remember(name, Packument::parse(name, &bytes), self.unchecked(stale)))
     }
 
     fn cached_packument(&self, name: &str) -> Option<Arc<Packument>> {
         if let Some(cached) = self.remembered(name) {
-            return Some(cached);
+            return Some(cached.packument);
         }
         // Freshness is not consulted: a stale deprecation notice is a better
         // answer than a round trip, and this is the one caller that would
         // rather have nothing than wait.
         let record = self.disk.as_ref()?.get(&self.base, name)?;
-        Some(self.remember(name, Packument::parse(name, &record.body)))
+        let stale = !record.is_fresh(SystemTime::now());
+        Some(self.remember(
+            name,
+            Packument::parse(name, &record.body),
+            self.unchecked(stale),
+        ))
     }
 
     fn tarball(&self, url: &str) -> Result<Vec<u8>, RegistryError> {

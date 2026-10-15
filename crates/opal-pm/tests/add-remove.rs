@@ -13,6 +13,8 @@
 //! version from resolving it again.
 
 use std::path::PathBuf;
+use std::sync::{Arc, Mutex};
+use std::time::Duration;
 
 use opal_core::cache::CacheRoot;
 use opal_pm::edit::{AddRequest, EditError, Group};
@@ -20,9 +22,10 @@ use opal_pm::fixtures::{FixtureRegistry, Package, write_project};
 use opal_pm::install::{self, Change, InstallError, InstallOptions, InstallReport};
 use opal_pm::lockfile;
 use opal_pm::package::PackageStore;
+use opal_pm::packuments::{PackumentCache, Record};
 use opal_pm::progress::Silent;
 use opal_pm::projects::ProjectIndex;
-use opal_pm::registry::{NpmRegistry, RegistryError};
+use opal_pm::registry::{Fetched, HttpTransport, NpmRegistry, RegistryError, Request, Transport};
 use opal_pm::resolve::ResolveError;
 
 struct Sandbox {
@@ -31,6 +34,7 @@ struct Sandbox {
     registry: FixtureRegistry,
     store: PackageStore,
     projects: ProjectIndex,
+    packuments: PackumentCache,
 }
 
 impl Sandbox {
@@ -45,6 +49,7 @@ impl Sandbox {
             registry: FixtureRegistry::new(directory.path().join("registry")),
             store,
             projects: ProjectIndex::new(cache.path().join("projects")).expect("project index"),
+            packuments: PackumentCache::new(cache.path().join("packuments")),
             _directory: directory,
         }
     }
@@ -780,4 +785,178 @@ fn test_an_install_clears_its_own_stale_temp_files_and_nothing_else() {
     for name in theirs {
         assert!(sandbox.project.join(name).exists(), "{name} was removed");
     }
+}
+
+// Metadata a lockfile already settled.
+//
+// Each test below installs through a registry that keeps metadata between
+// runs, as the CLI's does, then ages every record past its `max-age` and
+// changes the project through a new client, standing in for a later run.
+// Only an aged record tells "used the cache" from "asked the registry",
+// because a fresh one is used without asking either way.
+
+/// The fixture registry's own transport, noting each package whose metadata
+/// it was asked for.
+struct Noting {
+    inner: HttpTransport,
+    base: String,
+    asked: Arc<Mutex<Vec<String>>>,
+}
+
+impl Transport for Noting {
+    fn get(&self, request: &Request<'_>) -> Result<Fetched, RegistryError> {
+        if request.accept.is_some()
+            && let Some(name) = request
+                .url
+                .strip_prefix(&self.base)
+                .and_then(|path| path.strip_prefix('/'))
+                .and_then(|path| path.strip_suffix(".json"))
+        {
+            self.asked.lock().unwrap().push(name.to_string());
+        }
+        self.inner.get(request)
+    }
+}
+
+impl Sandbox {
+    /// A client over this sandbox's packument cache, and the list of names it
+    /// goes on to ask the registry about.
+    fn caching(&self) -> (NpmRegistry, Arc<Mutex<Vec<String>>>) {
+        let asked = Arc::new(Mutex::new(Vec::new()));
+        let transport = Noting {
+            inner: HttpTransport::new(),
+            base: self.registry.url(),
+            asked: Arc::clone(&asked),
+        };
+        let registry = NpmRegistry::with_transport(self.registry.url(), Box::new(transport))
+            .with_packument_cache(self.packuments.clone());
+        (registry, asked)
+    }
+
+    /// Rewrites each named package's cached record as fetched a day ago.
+    fn age_metadata(&self, names: &[&str]) {
+        let base = self.registry.url();
+        for name in names {
+            let record = self.packuments.get(&base, name).expect("a cached record");
+            self.packuments.put(
+                &base,
+                name,
+                &Record {
+                    fetched: record.fetched - Duration::from_secs(86_400),
+                    ..record
+                },
+            );
+        }
+    }
+
+    fn install_through(&self, registry: &NpmRegistry) -> InstallReport {
+        install::install(
+            &self.project,
+            registry,
+            &self.store,
+            &self.projects,
+            &InstallOptions::default(),
+            &Silent,
+        )
+        .expect("install")
+    }
+
+    fn add_through(&self, registry: &NpmRegistry, arguments: &[&str]) -> InstallReport {
+        install::change(
+            &self.project,
+            &adding(arguments, None, false),
+            registry,
+            &self.store,
+            &self.projects,
+            &InstallOptions::default(),
+            &Silent,
+        )
+        .expect("add")
+    }
+}
+
+fn sorted(asked: &Mutex<Vec<String>>) -> Vec<String> {
+    let mut names = asked.lock().unwrap().clone();
+    names.sort();
+    names
+}
+
+#[test]
+fn test_adding_a_package_over_stale_metadata_asks_only_about_what_the_change_names() {
+    let mut sandbox = Sandbox::new();
+    publish_originals(&mut sandbox.registry);
+    sandbox.project(serde_json::json!({ "dependencies": { "lib": "^1.0.0" } }));
+    let (first, asked) = sandbox.caching();
+    sandbox.install_through(&first);
+    assert_eq!(sorted(&asked), ["lib", "util"]);
+    sandbox.age_metadata(&["lib", "util"]);
+
+    let (later, asked) = sandbox.caching();
+    sandbox.add_through(&later, &["extra"]);
+
+    // `lib` and `util` are answered by the lockfile, so their day-old
+    // metadata is read as it is; before, both were revalidated.
+    assert_eq!(sorted(&asked), ["extra"]);
+    assert_eq!(sandbox.locked(), ["extra@1.0.0", "lib@1.0.0", "util@1.0.0"]);
+}
+
+#[test]
+fn test_a_new_need_for_a_version_published_since_the_metadata_was_cached_still_finds_it() {
+    let mut sandbox = Sandbox::new();
+    publish_originals(&mut sandbox.registry);
+    sandbox.project(serde_json::json!({ "dependencies": { "lib": "^1.0.0" } }));
+    let (first, _) = sandbox.caching();
+    sandbox.install_through(&first);
+    sandbox
+        .registry
+        .publish(Package::new("util", "1.1.0"))
+        .publish(Package::new("mid", "1.0.0").dependency("util", "^1.1.0"))
+        .publish(Package::new("wants", "1.0.0").dependency("mid", "^1.0.0"));
+    sandbox.age_metadata(&["lib", "util"]);
+
+    let (later, asked) = sandbox.caching();
+    sandbox.add_through(&later, &["wants"]);
+
+    // `util` is first read for `lib`, which the lockfile answers, from the
+    // day-old record that predates 1.1.0. `mid` then needs `^1.1.0`, which
+    // chooses a version, so `util` is asked about after all: once.
+    assert_eq!(
+        sandbox.locked(),
+        [
+            "lib@1.0.0",
+            "mid@1.0.0",
+            "util@1.0.0",
+            "util@1.1.0",
+            "wants@1.0.0"
+        ]
+    );
+    assert_eq!(sorted(&asked), ["mid", "util", "wants"]);
+}
+
+#[test]
+fn test_a_locked_version_newer_than_the_cached_metadata_is_not_taken_for_withdrawn() {
+    let mut sandbox = Sandbox::new();
+    publish_originals(&mut sandbox.registry);
+    sandbox.project(serde_json::json!({ "dependencies": { "lib": "^1.0.0" } }));
+    let (first, _) = sandbox.caching();
+    sandbox.install_through(&first);
+
+    // Someone else locks `lib@1.1.0`, published after this machine cached
+    // `lib`'s metadata. A client with no cache stands in for their machine.
+    sandbox.registry.publish(Package::new("lib", "1.1.0"));
+    std::fs::remove_file(lockfile::path_in(&sandbox.project)).expect("remove opal.lock");
+    sandbox.install();
+    assert!(sandbox.locked().contains(&"lib@1.1.0".to_string()));
+    sandbox.age_metadata(&["lib", "util"]);
+
+    let (later, _) = sandbox.caching();
+    sandbox.add_through(&later, &["extra"]);
+
+    // The cached record doesn't list 1.1.0. Taking that as withdrawn would
+    // move `lib` back to 1.0.0 for an add that never named it.
+    assert!(
+        sandbox.locked().contains(&"lib@1.1.0".to_string()),
+        "{}",
+        sandbox.lockfile()
+    );
 }

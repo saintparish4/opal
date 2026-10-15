@@ -446,6 +446,28 @@ impl Request {
     }
 }
 
+/// How current a packument has to be for what it is about to answer.
+///
+/// Ordered so that one package asked for both ways in a level is fetched as
+/// [`Need::Current`].
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+enum Need {
+    /// Only a version the lockfile already settled is read from it.
+    Settled,
+    /// A version is about to be chosen from it.
+    Current,
+}
+
+/// The range a request is answered within. A tag has none.
+fn range_of(spec: &Spec) -> Option<&Range> {
+    match spec {
+        // An alias narrows the *target*, so from here it is an ordinary
+        // range against an ordinary packument — only the name differs.
+        Spec::Range(range) | Spec::Alias { range, .. } => Some(range),
+        Spec::Tag(_) | Spec::Unsupported(_) => None,
+    }
+}
+
 impl<'a> Resolver<'a> {
     fn run(
         mut self,
@@ -572,17 +594,29 @@ impl<'a> Resolver<'a> {
     ///
     /// Only packages nothing has selected yet are fetched. The first request
     /// for one of those always asks the registry, so this never makes a
-    /// request the sequential pass would not have made.
+    /// request the sequential pass would not have made. A package every
+    /// request in the level would answer from the lockfile is asked for the
+    /// way the sequential pass will ask for it, as settled.
     ///
     /// Returns how many such packages the level names, fetched ahead or not.
     fn fetch_ahead(&mut self, level: &[Request], threads: usize) -> usize {
-        let wanted: BTreeSet<&str> = level
-            .iter()
-            .filter(|request| !matches!(request.spec, Spec::Unsupported(_)))
-            .map(|request| request.package.as_str())
-            .filter(|package| !self.selected.contains_key(*package))
-            .collect();
-        let wanted: Vec<&str> = wanted.into_iter().collect();
+        let mut wanted: BTreeMap<&str, Need> = BTreeMap::new();
+        for request in level {
+            if matches!(request.spec, Spec::Unsupported(_))
+                || self.selected.contains_key(&request.package)
+            {
+                continue;
+            }
+            let need = match self.answered(request, range_of(&request.spec)) {
+                Some(_) => Need::Settled,
+                None => Need::Current,
+            };
+            wanted
+                .entry(request.package.as_str())
+                .and_modify(|wanted| *wanted = (*wanted).max(need))
+                .or_insert(need);
+        }
+        let wanted: Vec<(&str, Need)> = wanted.into_iter().collect();
         let threads = threads.min(wanted.len());
         if threads < 2 {
             return wanted.len();
@@ -593,8 +627,12 @@ impl<'a> Resolver<'a> {
             &wanted,
             threads,
             Vec::new,
-            |package, refused: &mut Vec<(String, RegistryError)>| {
-                if let Err(error) = registry.packument(package) {
+            |(package, need), refused: &mut Vec<(String, RegistryError)>| {
+                let fetched = match need {
+                    Need::Settled => registry.settled_packument(package),
+                    Need::Current => registry.packument(package),
+                };
+                if let Err(error) = fetched {
                     refused.push(((*package).to_string(), error));
                 }
                 Ok::<(), Infallible>(())
@@ -604,35 +642,32 @@ impl<'a> Resolver<'a> {
         wanted.len()
     }
 
-    fn packument(&mut self, package: &str) -> Result<Arc<Packument>, RegistryError> {
-        match self.refused.remove(package) {
-            Some(error) => Err(error),
-            None => self.registry.packument(package),
+    fn packument(&mut self, package: &str, need: Need) -> Result<Arc<Packument>, RegistryError> {
+        if let Some(error) = self.refused.remove(package) {
+            return Err(error);
+        }
+        match need {
+            Need::Settled => self.registry.settled_packument(package),
+            Need::Current => self.registry.packument(package),
         }
     }
 
     /// Chooses a version, recording the package if it is new.
     fn select(&mut self, request: &Request) -> Result<Option<Version>, ResolveError> {
-        let range = match &request.spec {
-            Spec::Range(range) => Some(range.clone()),
-            // An alias narrows the *target*, so from here it is an ordinary
-            // range against an ordinary packument — only the name differs.
-            Spec::Alias { range, .. } => Some(range.clone()),
-            Spec::Tag(_) => None,
-            Spec::Unsupported(spec) => {
-                if request.optional {
-                    self.skipped.push((
-                        request.name.clone(),
-                        format!("unsupported specifier {spec:?}"),
-                    ));
-                    return Ok(None);
-                }
-                return Err(ResolveError::UnsupportedSpec {
-                    name: request.name.clone(),
-                    spec: spec.clone(),
-                });
+        if let Spec::Unsupported(spec) = &request.spec {
+            if request.optional {
+                self.skipped.push((
+                    request.name.clone(),
+                    format!("unsupported specifier {spec:?}"),
+                ));
+                return Ok(None);
             }
-        };
+            return Err(ResolveError::UnsupportedSpec {
+                name: request.name.clone(),
+                spec: spec.clone(),
+            });
+        }
+        let range = range_of(&request.spec).cloned();
 
         // An answer already given comes before reuse. Reuse would move an
         // edge the lockfile settled onto whichever satisfying version this
@@ -647,16 +682,24 @@ impl<'a> Resolver<'a> {
             if selected {
                 return Ok(Some(version));
             }
-            let Some(offered) = self.packument_for(request)? else {
+            let Some(offered) = self.packument_for(request, Need::Settled)? else {
+                return Ok(None);
+            };
+            if let Some(metadata) = offered.version(&version) {
+                return Ok(Some(self.record(request, metadata)));
+            }
+            // Missing from a copy cached before it was published is not
+            // withdrawn; only the registry's current answer can say which.
+            let Some(current) = self.packument_for(request, Need::Current)? else {
                 return Ok(None);
             };
             // A version the registry has withdrawn is not kept: its edges
             // would read as none, and its dependencies would drop out of the
             // tree without a word. The request is answered afresh instead.
-            if let Some(metadata) = offered.version(&version) {
+            if let Some(metadata) = current.version(&version) {
                 return Ok(Some(self.record(request, metadata)));
             }
-            packument = Some(offered);
+            packument = Some(current);
         }
 
         // Reuse before fetching: an already-selected version that satisfies the
@@ -670,7 +713,7 @@ impl<'a> Resolver<'a> {
 
         let packument = match packument {
             Some(packument) => packument,
-            None => match self.packument_for(request)? {
+            None => match self.packument_for(request, Need::Current)? {
                 Some(packument) => packument,
                 None => return Ok(None),
             },
@@ -750,8 +793,12 @@ impl<'a> Resolver<'a> {
 
     /// The packument a request is answered from, or `None` once an optional
     /// dependency the registry does not have is recorded as skipped.
-    fn packument_for(&mut self, request: &Request) -> Result<Option<Arc<Packument>>, ResolveError> {
-        match self.packument(&request.package) {
+    fn packument_for(
+        &mut self,
+        request: &Request,
+        need: Need,
+    ) -> Result<Option<Arc<Packument>>, ResolveError> {
+        match self.packument(&request.package, need) {
             Ok(packument) => Ok(Some(packument)),
             Err(RegistryError::NotFound(name)) if request.optional => {
                 self.skipped.push((name, "not in the registry".to_string()));
@@ -794,7 +841,10 @@ impl<'a> Resolver<'a> {
         &self,
         id: &PackageId,
     ) -> Result<Vec<crate::manifest::Requirement>, ResolveError> {
-        let packument = self.registry.packument(&id.name)?;
+        // Settled whichever way the version was chosen: its record is the
+        // same in any copy that lists it, and asking for a current copy here
+        // would revalidate every package the lockfile kept.
+        let packument = self.registry.settled_packument(&id.name)?;
         let Some(metadata) = packument.version(&id.version) else {
             return Ok(Vec::new());
         };

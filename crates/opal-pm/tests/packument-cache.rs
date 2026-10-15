@@ -286,6 +286,85 @@ fn test_without_a_cache_every_process_starts_cold() {
     assert_eq!(wire.count(), 4);
 }
 
+/// Rewrites the cached record as fetched a day ago, past any `max-age`.
+fn age_a_day(cache: &PackumentCache) {
+    let record = cache.get(BASE, "demo").expect("record");
+    cache.put(
+        BASE,
+        "demo",
+        &opal_pm::packuments::Record {
+            fetched: record.fetched - Duration::from_secs(86_400),
+            ..record
+        },
+    );
+}
+
+fn listed(packument: &opal_pm::registry::Packument) -> Vec<String> {
+    packument.versions().map(ToString::to_string).collect()
+}
+
+#[test]
+fn test_a_settled_packument_takes_a_stale_record_until_something_needs_it_current() {
+    let directory = tempfile::tempdir().expect("temp dir");
+    let cache = PackumentCache::new(directory.path());
+    let wire = Arc::new(Wire::new());
+    client(&wire, &cache, Freshness::Revalidate)
+        .packument("demo")
+        .expect("first fetch");
+    age_a_day(&cache);
+    *wire.body.lock().unwrap() = packument("1.1.0");
+
+    let registry = client(&wire, &cache, Freshness::Revalidate);
+    let settled = registry.settled_packument("demo").expect("settled");
+    assert_eq!(wire.count(), 1, "a day-old record answers without asking");
+    assert_eq!(listed(&settled), ["1.0.0"]);
+
+    let current = registry.packument("demo").expect("current");
+    assert_eq!(wire.count(), 2, "choosing a version asks after all");
+    assert_eq!(listed(&current), ["1.1.0"]);
+
+    let again = registry.settled_packument("demo").expect("settled again");
+    assert!(
+        Arc::ptr_eq(&again, &current),
+        "once current, every later read in the run gets the current copy"
+    );
+    assert_eq!(wire.count(), 2);
+}
+
+#[test]
+fn test_a_settled_packument_that_was_fresh_is_never_asked_for_again() {
+    let directory = tempfile::tempdir().expect("temp dir");
+    let cache = PackumentCache::new(directory.path());
+    let wire = Arc::new(Wire::new());
+    *wire.cache_control.lock().unwrap() = Some("max-age=300".to_string());
+    client(&wire, &cache, Freshness::Revalidate)
+        .packument("demo")
+        .expect("first fetch");
+
+    let registry = client(&wire, &cache, Freshness::Revalidate);
+    registry.settled_packument("demo").expect("settled");
+    registry.packument("demo").expect("current");
+
+    assert_eq!(wire.count(), 1, "a fresh record is current already");
+}
+
+#[test]
+fn test_under_prefer_offline_a_stale_record_is_never_brought_current() {
+    let directory = tempfile::tempdir().expect("temp dir");
+    let cache = PackumentCache::new(directory.path());
+    let wire = Arc::new(Wire::new());
+    client(&wire, &cache, Freshness::Revalidate)
+        .packument("demo")
+        .expect("first fetch");
+    age_a_day(&cache);
+
+    let registry = client(&wire, &cache, Freshness::PreferOffline);
+    registry.settled_packument("demo").expect("settled");
+    registry.packument("demo").expect("current");
+
+    assert_eq!(wire.count(), 1, "the caller asked for whatever is cached");
+}
+
 /// Holds each request until a second one has arrived, so two callers are
 /// certain to have both missed the in-process cache before either is answered.
 struct Meeting {
