@@ -5,3 +5,6 @@ base/
 content/
 public/
 .claude/
+/website/node_modules
+/website/dist
+/website/.astro

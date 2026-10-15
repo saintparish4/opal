@@ -1,0 +1,46 @@
+---
+import { render } from "astro:content";
+import Base from "../../../layouts/Base.astro";
+import CopyCommand from "../../../components/CopyCommand.astro";
+import { postsNewestFirst, inlineCode, longDate, isoDay, type Post } from "../../../lib/posts";
+
+export async function getStaticPaths() {
+  const posts = await postsNewestFirst();
+  return posts.map((post) => ({ params: { slug: post.id }, props: { post } }));
+}
+
+const { post } = Astro.props as { post: Post };
+const { title, description, date, release, lede, commands } = post.data;
+const { Content } = await render(post);
+// From the rendered HTML rather than `headings`, which is plain text and would
+// drop the <code> in a heading such as "A contained `exports`".
+const toc = [...(post.rendered?.html ?? "").matchAll(/<h2 id="([^"]+)">(.*?)<\/h2>/g)].map(([, id, html]) => ({ id, html }));
+---
+<Base title={`${title} — Opal blog`} description={description} ogTitle={title} ogDescription={description} current="blog" rss>
+  <main id="main">
+    <header class="wrap post-head">
+      <a class="label" href="/blog/">← Blog</a>
+      <h1>{title}</h1>
+      <p class="post-meta"><a class="post-author" href="https://github.com/saintparish4"><img src="https://github.com/saintparish4.png?size=64" alt="" width="24" height="24" loading="lazy">Sharif Parish</a> <span aria-hidden="true">·</span> <time datetime={isoDay(date)}>{longDate(date)}</time> <span aria-hidden="true">·</span> <a href={release}>Release on GitHub ↗</a> <a class="post-rss" href="/blog/rss.xml" aria-label="RSS feed" title="RSS feed"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true"><path d="M4 11h3.5l5.5 5.5V20"/><path d="M4 4h8l8 8v8"/><rect x="4" y="18" width="2" height="2" fill="currentColor"/></svg></a></p>
+    </header>
+    <div class="wrap post-layout">
+      <article class="prose">
+        <p set:html={inlineCode(lede)} />
+        {commands.map((box) => (
+          <>
+            <h3 class="post-box-title">{box.title}</h3>
+            <CopyCommand id={box.id} command={box.command} />
+          </>
+        ))}
+        <Content />
+      </article>
+      {toc.length > 0 && (
+        <aside class="toc" aria-label="On this page">
+          <p class="label">On this page</p>
+          {toc.map((heading) => <a class="toc-2" href={`#${heading.id}`} set:html={heading.html} />)}
+        </aside>
+      )}
+    </div>
+  </main>
+  <script slot="scripts" is:inline src="/blog/post.js"></script>
+</Base>

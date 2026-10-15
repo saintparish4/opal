@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
 # Installs opal into ~/.opal/bin and adds it to PATH.
 #
-# No branded install domain yet, so run it straight off the repo:
-#   curl -fsSL https://raw.githubusercontent.com/saintparish4/opal/master/install.sh | bash
+# opalx.dev/install.sh redirects to this file on master (website/vercel.json),
+# so the raw.githubusercontent.com URL keeps working too:
+#   curl -fsSL https://opalx.dev/install.sh | bash
 #
 # Pin a version instead of the latest release. The variable goes on bash, the
 # command that reads it; in front of curl it would be ignored:
-#   curl -fsSL https://raw.githubusercontent.com/saintparish4/opal/master/install.sh | OPAL_VERSION=v0.3.1 bash
+#   curl -fsSL https://opalx.dev/install.sh | OPAL_VERSION=v0.3.1 bash
 #
 # v1 targets macOS, Linux, and WSL2 only (WSL2 reports as Linux via uname,
 # so the linux-x64/linux-arm64 assets cover it directly). Native Windows is

@@ -1,0 +1,55 @@
+---
+import Base from "../../layouts/Base.astro";
+import { postsNewestFirst, inlineCode, longDate, shortDate, isoDay } from "../../lib/posts";
+
+const [latest, ...older] = await postsNewestFirst();
+const years = [...new Set(older.map((post) => post.data.date.getUTCFullYear()))];
+---
+<Base
+  title="Blog — Opal"
+  description="Release notes and writing about Opal, a JavaScript toolkit built on one module graph."
+  ogTitle="Opal blog"
+  ogDescription="Release notes and writing about Opal."
+  current="blog"
+  rss
+>
+  <main id="main">
+    <section class="wrap blog">
+      <div class="blog-top">
+        <h1>Blog</h1>
+        <a class="label rss" href="/blog/rss.xml">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true"><path d="M4 11h3.5l5.5 5.5V20"/><path d="M4 4h8l8 8v8"/><rect x="4" y="18" width="2" height="2" fill="currentColor"/></svg>
+          RSS
+        </a>
+      </div>
+
+      <a class="post-feature" href={`/blog/${latest.id}/`}>
+        <p class="label"><b class="tag">Latest</b> <time datetime={isoDay(latest.data.date)}>{longDate(latest.data.date)}</time> · Release</p>
+        <h2>{latest.data.title}</h2>
+        <p class="lede" set:html={inlineCode(latest.data.summary)} />
+        <p class="post-by">Sharif</p>
+        <span class="post-go" aria-hidden="true">→</span>
+      </a>
+
+      <div class="post-count"><p class="label">Every post so far is a release · <a href="/history/">Read them as a book</a></p><p class="label">{older.length + 1} posts</p></div>
+
+      {years.map((year) => (
+        <div class="post-year">
+          <h2>{year}</h2>
+          <ol class="posts">
+            {older.filter((post) => post.data.date.getUTCFullYear() === year).map((post) => (
+              <li>
+                <time datetime={isoDay(post.data.date)}>{shortDate(post.data.date)}</time>
+                <div>
+                  <h3><a href={`/blog/${post.id}/`}>{post.data.title}</a> <span class="post-kind">Release</span></h3>
+                  <p set:html={inlineCode(post.data.summary)} />
+                  <p class="post-by">Sharif</p>
+                </div>
+              </li>
+            ))}
+          </ol>
+        </div>
+      ))}
+    </section>
+  </main>
+</Base>

@@ -1,0 +1,29 @@
+---
+import Base from "../layouts/Base.astro";
+---
+<Base title="Not here yet — Opal" noindex>
+  <main id="main">
+    <section class="wrap missing">
+      <p class="label">404</p>
+      <h1 id="missing-title">This page doesn't exist yet.</h1>
+      <p class="lede" id="missing-note">Opal's site is one page and a blog so far. Some links are in place for pages that haven't been written.</p>
+      <div class="actions">
+        <a class="btn" href="/">Back to the home page</a>
+        <a class="btn outline" href="/blog/">Read the blog</a>
+        <a class="btn outline" href="https://github.com/saintparish4/opal">Opal on GitHub</a>
+      </div>
+    </section>
+  </main>
+
+  <script slot="scripts" is:inline>
+    // A link to a page that isn't written yet says which one it was.
+    const missing = new URLSearchParams(location.search).get("missing");
+    const planned = ["Runtime", "Test runner", "Bundler"];
+    if (missing) {
+      document.getElementById("missing-title").textContent = `${missing}: not here yet.`;
+      document.getElementById("missing-note").textContent = planned.includes(missing)
+        ? `Opal's ${missing.toLowerCase()} is planned and not built. The package manager is the one tool that works today.`
+        : "There's a place for this in the footer, and nothing behind it yet. Opal's site is one page and a blog so far.";
+    }
+  </script>
+</Base>

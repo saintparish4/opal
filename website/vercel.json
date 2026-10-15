@@ -1,0 +1,14 @@
+{
+  "framework": "astro",
+  "installCommand": "curl -fsSL https://raw.githubusercontent.com/saintparish4/opal/master/install.sh | bash && $HOME/.opal/bin/opal install --frozen-lockfile",
+  "buildCommand": "node_modules/.bin/astro build",
+  "outputDirectory": "dist",
+  "ignoreCommand": "git diff --quiet HEAD^ HEAD -- .",
+  "redirects": [
+    {
+      "source": "/install.sh",
+      "destination": "https://raw.githubusercontent.com/saintparish4/opal/master/install.sh",
+      "permanent": false
+    }
+  ]
+}

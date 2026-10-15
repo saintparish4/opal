@@ -40,10 +40,10 @@ Opal supports Linux (x64 & arm64) and macOS (x64 & Apple Silicon). On Windows, i
 
 ```sh
 # with install script (recommended)
-curl -fsSL https://raw.githubusercontent.com/saintparish4/opal/master/install.sh | bash
+curl -fsSL https://opalx.dev/install.sh | bash
 
 # a specific version
-curl -fsSL https://raw.githubusercontent.com/saintparish4/opal/master/install.sh | OPAL_VERSION=v0.3.0 bash
+curl -fsSL https://opalx.dev/install.sh | OPAL_VERSION=v0.3.0 bash
 
 # from source (prerequisites are in CONTRIBUTING.md)
 git clone https://github.com/saintparish4/opal && cd opal
