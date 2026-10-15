@@ -10,7 +10,9 @@ Opal against npm, pnpm, yarn, and bun, each installing the same `package.json`. 
 - [Results: 2026-09-26, opal 0.3.0](#results-2026-09-26-opal-030)
 - [Reproducing](#reproducing)
 - [The kill test](#the-kill-test)
+- [Concurrent installs on one store](#concurrent-installs-on-one-store)
 - [The internal install benchmark](#the-internal-install-benchmark)
+  - [Scaling: package count and peak memory](#scaling-package-count-and-peak-memory)
 
 ## Method
 
@@ -402,6 +404,50 @@ python3 benchmarks/kill-test.py next --opal ~/opal-bench/opal --trials 12
 
 `--seed N` replays a run's delays. They are delays, not positions, so the same seed lands its kills in the same places only on a machine and network of the same speed. A failed trial's project and cache are left in the scratch directory (`--work`, default `/tmp/opal-kill-test`) to look at.
 
+## Concurrent installs on one store
+
+Every project on a machine shares one store, and until this harness nothing had run more than two installs against it at once. [`concurrent-installs.py`](./concurrent-installs.py) starts N `opal install`s together, each in its own copy of one project, all on one empty `OPAL_CACHE_DIR`, all through [`registry-proxy.py`](./registry-proxy.py), a proxy in front of the public registry that counts every request. Then it runs `opal cache verify` on the store and compares every project's `node_modules` and `opal.lock` with a reference install, file for file.
+
+```sh
+python3 benchmarks/concurrent-installs.py express --opal ~/opal-bench/<build>/opal --n 1,2,4,8,16,32
+python3 benchmarks/concurrent-installs.py next --opal ~/opal-bench/<build>/opal --n 1,2,4,8
+```
+
+**Tarball requests per tarball** is 1.0 when each tarball was downloaded once for the whole run, and N when every install downloaded everything. **Peak memory** is each install's own, read through GNU time and summed. Read straight from `wait4` it would be wrong: on Linux, `exec` carries a parent's peak into its child's `ru_maxrss`, so every install would report at least the harness's own size (`/bin/true` started by a 500 MB process reads 511 MB). The figures in the tables above come from `wait4` too, and stand: `compare-pms.py`'s own size is about 11 MB, under every figure it reported.
+
+### Results: 2026-10-15, master `3045ff6` (0.4.0 plus the v0.4.1 changes)
+
+Laptop: AMD Ryzen 5 5625U (WSL limited to 8 of 12 threads), 16 GB RAM, Linux under WSL2. Binary SHA-256 `51a82cbbe36b4bd6ab1c612d35fbdb198e21deb43f9309d4ef63a2dca3aa0d82`. Raw results: [`concurrent-express-20261015-085359.json`](./results/concurrent-express-20261015-085359.json), [`concurrent-next-20261015-091207.json`](./results/concurrent-next-20261015-091207.json).
+
+**express** (68 packages):
+
+| N | Wall | vs N = 1 | Failed | Peak memory, summed | `cache verify` | Trees equal | Store | Tarball requests per tarball | Packument requests per package |
+|---|---|---|---|---|---|---|---|---|---|
+| 1 | 1.39s | 1.00× | 0 | 25 MB | clean | 1 of 1 | 10 MB | 1.0 | 1.0 |
+| 2 | 1.50s | 1.08× | 0 | 46 MB | clean | 2 of 2 | 10 MB | 2.0 | 1.57 |
+| 4 | 2.02s | 1.46× | 0 | 82 MB | clean | 4 of 4 | 10 MB | 3.0 | 2.12 |
+| 8 | 2.79s | 2.00× | 0 | 195 MB | clean | 8 of 8 | 10 MB | 6.43 | 3.28 |
+| 16 | 3.82s | 2.75× | 0 | 272 MB | clean | 16 of 16 | 10 MB | 5.28 | 4.89 |
+| 32 | 6.53s | 4.70× | 0 | 405 MB | clean | 32 of 32 | 10 MB | 4.38 | 6.86 |
+
+**Next.js** (418 package names):
+
+| N | Wall | vs N = 1 | Failed | Peak memory, summed | `cache verify` | Trees equal | Store | Tarball requests per tarball | Packument requests per package |
+|---|---|---|---|---|---|---|---|---|---|
+| 1 | 56.82s | 1.00× | 0 | 501 MB | clean | 1 of 1 | 820 MB | 1.0 | 1.0 |
+| 2 | 71.37s | 1.26× | 0 | 996 MB | clean | 2 of 2 | 820 MB | 1.94 | 1.6 |
+| 4 | 93.20s | 1.64× | 0 | 1951 MB | clean | 4 of 4 | 820 MB | 3.52 | 2.55 |
+| 8 | 199.24s | 3.51× | 0 | 3816 MB | clean | 8 of 8 | 820 MB | 5.68 | 2.45 |
+
+### What these show
+
+- **The store stays correct.** At every N, up to 32 on express and 8 on Next.js, `cache verify` was clean and every project's tree and lockfile equalled the reference's.
+- **Installs don't queue behind one another.** Each holds the store's lock shared, so nothing serializes them there. Wall time grows with the bytes the run downloads, not with N times one install: express at N = 32 took 4.7× one install, Next.js at N = 8 3.5×.
+- **They do download the same tarballs.** Opal shares a download only within one process, so installs started together fetch what they need for themselves: 5.7 requests per tarball for Next.js at N = 8, where 8 would mean every install fetched everything. The rest found the package already stored, having started a moment later. On express the ratio peaks at 6.4 (N = 8) and falls to 4.4 at N = 32, as 32 start times spread further apart. Next.js is bandwidth-bound, so those extra bytes are most of its 3.5×.
+- **Memory is per install.** Eight Next.js installs at once peak at 3.8 GB in all, about 480 MB each, the same as one install alone.
+
+Two earlier runs were wrong because of the harness, not Opal. The proxy listened with Python's default backlog of 5, so at N = 32 dropped connections waited on TCP's retransmit and 4 of 32 installs took 30s. It also read each packument whole before sending any of it, so on a saturated link a Next.js packument outlasted Opal's 30-second time-to-first-byte limit, and 2 of 8 installs failed after their retries. Both are fixed in the proxy, and neither result is in a table.
+
 ## The internal install benchmark
 
 `cargo bench -p opal-pm --bench install-pipeline` measures Opal alone against a synthetic `file://` registry with a simulated round-trip time, so it doesn't depend on the public registry or the network:
@@ -425,3 +471,31 @@ It has two workloads, and they answer different questions:
   37 Mbit/s and 70 ms are what one network measured on one afternoon (157 MB in 34s over 16 connections), not constants; set them to the network you care about. At those values the benchmark's fetch took 41s where the real tree's took 43–44s the same afternoon. Generating the fixture takes one to two minutes.
 
   **Read this workload as a floor on transfer time, not a prediction of a real install.** It models one shared link and nothing else: no limit on what a single connection carries, and a bandwidth that never changes. So it credits parallel downloading with more than a real network gives: it measured parallel fetching at about 5× where the real tree, in the same machine state, showed 2.7×. Use it to see whether a change adds or removes transfer and round trips, and measure the real tree before quoting a speedup.
+
+### Scaling: package count and peak memory
+
+`--workload wide-N` is N packages the project depends on directly, each with 12 published versions and 6 small files: install cost as a plain function of package count. Every scenario also reports the peak memory of one more install, done by a copy of the benchmark that does nothing else and reads its own peak (`VmHWM`, for the reason given under [Concurrent installs](#concurrent-installs-on-one-store)). The other named workloads are `deep-N`, `dedup-heavy`, `diamond`, and `conflicting-ranges`; `--help` says what each asks.
+
+```sh
+cargo bench -p opal-pm --bench install-pipeline -- --workload wide-1000 --rtt-ms 25 --iterations 3
+```
+
+**Results: 2026-10-15,** laptop as above, 25 ms simulated round trip, median of 3, master `85a84e6` for wide-100 and wide-500 and `fc87d19` for the rest (the benchmark's code is the same in both). Raw results: [`results/scaling-*-20261015.json`](./results/).
+
+| Workload | Placements | cold | resolve | link | noop | Peak, cold | resolve | link | noop | Tarballs |
+|---|---|---|---|---|---|---|---|---|---|---|
+| wide-100 | 100 | 0.75s | 0.02s | 0.12s | 0.01s | 23 MiB | 5 MiB | 5 MiB | 5 MiB | 0 MiB |
+| wide-500 | 500 | 3.32s | 0.05s | 0.53s | 0.05s | 32 MiB | 11 MiB | 10 MiB | 10 MiB | 1 MiB |
+| wide-1000 | 1,000 | 6.74s | 0.09s | 1.04s | 0.11s | 39 MiB | 17 MiB | 16 MiB | 16 MiB | 2 MiB |
+| wide-2500 | 2,500 | 17.26s | 0.22s | 2.70s | 0.22s | 60 MiB | 36 MiB | 34 MiB | 34 MiB | 6 MiB |
+| wide-5000 | 5,000 | 34.51s | 0.41s | 5.01s | 0.50s | 92 MiB | 68 MiB | 64 MiB | 64 MiB | 12 MiB |
+| wide-10000 | 10,000 | 73.11s | 0.98s | 11.16s | 0.85s | 158 MiB | 132 MiB | 125 MiB | 123 MiB | 24 MiB |
+| scaffold | 409 | 6.08s | - | - | 0.04s | 85 MiB | - | - | 12 MiB | 153 MiB |
+| dedup-heavy | 4,521 | 12.46s | - | - | 0.52s | 58 MiB | - | - | 32 MiB | 4 MiB |
+
+What it shows:
+
+- **Time grows linearly with packages:** about 7 ms per package for a cold install at a 25 ms round trip, most of it fetching.
+- **So does memory, and it stays small:** about 14 KiB per package cold and 12 KiB warm, on top of about 22 MiB. 10,000 packages peak at 158 MiB.
+- **Package count doesn't explain Opal's 491 MB on the Next.js app; its metadata does.** Measured the same day with GNU time on the real app, a cold install, which resolves, peaked at 494 MiB, and a lockfile-only install, which reads no metadata, at 172 MiB. Those 418 packuments are 185 MiB of JSON on disk, and the resolver keeps every one for the whole run. The packuments here have 12 versions each; real ones have hundreds or thousands.
+- **Bytes in flight come next.** The scaffold workload, with real-sized tarballs, peaks at 85 MiB cold against 12 MiB for a no-op: up to 16 tarballs are held in memory at once.
