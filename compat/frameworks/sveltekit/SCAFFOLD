@@ -1,0 +1,12 @@
+npx --yes sv@1.1.1 create sveltekit --template minimal --types ts --no-add-ons --no-install
+
+Scaffolder: sv 1.1.1
+Generated:  2026-10-14, Node 24.19.0, npm 12.0.2, no TTY (stdin from /dev/null)
+
+The minimal SvelteKit template with TypeScript and no add-ons. It keeps the
+default adapter (adapter-auto), which finds no deployment target outside a
+hosting platform's build, so the build's output is .svelte-kit/output and the
+runtime check serves it with `vite preview`. package.json has a project
+`prepare` script (`svelte-kit sync || echo ''`) that opal does not run.
+Nothing was changed afterwards. No node_modules, lockfile, or .git was
+created.

@@ -1,0 +1,10 @@
+npx --yes @nestjs/cli@12.0.8 new nest --package-manager npm --skip-install --skip-git --no-observe
+
+Scaffolder: @nestjs/cli 12.0.8
+Generated:  2026-10-14, Node 24.19.0, npm 12.0.2, no TTY (stdin from /dev/null)
+
+The default TypeScript application. `--no-observe` answers the one prompt
+the other flags leave (observability setup) with no. Nest 12's scaffold ships
+a vitest suite (`npm test` runs `vitest run`), not jest. With `--skip-git`
+the CLI writes no .gitignore. Nothing was changed afterwards. No
+node_modules, lockfile, or .git was created.

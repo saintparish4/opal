@@ -1,0 +1,10 @@
+npx --yes create-vite@9.2.1 vite-react --template react-ts --no-immediate --no-interactive
+
+Scaffolder: create-vite 9.2.1
+Generated:  2026-10-14, Node 24.19.0, npm 12.0.2, no TTY (stdin from /dev/null)
+
+`react-ts` is the TypeScript variant of the React template, the first one the
+interactive prompt offers. Linting is create-vite's default for React
+(Oxlint, not ESLint). `--no-immediate` skips the install and dev server.
+Nothing was changed afterwards. No node_modules, lockfile, or .git was
+created.

@@ -1,0 +1,16 @@
+npx --yes create-next-app@16.3.2 next-test --ts --tailwind --eslint --app --no-src-dir --no-react-compiler --no-agents-md --import-alias "@/*" --use-npm --skip-install --disable-git --yes
+
+Scaffolder: create-next-app 16.3.2
+Generated:  2026-10-14, Node 24.19.0, npm 12.0.2, no TTY (stdin from /dev/null)
+
+Every option is passed as a flag, so saved create-next-app preferences on the
+machine play no part. The directory was generated as `next-test` and renamed
+to `next`: the name is what create-next-app writes into package.json, and
+`next-test` makes package.json byte-identical to the manifest
+benchmarks/compare-pms.py inlines for its `next` project.
+
+Removed afterwards: next-env.d.ts, which the scaffold's own .gitignore
+excludes and `next build` writes again. `--no-agents-md` leaves out the
+AGENTS.md and CLAUDE.md that 16.3.2 writes by default; they are instructions
+for coding agents, not part of the app. Nothing else was changed. No
+node_modules, lockfile, or .git was created.

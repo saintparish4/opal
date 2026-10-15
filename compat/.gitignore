@@ -1,0 +1,4 @@
+# The repository's root .gitignore ignores every `public/` and `content/`,
+# which would drop the scaffolds' static assets from the commit.
+!public/
+!content/

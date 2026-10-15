@@ -1,0 +1,11 @@
+npx --yes create-astro@5.2.6 astro --template basics --no-install --no-git --no-ai --skip-houston --yes
+
+Scaffolder: create-astro 5.2.6
+Generated:  2026-10-14, Node 24.19.0, npm 12.0.2, no TTY (stdin from /dev/null)
+
+`basics` is the starter the interactive prompt recommends. create-astro
+downloads the template from the withastro/astro repository on GitHub, so the
+version above names the scaffolder, and the template is whatever that
+repository held on the date above. `--no-ai` leaves out the AI agent files.
+Nothing was changed afterwards. No node_modules, lockfile, or .git was
+created.

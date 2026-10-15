@@ -1,0 +1,63 @@
+name: Nightly
+
+# Runs too long to sit on every push: they catch what a day of changes broke,
+# and none of them is a required check. GitHub stops scheduling a public
+# repository's workflows after 60 days with no activity, without failing
+# anything, so the last run's date is kept in base/metrics.md where a stale
+# one shows, and `workflow_dispatch` starts a run by hand.
+on:
+  schedule:
+    - cron: "17 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+concurrency:
+  group: nightly
+  cancel-in-progress: false
+
+jobs:
+  # `compat/COMPATIBILITY.md`: install each framework's own starter with a
+  # release build of master, then build it, test it, and serve it. The table
+  # committed for a release comes from that release's asset; this one is for
+  # noticing the day something stops working.
+  frameworks:
+    name: Framework matrix
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Install Rust toolchain
+        run: rustup show
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+      - name: Install Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - name: Build
+        run: cargo build --release --locked -p opal-cli
+      - name: Run
+        run: |
+          set -o pipefail
+          python3 compat/frameworks.py --opal target/release/opal --results results | tee frameworks.log
+      - name: Summarize
+        if: always()
+        run: |
+          {
+            echo "### Framework matrix"
+            echo
+            grep -E '^(Frameworks:|\|)' frameworks.log || echo "No table: the harness stopped before printing one."
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: frameworks
+          path: results/*.json
+          if-no-files-found: warn
