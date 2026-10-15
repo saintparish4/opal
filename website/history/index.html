@@ -149,6 +149,7 @@
           <li><a href="#v0.3.0"><span class="toc-version">0.3.0</span> <span class="toc-date">(2026-09-19)</span> <span class="toc-title">Opal installs the versions npm would install.</span></a></li>
           <li><a href="#v0.3.1"><span class="toc-version">0.3.1</span> <span class="toc-date">(2026-09-27)</span> <span class="toc-title">Cleaner terminal output, a new download bar, and <code>opal upgrade</code>.</span></a></li>
           <li><a href="#v0.4.0"><span class="toc-version">0.4.0</span> <span class="toc-date">(2026-10-06)</span> <span class="toc-title">Parallel downloads, <code>opal add</code> and <code>opal remove</code>, and an install that shows what it is doing.</span></a></li>
+          <li><a href="#v0.4.1"><span class="toc-version">0.4.1</span> <span class="toc-date">(2026-10-15)</span> <span class="toc-title">A faster <code>opal add</code> over old metadata, release notes taken from this changelog, and new checks that what Opal installs builds and runs.</span></a></li>
         </ol>
       </nav>
       <ol class="chapters">
@@ -335,6 +336,40 @@
               <h3>Known issues</h3>
               <ul>
                 <li><code>opal add</code> and <code>opal remove</code> ask the registry about every package in the tree, not only the one being changed. On a Next.js app that is about half a second when the metadata was fetched in the last five minutes, about 2s when it is older, and 5–7s when none is cached, as on a machine that installed from a lockfile. A fix for the second case is planned for 0.4.1.</li>
+              </ul>
+            </div>
+          </article>
+        </li>
+        <li class="chapter" id="v0.4.1" data-version="0.4.1">
+          <article aria-labelledby="ch-0.4.1">
+            <header class="chapter-head">
+              <h2 id="ch-0.4.1"><a href="https://github.com/saintparish4/opal/releases/tag/v0.4.1">0.4.1</a> <span class="chapter-date">(2026-10-15)</span></h2>
+            </header>
+            <figure class="plate ornament">
+              <svg viewBox="0 0 400 300" role="img" aria-label="An ornament: a cut stone within a laurel wreath tied with a ribbon"><use href="#plate-ornament"/></svg>
+            </figure>
+            <div class="chapter-text">
+              <p class="incipit">A faster <code>opal add</code> over old metadata, release notes taken from this changelog, and new checks that what Opal installs builds and runs. No <code>opal.lock</code> format change.</p>
+              <h3>Added</h3>
+              <ul>
+                <li><strong><code>opal --revision</code></strong> prints the version and the commit a build came from, as in <code>opal 0.4.1 (1a2b3c4)</code>. <code>opal --version</code> still prints the version alone, because <code>opal upgrade</code> in 0.3.1 and 0.4.0 checks for exactly that.</li>
+                <li>A framework compatibility matrix, <a href="https://github.com/saintparish4/opal/blob/master/compat/COMPATIBILITY.md">compat/COMPATIBILITY.md</a>: the Next.js, Vite (React and Vue), Astro, SvelteKit, Nest, and Express starters, each installed by Opal, then built, tested, and served. It runs every night against <code>master</code>.</li>
+                <li>Benchmarks of several installs sharing one store at once, and of how memory grows with package count, in <a href="https://github.com/saintparish4/opal/blob/master/benchmarks/BENCHMARKS.md">benchmarks/BENCHMARKS.md</a>.</li>
+              </ul>
+              <h3>Changed</h3>
+              <ul>
+                <li><strong><code>opal add</code> and <code>opal remove</code> no longer re-check packages the lockfile already holds.</strong> Their cached metadata is used however old, since a published version never changes; anything the change needs a version chosen for is still checked against the registry. On a Next.js app with metadata a day old, an add took 3.0s with 0.4.0 and takes 0.56s now (median of five rounds each, one machine), about what it takes with fresh metadata. When no metadata is cached at all, as on a machine that installed from a lockfile, an add still takes 5–7s on that app.</li>
+                <li>A version withdrawn from the registry after its metadata was cached is noticed when that metadata is next refreshed, not on the next add.</li>
+              </ul>
+              <h3>Fixed</h3>
+              <ul>
+                <li>The files in the release archives are owned by root, not by uid 1001. <code>install.sh</code> run as root, as in a Dockerfile, kept that owner on <code>~/.opal/bin/opal</code>.</li>
+                <li>A GitHub release's notes are this changelog's section for that version. 0.3.1's and 0.4.0's were a list of Dependabot pull requests.</li>
+              </ul>
+              <h3>Known issues</h3>
+              <ul>
+                <li>A damaged entry in the package metadata cache makes every <code>opal add</code> that keeps that package fail, and rechecking it with the registry doesn't repair it. Deleting the <code>packuments</code> folder inside the cache (<code>opal cache path</code> shows where) does.</li>
+                <li><code>opal cache verify</code> doesn't notice a file deleted from the shared store, and the next project that needs that file fails to link. Deleting the cache folder clears it.</li>
               </ul>
             </div>
           </article>
