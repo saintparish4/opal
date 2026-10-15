@@ -8,6 +8,10 @@ on:
   # branch and publishes nothing. A pushed tag can't be moved, so a build that
   # breaks only here costs a version number unless it is found first.
   workflow_dispatch:
+    inputs:
+      version:
+        description: "Version whose CHANGELOG.md section to extract (default: the version in Cargo.toml)"
+        required: false
 
 env:
   CARGO_TERM_COLOR: always
@@ -22,8 +26,79 @@ permissions:
   contents: read
 
 jobs:
+  # The release body is the changelog's section for the version, so the notes
+  # and the changelog can't say different things. `--generate-notes` gave
+  # v0.3.1 and v0.4.0 a changelog link and two Dependabot lines. First, so a
+  # tag with no section fails before four targets are built for nothing.
+  notes:
+    name: Release notes
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: |
+            CHANGELOG.md
+            Cargo.toml
+          sparse-checkout-cone-mode: false
+
+      # A tag must name the version the binaries were built as, or
+      # `opal --version` reports a different release than the one it came
+      # from, and the tag can't be moved to fix it.
+      - name: Extract the changelog section
+        env:
+          REQUESTED: ${{ inputs.version }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          python3 - <<'PY'
+          import os
+          import re
+          import sys
+          import tomllib
+
+          with open("Cargo.toml", "rb") as manifest:
+              built = tomllib.load(manifest)["workspace"]["package"]["version"]
+          if os.environ["GITHUB_REF_TYPE"] == "tag":
+              version = os.environ["GITHUB_REF_NAME"].removeprefix("v")
+              if version != built:
+                  sys.exit(f"tag {os.environ['GITHUB_REF_NAME']} names {version}, Cargo.toml builds {built}")
+              ref = os.environ["GITHUB_REF_NAME"]
+          else:
+              version = os.environ["REQUESTED"] or built
+              ref = os.environ["GITHUB_SHA"]
+
+          section, found = [], False
+          for line in open("CHANGELOG.md", encoding="utf-8"):
+              if line.startswith("## "):
+                  if found:
+                      break
+                  found = re.match(rf"## \[{re.escape(version)}\](\s|$)", line) is not None
+              elif found:
+                  section.append(line)
+          body = "".join(section).strip()
+          if not body:
+              sys.exit(f"CHANGELOG.md has no section for {version}: add `## [{version}] (date)` before tagging")
+
+          # A link relative to the repository resolves against the release
+          # page on GitHub, not the file, so it is pinned to this ref instead.
+          body = body.replace("](./", f"](https://github.com/{os.environ['REPOSITORY']}/blob/{ref}/")
+          with open("notes.md", "w", encoding="utf-8") as notes:
+              notes.write(body + "\n")
+          print(f"Release notes for {version}:\n\n{body}")
+          PY
+          cat notes.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload notes
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: release-notes
+          path: notes.md
+          if-no-files-found: error
+
   build:
     name: Build (${{ matrix.asset }})
+    needs: notes
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -109,7 +184,7 @@ jobs:
 
   release:
     name: Publish release
-    needs: build
+    needs: [notes, build]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -117,8 +192,14 @@ jobs:
       - name: Download artifacts
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
+          pattern: ${{ env.BIN_NAME }}-*
           path: dist
           merge-multiple: true
+
+      - name: Download notes
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: release-notes
 
       # One SHA256SUMS across all four artifacts from this one matrix run —
       # never a partial release, and never checksums assembled by hand.
@@ -141,4 +222,4 @@ jobs:
           GH_REPO: ${{ github.repository }}
         run: |
           gh release create "$GITHUB_REF_NAME" dist/*.tar.gz dist/SHA256SUMS \
-            --title "$GITHUB_REF_NAME" --generate-notes --verify-tag
+            --title "$GITHUB_REF_NAME" --notes-file notes.md --verify-tag
