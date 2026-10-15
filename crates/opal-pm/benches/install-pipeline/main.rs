@@ -471,10 +471,10 @@ fn measure(scenario: Scenario, workload: &Workload, options: &Options) -> Measur
 /// The peak memory of one install in `sandbox`, prepared for its scenario.
 ///
 /// Measured by a copy of this benchmark that does that install and nothing
-/// else. In this process the peak would be the highest of everything it has
-/// done, generating the workload included, since `ru_maxrss` never comes
-/// down; resetting it is Linux-only (`/proc/self/clear_refs`), and memory
-/// this process freed but kept would hide what the install allocated.
+/// else, reading its own peak ([`own_peak_rss`]). In this process the peak
+/// would be the highest of everything it has done, generating the workload
+/// included, and memory it freed but kept would hide what the install
+/// allocated.
 fn peak_rss(sandbox: &Sandbox, workload: &Workload, options: &Options) -> Option<u64> {
     let mut command = std::process::Command::new(std::env::current_exe().ok()?);
     command
@@ -510,7 +510,43 @@ fn peak_of(sandbox: &std::path::Path, registry_url: &str, options: &Options) -> 
     let sandbox = Sandbox::open(sandbox);
     let client = sandbox.registry(registry_url, options, options.rtt, options.bandwidth);
     sandbox.install(&client.registry);
+    match own_peak_rss() {
+        Some(bytes) => {
+            println!("{bytes}");
+            ExitCode::SUCCESS
+        }
+        None => {
+            eprintln!("no reading of this process's peak memory");
+            ExitCode::FAILURE
+        }
+    }
+}
 
+/// This process's peak resident memory, in bytes.
+///
+/// Not `ru_maxrss` on Linux: `exec` carries the parent's peak into the
+/// child's, so a child of a large process reports at least the parent's size
+/// however little it uses itself (measured 2026-10-15: `/bin/true` started by
+/// a 500 MB process read 511 MB). `VmHWM` is the peak of this process's own
+/// address space, which `exec` started empty.
+#[cfg(target_os = "linux")]
+fn own_peak_rss() -> Option<u64> {
+    let status = std::fs::read_to_string("/proc/self/status").ok()?;
+    let kilobytes = status
+        .lines()
+        .find_map(|line| line.strip_prefix("VmHWM:"))?
+        .trim()
+        .strip_suffix("kB")?
+        .trim()
+        .parse::<u64>()
+        .ok()?;
+    Some(kilobytes * 1024)
+}
+
+/// `ru_maxrss`, in bytes on macOS. Whether `exec` carries the parent's peak
+/// into it there, as it does on Linux, hasn't been checked.
+#[cfg(not(target_os = "linux"))]
+fn own_peak_rss() -> Option<u64> {
     let mut usage = std::mem::MaybeUninit::<libc::rusage>::zeroed();
     // SAFETY: `getrusage` fills the whole struct for `RUSAGE_SELF` and
     // touches nothing else; the zeroed value is a valid `rusage` regardless.
@@ -518,10 +554,8 @@ fn peak_of(sandbox: &std::path::Path, registry_url: &str, options: &Options) -> 
         libc::getrusage(libc::RUSAGE_SELF, usage.as_mut_ptr());
         usage.assume_init()
     };
-    // Kilobytes on Linux, bytes on macOS.
     let unit = if cfg!(target_os = "macos") { 1 } else { 1024 };
-    println!("{}", usage.ru_maxrss as u64 * unit);
-    ExitCode::SUCCESS
+    Some(usage.ru_maxrss as u64 * unit)
 }
 
 fn report(workload: &Workload, options: &Options, setup: Duration, measurements: &[Measurement]) {
