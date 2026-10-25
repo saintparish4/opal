@@ -6,6 +6,7 @@ Which JavaScript engine `opal run app.js` should embed, decided by measurement r
 - [Results: 2026-10-24](#results-2026-10-24)
 - [What they show](#what-they-show)
 - [The decision](#the-decision)
+- [What the engines' own sources add](#what-the-engines-own-sources-add)
 - [The event loop and the tokio ban](#the-event-loop-and-the-tokio-ban)
 - [Reproducing](#reproducing)
 
@@ -90,6 +91,16 @@ Not made in this commit. The measurements don't pick an engine on their own, bec
 The recommendation is **V8 with a startup snapshot**. The gap to "run fast" under QuickJS is the engine's design (no JIT) and can't be closed from outside it. The gap to the startup target under V8 is 0.4–0.6 ms of page faults and system time in isolate creation, which is the kind of cost that can be attacked from outside the engine (untried candidates: fewer pages touched at startup, a smaller snapshot, the order of pages in the binary), and the snapshot keeps it nearly flat as the bootstrap grows. The cost is a binary six times bigger, and a build that downloads V8's prebuilt static library from GitHub, outside what `cargo deny` sees.
 
 That trade (binary size and the startup target against steady-state speed) is the project's to make, so step 3 waits on it.
+
+## What the engines' own sources add
+
+Read from each project's source on 2026-10-24, not from their docs:
+
+- **Bun has no startup snapshot.** Its speed comes from laziness: about 120 lazily built globals and classes in `ZigGlobalObject.cpp`, and built-in modules (`node:path` and the rest) embedded as minified source and compiled on first `require` (`InternalModuleRegistry.cpp`). Bun's main branch is now Rust (`src/jsc/VirtualMachine.rs`), bound to JSC's internal C++ API through a WebKit fork that Bun's CI prebuilds for each ABI. JSC isn't a practical third option for opal.
+- **A V8 snapshot keeps compiled code only for what ran while it was made** (`FunctionCodeHandling::Keep`, V8's `snapshot.cc`). So the bootstrap has to exercise its paths at build time, and Node also ships a code cache for every builtin, built in a second pass (`node_snapshotable.cc`). V8 deserializes the whole blob at startup, so its size sets a floor, which argues for Bun-style laziness inside the snapshot: modules not needed at startup stay out, as source or code cache.
+- **quickjs-ng can precompile a bootstrap to bytecode** (`JS_WriteObject`/`JS_ReadObject`). That saves the parse, but the bootstrap still runs, and the intrinsics are rebuilt, on every start. The quickjs-pad256 gap would shrink, but not to zero.
+- **The single-threaded platform requires `--single-threaded`** (`libplatform.h`), which the spike found by crashing. That flag also turns off concurrent GC, so it's a startup choice with a steady-state cost on allocation-heavy code. The json workload doesn't show one at this size.
+- **deno_core is archived** (its code now lives in `denoland/deno` under `libs/core`), requires tokio unconditionally, and pins v8 150.4.
 
 ## The event loop and the tokio ban
 
