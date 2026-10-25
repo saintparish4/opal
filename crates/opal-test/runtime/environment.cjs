@@ -18,10 +18,16 @@ const DENY = new Set(['GLOBAL', 'root', 'global', 'globalThis', 'Buffer', 'Array
 // Node 25+ storage proxies warn when read without --localstorage-file.
 const STORAGE = new Set(['localStorage', 'sessionStorage']);
 
+// Node's globals, by whether each is enumerable. jest-environment-node reads
+// every global's descriptor here, but reading one materializes a lazy global:
+// FormData's loads undici, 28 ms before a worker has run anything. Every
+// Node global a fresh context lacks is configurable (Node 24), and a
+// configurable one becomes a lazy getter below, so only enumerability is
+// needed, and that check materializes nothing.
 const nodeGlobals = new Map(
   Object.getOwnPropertyNames(globalThis)
     .filter(name => !DENY.has(name))
-    .map(name => [name, Object.getOwnPropertyDescriptor(globalThis, name)]),
+    .map(name => [name, Object.prototype.propertyIsEnumerable.call(globalThis, name)]),
 );
 
 function createProcessEnv() {
@@ -104,38 +110,22 @@ function createEnvironment(config) {
   const context = vm.createContext({});
   const global = vm.runInContext('this', Object.assign(context, config.testEnvironmentOptions || {}));
   const contextGlobals = new Set(Object.getOwnPropertyNames(global));
-  for (const [name, descriptor] of nodeGlobals) {
+  for (const [name, enumerable] of nodeGlobals) {
     if (contextGlobals.has(name)) continue;
-    if (STORAGE.has(name) || descriptor.configurable) {
-      Object.defineProperty(global, name, {
-        configurable: true,
-        enumerable: descriptor.enumerable,
-        get() {
-          const value = globalThis[name];
-          if (!STORAGE.has(name)) {
-            Object.defineProperty(global, name, {configurable: true, enumerable: descriptor.enumerable, value, writable: true});
-          }
-          return value;
-        },
-        set(value) {
-          Object.defineProperty(global, name, {configurable: true, enumerable: descriptor.enumerable, value, writable: true});
-        },
-      });
-    } else if ('value' in descriptor) {
-      Object.defineProperty(global, name, {
-        configurable: false,
-        enumerable: descriptor.enumerable,
-        value: descriptor.value,
-        writable: descriptor.writable,
-      });
-    } else {
-      Object.defineProperty(global, name, {
-        configurable: false,
-        enumerable: descriptor.enumerable,
-        get: descriptor.get,
-        set: descriptor.set,
-      });
-    }
+    Object.defineProperty(global, name, {
+      configurable: true,
+      enumerable,
+      get() {
+        const value = globalThis[name];
+        if (!STORAGE.has(name)) {
+          Object.defineProperty(global, name, {configurable: true, enumerable, value, writable: true});
+        }
+        return value;
+      },
+      set(value) {
+        Object.defineProperty(global, name, {configurable: true, enumerable, value, writable: true});
+      },
+    });
   }
   global.global = global;
   global.Buffer = Buffer;

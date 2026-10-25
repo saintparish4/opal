@@ -56,6 +56,7 @@ pub struct Pool {
     next_id: usize,
     /// Whether workers get FORCE_COLOR=1.
     color: bool,
+    code_cache: Option<PathBuf>,
 }
 
 /// What a worker reported for one file, or what opal says about a file whose
@@ -67,12 +68,14 @@ pub struct FileOutcome {
 
 impl Pool {
     /// `color` is whether workers color matcher messages: jest-worker's
-    /// FORCE_COLOR, decided by colors.rs.
+    /// FORCE_COLOR, decided by colors.rs. `code_cache` is where workers keep
+    /// V8's code cache for the runtime (runner.cjs).
     pub fn start(
         node: &Path,
         worker_script: &Path,
         transforms: Arc<TransformService>,
         color: bool,
+        code_cache: Option<PathBuf>,
     ) -> Result<Pool, TestError> {
         let listener = TcpListener::bind("127.0.0.1:0").map_err(TestError::Channel)?;
         let port = listener.local_addr().map_err(TestError::Channel)?.port();
@@ -83,6 +86,7 @@ impl Pool {
         thread::spawn(move || accept_loop(listener, &accept_token, &accept_sender, &transforms));
         Ok(Pool {
             color,
+            code_cache,
             node: node.to_path_buf(),
             worker_script: worker_script.to_path_buf(),
             port,
@@ -119,6 +123,9 @@ impl Pool {
             command.env("FORCE_COLOR", "1");
         } else {
             command.env_remove("FORCE_COLOR");
+        }
+        if let Some(dir) = &self.code_cache {
+            command.env("OPAL_TEST_CODE_CACHE", dir);
         }
         let child = command
             .stdin(Stdio::null())
@@ -297,7 +304,7 @@ impl Pool {
                 match slot.child.try_wait() {
                     Ok(Some(_)) => break,
                     Ok(None) if Instant::now() < deadline => {
-                        thread::sleep(Duration::from_millis(5));
+                        thread::sleep(Duration::from_millis(1));
                     }
                     _ => {
                         let _ = slot.child.kill();
@@ -417,11 +424,14 @@ fn serve_transforms(
         }
         let reply = match serde_json::from_str::<Value>(&line) {
             Ok(request) => service.answer(&request),
-            Err(error) => json!({ "error": format!("unreadable transform request: {error}") }),
+            Err(error) => std::sync::Arc::new(
+                serde_json::to_vec(
+                    &json!({ "error": format!("unreadable transform request: {error}") }),
+                )
+                .expect("serializable"),
+            ),
         };
-        let mut bytes = serde_json::to_vec(&reply).expect("serializable");
-        bytes.push(b'\n');
-        if stream.write_all(&bytes).is_err() {
+        if stream.write_all(&reply).is_err() || stream.write_all(b"\n").is_err() {
             return;
         }
     }

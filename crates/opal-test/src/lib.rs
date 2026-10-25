@@ -141,11 +141,17 @@ pub fn run(options: &RunOptions, out: &mut dyn Write) -> Result<Outcome, TestErr
     let runtime_dir = runtime::unpack(&options.cache_dir).map_err(TestError::Runtime)?;
     let transforms = std::sync::Arc::new(service::TransformService::new(&options.cache_dir));
     let color = colors::stdout_supports_color(options.color);
+    // Beside the unpacked runtime, sharing its content hash; none for a
+    // runtime folder given with OPAL_TEST_RUNTIME, which is a source tree.
+    let code_cache = std::env::var_os("OPAL_TEST_RUNTIME")
+        .is_none()
+        .then(|| runtime_dir.with_extension("v8"));
     let mut pool = pool::Pool::start(
         &options.node,
         &runtime_dir.join("worker.cjs"),
         transforms,
         color,
+        code_cache,
     )?;
     pool.spawn()?;
     let result = match options.watch {

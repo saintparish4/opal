@@ -6,7 +6,7 @@
 const net = require('net');
 const {loadConfig} = require('./config.cjs');
 const {Bridge} = require('./bridge.cjs');
-const {runTestFile} = require('./runner.cjs');
+const {runTestFile, saveCodeCache} = require('./runner.cjs');
 
 const port = Number(process.env.OPAL_TEST_PORT);
 const token = process.env.OPAL_TEST_TOKEN;
@@ -76,6 +76,8 @@ async function handle(message) {
         };
       }
       send({type: 'result', result: toJSONSafe(result)});
+      // After the result is on its way, so the first file isn't held up.
+      saveCodeCache();
       break;
     }
     case 'exit':

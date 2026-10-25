@@ -37,7 +37,8 @@ class Bridge {
     Atomics.wait(this.signal, 0, 0);
     const received = receiveMessageOnPort(this.replies);
     if (!received) throw new Error('opal test: the transform channel closed without a reply');
-    return received.message;
+    const reply = received.message;
+    return typeof reply === 'string' ? JSON.parse(reply) : reply;
   }
 }
 

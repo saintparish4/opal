@@ -17,7 +17,9 @@ socket.on('data', chunk => {
   while ((newline = buffered.indexOf('\n')) >= 0) {
     const line = buffered.slice(0, newline);
     buffered = buffered.slice(newline + 1);
-    replies.postMessage(JSON.parse(line));
+    // As text: the main thread parses it, which is cheaper than cloning the
+    // parsed object across.
+    replies.postMessage(line);
     Atomics.store(signal, 0, 1);
     Atomics.notify(signal, 0);
   }

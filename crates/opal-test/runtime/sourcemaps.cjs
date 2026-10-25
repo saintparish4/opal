@@ -8,22 +8,32 @@
 // loader.cjs's wrapper, async or not: both are this long.
 const WRAPPER_PREFIX = '({"Object.<anonymous>":      function(module,exports,require,__dirname,__filename,jest){';
 
+// filename -> the mappings as opal sent them, `line,column,sourceLine,
+// sourceColumn` repeated, until a stack trace needs that file; then by line.
 const registry = new Map();
 
 function register(filename, mappings) {
-  // By line, for lookup: line -> [[column, sourceLine, sourceColumn], ...].
+  registry.set(filename, mappings);
+}
+
+function byLineOf(filename) {
+  const entry = registry.get(filename);
+  if (typeof entry !== 'string') return entry;
+  // line -> [[column, sourceLine, sourceColumn], ...], in column order.
   const byLine = new Map();
-  for (const [line, column, sourceLine, sourceColumn] of mappings) {
-    let list = byLine.get(line);
-    if (!list) byLine.set(line, (list = []));
-    list.push([column, sourceLine, sourceColumn]);
+  const numbers = entry ? entry.split(',').map(Number) : [];
+  for (let i = 0; i + 3 < numbers.length; i += 4) {
+    let list = byLine.get(numbers[i]);
+    if (!list) byLine.set(numbers[i], (list = []));
+    list.push([numbers[i + 1], numbers[i + 2], numbers[i + 3]]);
   }
   registry.set(filename, byLine);
+  return byLine;
 }
 
 // 1-based in and out, as stack traces count.
 function originalPosition(filename, line, column) {
-  const byLine = registry.get(filename);
+  const byLine = byLineOf(filename);
   if (!byLine) return null;
   let generatedColumn = column - 1;
   if (line === 1) generatedColumn -= WRAPPER_PREFIX.length;

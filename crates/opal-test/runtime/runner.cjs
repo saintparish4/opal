@@ -28,15 +28,50 @@ const HOST_FILES = new Set([
 ]);
 const frameworkScripts = new Map();
 
+// The framework's compiled code, kept on disk as V8's code cache, the way Node
+// keeps its own built-in modules', so a new worker deserializes it instead of
+// compiling it again. The pool says where (OPAL_TEST_CODE_CACHE, beside the
+// unpacked runtime, so it shares its content hash). A worker writes what it
+// compiled after its first test file, so the cache holds the functions running
+// a file compiles too. It is keyed by Node's version and architecture, so a
+// cache V8 would reject is never read.
+const CODE_CACHE = process.env.OPAL_TEST_CODE_CACHE
+  ? path.join(process.env.OPAL_TEST_CODE_CACHE, `${process.version}-${process.arch}`)
+  : null;
+const uncached = [];
+
 function frameworkScript(name) {
   let script = frameworkScripts.get(name);
   if (!script) {
     const filename = path.join(__dirname, name);
     const source = fs.readFileSync(filename, 'utf8');
-    script = new vm.Script(`(function (exports, require, module, __filename, __dirname) {${source}\n})`, {filename});
+    const cachePath = CODE_CACHE && path.join(CODE_CACHE, `${name}.v8`);
+    let cachedData;
+    try {
+      if (cachePath) cachedData = fs.readFileSync(cachePath);
+    } catch {}
+    script = new vm.Script(`(function (exports, require, module, __filename, __dirname) {${source}\n})`, {
+      cachedData,
+      filename,
+    });
+    if (cachePath && (!cachedData || script.cachedDataRejected)) uncached.push([script, cachePath]);
     frameworkScripts.set(name, script);
   }
   return script;
+}
+
+// Writes the code cache for what this worker compiled without one. Each file
+// is written whole and renamed into place, so a worker never reads half of
+// one another is writing.
+function saveCodeCache() {
+  for (const [script, cachePath] of uncached.splice(0)) {
+    try {
+      fs.mkdirSync(path.dirname(cachePath), {recursive: true});
+      const staging = `${cachePath}.${process.pid}`;
+      fs.writeFileSync(staging, script.createCachedData());
+      fs.renameSync(staging, cachePath);
+    } catch {}
+  }
 }
 
 const isFrameworkFile = name =>
@@ -174,6 +209,10 @@ function isEsModule(filename) {
 // OPAL_TEST_PROFILE=1 prints, per file, how much went to transforms.
 const profile = process.env.OPAL_TEST_PROFILE ? {transformNanos: 0n, transforms: 0} : null;
 
+// What this worker has had transformed, by file: a module required by many
+// test files is sent across once per worker, not once per test file.
+const transformed = new Map();
+
 function createTransform(config, bridge) {
   if (!bridge || (config.transform && Object.keys(config.transform).length === 0)) return undefined;
   const ignore = (config.transformIgnorePatterns || ['/node_modules/', '\\.pnp\\.[^\\/]+$']).map(
@@ -185,6 +224,8 @@ function createTransform(config, bridge) {
     } else if (!ALWAYS.has(path.extname(filename)) && !NEEDS_TRANSFORM.test(code)) {
       return code;
     }
+    const known = transformed.get(filename);
+    if (known && known.source === code) return known.code;
     const started = profile ? process.hrtime.bigint() : 0n;
     const reply = bridge.request({path: filename});
     if (profile) {
@@ -197,6 +238,7 @@ function createTransform(config, bridge) {
       throw error;
     }
     sourcemaps.register(filename, reply.mappings);
+    transformed.set(filename, {code: reply.code, source: code});
     return reply.code;
   };
 }
@@ -275,4 +317,4 @@ async function runTestFile(testPath, context, bridge) {
   return result;
 }
 
-module.exports = {frameworkRequire, runTestFile};
+module.exports = {frameworkRequire, runTestFile, saveCodeCache};

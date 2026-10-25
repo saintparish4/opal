@@ -5,6 +5,11 @@
 //! result is kept in memory for the run and on disk across runs, under a hash
 //! of the source, its extension and the options it was transformed with; a
 //! file edited back to an earlier state finds its old result.
+//!
+//! A result is kept as the reply's bytes and sent as they are: a hit costs a
+//! read and a write, not a parse and a print. The source map in it is one
+//! string of numbers, `line,column,sourceLine,sourceColumn` repeated, which
+//! the worker decodes only for a file a stack trace passes through.
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -21,7 +26,7 @@ pub struct TransformService {
     /// request, so a run that transforms nothing doesn't pay for it.
     identity: OnceLock<blake3::Hash>,
     tsconfig: TsconfigCache,
-    memory: Mutex<HashMap<blake3::Hash, Arc<Value>>>,
+    memory: Mutex<HashMap<blake3::Hash, Arc<Vec<u8>>>>,
     disk: Option<PathBuf>,
 }
 
@@ -36,14 +41,18 @@ impl TransformService {
         }
     }
 
-    /// The reply to one request: `{code, mappings}` or `{error}`.
-    pub fn answer(&self, request: &Value) -> Value {
+    /// The reply to one request, as JSON bytes: `{code, mappings}` or
+    /// `{error}`.
+    pub fn answer(&self, request: &Value) -> Arc<Vec<u8>> {
+        let error = |message: String| {
+            Arc::new(serde_json::to_vec(&json!({ "error": message })).expect("serializable"))
+        };
         let Some(path) = request["path"].as_str().map(Path::new) else {
-            return json!({ "error": "a transform request names no path" });
+            return error("a transform request names no path".to_string());
         };
         let source = match std::fs::read_to_string(path) {
             Ok(source) => source,
-            Err(error) => return json!({ "error": format!("{}: {error}", path.display()) }),
+            Err(failure) => return error(format!("{}: {failure}", path.display())),
         };
         let options = self.tsconfig.options_for(path);
         let mut hasher = blake3::Hasher::new();
@@ -65,38 +74,49 @@ impl TransformService {
         hasher.update(source.as_bytes());
         let key = hasher.finalize();
         if let Some(hit) = self.memory.lock().expect("lock").get(&key) {
-            return (**hit).clone();
+            return Arc::clone(hit);
         }
         let file = self
             .disk
             .as_ref()
             .map(|dir| dir.join(format!("{}.json", key.to_hex())));
-        if let Some(cached) = file
-            .as_ref()
-            .and_then(|f| std::fs::read(f).ok())
-            .and_then(|bytes| serde_json::from_slice::<Value>(&bytes).ok())
-        {
+        if let Some(cached) = file.as_ref().and_then(|f| std::fs::read(f).ok()) {
+            let cached = Arc::new(cached);
             self.memory
                 .lock()
                 .expect("lock")
-                .insert(key, Arc::new(cached.clone()));
+                .insert(key, Arc::clone(&cached));
             return cached;
         }
         let reply = match transform::transform(path, &source, &options) {
-            Ok(output) => json!({ "code": output.code, "mappings": output.mappings }),
+            Ok(output) => {
+                let mut mappings = String::with_capacity(output.mappings.len() * 12);
+                for (index, mapping) in output.mappings.iter().enumerate() {
+                    for (part, number) in mapping.iter().enumerate() {
+                        if index > 0 || part > 0 {
+                            mappings.push(',');
+                        }
+                        mappings.push_str(&number.to_string());
+                    }
+                }
+                Arc::new(
+                    serde_json::to_vec(&json!({ "code": output.code, "mappings": mappings }))
+                        .expect("serializable"),
+                )
+            }
             // Errors aren't cached: the file's next edit is likely the fix.
-            Err(error) => return json!({ "error": error }),
+            Err(failure) => return error(failure),
         };
         if let Some(file) = file {
             let staging = file.with_extension(format!("tmp{}", std::process::id()));
-            if std::fs::write(&staging, serde_json::to_vec(&reply).expect("serializable")).is_ok() {
+            if std::fs::write(&staging, reply.as_slice()).is_ok() {
                 let _ = std::fs::rename(&staging, &file);
             }
         }
         self.memory
             .lock()
             .expect("lock")
-            .insert(key, Arc::new(reply.clone()));
+            .insert(key, Arc::clone(&reply));
         reply
     }
 }
