@@ -10,6 +10,8 @@ repository.workspace = true
 opal-core.workspace = true
 opal-pm.workspace = true
 opal-runtime.workspace = true
+# `opal x` names each package's install folder by a hash of its spec.
+blake3.workspace = true
 clap.workspace = true
 indicatif.workspace = true
 console.workspace = true
@@ -22,6 +24,7 @@ serde_json.workspace = true
 thiserror.workspace = true
 
 [dev-dependencies]
+libc.workspace = true
 opal-pm = { workspace = true, features = ["fixtures"] }
 tempfile.workspace = true
 

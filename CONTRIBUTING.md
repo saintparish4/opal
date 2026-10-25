@@ -39,7 +39,9 @@ For a release build, run `cargo build --release`. The binary is `./target/releas
 - `crates/opal-cli`: the `opal` binary and everything that draws to the terminal.
 - `fuzz/`: fuzz targets, in a workspace of their own.
 
-`opal-runtime`, `opal-bundler`, and `opal-test` hold placeholder files only and aren't workspace members yet.
+- `crates/opal-runtime`: running code. Today that is `opal run` for package.json scripts and `opal x` for package commands, plus the `OPAL_TRACE_STARTUP` timeline; running JavaScript files on an engine comes later.
+
+`opal-bundler` and `opal-test` hold placeholder files only and aren't workspace members yet.
 
 ## Before you open a pull request
 
@@ -74,6 +76,9 @@ cargo test -p opal-cli --test npm-compatibility -- --ignored test_execute
 
 # opal's resolution checked against npm's on the same package.json; needs node and npm
 cargo test -p opal-pm --test npm-cross-check -- --ignored --nocapture
+
+# opal run against npm run on the same package.json, and opal x against npx; needs npm
+cargo test -p opal-cli --test npm-run-cross-check -- --ignored
 
 # the install benchmark: CI records its numbers but never fails on them
 cargo bench -p opal-pm --bench install-pipeline -- --rtt-ms 25 --scenario cold

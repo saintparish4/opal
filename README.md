@@ -28,7 +28,7 @@ opal cache verify                # re-hash the shared store and check it for cor
 opal cache gc                    # delete store files no project uses anymore
 ```
 
-> **Status**: Beta. The package manager works today — `opal install` resolves against the real npm registry and produces a `node_modules` tree Node runs against, validated on real projects (a Next.js scaffold at 365 packages, express, webpack, and a curated compatibility suite), and it is under active development, so expect rough edges and breaking releases. The runtime (`opal run`), bundler (`opal build`), and test runner (`opal test`) are **not implemented**; their directories under `crates/` hold placeholder files only.
+> **Status**: Beta. The package manager works today — `opal install` resolves against the real npm registry and produces a `node_modules` tree Node runs against, validated on real projects (a Next.js scaffold at 365 packages, express, webpack, and a curated compatibility suite), and it is under active development, so expect rough edges and breaking releases. `opal run` runs package.json scripts and `opal x` runs package commands, both checked against npm's; running a JavaScript or TypeScript file directly (`opal run app.js`), the bundler (`opal build`), and the test runner (`opal test`) are **not implemented**.
 
 ## Install
 
@@ -78,7 +78,7 @@ There's no canary channel; every release is a tagged [GitHub Release](https://gi
 
 ## Usage
 
-Opal has six commands today: `opal install`, `opal add`, `opal remove`, `opal graph`, `opal cache`, and `opal upgrade`. Run `opal <command> --help` to see their flags.
+Opal has eight commands today: `opal install`, `opal add`, `opal remove`, `opal run`, `opal x`, `opal graph`, `opal cache`, and `opal upgrade`. Run `opal <command> --help` to see their flags.
 
 Commit `opal.lock`. In CI, run `opal install --frozen-lockfile`, which installs exactly what `opal.lock` records and fails instead of changing it.
 
@@ -102,6 +102,20 @@ opal add old-ms@npm:ms@^2.0.0    # an alias
 - **To re-resolve everything from scratch**, delete `opal.lock` and run `opal install`.
 
 Not supported yet, and planned for v0.5.0: `--peer`, `--global`, `git:` and `file:` specifiers, and `opal add` in a directory that has no `package.json`.
+
+### Running scripts and package commands
+
+```bash
+opal run                         # list package.json's scripts
+opal run build                   # prebuild, build, postbuild, as npm runs them
+opal run test --watch            # everything after the name is the script's
+opal x tsc --noEmit              # a command from node_modules/.bin
+opal x cowsay@1.6.0 hello        # installed once into the cache, then run
+```
+
+`opal run` follows npm's own source (`@npmcli/run-script`): the script runs in the project folder with every `node_modules/.bin` from there up on `PATH`, sees the `npm_package_*` and `npm_lifecycle_*` variables tools read, and ends opal with its own exit code or signal. Where it differs: npm's own settings (`npm_config_cache` and the like) aren't exported, the shell is `/bin/sh` (npm's `script-shell` isn't read), workspaces aren't supported, and flags after the script's name are the script's, where npm would read them as its own.
+
+`opal x` installs a package the first time it's asked for and reuses that install after, so a range or tag (`cowsay`, `cowsay@latest`) is resolved once, not on every run.
 
 `update`, `why`, `outdated`, `audit`, and `publish` aren't implemented yet, so the binary doesn't have them. A command that exists and does nothing is worse than one that doesn't exist.
 

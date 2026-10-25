@@ -105,6 +105,29 @@ jobs:
       - name: Cross-check
         run: cargo test -p opal-pm --test npm-cross-check -- --ignored --nocapture
 
+  # `opal run` held to `npm run` on the same package.json: stdout, exit
+  # status, and the environment a script sees, minus an explicit allowlist
+  # (crates/opal-cli/tests/npm-run-cross-check.rs). Its `opal x` case also
+  # installs a real package from the public registry, like npx.
+  npm-run-cross-check:
+    name: npm cross-check (scripts)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Install Rust toolchain
+        run: rustup show
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+      - name: Install Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - name: Cross-check
+        run: |
+          npm --version
+          cargo test -p opal-cli --test npm-run-cross-check -- --ignored
+
   # `deny.toml`: licenses a static MIT binary can carry, crates.io as the only
   # source, and the crates the design rules out. Advisories are left to
   # audit.yml, so the result depends on the tree alone and can gate a merge.

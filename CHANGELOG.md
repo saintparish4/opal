@@ -8,6 +8,9 @@ Opal is pre-1.0, so a release can change behaviour you depend on. Anything that 
 
 ### Added
 
+- **`opal run <script>`** runs a package.json script the way `npm run` does: `pre` and `post` scripts around it, arguments appended to it alone, every `node_modules/.bin` from the project up on `PATH`, and the `npm_package_*`, `npm_lifecycle_*`, and other variables tools read. The exit code is the script's, and a script killed by a signal kills opal with the same signal. With no `pre`/`post` script, opal replaces itself with the shell instead of waiting on it. `opal run` alone lists the scripts. Everything after the script's name goes to the script, flags included. A test suite checks it against `npm run` on the same package.json, environment included.
+- **`opal x <package>`** runs a package's command, as `npx` does: a command already in `node_modules/.bin` (or the current package's own `bin`) first, otherwise the package is installed once into its own folder in the cache and its command run directly, with no shell in between. `opal x cowsay@1.6.0` pins a version.
+
 - **`OPAL_TRACE_STARTUP=1`** prints where an opal command's startup time went: one line per checkpoint on stderr, with the time since the first and since the one before. Set `OPAL_TRACE_SPAWN_NS` to the parent's `CLOCK_MONOTONIC` reading in nanoseconds just before it started opal, and the timeline starts there, so the time before `main` shows too.
 - [`benchmarks/compare-runtimes.py`](./benchmarks/compare-runtimes.py) measures startup and steady-state speed against node and bun, with an empty C program and `opal --version` in the same rounds as controls. A CI check fails a change that adds syscalls or page faults to an opal command's startup beyond its budget in `benchmarks/runtime-budget.json`.
 

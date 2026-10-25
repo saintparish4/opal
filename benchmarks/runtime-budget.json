@@ -1,12 +1,39 @@
 {
-  "note": "Syscalls and minor page faults per opal command, above the empty static C program's. compare-runtimes.py gate fails CI when a command goes over; --rebase rewrites the numbers from a measurement plus headroom.",
+  "note": "Syscalls and minor page faults per opal command, above the empty static C program's. compare-runtimes.py gate fails CI when a command goes over; --rebase rewrites the numbers from a measurement plus headroom. Counts are for the whole process tree (strace -f), so a script's own shell is in them; the scripts here are `true` so that what moves is opal's part.",
   "commands": {
     "--version": {
       "args": [
         "--version"
       ],
       "syscalls": 68,
-      "minor_faults": 155
+      "minor_faults": 165
+    },
+    "run noop": {
+      "args": [
+        "run",
+        "noop"
+      ],
+      "syscalls": 154,
+      "minor_faults": 242
+    },
+    "run noop2 (pre-script, spawned)": {
+      "args": [
+        "run",
+        "noop2"
+      ],
+      "syscalls": 256,
+      "minor_faults": 327
+    }
+  },
+  "files": {
+    "package.json": {
+      "name": "budget",
+      "version": "1.0.0",
+      "scripts": {
+        "noop": "true",
+        "prenoop2": "true",
+        "noop2": "true"
+      }
     }
   }
 }

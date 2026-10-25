@@ -2,7 +2,7 @@
 """Install each framework's own starter project with opal, then build it, test
 it, and serve it.
 
-    python3 compat/frameworks.py --opal PATH [next vite-react ...] [--timeout build=900,runtime=120] [--keep]
+    python3 compat/frameworks.py --opal PATH [next vite-react ...] [--runner npm|opal] [--timeout build=900,runtime=120] [--keep]
 
 The scaffolds are under frameworks/<name>/, each generated once by the
 framework's own scaffolder and committed with a SCAFFOLD file naming the
@@ -20,9 +20,13 @@ with a timeout:
   runtime  the production server through its npm script on a free port,
            polled until it answers HTTP 200, then its whole process group is
            killed
-Every script runs through npm with the project's own node_modules, which is
-what a user does: opal is only the installer. A check that depends on one
-that failed is not run, and is shown as such rather than as a pass.
+By default every script runs through npm with the project's own node_modules,
+so opal is only the installer. With `--runner opal` the same scripts run
+through `opal run` instead, which checks that opal starts each framework's
+build, tests, and server the way npm does: the same command and arguments,
+`node_modules/.bin` on PATH, the npm_* variables tools read. A check that
+depends on one that failed is not run, and is shown as such rather than as a
+pass.
 
 Opal does not run install scripts and says so in a warning naming each
 package it skipped. That list is parsed out of its output into the "scripts
@@ -131,6 +135,18 @@ def kill_group(process):
     except ProcessLookupError:
         pass
     process.wait()
+    # The leader having exited doesn't mean the group has. npm outlives the
+    # processes it starts, but under `opal run` the leader is the server
+    # itself, and its workers can still be exiting, port open, when the
+    # check for a leftover listener runs. Wait until nothing in the group is
+    # left (its other members are reaped by init once orphaned).
+    deadline = time.perf_counter() + 5
+    while time.perf_counter() < deadline:
+        try:
+            os.killpg(process.pid, 0)
+        except (ProcessLookupError, PermissionError):
+            return
+        time.sleep(0.02)
 
 
 def run(cmd, cwd, env, log, timeout):
@@ -228,11 +244,13 @@ def installed_version(project, package):
         return None
 
 
-def npm_command(script, args, port):
-    cmd = ["npm", "run", script]
-    if args:
-        cmd += ["--", *(arg.replace("{port}", str(port)) for arg in args)]
-    return cmd
+def npm_command(script, args, port, runner="npm"):
+    """The command that runs `script` with `args`: `npm run script -- args`,
+    or with --runner opal, `opal run script args`."""
+    args = [arg.replace("{port}", str(port)) for arg in args]
+    if runner != "npm":
+        return [runner, "run", script, *args]
+    return ["npm", "run", script, *(["--", *args] if args else [])]
 
 
 def cell(check):
@@ -251,7 +269,7 @@ def report(name, check, entry):
         print(f"           | {line}", flush=True)
 
 
-def check_framework(name, config, opal, work, base_env, timeouts):
+def check_framework(name, config, opal, work, base_env, timeouts, runner):
     framework_dir = work / name
     project = framework_dir / "project"
     logs = framework_dir / "logs"
@@ -290,7 +308,7 @@ def check_framework(name, config, opal, work, base_env, timeouts):
     if "build" in config:
         if installed:
             log = logs / "build.log"
-            code, seconds = run(["npm", "run", config["build"]], project, env, log,
+            code, seconds = run(npm_command(config["build"], [], 0, runner), project, env, log,
                                 timeouts["build"])
             missing = None if (project / config["output"]).exists() else config["output"]
             built = finish("build", code, seconds, log, missing)
@@ -302,7 +320,8 @@ def check_framework(name, config, opal, work, base_env, timeouts):
     if "test" in config:
         if installed:
             log = logs / "test.log"
-            code, seconds = run(["npm", "run", config["test"]], project, env, log, timeouts["test"])
+            code, seconds = run(npm_command(config["test"], [], 0, runner), project, env, log,
+                                timeouts["test"])
             finish("test", code, seconds, log)
         else:
             result["test"] = {"status": "not run"}
@@ -314,7 +333,7 @@ def check_framework(name, config, opal, work, base_env, timeouts):
         log = logs / "runtime.log"
         url = f"http://127.0.0.1:{port}{config['path']}"
         script, *args = config["serve"]
-        ok, seconds, reason = serve(npm_command(script, args, port), project,
+        ok, seconds, reason = serve(npm_command(script, args, port, runner), project,
                                     {**env, "PORT": str(port)}, log, url, timeouts["runtime"])
         entry = {"status": "pass" if ok else "fail", "seconds": round(seconds, 3),
                  "url": f"http://127.0.0.1:<port>{config['path']}", "reason": reason}
@@ -333,13 +352,13 @@ def check_framework(name, config, opal, work, base_env, timeouts):
     return result
 
 
-def commands(config):
+def commands(config, runner_name):
     listed = {"install": "opal install"}
     for check in ("build", "test"):
         if check in config:
-            listed[check] = f"npm run {config[check]}"
+            listed[check] = " ".join(npm_command(config[check], [], 0, runner_name))
     script, *args = config["serve"]
-    listed["runtime"] = " ".join(npm_command(script, args, "<port>"))
+    listed["runtime"] = " ".join(npm_command(script, args, "<port>", runner_name))
     return listed
 
 
@@ -358,7 +377,8 @@ def failed(result):
 def table(results, meta):
     lines = [
         f"Frameworks: opal {meta['versions']['opal']} (SHA-256 {meta['opal_binary']['sha256']}), "
-        f"node {meta['versions']['node']}, npm {meta['versions']['npm']}, {meta['date']}",
+        f"node {meta['versions']['node']}, npm {meta['versions']['npm']}, "
+        f"scripts run by {meta['runner']}, {meta['date']}",
         "",
         "| Framework | Resolved | install | build | test | runtime | Scripts skipped |",
         "|---|---|---|---|---|---|---|",
@@ -383,6 +403,8 @@ def main():
     parser.add_argument("--opal", required=True)
     parser.add_argument("--timeout", default="",
                         help="seconds per check, e.g. install=900,build=900,test=600,runtime=120")
+    parser.add_argument("--runner", choices=["npm", "opal"], default="npm",
+                        help="what runs the build, test, and serve scripts (default: npm)")
     parser.add_argument("--keep", action="store_true", help="keep the scratch folder")
     parser.add_argument("--work", default=tempfile.gettempdir(),
                         help="where the scratch folder is made (default: the system temp folder)")
@@ -434,7 +456,8 @@ def main():
                      "npm": version(["npm", "--version"])},
         "opal_binary": {"path": str(opal), "sha256": hashlib.sha256(opal.read_bytes()).hexdigest()},
         "timeouts": timeouts,
-        "commands": {name: commands(FRAMEWORKS[name]) for name in names},
+        "runner": args.runner,
+        "commands": {name: commands(FRAMEWORKS[name], args.runner) for name in names},
     }
     print(json.dumps(meta, indent=2), flush=True)
 
@@ -442,7 +465,9 @@ def main():
     started = time.perf_counter()
     try:
         for name in names:
-            results.append(check_framework(name, FRAMEWORKS[name], opal, work, base_env, timeouts))
+            runner = str(opal) if args.runner == "opal" else "npm"
+            results.append(check_framework(name, FRAMEWORKS[name], opal, work, base_env, timeouts,
+                                           runner))
     finally:
         if args.keep:
             print(f"\nscratch kept: {work}")
@@ -452,7 +477,8 @@ def main():
 
     results_dir = Path(args.results)
     results_dir.mkdir(parents=True, exist_ok=True)
-    out = results_dir / f"frameworks-{datetime.now():%Y%m%d-%H%M%S}.json"
+    suffix = "" if args.runner == "npm" else f"-{args.runner}-run"
+    out = results_dir / f"frameworks{suffix}-{datetime.now():%Y%m%d-%H%M%S}.json"
     out.write_text(json.dumps({"meta": meta, "results": results}, indent=2) + "\n")
 
     failures = [result["framework"] for result in results if failed(result)]

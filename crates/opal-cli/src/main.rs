@@ -1,13 +1,15 @@
 //! The `opal` binary.
 //!
 //! Implements: resolving a module graph, installing dependencies, adding and
-//! removing them, inspecting the shared cache, and upgrading itself. `run`,
-//! `build`, and `test` are not here, because a command that exists and does
-//! nothing is worse than one that does not exist. The same goes for `update`
+//! removing them, running package.json scripts and package executables,
+//! inspecting the shared cache, and upgrading itself. `build` and `test` are
+//! not here, because a command that exists and does nothing is worse than one
+//! that does not exist. The same goes for `update`
 //! and the analysis commands — they arrive with the phase that implements
 //! them.
 
 mod progress;
+mod run;
 mod style;
 mod upgrade;
 
@@ -67,6 +69,10 @@ enum Command {
     /// Remove dependencies from package.json and from node_modules.
     #[command(visible_alias = "rm", alias = "uninstall")]
     Remove(RemoveArgs),
+    /// Run a package.json script, or list them.
+    Run(run::RunArgs),
+    /// Run a package's command, installing the package first if it isn't here.
+    X(run::XArgs),
     /// Inspect the shared content-addressed cache.
     Cache {
         #[command(subcommand)]
@@ -101,26 +107,26 @@ struct GraphArgs {
 /// Which project, and what an install of it draws on. The same for every
 /// command that ends in an install.
 #[derive(Args)]
-struct ProjectArgs {
+pub(crate) struct ProjectArgs {
     /// Project directory (default: the current directory).
     #[arg(long)]
-    root: Option<PathBuf>,
+    pub(crate) root: Option<PathBuf>,
     /// Cache location. Defaults to $OPAL_CACHE_DIR, else the platform cache directory.
     #[arg(long)]
-    cache_dir: Option<PathBuf>,
+    pub(crate) cache_dir: Option<PathBuf>,
     /// Registry base URL. Defaults to $OPAL_REGISTRY, else the public registry.
     #[arg(long)]
-    registry: Option<String>,
+    pub(crate) registry: Option<String>,
     /// Skip devDependencies.
     #[arg(long)]
-    production: bool,
+    pub(crate) production: bool,
     /// Resolve from cached registry metadata only; never reach the network.
     #[arg(long)]
-    offline: bool,
+    pub(crate) offline: bool,
     /// Use cached registry metadata however old it is, and only fetch what is
     /// missing.
     #[arg(long, conflicts_with = "offline")]
-    prefer_offline: bool,
+    pub(crate) prefer_offline: bool,
 }
 
 /// Where in package.json an added package goes, and how it is written. The
@@ -231,7 +237,7 @@ enum CacheCommand {
 /// looked at.
 const PACKUMENT_MAX_AGE: std::time::Duration = std::time::Duration::from_secs(30 * 24 * 60 * 60);
 
-type Failure = Box<dyn std::error::Error>;
+pub(crate) type Failure = Box<dyn std::error::Error>;
 
 fn main() -> ExitCode {
     trace::checkpoint("main");
@@ -278,6 +284,8 @@ fn run(cli: Cli) -> Result<ExitCode, Failure> {
             };
             install_command("remove", args.project, false, Some(change))
         }
+        Command::Run(args) => run::run_command(args),
+        Command::X(args) => run::x_command(args),
         Command::Cache { command } => match command {
             CacheCommand::Verify { cache_dir } => verify(cache_dir),
             CacheCommand::Gc {
@@ -363,26 +371,11 @@ fn install_command(
     frozen_lockfile: bool,
     change: Option<Change>,
 ) -> Result<ExitCode, Failure> {
-    let root = match args.root {
+    let root = match args.root.clone() {
         Some(root) => root,
         None => std::env::current_dir()?,
     };
-    let cache = cache_root(args.cache_dir)?;
-    let store = PackageStore::open(cache.open_cas()?, cache.path())?;
-    let projects = ProjectIndex::new(cache.path().join("projects"))?;
-    let freshness = match (args.offline, args.prefer_offline) {
-        (true, _) => Freshness::Offline,
-        (_, true) => Freshness::PreferOffline,
-        _ => Freshness::Revalidate,
-    };
-    let registry = match args.registry {
-        Some(url) => NpmRegistry::new(url),
-        None => NpmRegistry::discover(),
-    }
-    // Packument metadata outlives the process here, so a re-resolve against a
-    // warm store does not re-download what built it.
-    .with_packument_cache(PackumentCache::new(cache.path().join("packuments")))
-    .with_freshness(freshness);
+    let (_, store, projects, registry) = install_tools(&args)?;
     let options = InstallOptions {
         include_development: !args.production,
         frozen_lockfile,
@@ -774,6 +767,30 @@ fn collect(
         eprintln!("warning: {}: {error}", path.display());
     }
     Ok(ExitCode::SUCCESS)
+}
+
+/// The cache, store, project index, and registry an install draws on, as
+/// `args` asks for them.
+pub(crate) fn install_tools(
+    args: &ProjectArgs,
+) -> Result<(CacheRoot, PackageStore, ProjectIndex, NpmRegistry), Failure> {
+    let cache = cache_root(args.cache_dir.clone())?;
+    let store = PackageStore::open(cache.open_cas()?, cache.path())?;
+    let projects = ProjectIndex::new(cache.path().join("projects"))?;
+    let freshness = match (args.offline, args.prefer_offline) {
+        (true, _) => Freshness::Offline,
+        (_, true) => Freshness::PreferOffline,
+        _ => Freshness::Revalidate,
+    };
+    let registry = match &args.registry {
+        Some(url) => NpmRegistry::new(url.clone()),
+        None => NpmRegistry::discover(),
+    }
+    // Packument metadata outlives the process here, so a re-resolve against a
+    // warm store does not re-download what built it.
+    .with_packument_cache(PackumentCache::new(cache.path().join("packuments")))
+    .with_freshness(freshness);
+    Ok((cache, store, projects, registry))
 }
 
 fn cache_root(explicit: Option<PathBuf>) -> Result<CacheRoot, Failure> {
