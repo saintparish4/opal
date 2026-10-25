@@ -8,8 +8,19 @@ const {ErrorWithStack, isPromise} = require('./errors.cjs');
 // chalk. opal prints matcher messages without color; a test that snapshots
 // one gets the same text either way, since Jest's own snapshots of matcher
 // output are taken with colors off.
-const plain = (...args) => args.join(' ');
-const colors = {bgYellow: plain, bold: plain, dim: plain, green: plain, inverse: plain, red: plain, yellow: plain};
+// It is chalk at level 0: every style, chained or called with arguments
+// (`red.bold`, `rgb(1, 2, 3).bgRgb(...)`), returns its text as is.
+const colors = new Proxy(function chalk(...args) {
+  return args.join(' ');
+}, {
+  apply: (_target, _this, args) => args.join(' '),
+  get: (target, name) => {
+    if (name === 'level') return 0;
+    if (name === 'supportsColor') return false;
+    if (typeof name === 'symbol' || name in Function.prototype) return target[name];
+    return colors;
+  },
+});
 
 // jest-util
 const pluralize = (word, count, ending = 's') => `${count} ${word}${count === 1 ? '' : ending}`;
@@ -48,8 +59,65 @@ function formatExecError(error) {
   return `${message}\n${formatStackTrace(stack)}`;
 }
 
+// The runtime's own frames are Jest-internal frames to the code that looks
+// for the test's frame.
+const isJestInternalFrame = line => line.includes(RUNTIME_DIR);
+const PATH_NODE_MODULES = `${require('path').sep}node_modules${require('path').sep}`;
+const STACK_LINE = /^\s*at (?:(.+?) \()?(.+?):(\d+):(\d+)\)?$/;
+
+function getStackTraceLines(stack) {
+  return stack
+    .split('\n')
+    .filter(line => line && !/^\s+at (?:new )?Promise \(<anonymous>\)/.test(line) && !line.includes('node:internal'));
+}
+
+// The first frame outside node_modules and the runtime: where the test
+// called the matcher.
+function getTopFrame(lines) {
+  for (const line of lines) {
+    if (line.includes(PATH_NODE_MODULES) || isJestInternalFrame(line)) continue;
+    const match = line.trim().match(STACK_LINE);
+    if (match) {
+      let file = match[2];
+      if (file.startsWith('file://')) file = require('url').fileURLToPath(file);
+      return {column: Number(match[4]), file, function: match[1], line: Number(match[3])};
+    }
+  }
+  return null;
+}
+
+const isError = value => {
+  switch (Object.prototype.toString.call(value)) {
+    case '[object Error]':
+    case '[object Exception]':
+    case '[object DOMException]':
+      return true;
+    default:
+      return value instanceof Error;
+  }
+};
+
+const interopRequireDefault = obj => (obj && obj.__esModule ? obj : {default: obj});
+
+// @jest/transform's, for a custom snapshotResolver: loaded as Node loads it.
+const createTranspilingRequire = () => async (resolverPath, applyInteropRequireDefault) => {
+  const loaded = require(resolverPath);
+  return applyInteropRequireDefault ? interopRequireDefault(loaded).default : loaded;
+};
+
 module.exports = {
-  ...colors,
+  bgYellow: colors,
+  bold: colors,
+  dim: colors,
+  green: colors,
+  inverse: colors,
+  red: colors,
+  yellow: colors,
+  createTranspilingRequire,
+  getStackTraceLines,
+  getTopFrame,
+  interopRequireDefault,
+  isError,
   default: colors,
   ErrorWithStack,
   formatExecError,

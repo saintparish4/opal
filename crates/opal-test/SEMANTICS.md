@@ -14,6 +14,9 @@ opal test promises Jest 30.5.2's behavior for files written against Jest's globa
 - [Where an error is charged](#where-an-error-is-charged)
 - [What a file reports](#what-a-file-reports)
 - [expect](#expect)
+- [Snapshots](#snapshots)
+- [Mock functions](#mock-functions)
+- [Module mocking](#module-mocking)
 - [Checked so far](#checked-so-far)
 - [Not yet](#not-yet)
 
@@ -130,6 +133,43 @@ From `runAndTransformResultsToJestFormat` in `jestAdapterInit.ts`, `TestSchedule
 
 Messages have no colors. Stack traces in them leave out opal's runtime frames the way Jest leaves out its own.
 
+## Snapshots
+
+`jest-snapshot`, `@jest/snapshot-utils` and `@jest/expect` are ported the same way as `expect`. So the `.snap` format, the key order, escaping and obsolete-snapshot accounting are Jest's own code. `-u` rewrites, and `--ci` writes nothing and fails on a missing snapshot. A test that is skipped or failed, or a `failing` test that passed, keeps its snapshots from counting as obsolete (jestAdapter's `_addSnapshotData`).
+
+Inline snapshots are the exception. Jest finds the matcher call at the snapshot's stack frame with Babel, sets the argument, and regenerates the whole call with `@babel/generator`. It then formats the file with the project's prettier when the project has one. opal's `runtime/inline-snapshots.cjs` finds the same call at the same frame and splices the same argument in, the first template or string argument replaced or one appended, but leaves the rest of the call as written.
+
+- **Where opal and Jest differ.** Two known differences remain:
+  - opal doesn't run prettier yet;
+  - without prettier, Babel's reprint differs where it normalizes formatting, for example `expect({z: 1})`, which Babel writes as `expect({ z: 1 })`.
+
+  Matching snapshots read the same either way. Only writing a new or changed inline snapshot can differ.
+
+## Mock functions
+
+`jest-mock` is ported as it is. `jest.fn`, `jest.spyOn`, `jest.replaceProperty`, `jest.mocked` and the `mock` record (`calls`, `results`, `instances`, `contexts`, `invocationCallOrder`, `lastCall`) are Jest's own.
+
+- **At the start of each test.** `clearMocks`, `resetMocks`, `restoreMocks` and `resetModules` run in a `beforeEach` registered before any of the file's own, as jestAdapter registers it.
+- **At the end of each file.** Every spy is restored. A spy on a built-in module, which later files in the same worker share, would otherwise outlive its file.
+
+## Module mocking
+
+From jest-runtime's `MockState.ts`, `CjsLoader.ts`, `Resolution.ts` and `index.ts`, and from jest-resolve's `getModuleID` and `getMockModule`:
+
+- **Manual mocks.** Every file in a `__mocks__` folder under the roots, outside `node_modules`, is a manual mock. It is named by its path inside that folder, without the extension, as jest-haste-map names it.
+- **Explicit mocks.** They are keyed by a module ID made of the resolved path and any manual mock's path, so two spellings of one module share a mock.
+  - `jest.mock(name, factory)` registers a factory.
+  - `jest.mock(name)` marks the module mocked. It is then served by a manual mock, a root one by name or one in a `__mocks__` folder beside the file, or else by an automock generated from the real module's shape.
+  - `{virtual: true}` mocks a module that doesn't exist.
+- **A root manual mock named like a package or a core module replaces it without any `jest.mock` call,** unless the test unmocks it. A module never gets itself in place of something it requires.
+- **`automock`** mocks every required module except core modules, what `unmockedModulePathPatterns` exempts, and the dependencies of an unmocked `node_modules` package.
+- **`jest.requireActual`** skips all of the above. `jest.requireMock` always goes through it.
+- **`jest.resetModules` clears the registries and keeps the mocks.** `jest.isolateModules` gives its callback registries of its own.
+- **Generating an automock loads the real module in scratch registries,** so nothing it requires stays loaded.
+- **`require('@jest/globals')`** gives the globals with the requiring module's `jest`.
+
+`jest.mock` calls aren't hoisted yet: a file that requires a module above the `jest.mock` for it gets the real module. Jest hoists them with babel-plugin-jest-hoist. That arrives with the transform that TypeScript needs too.
+
 ## Checked so far
 
 | check | result |
@@ -138,11 +178,15 @@ Messages have no colors. Stack traces in them leave out opal's runtime frames th
 | the same with `-t '[13579]$'` and `-t 'describe1\|test2'` (seed 8) | 2,000 of 2,000 identical |
 | `compat/test-expect.cjs`, seeds 1 to 3, 20,000 cases each, against Jest's installed `expect` build | 300,000 calls to `toEqual`, `toStrictEqual`, `toMatchObject`, `toContainEqual` and `toContain`: no verdict differs, and no failure message differs by a byte |
 | the same with a bug planted, `Object.is` replaced by `===` in equality, or `-0` printed as `0` | caught: 380 verdicts, or 1,688 messages, differ in 5,000 cases |
-| `compat/test-runners.py --opal`, the Jest-dialect fixtures | everything matches Jest except the fixtures that need mock functions or snapshots; all 21 planted failures opal faced fail |
+| `compat/test-mock.cjs`, seeds 1 and 2, 3,000 programs of 30 operations each, against Jest's installed `jest-mock` build | 180,000 operations: the full recorded state of every mock identical after each one |
+| the same with a bug planted, each call's `this` recorded as `undefined` | caught: 484 of 500 programs differ |
+| `compat/test-runners.py --opal`, all 88 Jest-dialect fixtures | identical to Jest in verdicts and in every file written, the known differences included; all 34 planted failures fail |
 
 ## Not yet
 
-- **Snapshots, mock functions and module mocking.** The runtime has placeholders that throw rather than pass.
+- **Hoisting `jest.mock` above the requires it governs.**
+- **Fake timers.** `jest.useFakeTimers` and friends throw rather than pass.
+- **Running the project's prettier on inline snapshots.**
 - **TypeScript and ESM test files.**
 - **Watch mode.**
 - **Vitest's dialect.**

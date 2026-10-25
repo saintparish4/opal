@@ -40,6 +40,13 @@ const PACKAGES = {
   'jest-diff': ['jest-diff', ['index', 'cleanupSemantic', 'constants', 'diffLines', 'diffStrings', 'escapeControlCharacters', 'getAlignedDiffs', 'joinAlignedDiffs', 'normalizeDiffOptions', 'printDiffs']],
   'diff-sequences': ['jest-diff-sequences', ['index']],
   'jest-get-type': ['jest-get-type', ['index']],
+  // InlineSnapshots.ts parses and reprints the test file with Babel and
+  // prettier, which opal's runtime doesn't carry; inline-snapshots.cjs
+  // writes them instead.
+  'jest-snapshot': ['jest-snapshot', ['index', 'State', 'utils', 'printSnapshot', 'dedentLines', 'mockSerializer', 'plugins', 'colors', 'SnapshotResolver']],
+  'jest-snapshot-utils': ['jest-snapfile', ['index', 'utils', 'types']],
+  'jest-expect': ['jest-expect-snapshot', ['index']],
+  'jest-mock': ['jest-mock', ['index']],
 };
 
 // Bare specifiers -> runtime module.
@@ -49,11 +56,21 @@ const EXTERNAL = {
   '@jest/diff-sequences': 'jest-diff-sequences',
   'jest-matcher-utils': 'jest-matcher-utils',
   'jest-diff': 'jest-diff',
+  '@jest/snapshot-utils': 'jest-snapfile',
+  'expect': 'jest-expect',
+  'jest-snapshot': 'jest-snapshot',
+  'natural-compare': 'natural-compare',
+  '@jest/transform': 'support',
   'pretty-format': 'format',
   'chalk': 'support',
   'jest-util': 'support',
   'jest-message-util': 'support',
 };
+
+// Node's own modules, required from the host as they are.
+const HOST = new Set(['graceful-fs', 'node:path', 'node:fs', 'path', 'fs']);
+// A sibling replaced by a hand-written module.
+const REPLACED = {'jest-snapshot/./InlineSnapshots': 'inline-snapshots'};
 
 const moduleName = (prefix, file) => (file === 'index' ? prefix : `${prefix}-${file}`);
 
@@ -72,6 +89,8 @@ function convert(source, pkg, file) {
   let counter = 0;
 
   const target = specifier => {
+    if (REPLACED[`${pkg}/${specifier}`]) return `./${REPLACED[`${pkg}/${specifier}`]}.cjs`;
+    if (HOST.has(specifier)) return specifier === 'graceful-fs' ? 'fs' : specifier;
     if (specifier.startsWith('./')) return `./${moduleName(prefix, specifier.slice(2))}.cjs`;
     const mapped = EXTERNAL[specifier];
     if (!mapped) throw new Error(`${pkg}/${file}: no mapping for '${specifier}'`);

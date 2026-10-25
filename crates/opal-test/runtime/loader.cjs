@@ -1,11 +1,25 @@
 // The module registry a test file loads through: CommonJS, evaluated inside
-// the file's context, after jest-runtime (jest/packages/jest-runtime/src/
-// index.ts).
+// the file's context, with Jest's module mocking. After jest-runtime 30.5.2
+// (index.ts, internals/CjsLoader.ts, internals/MockState.ts,
+// internals/Resolution.ts, internals/cjsRequire.ts) and jest-resolve's
+// getModuleID and getMockModule.
 //
 // Every test file gets its own registry, so a module's state never survives
 // from one file to the next, which is Jest's isolation. Node's built-in
 // modules are the exception, as in Jest: they come from the host, except
 // `process`, which is the context's own copy.
+//
+// Mocking, as Jest decides it (SEMANTICS.md has the rules):
+//   - `jest.mock(name, factory)` registers a factory; `jest.mock(name)`
+//     marks the module mocked, and it is then served by a manual mock (a
+//     file in a `__mocks__` folder) or else an automock generated from the
+//     real module's shape;
+//   - a manual mock in a root `__mocks__` folder named like a package or a
+//     core module replaces it without any `jest.mock` call;
+//   - `automock` mocks everything not unmocked, except core modules and
+//     what `unmockedModulePathPatterns` exempts.
+// ES module mocking (`unstable_mockModule`) isn't here: test files load as
+// CommonJS.
 //
 // Each module is wrapped exactly as Jest wraps it, `jest` included as a
 // module-local, so stack traces and `arguments` read the same. A compiled
@@ -21,6 +35,12 @@ const Module = require('module');
 const builtinModules = new Set(Module.builtinModules);
 const isBuiltin = request =>
   request.startsWith('node:') || builtinModules.has(request) || builtinModules.has(request.split('/')[0]);
+const normalizeCore = request => (request.startsWith('node:') ? request.slice(5) : request);
+
+const NODE_MODULES = `${path.sep}node_modules${path.sep}`;
+// Part of every module ID, as jest-resolve folds the resolve options into
+// it; constant here, since opal resolves CommonJS one way.
+const CJS_OPTIONS = JSON.stringify({conditions: ['require', 'node', 'default', 'node', 'node-addons']});
 
 const scriptCache = new Map();
 
@@ -63,27 +83,110 @@ class ModuleNotFoundError extends Error {
 }
 
 class Loader {
-  constructor({config, context, global, testPath, transform}) {
+  constructor({config, context, global, testPath, mocks, transform}) {
     this.config = config;
     this.context = context;
     this.global = global;
     this.testPath = testPath;
     this.transform = transform;
     this.extensions = config.moduleFileExtensions.map(extension => `.${extension}`);
-    this.registry = new Map();
-    this.mainModule = null;
-    this.createJestObject = () => undefined;
     this.moduleNameMapper = Object.entries(config.moduleNameMapper || {}).map(([pattern, target]) => [
       new RegExp(pattern),
       target,
     ]);
+    // jest-haste-map's mocks: every file in a `__mocks__` folder under the
+    // roots, by its path inside that folder, without extension.
+    this.manualMocks = new Map(Object.entries(mocks || {}));
+    this.createJestObject = () => undefined;
+    this.moduleMocker = null;
+    this.mainModule = null;
+
+    this.moduleRegistry = new Map();
+    this.mockRegistry = new Map();
+    this.isolated = null;
+
+    // MockState
+    this.automock = Boolean(config.automock);
+    this.unmockList =
+      config.unmockedModulePathPatterns && config.unmockedModulePathPatterns.length > 0
+        ? new RegExp(config.unmockedModulePathPatterns.join('|'))
+        : undefined;
+    this.explicitMock = new Map();
+    this.factories = new Map();
+    this.virtualMocks = new Map();
+    this.shouldMockCache = new Map();
+    this.unmockTransitiveCache = new Map();
+    this.transitiveShouldMock = new Map();
+    this.mockMetadata = new Map();
+    this.onGenerateMockCallbacks = new Set();
+    this.currentlyExecuting = null;
+    this.moduleIdCache = new Map();
+  }
+
+  // --- registries ------------------------------------------------------------
+
+  modules() {
+    return this.isolated ? this.isolated.modules : this.moduleRegistry;
+  }
+
+  mocks() {
+    return this.isolated ? this.isolated.mocks : this.mockRegistry;
+  }
+
+  // jest.isolateModules: what `fn` requires comes from registries of its own,
+  // thrown away afterwards.
+  isolateModules(fn) {
+    this.enterIsolated('isolateModules');
+    try {
+      fn();
+    } finally {
+      this.isolated = null;
+    }
+  }
+
+  async isolateModulesAsync(fn) {
+    this.enterIsolated('isolateModulesAsync');
+    try {
+      await fn();
+    } finally {
+      this.isolated = null;
+    }
+  }
+
+  enterIsolated(name) {
+    if (this.isolated) {
+      throw new Error(
+        `${name} cannot be nested inside another isolateModules or isolateModulesAsync.`,
+      );
+    }
+    this.isolated = {mocks: new Map(), modules: new Map()};
+  }
+
+  // Generating an automock loads the real module; that must not leave it,
+  // or anything it required, in the test's registries.
+  withScratchRegistries(fn) {
+    const saved = this.isolated;
+    this.isolated = {mocks: new Map(), modules: new Map()};
+    try {
+      return fn();
+    } finally {
+      this.isolated = saved;
+    }
+  }
+
+  // resetModules keeps the mock state: factories, explicit mocks and
+  // virtual marks survive it.
+  resetModules() {
+    this.isolated = null;
+    this.moduleRegistry.clear();
+    this.mockRegistry.clear();
   }
 
   // --- resolution ------------------------------------------------------------
 
   resolve(from, request) {
     if (isBuiltin(request)) return request;
-    const mapped = this.mapModuleName(from, request);
+    const mapped = this.resolveStub(from, request);
     if (mapped) return mapped;
     const dir = path.dirname(from);
     if (request.startsWith('./') || request.startsWith('../') || request === '.' || request === '..' || path.isAbsolute(request)) {
@@ -95,13 +198,11 @@ class Loader {
       if (found) return found;
     }
     const relative = path.relative(path.dirname(this.testPath), from) || path.basename(from);
-    throw new ModuleNotFoundError(
-      `Cannot find module '${request}' from '${relative}'`,
-      request,
-    );
+    throw new ModuleNotFoundError(`Cannot find module '${request}' from '${relative}'`, request);
   }
 
-  mapModuleName(from, request) {
+  // moduleNameMapper, which jest-resolve calls resolving a "stub".
+  resolveStub(from, request) {
     for (const [regex, target] of this.moduleNameMapper) {
       const match = request.match(regex);
       if (!match) continue;
@@ -109,7 +210,7 @@ class Loader {
       for (const candidate of targets) {
         const replaced = candidate.replaceAll(/\$(\d+)/g, (_, index) => match[Number(index)] ?? '');
         try {
-          return this.resolve(from, replaced);
+          return this.resolveUnmapped(from, replaced);
         } catch {}
       }
       throw new ModuleNotFoundError(
@@ -118,6 +219,16 @@ class Loader {
       );
     }
     return null;
+  }
+
+  resolveUnmapped(from, request) {
+    const saved = this.moduleNameMapper;
+    this.moduleNameMapper = [];
+    try {
+      return this.resolve(from, request);
+    } finally {
+      this.moduleNameMapper = saved;
+    }
   }
 
   tryFile(target) {
@@ -153,8 +264,8 @@ class Loader {
   }
 
   // A bare specifier: Node's own resolver, which reads package exports with
-  // the `require` and `node` conditions as Jest's does, then the module
-  // file extensions Jest adds on top of Node's.
+  // the `require` and `node` conditions as Jest's does, then the module file
+  // extensions Jest adds on top of Node's.
   resolvePackage(dir, request) {
     try {
       return require.resolve(request, {paths: [dir]});
@@ -167,24 +278,234 @@ class Loader {
     }
   }
 
+  // jest-resolve's getModulePath: where a virtual mock of `request` lives.
+  getModulePath(from, request) {
+    if (request[0] !== '.' || path.isAbsolute(request)) return request;
+    return path.normalize(`${path.dirname(from)}/${request}`);
+  }
+
+  lookupManualMock(name) {
+    const mock = this.manualMocks.get(name) || this.manualMocks.get(`${name}/index`);
+    if (mock) return mock;
+    if (!isBuiltin(name)) return null;
+    const normalized = normalizeCore(name);
+    return normalized === name ? null : this.manualMocks.get(normalized) || null;
+  }
+
+  // jest-resolve's getMockModule: a root manual mock for the name, or for
+  // what moduleNameMapper maps it to.
+  getMockModule(from, name) {
+    const mock = this.lookupManualMock(name);
+    if (mock) return mock;
+    const stub = this.resolveStub(from, name);
+    return stub ? this.lookupManualMock(stub) : null;
+  }
+
+  // The manual mock `jest.mock(name)` uses: a root mock by name, or a
+  // `__mocks__` folder beside the real file.
+  findManualMock(from, name) {
+    if (isBuiltin(name)) return this.getMockModule(from, normalizeCore(name));
+    const rootMock = this.getMockModule(from, name);
+    if (rootMock) return rootMock;
+    const modulePath = this.resolve(from, name);
+    const sibling = path.join(path.dirname(modulePath), '__mocks__', path.basename(modulePath));
+    return fs.existsSync(sibling) ? sibling : null;
+  }
+
+  // jest-resolve's getModuleID: what explicit mocks and factories are keyed
+  // by, so two spellings of one module share a mock.
+  getModuleId(from, name = '') {
+    const isVirtual = this.virtualMocks.size > 0 && this.virtualMocks.get(this.getModulePath(from, name)) === true;
+    const key = `${from}\0${name}\0${isVirtual}`;
+    const cached = this.moduleIdCache.get(key);
+    if (cached) return cached;
+    const core = isBuiltin(name);
+    let absolutePath;
+    if (core) {
+      absolutePath = normalizeCore(name);
+    } else if (this.getMockModule(from, name)) {
+      absolutePath = null;
+    } else {
+      const virtualPath = this.getModulePath(from, name);
+      absolutePath = this.virtualMocks.get(virtualPath) ? virtualPath : name ? this.resolve(from, name) : from;
+    }
+    const mockPath = core ? null : this.getMockModule(from, name);
+    const sep = path.delimiter;
+    const id = `${core ? 'node' : 'user'}${sep}${absolutePath ? absolutePath + sep : ''}${mockPath ? mockPath + sep : ''}${CJS_OPTIONS}${sep}`;
+    this.moduleIdCache.set(key, id);
+    return id;
+  }
+
+  // --- the mock decision (MockState.decideSync) --------------------------------
+
+  shouldMock(from, name) {
+    if (!this.automock && this.explicitMock.size === 0) return {moduleID: '', shouldMock: false};
+    const moduleID = this.getModuleId(from, name);
+    const explicit = this.explicitMock.get(moduleID);
+    if (explicit !== undefined) return {moduleID, shouldMock: explicit};
+    if (!this.automock || isBuiltin(name)) return {moduleID, shouldMock: false};
+    const key = `${from}\0${moduleID}`;
+    if (this.unmockTransitiveCache.get(key)) return {moduleID, shouldMock: false};
+    const cached = this.shouldMockCache.get(moduleID);
+    if (cached !== undefined) return {moduleID, shouldMock: cached};
+    let modulePath;
+    try {
+      modulePath = this.resolve(from, name);
+    } catch (error) {
+      if (this.getMockModule(from, name)) {
+        this.shouldMockCache.set(moduleID, true);
+        return {moduleID, shouldMock: true};
+      }
+      throw error;
+    }
+    if (this.unmockList?.test(modulePath)) {
+      this.shouldMockCache.set(moduleID, false);
+      return {moduleID, shouldMock: false};
+    }
+    const currentModuleID = this.getModuleId(from);
+    if (
+      this.transitiveShouldMock.get(currentModuleID) === false ||
+      (from.includes(NODE_MODULES) &&
+        modulePath.includes(NODE_MODULES) &&
+        ((this.unmockList && this.unmockList.test(from)) || this.explicitMock.get(currentModuleID) === false))
+    ) {
+      this.transitiveShouldMock.set(moduleID, false);
+      this.unmockTransitiveCache.set(key, true);
+      return {moduleID, shouldMock: false};
+    }
+    this.shouldMockCache.set(moduleID, true);
+    return {moduleID, shouldMock: true};
+  }
+
+  setMock(from, name, factory, options) {
+    if (options?.virtual) this.virtualMocks.set(this.getModulePath(from, name), true);
+    let moduleID;
+    try {
+      moduleID = this.getModuleId(from, name);
+    } catch (error) {
+      if (error.code === 'MODULE_NOT_FOUND') {
+        error.message +=
+          '\n\nTo mock a module that does not exist on disk, pass `{virtual: true}` in the mock options. See https://jestjs.io/docs/jest-object#jestmockmodulename-factory-options';
+      }
+      throw error;
+    }
+    this.explicitMock.set(moduleID, true);
+    this.factories.set(moduleID, factory);
+  }
+
+  markExplicitMock(from, name) {
+    this.explicitMock.set(this.getModuleId(from, name), true);
+  }
+
+  unmock(from, name) {
+    this.explicitMock.set(this.getModuleId(from, name), false);
+  }
+
+  deepUnmock(from, name) {
+    const moduleID = this.getModuleId(from, name);
+    this.explicitMock.set(moduleID, false);
+    this.transitiveShouldMock.set(moduleID, false);
+  }
+
+  enableAutomock() {
+    this.automock = true;
+  }
+
+  disableAutomock() {
+    this.automock = false;
+  }
+
+  addOnGenerateMock(callback) {
+    this.onGenerateMockCallbacks.add(callback);
+  }
+
   // --- loading -----------------------------------------------------------------
 
-  requireModule(from, request) {
-    const filename = this.resolve(from, request);
-    if (isBuiltin(filename)) return this.requireBuiltin(filename);
-    return this.load(filename, from);
+  // What `require` in a test file or module does.
+  requireModuleOrMock(from, name) {
+    if (name === '@jest/globals') return this.jestGlobals(from);
+    const {shouldMock, moduleID} = this.shouldMock(from, name);
+    if (shouldMock) return this.requireMockWithId(from, name, moduleID);
+    return this.requireModule(from, name);
+  }
+
+  requireActual(from, name) {
+    return this.requireModule(from, name, true);
+  }
+
+  requireModule(from, name, isRequireActual = false) {
+    if (name && isBuiltin(name)) return this.requireBuiltin(name);
+    let modulePath;
+    // A root manual mock named like the request stands in for it with no
+    // jest.mock call ("some old tests rely on this", says Jest's source).
+    if (name && !isRequireActual) {
+      const manualMock = this.getMockModule(from, name);
+      if (
+        manualMock &&
+        manualMock !== this.currentlyExecuting &&
+        this.explicitMock.get(this.getModuleId(from, name)) !== false
+      ) {
+        modulePath = manualMock;
+      }
+    }
+    if (!modulePath) modulePath = name ? this.resolve(from, name) : from;
+    return this.loadInto(this.modules(), modulePath, from);
+  }
+
+  requireMock(from, name) {
+    return this.requireMockWithId(from, name, this.getModuleId(from, name));
+  }
+
+  requireMockWithId(from, name, moduleID) {
+    const registry = this.mocks();
+    if (registry.has(moduleID)) return registry.get(moduleID);
+    const factory = this.factories.get(moduleID);
+    if (factory) {
+      const value = factory();
+      registry.set(moduleID, value);
+      return value;
+    }
+    const manualMockPath = this.findManualMock(from, name);
+    if (manualMockPath) {
+      const module = this.createModule(manualMockPath, from);
+      this.executeFile(module);
+      registry.set(moduleID, module.exports);
+    } else {
+      registry.set(moduleID, this.generateMock(from, name));
+    }
+    return registry.get(moduleID);
+  }
+
+  // jest.createMockFromModule and automocking: the real module's shape,
+  // made of mock functions.
+  generateMock(from, name) {
+    const modulePath = this.resolveStub(from, name) || this.resolve(from, name);
+    if (!this.mockMetadata.has(modulePath)) {
+      // Seeded first, so a module that requires itself through the cycle
+      // finds something.
+      this.mockMetadata.set(modulePath, this.moduleMocker.getMetadata({}) || {});
+      const exports = this.withScratchRegistries(() => this.requireModule(from, name));
+      const metadata = this.moduleMocker.getMetadata(exports);
+      if (metadata == null) {
+        throw new Error(
+          `Failed to get mock metadata: ${modulePath}\n\nSee: https://jestjs.io/docs/manual-mocks#content`,
+        );
+      }
+      this.mockMetadata.set(modulePath, metadata);
+    }
+    let mock = this.moduleMocker.generateFromMetadata(this.mockMetadata.get(modulePath));
+    for (const callback of this.onGenerateMockCallbacks) mock = callback(modulePath, mock);
+    return mock;
   }
 
   requireBuiltin(name) {
-    const bare = name.startsWith('node:') ? name.slice(5) : name;
+    const bare = normalizeCore(name);
     if (bare === 'process') return this.global.process;
     return require(name);
   }
 
-  load(filename, from) {
-    const cached = this.registry.get(filename);
-    if (cached) return cached.exports;
-    const parent = from ? this.registry.get(from) : null;
+  createModule(filename, from) {
+    const parent = from ? this.modules().get(from) : null;
     const module = {
       children: [],
       exports: {},
@@ -195,26 +516,34 @@ class Loader {
       path: path.dirname(filename),
       paths: nodeModulesPaths(path.dirname(filename)),
     };
-    Object.defineProperty(module, 'require', {value: request => this.requireModule(filename, request)});
-    if (parent) parent.children.push(module);
+    Object.defineProperty(module, 'require', {value: request => this.requireModuleOrMock(filename, request)});
+    return module;
+  }
+
+  loadInto(registry, filename, from) {
+    const cached = registry.get(filename);
+    if (cached) return cached.exports;
+    const module = this.createModule(filename, from);
+    const parent = from ? registry.get(from) : null;
+    if (parent && !parent.children.includes(module)) parent.children.push(module);
     if (!this.mainModule) this.mainModule = module;
-    this.registry.set(filename, module);
+    registry.set(filename, module);
     try {
-      this.execute(module);
+      this.executeFile(module);
     } catch (error) {
-      this.registry.delete(filename);
+      registry.delete(filename);
+      if (parent) parent.children.splice(parent.children.indexOf(module), 1);
       throw error;
     }
     module.loaded = true;
     return module.exports;
   }
 
-  execute(module) {
+  executeFile(module) {
     const {filename} = module;
     const extension = path.extname(filename);
     if (extension === '.json') {
-      const text = stripBOM(fs.readFileSync(filename, 'utf8'));
-      module.exports = this.global.JSON.parse(text);
+      module.exports = this.global.JSON.parse(stripBOM(fs.readFileSync(filename, 'utf8')));
       return;
     }
     if (extension === '.node') {
@@ -226,59 +555,55 @@ class Loader {
     if (code.startsWith('#!')) code = `//${code.slice(2)}`;
     const wrapper = compile(filename, code).runInContext(this.context)['Object.<anonymous>'];
     const require = this.createRequire(module);
-    const dirname = path.dirname(filename);
-    wrapper.call(module.exports, module, module.exports, require, dirname, filename, this.createJestObject(filename));
+    const saved = this.currentlyExecuting;
+    this.currentlyExecuting = filename;
+    try {
+      wrapper.call(module.exports, module, module.exports, require, path.dirname(filename), filename, this.createJestObject(filename));
+    } finally {
+      this.currentlyExecuting = saved;
+    }
   }
 
   createRequire(module) {
     const from = module.filename;
-    const require = request => this.requireModule(from, request);
+    const require = request => this.requireModuleOrMock(from, request);
     require.resolve = (request, options) => {
+      if (request == null) {
+        throw new Error('The first argument to require.resolve must be a string. Received null or undefined.');
+      }
       if (options && Array.isArray(options.paths)) {
         for (const base of options.paths) {
           try {
-            return this.resolve(path.join(base, 'index.js'), request);
+            return this.resolve(path.join(path.resolve(path.dirname(from), base), 'index.js'), request);
           } catch {}
         }
+        throw new ModuleNotFoundError(
+          `Cannot resolve module '${request}' from paths ['${options.paths.join("', '")}'] from ${from}`,
+          request,
+        );
       }
-      return this.resolve(from, request);
+      try {
+        return this.resolve(from, request);
+      } catch (error) {
+        const mock = this.getMockModule(from, request);
+        if (mock) return mock;
+        throw error;
+      }
     };
-    require.resolve.paths = request => (isBuiltin(request) ? null : nodeModulesPaths(path.dirname(from)));
-    require.main = this.mainModule;
+    require.resolve.paths = request => {
+      if (request[0] === '.') return [path.dirname(from)];
+      return isBuiltin(request) ? null : nodeModulesPaths(path.dirname(from));
+    };
+    Object.defineProperty(require, 'main', {enumerable: true, get: () => this.mainModule});
     require.extensions = Object.create(null);
     Object.defineProperty(require, 'cache', {
       get: () => {
         const cache = Object.create(null);
-        for (const [key, value] of this.registry) cache[key] = value;
+        for (const [key, value] of this.modules()) cache[key] = value;
         return cache;
       },
     });
     return require;
-  }
-
-  requireActual(from, request) {
-    return this.requireModule(from, request);
-  }
-
-  resetModules() {
-    this.registry.clear();
-  }
-
-  // jest.isolateModules: what `fn` requires comes from a registry of its
-  // own, thrown away afterwards.
-  isolateModules(fn) {
-    if (this.isolating) {
-      throw new Error('isolateModules cannot be nested inside another isolateModules or isolateModulesAsync.');
-    }
-    const saved = this.registry;
-    this.registry = new Map();
-    this.isolating = true;
-    try {
-      fn();
-    } finally {
-      this.registry = saved;
-      this.isolating = false;
-    }
   }
 }
 

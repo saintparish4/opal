@@ -7,6 +7,7 @@
 //! is a regular expression, and a file has to match one. Jest compares
 //! everything against absolute paths, and so does this.
 
+use std::collections::BTreeMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -16,7 +17,17 @@ use crate::TestError;
 use crate::config::ProjectConfig;
 use crate::glob::{Glob, matches_any};
 
-pub fn find_tests(config: &ProjectConfig, filters: &[Regex]) -> Result<Vec<PathBuf>, TestError> {
+/// The test files to run, and jest-haste-map's manual mocks: every file in a
+/// `__mocks__` folder under the roots, by its path inside that folder without
+/// the extension (`__mocks__/fs.js` is `fs`, `__mocks__/@scope/pkg.js` is
+/// `@scope/pkg`). When two share a name the later one in the walk wins, as
+/// the last one Jest's crawler reports does.
+pub struct Found {
+    pub tests: Vec<PathBuf>,
+    pub manual_mocks: BTreeMap<String, PathBuf>,
+}
+
+pub fn find_tests(config: &ProjectConfig, filters: &[Regex]) -> Result<Found, TestError> {
     let globs = config
         .test_match
         .iter()
@@ -30,6 +41,7 @@ pub fn find_tests(config: &ProjectConfig, filters: &[Regex]) -> Result<Vec<PathB
         .any(|pattern| pattern.contains("node_modules"));
 
     let mut found = Vec::new();
+    let mut manual_mocks = BTreeMap::new();
     for root in &config.roots {
         walk(root, skip_node_modules, &mut |path| {
             let Some(text) = path.to_str() else { return };
@@ -37,6 +49,12 @@ pub fn find_tests(config: &ProjectConfig, filters: &[Regex]) -> Result<Vec<PathB
             let extension = path.extension().and_then(|e| e.to_str()).unwrap_or("");
             if !config.module_file_extensions.iter().any(|e| e == extension) {
                 return;
+            }
+            if let Some((_, inside)) = text.split_once("/__mocks__/") {
+                let name = inside
+                    .strip_suffix(&format!(".{extension}"))
+                    .unwrap_or(inside);
+                manual_mocks.insert(name.to_string(), path.to_path_buf());
             }
             let is_test = if globs.is_empty() {
                 regexes.iter().any(|r| r.is_match(&text))
@@ -57,7 +75,10 @@ pub fn find_tests(config: &ProjectConfig, filters: &[Regex]) -> Result<Vec<PathB
     // Largest first: without timings from an earlier run, size is the best
     // guess at what takes longest, and starting it early shortens the run.
     found.sort_by_key(|path| std::cmp::Reverse(fs::metadata(path).map(|m| m.len()).unwrap_or(0)));
-    Ok(found)
+    Ok(Found {
+        tests: found,
+        manual_mocks,
+    })
 }
 
 pub fn compile(patterns: &[String]) -> Result<Vec<Regex>, TestError> {

@@ -139,7 +139,7 @@ async function runTestFile(testPath, {config, globalConfig}) {
   try {
     const {context, global} = createEnvironment(config);
     global.console = createBufferedConsole(consoleEntries);
-    const loader = new Loader({config, context, global, testPath});
+    const loader = new Loader({config, context, global, mocks: config.manualMocks, testPath});
     framework = await loadFramework(context).initialize({
       config,
       globalConfig,
@@ -148,13 +148,14 @@ async function runTestFile(testPath, {config, globalConfig}) {
       testPath,
     });
     loader.createJestObject = from => framework.createJestObject(from);
-    for (const file of config.setupFiles) loader.requireModule(file, file);
+    loader.jestGlobals = from => ({...framework.globals, jest: framework.createJestObject(from)});
+    for (const file of config.setupFiles) loader.requireModule(file);
     if (config.injectGlobals) Object.assign(global, framework.globals);
     for (const file of config.setupFilesAfterEnv) {
-      const exported = loader.requireModule(file, file);
+      const exported = loader.requireModule(file);
       if (typeof exported === 'function') await exported();
     }
-    loader.requireModule(testPath, testPath);
+    loader.requireModule(testPath);
   } catch (error) {
     if (framework) await framework.teardown();
     result = failure(testPath, error);

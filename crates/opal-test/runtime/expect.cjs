@@ -1,13 +1,13 @@
-// The `expect` a test file sees: Jest's own, ported in jest-expect*.cjs,
-// evaluated once per test file inside its context, so its state (assertion
-// counts, custom matchers, the current test's name) is that file's alone.
-// Snapshot matchers are added here once snapshots are.
+// The `expect` a test file sees: Jest's own (jest-expect*.cjs) with the
+// snapshot matchers added, as @jest/expect adds them (jest-expect-snapshot.cjs).
+// Evaluated once per test file inside its context, so its state (assertion
+// counts, custom matchers, serializers, the current test) is that file's alone.
 'use strict';
 
-const {expect} = require('./jest-expect.cjs');
+const {jestExpect} = require('./jest-expect-snapshot.cjs');
 
 function createExpect() {
-  return expect;
+  return jestExpect;
 }
 
 module.exports = {createExpect};

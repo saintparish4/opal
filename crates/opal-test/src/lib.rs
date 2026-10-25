@@ -131,13 +131,15 @@ fn run_with(
     if let Some(error) = reply["error"].as_str() {
         return Err(TestError::Config(error.to_string()));
     }
-    let config_value = reply["config"].clone();
+    let mut config_value = reply["config"].clone();
     let config = config::ProjectConfig::from_value(&config_value).map_err(|error| {
         TestError::Config(format!("the runtime sent an unreadable config: {error}"))
     })?;
 
     let filters = discover::compile(&options.path_patterns)?;
-    let files = discover::find_tests(&config, &filters)?;
+    let found = discover::find_tests(&config, &filters)?;
+    config_value["manualMocks"] = json!(found.manual_mocks);
+    let files = found.tests;
     let mut aggregate = Aggregate::new(&config.root_dir);
     if files.is_empty() {
         let _ = writeln!(

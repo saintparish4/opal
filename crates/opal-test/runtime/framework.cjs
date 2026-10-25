@@ -11,6 +11,7 @@ const {createCircus} = require('./circus.cjs');
 const {createExpect} = require('./expect.cjs');
 const {ModuleMocker} = require('./mock.cjs');
 const {format: prettyFormat} = require('./format.cjs');
+const snapshot = require('./jest-snapshot.cjs');
 
 const ROOT = 'ROOT_DESCRIBE_BLOCK';
 const TEST_TIMEOUT_SYMBOL = Symbol.for('TEST_TIMEOUT_SYMBOL');
@@ -22,43 +23,80 @@ const LOG_ERRORS_BEFORE_RETRY = Symbol.for('LOG_ERRORS_BEFORE_RETRY');
 async function initialize({config, globalConfig, testPath, parentProcess, loader}) {
   const expect = createExpect({testPath});
   const circus = createCircus({expect, parentProcess});
+
+  // jestAdapterInit's snapshot setup: serializers from the config, tested
+  // before the built-in ones (so added last first), then the file's state.
+  for (const serializer of [...config.snapshotSerializers].reverse()) {
+    snapshot.addSerializer(loader.requireModule(testPath, serializer));
+  }
+  const resolver = await snapshot.buildSnapshotResolver(config, request => loader.requireModule(testPath, request));
+  const snapshotState = new snapshot.SnapshotState(resolver.resolveSnapshotPath(testPath), {
+    expand: globalConfig.expand,
+    prettierPath: null,
+    rootDir: config.rootDir,
+    snapshotFormat: config.snapshotFormat,
+    updateSnapshot: globalConfig.updateSnapshot,
+  });
+  expect.setState({snapshotState, testPath});
   const testTimeout = globalConfig.testTimeout || config.testTimeout;
   if (testTimeout) circus.state.testTimeout = testTimeout;
   const moduleMocker = new ModuleMocker(globalThis);
+  loader.moduleMocker = moduleMocker;
 
   await circus.dispatch({name: 'setup', testNamePattern: globalConfig.testNamePattern});
 
+  // jest-runtime's JestGlobals.buildJestObject: one `jest` per module,
+  // bridged to the loader for everything about modules.
+  const jestObjects = new Map();
   function createJestObject(from) {
+    const cached = jestObjects.get(from);
+    if (cached) return cached;
+    const chain = action => (...args) => {
+      action(...args);
+      return jest;
+    };
+    const mock = (moduleName, mockFactory, options) => {
+      if (mockFactory !== undefined) loader.setMock(from, moduleName, mockFactory, options);
+      else loader.markExplicitMock(from, moduleName);
+      return jest;
+    };
+    const unmock = chain(moduleName => loader.unmock(from, moduleName));
+    const fakeTimers = unsupported('fake timers');
     const jest = {
-      advanceTimersByTime: unsupported('advanceTimersByTime'),
-      clearAllMocks() {
-        moduleMocker.clearAllMocks();
-        return jest;
-      },
-      clearAllTimers: unsupported('clearAllTimers'),
-      fn: implementation => moduleMocker.fn(implementation),
-      getRealSystemTime: () => Date.now(),
+      advanceTimersByTime: fakeTimers,
+      advanceTimersByTimeAsync: fakeTimers,
+      advanceTimersToNextFrame: fakeTimers,
+      advanceTimersToNextTimer: fakeTimers,
+      advanceTimersToNextTimerAsync: fakeTimers,
+      autoMockOff: chain(() => loader.disableAutomock()),
+      autoMockOn: chain(() => loader.enableAutomock()),
+      clearAllMocks: chain(() => moduleMocker.clearAllMocks()),
+      clearAllTimers: fakeTimers,
+      createMockFromModule: moduleName => loader.generateMock(from, moduleName),
+      deepUnmock: chain(moduleName => loader.deepUnmock(from, moduleName)),
+      disableAutomock: chain(() => loader.disableAutomock()),
+      doMock: mock,
+      dontMock: unmock,
+      enableAutomock: chain(() => loader.enableAutomock()),
+      fn: moduleMocker.fn.bind(moduleMocker),
+      genMockFromModule: moduleName => loader.generateMock(from, moduleName),
+      getRealSystemTime: fakeTimers,
       getSeed: () => 0,
+      getTimerCount: fakeTimers,
       isEnvironmentTornDown: () => false,
-      isMockFunction: fn => moduleMocker.isMockFunction(fn),
-      isolateModules(fn) {
-        loader.isolateModules(fn);
-        return jest;
-      },
-      mocked: source => source,
-      requireActual: request => loader.requireActual(from, request),
-      resetAllMocks() {
-        moduleMocker.resetAllMocks();
-        return jest;
-      },
-      resetModules() {
-        loader.resetModules();
-        return jest;
-      },
-      restoreAllMocks() {
-        moduleMocker.restoreAllMocks();
-        return jest;
-      },
+      isMockFunction: moduleMocker.isMockFunction,
+      isolateModules: chain(fn => loader.isolateModules(fn)),
+      isolateModulesAsync: fn => loader.isolateModulesAsync(fn),
+      mock,
+      mocked: moduleMocker.mocked.bind(moduleMocker),
+      now: fakeTimers,
+      onGenerateMock: chain(callback => loader.addOnGenerateMock(callback)),
+      replaceProperty: moduleMocker.replaceProperty.bind(moduleMocker),
+      requireActual: moduleName => loader.requireActual(from, moduleName),
+      requireMock: moduleName => loader.requireMock(from, moduleName),
+      resetAllMocks: chain(() => moduleMocker.resetAllMocks()),
+      resetModules: chain(() => loader.resetModules()),
+      restoreAllMocks: chain(() => moduleMocker.restoreAllMocks()),
       retryTimes(numRetries, options) {
         globalThis[RETRY_TIMES] = numRetries;
         globalThis[LOG_ERRORS_BEFORE_RETRY] = options?.logErrorsBeforeRetry;
@@ -66,19 +104,37 @@ async function initialize({config, globalConfig, testPath, parentProcess, loader
         globalThis[RETRY_IMMEDIATELY] = options?.retryImmediately;
         return jest;
       },
-      runAllTimers: unsupported('runAllTimers'),
+      runAllImmediates: fakeTimers,
+      runAllTicks: fakeTimers,
+      runAllTimers: fakeTimers,
+      runAllTimersAsync: fakeTimers,
+      runOnlyPendingTimers: fakeTimers,
+      runOnlyPendingTimersAsync: fakeTimers,
+      setMock: (moduleName, moduleExports) => mock(moduleName, () => moduleExports),
+      setSystemTime: fakeTimers,
       setTimeout(timeout) {
         globalThis[TEST_TIMEOUT_SYMBOL] = timeout;
         return jest;
       },
-      spyOn: (object, methodKey, accessType) => moduleMocker.spyOn(object, methodKey, accessType),
-      useFakeTimers: unsupported('useFakeTimers'),
-      useRealTimers() {
-        return jest;
-      },
+      spyOn: moduleMocker.spyOn.bind(moduleMocker),
+      unmock,
+      unstable_mockModule: unsupported('unstable_mockModule'),
+      unstable_unmockModule: unsupported('unstable_unmockModule'),
+      useFakeTimers: fakeTimers,
+      useRealTimers: () => jest,
     };
+    jestObjects.set(from, jest);
     return jest;
   }
+
+  // jestAdapter.ts registers this before anything else, so it is the first
+  // beforeEach of every test.
+  circus.globals.beforeEach(() => {
+    if (config.resetModules) loader.resetModules();
+    if (config.clearMocks) moduleMocker.clearAllMocks();
+    if (config.resetMocks) moduleMocker.resetAllMocks();
+    if (config.restoreMocks) moduleMocker.restoreAllMocks();
+  });
 
   async function run() {
     const runResult = await circus.run();
@@ -124,6 +180,7 @@ async function initialize({config, globalConfig, testPath, parentProcess, loader
         .map(error => `  ● Test suite failed to run\n\n${indent(error, '    ')}`)
         .join('\n')}`;
     }
+    moduleMocker.restoreAllMocks();
     await circus.dispatch({name: 'teardown'});
     return {
       failureMessage,
@@ -132,13 +189,16 @@ async function initialize({config, globalConfig, testPath, parentProcess, loader
       numPendingTests,
       numTodoTests,
       skipped: false,
-      snapshot: expect.snapshotSummary ? expect.snapshotSummary() : emptySnapshot(),
+      snapshot: snapshotData(assertionResults, snapshotState),
       testExecError,
       testResults: assertionResults,
     };
   }
 
+  // jest-runtime's teardown restores every spy: one on a built-in module,
+  // which the next file in this worker shares, must not outlive the file.
   async function teardown() {
+    moduleMocker.restoreAllMocks();
     await circus.dispatch({name: 'teardown'});
   }
 
@@ -152,19 +212,33 @@ async function initialize({config, globalConfig, testPath, parentProcess, loader
 
 function unsupported(name) {
   return () => {
-    throw new Error(`opal test: jest.${name}() is not supported yet.`);
+    throw new Error(`opal test: ${name} ${name.endsWith('s') ? 'are' : 'is'} not supported yet.`);
   };
 }
 
-const emptySnapshot = () => ({
-  added: 0,
-  fileDeleted: false,
-  matched: 0,
-  unchecked: 0,
-  uncheckedKeys: [],
-  unmatched: 0,
-  updated: 0,
-});
+// jestAdapter.ts's _addSnapshotData: a skipped or failed test's snapshots
+// aren't obsolete, nor are those of a `failing` test that passed (it threw);
+// whatever else went unchecked is obsolete, and removed with -u.
+function snapshotData(assertionResults, snapshotState) {
+  for (const {fullName, status, failing} of assertionResults) {
+    if (status === 'pending' || status === 'failed' || (failing && status === 'passed')) {
+      snapshotState.markSnapshotsAsCheckedForTest(fullName);
+    }
+  }
+  const uncheckedCount = snapshotState.getUncheckedCount();
+  const uncheckedKeys = snapshotState.getUncheckedKeys();
+  if (uncheckedCount) snapshotState.removeUncheckedKeys();
+  const status = snapshotState.save();
+  return {
+    added: snapshotState.added,
+    fileDeleted: status.deleted,
+    matched: snapshotState.matched,
+    unchecked: status.deleted ? 0 : uncheckedCount,
+    uncheckedKeys: [...uncheckedKeys],
+    unmatched: snapshotState.unmatched,
+    updated: snapshotState.updated,
+  };
+}
 
 // An error's own enumerable fields, as JSON would carry them across.
 function detail(error) {
