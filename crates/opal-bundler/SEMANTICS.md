@@ -196,7 +196,7 @@ namespace. Importing an ambiguous or missing name is a link error in Node,
 a `SyntaxError` before any code runs, so the bundler refuses it
 ([`E-LINK`](#refusals)).
 
-Two cases follow V8 rather than the spec. First, the spec resolves a namespace
+Three cases follow V8 rather than the spec. First, the spec resolves a namespace
 re-export, `export * as ns from "m"` or `import * as ns from "m"; export
 { ns }`, to `m`'s namespace itself, so two `export *` that reach it through
 different declarations name one binding; test262's
@@ -218,6 +218,17 @@ rejects ([`E-LINK`](#refusals)). The bindings still come from the spec's
 algorithm. Modules reached only through `import()` are modelled as linking
 one `import()` target at a time, in file order. test262's
 `instn-star-iee-multi-cycle-same-name` is such a program; Node fails it.
+
+Third, a namespace over a cycle of `export *`. V8 builds a namespace from
+the export tables of the modules it star-exports, and keeps in each table
+what it found (FetchStarExports in `source-text-module.cc`). Inside a cycle
+it reads a table that is still partial, so a name the spec finds ambiguous
+can land in one module's table, and the next namespace built from it has
+the name. Which namespace gets it depends on which V8 built first, an order
+set by imports and by when each `import()` runs. Without a cycle, or
+without an ambiguous name, V8's namespaces are the spec's. So a namespace
+the bundle builds that has an ambiguous name and reaches a cycle of
+`export *` is refused ([`E-LINK`](#refusals)).
 
 ### 5. `this`, `arguments`, and strictness
 
@@ -512,7 +523,7 @@ line.
 | Code | What | Why |
 |---|---|---|
 | `E-PARSE` | A module does not parse. | Node would throw a `SyntaxError` before running anything. |
-| `E-LINK` | An import names a missing or ambiguous export, a CommonJS name the lexer does not find, or JSON without `type: 'json'`; a cycle of re-exports V8 rejects (rule 4); or a static import cannot be resolved, including one Node does not complete (`./x` for `./x.js`). | Node fails to link the graph, before any code runs. |
+| `E-LINK` | An import names a missing or ambiguous export, a CommonJS name the lexer does not find, or JSON without `type: 'json'`; a cycle of re-exports V8 rejects, or a namespace with an ambiguous name over a cycle of `export *` (rule 4); or a static import cannot be resolved, including one Node does not complete (`./x` for `./x.js`). | Node fails to link the graph, before any code runs. |
 | `E-TLA` | Top-level `await` outside the entry module, or in an entry that is in a cycle; or a lazily imported module that depends on an entry that awaits. | Rule 11. |
 | `E-REQUIRE-ESM` | A CommonJS module `require()`s an ES module. | Node 24 runs it with its own cycle and async-module errors (`ERR_REQUIRE_CYCLE_MODULE`, `ERR_REQUIRE_ASYNC_MODULE`) that this version does not reproduce. |
 | `E-DYNAMIC` | `import()` with options; or `import()` inside a sloppy CommonJS module. | Rule 10. The bundler does not read import attributes at run time, and a sloppy module is compiled at run time without access to the bundle's loader. |

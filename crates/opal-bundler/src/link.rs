@@ -1245,14 +1245,69 @@ impl Linker<'_, '_> {
     fn namespace_exports(&mut self, module: usize) -> Result<Vec<(String, Binding)>, Diagnostic> {
         let names = self.exported_names(module, &mut Vec::new())?;
         let mut exports = Vec::new();
+        let mut ambiguous = None;
         for name in names {
             match self.resolve_export(module, &name, &mut Vec::new()) {
                 Resolution::Found(binding, _) => exports.push((name, binding)),
-                Resolution::Ambiguous | Resolution::NotFound => {}
+                Resolution::Ambiguous => {
+                    ambiguous.get_or_insert(name);
+                }
+                Resolution::NotFound => {}
             }
+        }
+        // V8 builds a namespace from the export tables of the modules it
+        // star-exports, and keeps there what it found (FetchStarExports).
+        // Where `export *` declarations form a cycle, a namespace built
+        // earlier can leave one of those tables partial, and a later one
+        // then takes an ambiguous name from it instead of leaving it out:
+        // which namespace has the name depends on which V8 built first.
+        if let Some(name) = ambiguous
+            && self.reaches_star_cycle(module)
+        {
+            return Err(Diagnostic::new(
+                Code::Link,
+                &self.info(module).path,
+                format!(
+                    "this module's namespace has an ambiguous name, '{name}', through `export *` declarations that form a cycle: V8 leaves it out or puts it in depending on which namespace in the cycle it builds first"
+                ),
+            ));
         }
         exports.sort_by(|a, b| a.0.encode_utf16().cmp(b.0.encode_utf16()));
         Ok(exports)
+    }
+
+    /// Whether following `export *` from `module` reaches a cycle of them.
+    fn reaches_star_cycle(&self, module: usize) -> bool {
+        // 1: on the current path, 2: finished.
+        let mut state: HashMap<usize, u8> = HashMap::new();
+        let mut stack: Vec<(usize, usize)> = vec![(module, 0)];
+        state.insert(module, 1);
+        while let Some((current, next)) = stack.last_mut() {
+            let current = *current;
+            let stars = &self.info(current).esm.stars;
+            if *next >= stars.len() {
+                state.insert(current, 2);
+                stack.pop();
+                continue;
+            }
+            let (request, _) = stars[*next];
+            *next += 1;
+            let Target::Module(target) = self.targets[current][request] else {
+                continue;
+            };
+            if self.info(target).format != Format::Esm {
+                continue;
+            }
+            match state.get(&target) {
+                Some(1) => return true,
+                Some(_) => {}
+                None => {
+                    state.insert(target, 1);
+                    stack.push((target, 0));
+                }
+            }
+        }
+        false
     }
 
     /// Every module whose namespace object some binding needs, with its
