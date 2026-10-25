@@ -105,6 +105,26 @@ jobs:
       - name: Cross-check
         run: cargo test -p opal-pm --test npm-cross-check -- --ignored --nocapture
 
+  # crates/opal-bundler/SEMANTICS.md: every fixture is run unbundled and
+  # bundled under Node, and the two runs must be indistinguishable. Node is
+  # the oracle, so the job pins the major version the contract names.
+  bundler-differential:
+    name: Bundler differential (Node oracle)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Install Rust toolchain
+        run: rustup show
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+      - name: Install Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - name: Differential
+        run: cargo test -p opal-bundler --test differential -- --ignored --nocapture
+
   # `deny.toml`: licenses a static MIT binary can carry, crates.io as the only
   # source, and the crates the design rules out. Advisories are left to
   # audit.yml, so the result depends on the tree alone and can gate a merge.

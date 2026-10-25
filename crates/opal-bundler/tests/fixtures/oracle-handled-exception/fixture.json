@@ -1,0 +1,4 @@
+{
+  "why": "A program that handles its own uncaught exception and keeps writing to stderr. The oracle must not mistake it for an uncaught error, and must still see the exit code differ (3 against 4).",
+  "expect": "diverges"
+}

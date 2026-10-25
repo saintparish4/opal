@@ -1,0 +1,4 @@
+{
+  "why": "A two-file program with a live binding and an uncaught error, bundled by hand. The oracle must call it equivalent.",
+  "expect": "equivalent"
+}

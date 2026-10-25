@@ -55,7 +55,10 @@ These must be identical between the program and its bundle:
 1. Bytes written to stdout and to stderr by the program, in order.
 2. The exit code.
 3. For an uncaught exception or unhandled rejection: the thrown value's
-   constructor name and its `message`.
+   constructor name, its `message`, and whether it reached the process as
+   an exception or as a rejection. Node 24 evaluates an ES module as a
+   promise, so a throw at an ES module's top level is a rejection; a handler
+   for `uncaughtException` receives that origin as its second argument.
 4. The order of every synchronous effect, and the order of promise jobs
    relative to each other, except where [rule 10](#10-dynamic-import) says
    otherwise.

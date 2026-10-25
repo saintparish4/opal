@@ -1,0 +1,4 @@
+{
+  "why": "Same output, but the uncaught error is a RangeError instead of a TypeError. Exit code and stdout match, so only the uncaught-error observation can catch it.",
+  "expect": "diverges"
+}
