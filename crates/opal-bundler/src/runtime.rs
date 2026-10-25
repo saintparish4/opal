@@ -9,6 +9,7 @@
 
 /// Captured builtins. Always emitted first.
 pub const CAPTURE: &str = r#"const $$Object = Object, $$Reflect = Reflect, $$Proxy = Proxy, $$Promise = Promise, $$TypeError = TypeError, $$URL = URL;
+const $$genNext = $$Object.getPrototypeOf(function* () {}).prototype.next;
 const $$create = $$Object.create, $$define = $$Object.defineProperty, $$getOwn = $$Object.getOwnPropertyDescriptor, $$hasOwn = $$Object.hasOwn, $$is = $$Object.is, $$apply = $$Reflect.apply, $$then = $$Promise.prototype.then, $$tag = Symbol.toStringTag, $$JSONparse = JSON.parse;
 "#;
 

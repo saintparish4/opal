@@ -135,6 +135,9 @@ pub struct Info {
     pub dynamic_imports: Vec<(String, Span)>,
     /// An `import()` of anything else, resolved when it runs (rule 10).
     pub runtime_imports: bool,
+    /// A read of `arguments` outside any function, which is a global in an
+    /// ES module but would be a generator's own in a lazy module's.
+    pub top_level_arguments: Option<Span>,
 }
 
 impl Info {
@@ -150,6 +153,7 @@ impl Info {
             names: HashSet::new(),
             dynamic_imports: Vec::new(),
             runtime_imports: false,
+            top_level_arguments: None,
         }
     }
 }
@@ -175,6 +179,7 @@ pub fn analyze(source: &Source, parsed: &Parsed<'_>) -> Result<Info, Diagnostic>
         names: HashSet::new(),
         dynamic_imports: Vec::new(),
         runtime_imports: false,
+        top_level_arguments: None,
     };
     for name in scoping.symbol_names() {
         info.names.insert(name.to_string());
@@ -209,6 +214,7 @@ pub fn analyze(source: &Source, parsed: &Parsed<'_>) -> Result<Info, Diagnostic>
         top_level_await: None,
         dynamic_imports: Vec::new(),
         runtime_imports: false,
+        top_level_arguments: None,
         refusal: None,
         direct_eval: false,
         skip_meta: HashSet::new(),
@@ -220,6 +226,7 @@ pub fn analyze(source: &Source, parsed: &Parsed<'_>) -> Result<Info, Diagnostic>
     info.direct_eval = walker.direct_eval;
     info.dynamic_imports = walker.dynamic_imports;
     info.runtime_imports = walker.runtime_imports;
+    info.top_level_arguments = walker.top_level_arguments;
 
     if source.format == Format::Esm {
         info.esm = esm_entries(&parsed.program, scoping, root, &refuse)?;
@@ -521,6 +528,7 @@ struct Walker<'s> {
     top_level_await: Option<Span>,
     dynamic_imports: Vec<(String, Span)>,
     runtime_imports: bool,
+    top_level_arguments: Option<Span>,
     refusal: Option<(Code, Span, String)>,
     direct_eval: bool,
     /// `import.meta` nodes already accounted for by their parent.
@@ -563,6 +571,12 @@ impl<'a> Visit<'a> for Walker<'_> {
         };
         let resolved = self.scoping.get_reference(reference_id);
         let Some(symbol) = resolved.symbol_id() else {
+            if reference.name == "arguments"
+                && self.function_depth == 0
+                && self.top_level_arguments.is_none()
+            {
+                self.top_level_arguments = Some(reference.span);
+            }
             return;
         };
         if self.scoping.symbol_scope_id(symbol) != self.root {

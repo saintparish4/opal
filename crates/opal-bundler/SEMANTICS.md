@@ -310,8 +310,16 @@ bundled module returns a promise for its namespace object. The module, and
 any of its static dependencies not yet run, run once, after the current
 synchronous code and before the promise settles. Their order is rule 2's
 order, starting from the imported module. A module that is only reached
-through dynamic imports is run lazily, by a function in the bundle, and
-keeps rules 2 to 4 exactly, TDZ included.
+through dynamic imports is run lazily, by a generator in the bundle, and
+keeps rules 2 to 4 exactly, TDZ included. Linking and evaluating stay two
+steps, as in ECMA-262 (§16.2.1.6.1.2 Link before §16.2.1.6.1.3
+Evaluate): before any lazy module an `import()` reaches runs, each one's
+generator is created and run to its first `yield`, which makes its
+functions and puts its `let`s in their TDZ, so a module that runs first
+can already call another's function through a namespace or a re-export.
+A lazy module that reads `arguments` at its top level is refused
+([`E-UNSUPPORTED`](#refusals)): in an ES module that is a global, and in
+the generator it would be the generator's own.
 
 A link error in a lazily imported module (a missing export, an
 unresolved specifier) makes Node reject that `import()` when it runs. The

@@ -354,6 +354,7 @@ pub fn emit(
         }
         if *role == Role::Lazy {
             declared.push(format!("{p}b{module}"));
+            declared.push(format!("{p}g{module}"));
         }
     }
     if !declared.is_empty() {
@@ -417,7 +418,9 @@ pub fn emit(
         for (module, role) in linked.roles.iter().enumerate() {
             let thunk = match role {
                 Role::Eager => format!("() => {p}ns{module}"),
-                Role::Lazy => format!("() => ({p}init{module}(), {p}ns{module})"),
+                Role::Lazy => {
+                    format!("() => ({p}link{module}(), {p}init{module}(), {p}ns{module})")
+                }
                 Role::Cjs => {
                     format!("() => {p}cjsNs({p}m{module}, {p}names{module}, {p}sorted{module})")
                 }
@@ -437,9 +440,11 @@ pub fn emit(
     for module in &linked.lazy {
         let piece = pieces.remove(module).expect("every lazy module is printed");
         let cycle = linked.cycle_of[module];
-        out.push(&format!(
-            "const {p}init{module} = {p}lazy({cycle}, () => {{"
-        ));
+        // A generator, so linking and evaluating are two steps, as in
+        // ECMA-262: calling it creates the module's scope (its functions
+        // made, its lets in their TDZ) and runs to the `yield`, which sets
+        // up how other modules read it; resuming it runs the module.
+        out.push(&format!("function* {p}gen{module}() {{"));
         let mut getters = Vec::new();
         for name in exposed.get(module).into_iter().flatten() {
             let local = if name == &format!("{p}default") {
@@ -459,9 +464,28 @@ pub fn emit(
         for fixup in &piece.fixups {
             out.push(fixup);
         }
+        out.push("yield;");
         out.push(&dependency_steps(*module, linked, units, p));
         out.push_mapped(&piece.code, piece.map);
-        out.push("});");
+        out.push("}");
+        // Link (InnerModuleLinking, §16.2.1.6.1.2): this module and every
+        // lazy module it requests, before any of them runs.
+        let mut deps = Vec::new();
+        for target in &linked.targets[*module] {
+            if let Target::Module(t) = target
+                && linked.roles[*t] == Role::Lazy
+                && !deps.contains(t)
+            {
+                deps.push(*t);
+            }
+        }
+        let link_deps: String = deps.iter().map(|d| format!(" {p}link{d}();")).collect();
+        out.push(&format!(
+            "function {p}link{module}() {{ if ({p}g{module} !== undefined) return; {p}g{module} = {p}gen{module}(); {p}apply({p}genNext, {p}g{module}, []);{link_deps} }}"
+        ));
+        out.push(&format!(
+            "const {p}init{module} = {p}lazy({cycle}, () => {{ {p}apply({p}genNext, {p}g{module}, []); }});"
+        ));
     }
 
     for fixup in &fixups {
@@ -1179,7 +1203,7 @@ impl<'a> VisitMut<'a> for Rewriter<'a, '_> {
                         format!("() => {p}entryDone.then(() => {p}ns{t})")
                     }
                     Role::Eager => format!("() => {p}ns{t}"),
-                    Role::Lazy => format!("() => ({p}init{t}(), {p}ns{t})"),
+                    Role::Lazy => format!("() => ({p}link{t}(), {p}init{t}(), {p}ns{t})"),
                     Role::Cjs => format!("() => {p}cjsNs({p}m{t}, {p}names{t}, {p}sorted{t})"),
                     _ => return,
                 },

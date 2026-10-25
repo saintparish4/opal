@@ -107,10 +107,20 @@ as it runs and probes what it imported, so order, values, `.name`s, and errors
 reach stdout. A seed the bundler refuses counts as a pass only if Node also
 fails to link the program, or the refusal is one the contract lists.
 
-Its first runs found three bundler bugs, now fixed and covered by fixtures:
+Its runs found five bundler bugs, all fixed and covered by fixtures. The
+first three, in its first minutes:
 an `import()` of the entry while its top-level `await` was pending settled at
 once, where Node waits for the entry (and so deadlocks, like the program); a
 lazily imported module that depends on such an entry ran at once, where Node
 makes it wait (now refused, `E-TLA`); and the oracle compared the file and
 line in Node's "unsettled top-level await" warning, which name the bundle
 instead of the program.
+
+The long runs found two more. A lazy module's namespace getters were
+written inside its closure, where a re-exported binding's bundle name could
+resolve to one of the module's own (`lazy-namespace-capture`, seed
+1002770). And a lazy module was linked only when it was entered, so a
+module that ran first read another's re-exported function through a
+namespace as `undefined` where ECMA-262 has already made it at link time;
+lazy modules are now generators, linked as a graph before any runs
+(`lazy-link-before-evaluate`, seeds 2034477, 2040152, 2041121, 2045733).

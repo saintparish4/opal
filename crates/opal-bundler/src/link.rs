@@ -288,6 +288,16 @@ pub fn link(
     let (lazy, cycle_of) = linker.lazy_modules();
     linker.check_top_level_await(entry, &order)?;
     linker.check_lazy_waits_for_entry(entry, &lazy)?;
+    for module in &lazy {
+        if let Some(span) = linker.info(*module).top_level_arguments {
+            return Err(linker.refuse(
+                Code::Unsupported,
+                *module,
+                span,
+                "`arguments` at the top level of a module reached only through import(): the bundle runs that module in a generator, whose own arguments it would read".to_string(),
+            ));
+        }
+    }
     // Every CommonJS module an ES module requests gets a module record, and
     // so export names, even when nothing names one of them (`import 'x'`).
     for module in 0..modules.len() {
