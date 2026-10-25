@@ -1,6 +1,6 @@
 # Benchmarks
 
-Opal against npm, pnpm, yarn, and bun, each installing the same `package.json`. The [README](../README.md#benchmarks) has the headline numbers. This file has the full method, min–max ranges, both machines, and how to reproduce every table.
+Opal against npm, pnpm, yarn, and bun, each installing the same `package.json`. The [README](../README.md#benchmarks) has the headline numbers. This file has the full method, min–max ranges, both machines, and how to reproduce every table. [`opal test`](#opal-test) against Jest, Vitest, bun test and node --test is at the end.
 
 - [Method](#method)
 - [Results: 2026-10-06, opal 0.4.0](#results-2026-10-06-opal-040)
@@ -13,6 +13,8 @@ Opal against npm, pnpm, yarn, and bun, each installing the same `package.json`. 
 - [Concurrent installs on one store](#concurrent-installs-on-one-store)
 - [The internal install benchmark](#the-internal-install-benchmark)
   - [Scaling: package count and peak memory](#scaling-package-count-and-peak-memory)
+- [opal test](#opal-test)
+  - [Results: 2026-10-25, `e23f7eb`](#results-2026-10-25-e23f7eb)
 
 ## Method
 
@@ -499,3 +501,80 @@ What it shows:
 - **So does memory, and it stays small:** about 14 KiB per package cold and 12 KiB warm, on top of about 22 MiB. 10,000 packages peak at 158 MiB.
 - **Package count doesn't explain Opal's 491 MB on the Next.js app; its metadata does.** Measured the same day with GNU time on the real app, a cold install, which resolves, peaked at 494 MiB, and a lockfile-only install, which reads no metadata, at 172 MiB. Those 418 packuments are 185 MiB of JSON on disk, and the resolver keeps every one for the whole run. The packuments here have 12 versions each; real ones have hundreds or thousands.
 - **Bytes in flight come next.** The scaffold workload, with real-sized tarballs, peaks at 85 MiB cold against 12 MiB for a no-op: up to 16 tarballs are held in memory at once.
+
+## opal test
+
+`opal test` against the runners it stands in for, on the same tests: [`test-runners.py`](./test-runners.py). Every file holds the same ten tests:
+
+- a describe block with a `beforeEach`;
+- `toBe`, `toEqual`, `toThrow`, an async test, `toMatch`, `toContain`, `toBeFalsy`, `toBeCloseTo`, `toBeNull` and a counter.
+
+node --test gets them written for `node:test`. The project is 1, 40 or 400 such files.
+
+What a row costs depends on its isolation model, what one test file can see of another, so each row names it:
+
+- **opal test** gives every file a fresh `vm` context and its own module registry, as Jest does. It runs them in long-lived Node workers, which keep the compiled framework and the V8 code cache between files.
+- **Jest** builds the same per-file `vm` context in worker processes it starts for the run.
+- **Vitest** isolates each file in its own worker with its own module graph, unless `--no-isolate` lets the files in a worker share modules.
+- **node --test** starts a process per file.
+- **bun test** runs every file in one global scope, so nothing isolates one file from the next.
+
+The method is the engine-floor harness's:
+
+- **Rounds.** Each round runs a short hyperfine block per command, in an order shuffled per round. All samples are pooled, and min and median come from the pool, so a slow minute lands on every runner.
+- **Defaults and caches.** Each runner runs with its own defaults: its own worker count, and its own caches warm from warmup runs.
+- **Checked first.** Before timing, every command runs once and has to report all its tests passing.
+- **Ratios.** They are medians against opal test's median at the same size.
+
+```sh
+python3 benchmarks/test-runners.py           # 1, 40 and 400 files
+python3 benchmarks/test-runners.py --quick   # one round, to check the commands
+```
+
+### Results: 2026-10-25, `e23f7eb`
+
+Laptop: AMD Ryzen 5 5625U (WSL limited to 8 of 12 threads), Linux 6.6 under WSL2. Node 24.19.0, Jest 30.5.2, Vitest 4.1.12, bun 1.4.2, hyperfine 1.20.0. Raw samples: [`results/test-runners-20261025-173046.json`](./results/test-runners-20261025-173046.json).
+
+**1 file, 10 tests** (5 rounds of 6 runs each):
+
+| runner | isolation | min | median | × opal test |
+|---|---|---:|---:|---:|
+| opal test | vm context per file, warm Node workers | 78 ms | 82 ms | 1.00 |
+| jest 30.5.2 | vm context per file, worker processes | 557 ms | 575 ms | 7.05 |
+| vitest 4.1.12 | worker and module graph per file | 503 ms | 518 ms | 6.35 |
+| vitest 4.1.12 --no-isolate | modules shared within a worker | 509 ms | 524 ms | 6.43 |
+| bun test 1.4.2 | none: one global scope | 8 ms | 10 ms | 0.12 |
+| node --test 24.19 | process per file | 118 ms | 123 ms | 1.51 |
+
+**40 files, 400 tests** (3 rounds of 4):
+
+| runner | isolation | min | median | × opal test |
+|---|---|---:|---:|---:|
+| opal test | vm context per file, warm Node workers | 232 ms | 242 ms | 1.00 |
+| jest 30.5.2 | vm context per file, worker processes | 996 ms | 1.02 s | 4.19 |
+| vitest 4.1.12 | worker and module graph per file | 1.94 s | 2.03 s | 8.37 |
+| vitest 4.1.12 --no-isolate | modules shared within a worker | 743 ms | 768 ms | 3.17 |
+| bun test 1.4.2 | none: one global scope | 19 ms | 20 ms | 0.08 |
+| node --test 24.19 | process per file | 691 ms | 709 ms | 2.92 |
+
+**400 files, 4,000 tests** (3 rounds of 2):
+
+| runner | isolation | min | median | × opal test |
+|---|---|---:|---:|---:|
+| opal test | vm context per file, warm Node workers | 1.09 s | 1.14 s | 1.00 |
+| jest 30.5.2 | vm context per file, worker processes | 3.19 s | 3.20 s | 2.80 |
+| vitest 4.1.12 | worker and module graph per file | 15.88 s | 16.34 s | 14.29 |
+| vitest 4.1.12 --no-isolate | modules shared within a worker | 1.96 s | 2.02 s | 1.77 |
+| bun test 1.4.2 | none: one global scope | 104 ms | 110 ms | 0.10 |
+| node --test 24.19 | process per file | 6.45 s | 6.56 s | 5.74 |
+
+What these show:
+
+- **Isolation sets the floor.** bun test, which isolates nothing, stays 8 to 12 times faster than opal test at every size. Among the runners that give each file its own globals and modules, opal test is the fastest at every size.
+- **Against Jest, the gap narrows as files are added:** 7.0× at 1 file, 4.2× at 40, 2.8× at 400. Most of what opal saves is Jest's start: about 500 ms of Node workers, configuration and haste map before the first test runs. Per file, opal still spends about 18 ms of a worker's time: a fresh context, Jest's framework evaluated in it, the run, and the report. That is now what decides the larger sizes.
+- **Against Vitest, the gap widens with files:** 6.3× at 1 file, 14.3× at 400. Vitest isolates by giving each file its own worker and module graph, and that costs it about 40 ms a file here. With `--no-isolate` it is 1.8× opal's time at 400 files, and its files then share their modules.
+- **node --test** starts a Node process per file, which on this machine costs about 30 ms before the file does anything.
+- **Contention.** Few other processes were runnable when blocks started (at most 4, median 0 at every size). The load average had risen to 9 by the end, from the runners' own worker pools.
+
+On the Nest 12 scaffold's suite, one test file loading 401 ES modules that opal transforms, `opal test` takes 690 ms and `vitest run` 877 ms (hyperfine, 5 runs each, same session, `e23f7eb`).
+
