@@ -149,6 +149,7 @@ There is no Vite in opal test. A Vitest file's imports are resolved by Node's ru
   - `typecheck`, `includeSource` (in-source tests, `import.meta.vitest`), `coverage` and `reporters`.
 - **Isolation.** Every test file runs in its own context with its own module registry (SEMANTICS.md), as Vitest's default `isolate: true` does. `isolate: false` doesn't share modules between files.
 - **Command line and output. Jest's.** `opal test` takes Jest's flags (`-t`/`--testNamePattern`, `-u`, `--ci`, `--json`, `--outputFile`), prints Jest's report, and writes Jest's JSON. `vitest run`'s flags and reporters aren't accepted.
+- **Watch mode and related tests. Jest's.** `--watch`, `--watchAll`, `-o` and `--findRelatedTests` pick tests by Jest's rules (SEMANTICS.md), in Vitest's dialect too. Plain `vitest` watches by default and relates tests through Vite's module graph; `vitest related` isn't accepted.
 
 ## How this is checked
 

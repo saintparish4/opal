@@ -22,6 +22,17 @@ pub struct ProjectConfig {
     #[serde(default)]
     pub test_path_ignore_patterns: Vec<String>,
     pub module_file_extensions: Vec<String>,
+    /// Regular expressions; a file whose absolute path matches one doesn't
+    /// exist as far as Jest's haste map is concerned.
+    #[serde(default)]
+    pub module_path_ignore_patterns: Vec<String>,
+    /// Regular expression -> replacement (or replacements), in order.
+    #[serde(default)]
+    pub module_name_mapper: serde_json::Map<String, Value>,
+    /// Regular expressions; in watch mode, a change to a file whose absolute
+    /// path matches one doesn't count.
+    #[serde(default)]
+    pub watch_path_ignore_patterns: Vec<String>,
     /// Where the config came from, for messages; `None` for the defaults.
     #[serde(default)]
     pub config_path: Option<PathBuf>,

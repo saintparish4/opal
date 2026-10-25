@@ -5,22 +5,12 @@
 
 const {ErrorWithStack, isPromise} = require('./errors.cjs');
 
-// chalk. opal prints matcher messages without color; a test that snapshots
-// one gets the same text either way, since Jest's own snapshots of matcher
-// output are taken with colors off.
-// It is chalk at level 0: every style, chained or called with arguments
-// (`red.bold`, `rgb(1, 2, 3).bgRgb(...)`), returns its text as is.
-const colors = new Proxy(function chalk(...args) {
-  return args.join(' ');
-}, {
-  apply: (_target, _this, args) => args.join(' '),
-  get: (target, name) => {
-    if (name === 'level') return 0;
-    if (name === 'supportsColor') return false;
-    if (typeof name === 'symbol' || name in Function.prototype) return target[name];
-    return colors;
-  },
-});
+// chalk, the version Jest colors matcher messages and diffs with
+// (port/port-chalk.mjs). The ported files read it as this module's default
+// export. Whether it colors is up to FORCE_COLOR, which the pool sets as
+// jest-worker does, so a message snapshotted under `--color` carries the
+// same codes it does in Jest.
+const chalk = require('./chalk.cjs');
 
 // jest-util
 const pluralize = (word, count, ending = 's') => `${count} ${word}${count === 1 ? '' : ending}`;
@@ -106,19 +96,12 @@ const createTranspilingRequire = () => async (resolverPath, applyInteropRequireD
 };
 
 module.exports = {
-  bgYellow: colors,
-  bold: colors,
-  dim: colors,
-  green: colors,
-  inverse: colors,
-  red: colors,
-  yellow: colors,
+  default: chalk,
   createTranspilingRequire,
   getStackTraceLines,
   getTopFrame,
   interopRequireDefault,
   isError,
-  default: colors,
   ErrorWithStack,
   formatExecError,
   formatStackTrace,

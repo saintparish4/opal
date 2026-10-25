@@ -81,8 +81,32 @@ enum Command {
 /// spellings Jest also accepts.
 #[derive(Args)]
 struct TestArgs {
-    /// Regular expressions; only test files whose path matches one run.
+    /// Regular expressions; only test files whose path matches one run. With
+    /// --findRelatedTests, source files instead.
     patterns: Vec<String>,
+    /// Run the tests that depend on the source files given as arguments.
+    #[arg(long = "findRelatedTests", alias = "find-related-tests")]
+    find_related_tests: bool,
+    /// Print the test files that would run, and run none.
+    #[arg(long = "listTests", alias = "list-tests")]
+    list_tests: bool,
+    /// Run the tests related to the files git says have changed.
+    #[arg(short = 'o', long = "onlyChanged", alias = "only-changed")]
+    only_changed: bool,
+    /// Rerun the tests related to each change, starting from what git says
+    /// has changed.
+    #[arg(long, conflicts_with = "watch_all")]
+    watch: bool,
+    /// Rerun every test on each change.
+    #[arg(long = "watchAll", alias = "watch-all")]
+    watch_all: bool,
+    /// Color matcher messages, or with =false don't, whatever the terminal
+    /// supports.
+    #[arg(long, alias = "colors", num_args = 0..=1, require_equals = true, default_missing_value = "true")]
+    color: Option<bool>,
+    /// Don't color matcher messages.
+    #[arg(long = "no-color", alias = "no-colors", conflicts_with = "color")]
+    no_color: bool,
     /// A Jest config file to use instead of looking for one.
     #[arg(short = 'c', long)]
     config: Option<PathBuf>,
@@ -341,6 +365,21 @@ fn test_command(args: TestArgs) -> Result<ExitCode, Failure> {
         root,
         config: args.config,
         path_patterns: args.patterns,
+        find_related_tests: args.find_related_tests,
+        list_tests: args.list_tests,
+        only_changed: args.only_changed,
+        color: if args.no_color {
+            Some(false)
+        } else {
+            args.color
+        },
+        watch: if args.watch_all {
+            opal_test::Watch::All
+        } else if args.watch {
+            opal_test::Watch::Related
+        } else {
+            opal_test::Watch::Off
+        },
         test_name_pattern: args.test_name_pattern,
         update_snapshot,
         ci,

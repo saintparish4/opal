@@ -23,7 +23,9 @@ pub use memo::{
     CacheStatus, CachedResolution, GraphCache, MEMO_FORMAT_VERSION, MemoError, MemoKey, MissReason,
     resolve_cached,
 };
-pub use resolver::{Resolution, ResolveError, ResolveTrace, ResolverOptions, resolve};
+pub use resolver::{
+    Resolution, ResolveError, ResolveTrace, ResolverHooks, ResolverOptions, resolve, resolve_with,
+};
 
 /// Bumped when the serialized shape changes; older snapshots then miss instead
 /// of being misread.

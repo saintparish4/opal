@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // opal test's expect, held to Jest's own on random values.
 //
-//   node compat/test-expect.cjs [--runs N] [--seed N] [--against vitest]
+//   node compat/test-expect.cjs [--runs N] [--seed N] [--color] [--against vitest]
 //
 // Jest's real `expect` (the build installed in compat/test-runners/runners)
 // runs in one fresh test context, opal's port in another, each context built
@@ -23,6 +23,10 @@
 // matchers inside them. Half the pairs are a value and a copy with one
 // change; the rest are a value and a plain copy, or two unrelated values.
 //
+// --color runs both with FORCE_COLOR=1, as a Jest worker runs when the
+// terminal supports color or `--color` is given, so the messages carry
+// chalk's codes and have to carry the same ones.
+//
 // --against vitest holds opal to Vitest's expect instead, to measure the
 // distance rather than to close it: opal's expect is Jest's, in Vitest's
 // dialect too. Vitest's real expect (chai with @vitest/expect's plugins, put
@@ -33,7 +37,7 @@
 // differ. The cases that differ are printed, for COMPATIBILITY.md.
 'use strict';
 
-process.env.FORCE_COLOR = '0';
+process.env.FORCE_COLOR = process.argv.includes('--color') ? '1' : '0';
 
 const fs = require('fs');
 const path = require('path');

@@ -84,6 +84,12 @@ const NODE_BUILTINS: &[&str] = &[
     "zlib",
 ];
 
+fn in_node_modules(path: &NormalizedPath) -> bool {
+    path.as_str()
+        .split('/')
+        .any(|segment| segment == "node_modules")
+}
+
 #[derive(Debug, thiserror::Error)]
 pub enum ResolveError {
     #[error("entry {0} is not a file")]
@@ -108,6 +114,14 @@ pub struct ResolverOptions {
     /// `import type { T } from './t'` erases at compile time, so by default it
     /// is not an edge. Type-checking tools would want it on.
     pub follow_type_only_imports: bool,
+    /// Calls besides `require` that count as a `require` edge when their
+    /// first argument is a string literal, written `object.method`. A test
+    /// runner adds Jest's `jest.requireActual` and the like.
+    pub require_functions: Vec<String>,
+    /// A module inside `node_modules` is resolved to but not read for imports
+    /// of its own, so the graph ends at the project's edge. A test runner's
+    /// related-test query wants that; a bundler does not.
+    pub packages_are_leaves: bool,
 }
 
 impl Default for ResolverOptions {
@@ -121,6 +135,8 @@ impl Default for ResolverOptions {
             .collect(),
             conditions: vec!["node".to_string()],
             follow_type_only_imports: false,
+            require_functions: Vec::new(),
+            packages_are_leaves: false,
         }
     }
 }
@@ -138,8 +154,31 @@ impl ResolverOptions {
             builder.push_str(condition);
         }
         builder.push_u64(u64::from(self.follow_type_only_imports));
+        // Pushed only when set, so a default options' digest, and every memo
+        // key made from one, is what it was before these existed.
+        if !self.require_functions.is_empty() || self.packages_are_leaves {
+            builder.push_u64(self.require_functions.len() as u64);
+            for function in &self.require_functions {
+                builder.push_str(function);
+            }
+            builder.push_u64(u64::from(self.packages_are_leaves));
+        }
         builder.finish()
     }
+}
+
+/// A specifier rewrite: see [`ResolverHooks::rewrite`].
+pub type Rewrite<'h> = &'h dyn Fn(&str) -> Option<Vec<String>>;
+
+/// What a caller can change about resolution beyond [`ResolverOptions`]:
+/// behavior that is code rather than data, so it can't be part of a memo
+/// key, and [`resolve_with`] is never memoized.
+#[derive(Default)]
+pub struct ResolverHooks<'h> {
+    /// Rewrites a specifier before it is resolved. `Some(candidates)` are
+    /// tried in its place, in order, and the first that resolves wins; `None`
+    /// leaves it as written. Jest's `moduleNameMapper` is one.
+    pub rewrite: Option<Rewrite<'h>>,
 }
 
 /// Every filesystem fact the graph depends on, root-relative.
@@ -164,7 +203,18 @@ pub fn resolve(
     entry: &NormalizedPath,
     options: &ResolverOptions,
 ) -> Result<Resolution, ResolveError> {
-    Resolver::new(root.clone(), options).run(entry)
+    Resolver::new(root.clone(), options, &ResolverHooks::default()).run(std::slice::from_ref(entry))
+}
+
+/// Resolves the graph reachable from any of `entries`, with `hooks`. The
+/// graph's entry is the first of them.
+pub fn resolve_with(
+    root: &NormalizedPath,
+    entries: &[NormalizedPath],
+    options: &ResolverOptions,
+    hooks: &ResolverHooks,
+) -> Result<Resolution, ResolveError> {
+    Resolver::new(root.clone(), options, hooks).run(entries)
 }
 
 enum Target {
@@ -176,6 +226,7 @@ enum Target {
 struct Resolver<'a> {
     root: NormalizedPath,
     options: &'a ResolverOptions,
+    hooks: &'a ResolverHooks<'a>,
     builder: ModuleGraphBuilder,
     files: BTreeMap<NormalizedPath, ContentHash>,
     missing: BTreeSet<NormalizedPath>,
@@ -190,11 +241,16 @@ struct Resolver<'a> {
 }
 
 impl<'a> Resolver<'a> {
-    fn new(root: NormalizedPath, options: &'a ResolverOptions) -> Self {
+    fn new(
+        root: NormalizedPath,
+        options: &'a ResolverOptions,
+        hooks: &'a ResolverHooks<'a>,
+    ) -> Self {
         Self {
             builder: ModuleGraphBuilder::new(root.clone()),
             root,
             options,
+            hooks,
             files: BTreeMap::new(),
             missing: BTreeSet::new(),
             manifests: HashMap::new(),
@@ -203,14 +259,18 @@ impl<'a> Resolver<'a> {
         }
     }
 
-    fn run(mut self, entry: &NormalizedPath) -> Result<Resolution, ResolveError> {
-        let entry = self.root.join(entry.as_str());
-        if !self.probe(&entry) {
-            return Err(ResolveError::EntryNotFound(entry));
+    fn run(mut self, entries: &[NormalizedPath]) -> Result<Resolution, ResolveError> {
+        let mut queue = VecDeque::new();
+        for entry in entries {
+            let entry = self.root.join(entry.as_str());
+            if !self.probe(&entry) {
+                return Err(ResolveError::EntryNotFound(entry));
+            }
+            if self.builder.id_of(&entry).is_none() {
+                let entry_id = self.intern(&entry)?;
+                queue.push_back((entry_id, entry));
+            }
         }
-
-        let entry_id = self.intern(&entry)?;
-        let mut queue = VecDeque::from([(entry_id, entry)]);
 
         // Iterative rather than recursive: dependency chains in real projects
         // get deep enough to be a stack-overflow risk, and a package manager
@@ -286,7 +346,7 @@ impl<'a> Resolver<'a> {
         path: &NormalizedPath,
     ) -> Result<Vec<(String, DependencyKind)>, ResolveError> {
         let kind = self.kind_of(path);
-        if !kind.is_parsed() {
+        if !kind.is_parsed() || (self.options.packages_are_leaves && in_node_modules(path)) {
             return Ok(Vec::new());
         }
         let source = match self.sources.get(path) {
@@ -314,6 +374,7 @@ impl<'a> Resolver<'a> {
         let mut collector = ImportCollector {
             found: Vec::new(),
             follow_type_only: self.options.follow_type_only_imports,
+            require_functions: &self.options.require_functions,
         };
         collector.visit_program(&parsed.program);
 
@@ -326,6 +387,29 @@ impl<'a> Resolver<'a> {
     }
 
     fn resolve_specifier(
+        &mut self,
+        from: &NormalizedPath,
+        specifier: &str,
+        kind: DependencyKind,
+    ) -> Target {
+        if let Some(rewrite) = self.hooks.rewrite
+            && let Some(candidates) = rewrite(specifier)
+        {
+            for candidate in &candidates {
+                if let target @ (Target::Path(_) | Target::Builtin(_)) =
+                    self.resolve_written(from, candidate, kind)
+                {
+                    return target;
+                }
+            }
+            return Target::Unresolved(format!(
+                "rewritten to {candidates:?}, none of which resolves"
+            ));
+        }
+        self.resolve_written(from, specifier, kind)
+    }
+
+    fn resolve_written(
         &mut self,
         from: &NormalizedPath,
         specifier: &str,
@@ -806,12 +890,13 @@ fn source_kind_of(path: &NormalizedPath) -> SourceKind {
     }
 }
 
-struct ImportCollector {
+struct ImportCollector<'o> {
     found: Vec<(String, DependencyKind)>,
     follow_type_only: bool,
+    require_functions: &'o [String],
 }
 
-impl ImportCollector {
+impl ImportCollector<'_> {
     fn push(&mut self, specifier: &str, kind: DependencyKind) {
         self.found.push((specifier.to_string(), kind));
     }
@@ -821,7 +906,7 @@ impl ImportCollector {
     }
 }
 
-impl<'a> Visit<'a> for ImportCollector {
+impl<'a> Visit<'a> for ImportCollector<'_> {
     fn visit_import_declaration(&mut self, declaration: &ImportDeclaration<'a>) {
         if self.keeps(declaration.import_kind) {
             self.push(&declaration.source.value, DependencyKind::StaticImport);
@@ -853,10 +938,17 @@ impl<'a> Visit<'a> for ImportCollector {
     }
 
     fn visit_call_expression(&mut self, call: &CallExpression<'a>) {
-        if let Expression::Identifier(callee) = &call.callee
-            && callee.name == "require"
-            && let Some(Argument::StringLiteral(source)) = call.arguments.first()
-        {
+        let is_require = match &call.callee {
+            Expression::Identifier(callee) => callee.name == "require",
+            Expression::StaticMemberExpression(member) => {
+                matches!(&member.object, Expression::Identifier(object)
+                if self.require_functions.iter().any(|function| {
+                    function.split_once('.') == Some((object.name.as_str(), member.property.name.as_str()))
+                }))
+            }
+            _ => false,
+        };
+        if is_require && let Some(Argument::StringLiteral(source)) = call.arguments.first() {
             self.push(&source.value, DependencyKind::Require);
         }
         walk::walk_call_expression(self, call);
@@ -980,5 +1072,26 @@ mod tests {
         let mut changed = baseline.clone();
         changed.follow_type_only_imports = true;
         assert_ne!(baseline.digest(), changed.digest());
+        let mut leaves = baseline.clone();
+        leaves.packages_are_leaves = true;
+        assert_ne!(baseline.digest(), leaves.digest());
+    }
+
+    #[test]
+    fn test_default_options_keep_the_digest_they_had() {
+        // The digest of the defaults before require_functions and
+        // packages_are_leaves existed: memo keys made from it stay valid.
+        let mut builder = HashBuilder::new("opal.resolver.options.v1");
+        let defaults = ResolverOptions::default();
+        builder.push_u64(defaults.extensions.len() as u64);
+        for extension in &defaults.extensions {
+            builder.push_str(extension);
+        }
+        builder.push_u64(defaults.conditions.len() as u64);
+        for condition in &defaults.conditions {
+            builder.push_str(condition);
+        }
+        builder.push_u64(0);
+        assert_eq!(defaults.digest(), builder.finish());
     }
 }

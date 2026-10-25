@@ -13,15 +13,19 @@
 //! from in Jest's source; `compat/test-runners.py` checks it against Jest,
 //! Vitest and Bun.
 
+mod changed;
+mod colors;
 pub mod config;
 mod discover;
 pub mod glob;
 mod pool;
+mod related;
 mod report;
 mod runtime;
 mod service;
 pub mod transform;
 mod tsconfig;
+mod watch;
 
 use std::io::Write;
 use std::path::PathBuf;
@@ -51,11 +55,22 @@ pub enum TestError {
     Pattern(String, String),
     #[error("could not unpack the test runtime: {0}")]
     Runtime(std::io::Error),
+    #[error("watch mode: {0}")]
+    Watch(String),
     #[error("could not write {}: {source}", path.display())]
     Output {
         path: PathBuf,
         source: std::io::Error,
     },
+}
+
+/// `--watch` reruns the tests related to what changed; `--watchAll` reruns
+/// every test.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Watch {
+    Off,
+    Related,
+    All,
 }
 
 /// Whether snapshots that don't exist yet, or don't match, are written.
@@ -84,7 +99,17 @@ pub struct RunOptions {
     pub root: PathBuf,
     pub config: Option<PathBuf>,
     /// Regular expressions; a test file has to match one, when any are given.
+    /// With `find_related_tests`, the source files whose tests to run instead.
     pub path_patterns: Vec<String>,
+    /// `--findRelatedTests`: run the tests that depend on `path_patterns`.
+    pub find_related_tests: bool,
+    /// `--listTests`: print the test files that would run, and run none.
+    pub list_tests: bool,
+    /// `-o`: run the tests related to the files git says have changed.
+    pub only_changed: bool,
+    /// `--color` or `--no-color`; otherwise whether stdout supports color.
+    pub color: Option<bool>,
+    pub watch: Watch,
     pub test_name_pattern: Option<String>,
     pub update_snapshot: UpdateSnapshot,
     pub ci: bool,
@@ -115,18 +140,30 @@ fn default_workers() -> usize {
 pub fn run(options: &RunOptions, out: &mut dyn Write) -> Result<Outcome, TestError> {
     let runtime_dir = runtime::unpack(&options.cache_dir).map_err(TestError::Runtime)?;
     let transforms = std::sync::Arc::new(service::TransformService::new(&options.cache_dir));
-    let mut pool = pool::Pool::start(&options.node, &runtime_dir.join("worker.cjs"), transforms)?;
+    let color = colors::stdout_supports_color(options.color);
+    let mut pool = pool::Pool::start(
+        &options.node,
+        &runtime_dir.join("worker.cjs"),
+        transforms,
+        color,
+    )?;
     pool.spawn()?;
-    let result = run_with(&mut pool, options, out);
+    let result = match options.watch {
+        Watch::Off => run_once(&mut pool, options, out),
+        mode => watch::watch(&mut pool, options, mode, out),
+    };
     pool.shutdown();
     result
 }
 
-fn run_with(
-    pool: &mut pool::Pool,
-    options: &RunOptions,
-    out: &mut dyn Write,
-) -> Result<Outcome, TestError> {
+/// The project's config, as the runtime normalized it: read for discovery,
+/// and passed back to every worker.
+struct Project {
+    config: config::ProjectConfig,
+    value: serde_json::Value,
+}
+
+fn load_project(pool: &mut pool::Pool, options: &RunOptions) -> Result<Project, TestError> {
     let reply = pool.request(json!({
         "type": "config",
         "rootDir": options.root,
@@ -135,16 +172,69 @@ fn run_with(
     if let Some(error) = reply["error"].as_str() {
         return Err(TestError::Config(error.to_string()));
     }
-    let mut config_value = reply["config"].clone();
-    let config = config::ProjectConfig::from_value(&config_value).map_err(|error| {
+    let value = reply["config"].clone();
+    let config = config::ProjectConfig::from_value(&value).map_err(|error| {
         TestError::Config(format!("the runtime sent an unreadable config: {error}"))
     })?;
+    Ok(Project { config, value })
+}
 
-    let filters = discover::compile(&options.path_patterns)?;
-    let found = discover::find_tests(&config, &filters)?;
+/// The test files a run takes on: those related to `changed` when it is
+/// given, else every test file the path patterns let through.
+fn select(
+    options: &RunOptions,
+    project: &Project,
+    changed: Option<&[PathBuf]>,
+) -> Result<discover::Found, TestError> {
+    let Some(changed) = changed else {
+        return discover::find_tests(&project.config, &discover::compile(&options.path_patterns)?);
+    };
+    let found = discover::find_tests(&project.config, &[])?;
+    let cwd = std::env::current_dir().unwrap_or_else(|_| options.root.clone());
+    let mut tests = related::related_tests(&project.config, &found, changed, &cwd);
+    // With -o, the path patterns still narrow what runs, as in Jest.
+    if !options.find_related_tests && !options.path_patterns.is_empty() {
+        let filters = discover::compile(&options.path_patterns)?;
+        tests.retain(|path| filters.iter().any(|r| r.is_match(&path.to_string_lossy())));
+    }
+    Ok(discover::Found { tests, ..found })
+}
+
+fn run_once(
+    pool: &mut pool::Pool,
+    options: &RunOptions,
+    out: &mut dyn Write,
+) -> Result<Outcome, TestError> {
+    let project = load_project(pool, options)?;
+    let changed: Option<Vec<PathBuf>> = if options.find_related_tests {
+        Some(options.path_patterns.iter().map(PathBuf::from).collect())
+    } else if options.only_changed {
+        Some(changed::changed_files(&project.config.roots)?)
+    } else {
+        None
+    };
+    let found = select(options, &project, changed.as_deref())?;
+    if options.list_tests {
+        list_tests(options, &found.tests, out)?;
+        return Ok(Outcome {
+            success: true,
+            files: 0,
+        });
+    }
+    run_files(pool, options, &project, found, out)
+}
+
+fn run_files(
+    pool: &mut pool::Pool,
+    options: &RunOptions,
+    project: &Project,
+    found: discover::Found,
+    out: &mut dyn Write,
+) -> Result<Outcome, TestError> {
+    let mut config_value = project.value.clone();
     config_value["manualMocks"] = json!(found.manual_mocks);
     let files = found.tests;
-    let mut aggregate = Aggregate::new(&config.root_dir);
+    let mut aggregate = Aggregate::new(&project.config.root_dir);
     if files.is_empty() {
         let _ = writeln!(
             out,
@@ -185,6 +275,34 @@ fn run_with(
         success: aggregate.success(),
         files: count,
     })
+}
+
+/// runJest's `--listTests`: one path a line, or a JSON array with `--json`,
+/// to `--outputFile` when given.
+fn list_tests(
+    options: &RunOptions,
+    tests: &[PathBuf],
+    out: &mut dyn Write,
+) -> Result<(), TestError> {
+    let text = if options.json {
+        serde_json::to_string(tests).expect("serializable")
+    } else {
+        tests
+            .iter()
+            .map(|path| path.display().to_string())
+            .collect::<Vec<_>>()
+            .join("\n")
+    };
+    match &options.output_file {
+        Some(path) => std::fs::write(path, text).map_err(|source| TestError::Output {
+            path: path.clone(),
+            source,
+        }),
+        None => {
+            let _ = writeln!(out, "{text}");
+            Ok(())
+        }
+    }
 }
 
 fn write_json(options: &RunOptions, aggregate: &Aggregate) -> Result<(), TestError> {

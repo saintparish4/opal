@@ -18,6 +18,7 @@ opal test promises Jest 30.5.2's behavior for files written against Jest's globa
 - [Mock functions](#mock-functions)
 - [Module mocking](#module-mocking)
 - [Transforms](#transforms)
+- [Related tests and watch mode](#related-tests-and-watch-mode)
 - [Vitest's dialect](#vitests-dialect)
 - [Checked so far](#checked-so-far)
 - [Not yet](#not-yet)
@@ -132,10 +133,10 @@ From `runAndTransformResultsToJestFormat` in `jestAdapterInit.ts`, `TestSchedule
 `expect` is Jest's own: `expect`, `@jest/expect-utils`, `jest-matcher-utils`, `jest-diff`, `@jest/diff-sequences` and `@jest/get-type` at v30.5.2. [`port/port.mjs`](./port/port.mjs) carries them over as the `runtime/jest-*.cjs` files.
 
 - **What the port changes.** It strips the types with Node's own stripper and rewrites ES modules to CommonJS the way Babel does. Nothing else in the code changes, and `port.mjs --check` verifies that the committed files still match.
-- **What it maps out.** chalk becomes a shim without colors. pretty-format becomes opal's own port (`runtime/format.cjs`). Three functions of `jest-util` and `jest-message-util` come from `runtime/support.cjs`.
+- **What it maps out.** pretty-format becomes opal's own port (`runtime/format.cjs`). Three functions of `jest-util` and `jest-message-util` come from `runtime/support.cjs`. chalk is chalk 4.1.2 itself, with ansi-styles, color-convert and supports-color, copied from the oracle's install by [`port/port-chalk.mjs`](./port/port-chalk.mjs).
 - **Where it runs.** `expect` is evaluated inside each test file's context, as Jest loads it, so `instanceof` checks and assertion counts see the test's own realm.
 
-Messages have no colors. Stack traces in them leave out opal's runtime frames the way Jest leaves out its own.
+Messages are colored when Jest's would be. jest-worker gives each worker `FORCE_COLOR=1` when supports-color says the terminal running Jest supports color, or when `--color` is given, and no `FORCE_COLOR` otherwise. opal's pool makes the same decision (`src/colors.rs`). So a message snapshotted under `--color` carries chalk's codes byte for byte, as it does in Jest; `compat/test-expect.cjs --color` checks that. Stack traces in messages leave out opal's runtime frames the way Jest leaves out its own.
 
 ## Snapshots
 
@@ -189,6 +190,29 @@ Where Jest runs babel-jest, opal runs its own transform (`src/transform.rs`), in
 - **`import.meta`** is one object per module, from the loader, with the module's `url`, `filename`, `dirname` and `resolve`.
 - **Stack traces.** Every source map token is carried through these edits. Each test's context gets an `Error.prepareStackTrace` that maps frames back to the lines the user wrote, as Jest installs source-map-support. Inline snapshots find their call through those frames.
 
+## Related tests and watch mode
+
+`--findRelatedTests`, `-o` (`--onlyChanged`) and `--watch` all ask one question: which test files does a change affect. Jest answers it with jest-resolve-dependencies' `resolveInverse` over its haste map. opal answers with a reverse-dependency query on opal-core's module graph (`src/related.rs`), built to give the same answer:
+
+- **The files.** Only files in the haste map take part: those under `roots` with an extension in `moduleFileExtensions` (or `.snap`), outside `node_modules`, and not matching `modulePathIgnorePatterns`. A changed file outside it relates to nothing, and a chain of dependencies passes only through files inside it.
+- **The graph.** One opal-core graph is walked from every test file and every manual mock. Imports are resolved with `moduleNameMapper` first (the first pattern that matches, `$1` and so on filled in, the first candidate that resolves), then with `moduleFileExtensions` in Jest's order. The graph stops at packages.
+- **What counts as a dependency.** These count, as Jest's dependency extractor counts them:
+  - `import`, `export ... from`, `require` and `import()` with a string;
+  - `jest.requireActual`, `jest.requireMock` and `jest.createMockFromModule`.
+
+  Type-only imports and `jest.mock` calls don't count.
+- **Manual mocks.** A module that imports `./x` also depends on the manual mock named `x` when that mock is in the `__mocks__` folder beside what `./x` resolved to. An import that doesn't resolve depends on the manual mock named by the whole specifier. Built-in modules are skipped.
+- **Snapshots.** A changed snapshot file stands for its test file (jest-snapshot's default `resolveTestPath`).
+- **The answer.** The related tests are the changed files that are tests, plus every test that reaches a changed file.
+- **`-o`.** The changed files are what git reports for each root's repository, as jest-changed-files asks for them: `git diff --cached --name-only`, then `git ls-files --other --modified --exclude-standard`. Mercurial and Sapling aren't read.
+- **`--watch`.** The first run takes what `-o` would. Each later one takes the tests related to the files changed since the run before, gathered until changes stop for 100 ms. Test files are found afresh each time, so a new test or a new import counts.
+- **`--watchAll`.** Every test runs each time.
+- **What counts as a change in watch mode.** As in Jest, only a file the haste map would hold, outside `watchPathIgnorePatterns`.
+- **Between runs.** The workers stay up, with the transforms and compiled code they hold.
+- **What's missing.** Jest's interactive prompt isn't there; Ctrl+C stops.
+
+`compat/test-related.py` generates projects with every kind of edge above, and compares the two runners' `--listTests --json` answers to random queries and to `-o`.
+
 ## Vitest's dialect
 
 A project is in Vitest's dialect when its folder has no Jest config but a `vitest.config.*` (or `vite.config.*`), or lists vitest as a dependency; a test file is when it imports from `vitest`, whatever its project. The config is evaluated by Node with `vitest/config` and `vite` stubbed through `module.registerHooks`, which costs about 40 ms instead of the half second loading Vite takes. `include` and `exclude`, `globals`, `setupFiles`, `testTimeout`, the mock-reset flags and `resolve.alias` are read.
@@ -212,6 +236,7 @@ Where it is one of semantics (hook order, equality, mock functions, module loadi
 | `compat/test-lifecycle.py`, seeds 2 to 6, 1,000 files each | 5,000 of 5,000 files identical to Jest, about 32,000 tests, on verdicts and on the order every hook and test ran |
 | the same with `-t '[13579]$'` and `-t 'describe1\|test2'` (seed 8) | 2,000 of 2,000 identical |
 | `compat/test-expect.cjs`, seeds 1 to 3, 20,000 cases each, against Jest's installed `expect` build | 300,000 calls to `toEqual`, `toStrictEqual`, `toMatchObject`, `toContainEqual` and `toContain`: no verdict differs, and no failure message differs by a byte |
+| the same with `--color` (seed 3, 3,000 cases) | 15,000 calls: no colored message differs by a byte |
 | the same with a bug planted, `Object.is` replaced by `===` in equality, or `-0` printed as `0` | caught: 380 verdicts, or 1,688 messages, differ in 5,000 cases |
 | `compat/test-mock.cjs`, seeds 1 and 2, 3,000 programs of 30 operations each, against Jest's installed `jest-mock` build | 180,000 operations: the full recorded state of every mock identical after each one |
 | the same with a bug planted, each call's `this` recorded as `undefined` | caught: 484 of 500 programs differ |
@@ -225,5 +250,5 @@ Where it is one of semantics (hook order, equality, mock functions, module loadi
 
 - **Fake timers.** `jest.useFakeTimers` and friends throw rather than pass.
 - **Running the project's prettier on inline snapshots.**
-- **Watch mode.**
 - **Describe-level retries, `--randomize`, test locations in results, and custom test environments.**
+- **Yarn Plug'n'Play installs.** opal resolves through `node_modules`, as Jest does without a PnP resolver.

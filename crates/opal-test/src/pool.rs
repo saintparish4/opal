@@ -54,6 +54,8 @@ pub struct Pool {
     sender: Sender<Event>,
     slots: HashMap<usize, Slot>,
     next_id: usize,
+    /// Whether workers get FORCE_COLOR=1.
+    color: bool,
 }
 
 /// What a worker reported for one file, or what opal says about a file whose
@@ -64,10 +66,13 @@ pub struct FileOutcome {
 }
 
 impl Pool {
+    /// `color` is whether workers color matcher messages: jest-worker's
+    /// FORCE_COLOR, decided by colors.rs.
     pub fn start(
         node: &Path,
         worker_script: &Path,
         transforms: Arc<TransformService>,
+        color: bool,
     ) -> Result<Pool, TestError> {
         let listener = TcpListener::bind("127.0.0.1:0").map_err(TestError::Channel)?;
         let port = listener.local_addr().map_err(TestError::Channel)?.port();
@@ -77,6 +82,7 @@ impl Pool {
         let accept_token = token.clone();
         thread::spawn(move || accept_loop(listener, &accept_token, &accept_sender, &transforms));
         Ok(Pool {
+            color,
             node: node.to_path_buf(),
             worker_script: worker_script.to_path_buf(),
             port,
@@ -106,6 +112,13 @@ impl Pool {
         // jest-cli's bin/jest.js: test, unless the environment says otherwise.
         if std::env::var_os("NODE_ENV").is_none() {
             command.env("NODE_ENV", "test");
+        }
+        // jest-worker's: FORCE_COLOR=1 when the terminal supports color, and
+        // none at all when it doesn't.
+        if self.color {
+            command.env("FORCE_COLOR", "1");
+        } else {
+            command.env_remove("FORCE_COLOR");
         }
         let child = command
             .stdin(Stdio::null())

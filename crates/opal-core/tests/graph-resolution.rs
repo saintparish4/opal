@@ -5,7 +5,7 @@ mod support;
 use std::fs;
 use std::path::Path;
 
-use opal_core::graph::resolver::{ResolverOptions, resolve};
+use opal_core::graph::resolver::{ResolverHooks, ResolverOptions, resolve, resolve_with};
 use opal_core::graph::{DependencyKind, DependencyTarget, ModuleSystem, SourceKind};
 use support::{Project, entry, realistic_app};
 
@@ -364,5 +364,114 @@ fn test_realistic_project_matches_its_golden_snapshot() {
         json.trim(),
         expected.trim(),
         "resolved graph changed shape; re-run with UPDATE_GOLDEN=1 if intended"
+    );
+}
+
+#[test]
+fn test_several_entries_share_one_graph() {
+    let project = Project::new();
+    project
+        .write("a.test.js", "require('./shared');\n")
+        .write("b.test.js", "import './shared.js';\nimport './only-b';\n")
+        .write("shared.js", "")
+        .write("only-b.js", "");
+
+    let resolution = resolve_with(
+        &project.root(),
+        &[entry("a.test.js"), entry("b.test.js")],
+        &ResolverOptions::default(),
+        &ResolverHooks::default(),
+    )
+    .expect("resolve");
+    let graph = &resolution.graph;
+    assert_eq!(graph.len(), 4);
+    assert_eq!(graph.module(graph.entry()).path.to_string(), "a.test.js");
+    let shared = graph.id_of(&entry("shared.js")).expect("shared");
+    let dependents: Vec<String> = graph
+        .dependents(shared)
+        .into_iter()
+        .map(|id| graph.module(id).path.to_string())
+        .collect();
+    assert_eq!(dependents, vec!["a.test.js", "b.test.js"]);
+}
+
+#[test]
+fn test_require_functions_count_as_require_edges() {
+    let project = Project::new();
+    project
+        .write(
+            "a.test.js",
+            "jest.requireActual('./actual');\njest.mock('./mocked');\nother.requireActual('./ignored');\n",
+        )
+        .write("actual.js", "")
+        .write("mocked.js", "")
+        .write("ignored.js", "");
+
+    let options = ResolverOptions {
+        require_functions: vec!["jest.requireActual".to_string()],
+        ..ResolverOptions::default()
+    };
+    let resolution = resolve(&project.root(), &entry("a.test.js"), &options).expect("resolve");
+    assert_eq!(
+        specifiers(&resolution, "a.test.js"),
+        vec![("./actual".to_string(), "actual.js".to_string())]
+    );
+}
+
+#[test]
+fn test_packages_can_be_leaves() {
+    let project = Project::new();
+    project
+        .write("index.js", "require('pkg');\n")
+        .write("node_modules/pkg/package.json", r#"{"main": "main.js"}"#)
+        .write("node_modules/pkg/main.js", "require('./inner');\n")
+        .write("node_modules/pkg/inner.js", "");
+
+    let options = ResolverOptions {
+        packages_are_leaves: true,
+        ..ResolverOptions::default()
+    };
+    let resolution = resolve(&project.root(), &entry("index.js"), &options).expect("resolve");
+    assert_eq!(resolution.graph.len(), 2);
+    assert!(specifiers(&resolution, "node_modules/pkg/main.js").is_empty());
+}
+
+#[test]
+fn test_a_rewrite_hook_tries_its_candidates_in_order() {
+    let project = Project::new();
+    project
+        .write(
+            "index.js",
+            "import '@/util';\nimport '@/missing';\nimport 'plain';\n",
+        )
+        .write("src/util.ts", "");
+
+    let root = project.root();
+    let source = root.join("src");
+    let rewrite = |specifier: &str| {
+        specifier.strip_prefix("@/").map(|rest| {
+            vec![
+                format!("{}/nope/{rest}", source.as_str()),
+                format!("{}/{rest}", source.as_str()),
+            ]
+        })
+    };
+    let hooks = ResolverHooks {
+        rewrite: Some(&rewrite),
+    };
+    let resolution = resolve_with(
+        &root,
+        &[entry("index.js")],
+        &ResolverOptions::default(),
+        &hooks,
+    )
+    .expect("resolve");
+    assert_eq!(
+        specifiers(&resolution, "index.js"),
+        vec![
+            ("@/util".to_string(), "src/util.ts".to_string()),
+            ("@/missing".to_string(), "unresolved".to_string()),
+            ("plain".to_string(), "unresolved".to_string()),
+        ]
     );
 }

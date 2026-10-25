@@ -1176,7 +1176,10 @@ mod tests {
             "a.mjs",
             "import {createRequire} from 'node:module';\nconst require = createRequire(import.meta.url);\nconst __dirname = '/x';\nexport const pkg = require('./p.json');\nexport const where = {__dirname};\n",
         );
-        assert!(code.contains("const _require = (0, _node_module.createRequire)("), "{code}");
+        assert!(
+            code.contains("const _require = (0, _node_module.createRequire)("),
+            "{code}"
+        );
         assert!(code.contains("const _dirname = \"/x\";"), "{code}");
         assert!(code.contains("= _require(\"./p.json\")"), "{code}");
         assert!(code.contains("{ __dirname: _dirname }"), "{code}");

@@ -1,11 +1,13 @@
 //! Which files are test files, by Jest's rules.
 //!
-//! A file under one of `roots` is a test file when its extension is one of
-//! `moduleFileExtensions`, it matches `testMatch` (or `testRegex`, when that
-//! is set instead), and no `testPathIgnorePatterns` entry matches its
-//! absolute path. Paths given on the command line narrow that further: each
-//! is a regular expression, and a file has to match one. Jest compares
-//! everything against absolute paths, and so does this.
+//! Jest sees a project through jest-haste-map: every file under one of
+//! `roots` whose extension is one of `moduleFileExtensions` (or `snap`),
+//! outside `node_modules`, and not matching `modulePathIgnorePatterns`. Of
+//! those, a test file matches `testMatch` (or `testRegex`, when that is set
+//! instead), and no `testPathIgnorePatterns` entry matches its absolute path.
+//! Paths given on the command line narrow that further: each is a regular
+//! expression, and a file has to match one. Jest compares everything against
+//! absolute paths, and so does this.
 
 use std::collections::BTreeMap;
 use std::fs;
@@ -21,10 +23,12 @@ use crate::glob::{Glob, matches_any};
 /// `__mocks__` folder under the roots, by its path inside that folder without
 /// the extension (`__mocks__/fs.js` is `fs`, `__mocks__/@scope/pkg.js` is
 /// `@scope/pkg`). When two share a name the later one in the walk wins, as
-/// the last one Jest's crawler reports does.
+/// the last one Jest's crawler reports does. `files` is everything the haste
+/// map holds, which is what a related-tests query searches.
 pub struct Found {
     pub tests: Vec<PathBuf>,
     pub manual_mocks: BTreeMap<String, PathBuf>,
+    pub files: Vec<PathBuf>,
 }
 
 pub fn find_tests(config: &ProjectConfig, filters: &[Regex]) -> Result<Found, TestError> {
@@ -35,19 +39,24 @@ pub fn find_tests(config: &ProjectConfig, filters: &[Regex]) -> Result<Found, Te
         .collect::<Result<Vec<_>, _>>()?;
     let regexes = compile(&config.test_regex)?;
     let ignored = compile(&config.test_path_ignore_patterns)?;
-    let skip_node_modules = config
-        .test_path_ignore_patterns
-        .iter()
-        .any(|pattern| pattern.contains("node_modules"));
+    let haste_ignored = compile(&config.module_path_ignore_patterns)?;
 
     let mut found = Vec::new();
     let mut manual_mocks = BTreeMap::new();
+    let mut files = Vec::new();
     for root in &config.roots {
-        walk(root, skip_node_modules, &mut |path| {
+        walk(root, &mut |path| {
             let Some(text) = path.to_str() else { return };
             let text = text.replace('\\', "/");
             let extension = path.extension().and_then(|e| e.to_str()).unwrap_or("");
-            if !config.module_file_extensions.iter().any(|e| e == extension) {
+            let is_module = config.module_file_extensions.iter().any(|e| e == extension);
+            if !(is_module || extension == "snap")
+                || haste_ignored.iter().any(|r| r.is_match(&text))
+            {
+                return;
+            }
+            files.push(path.to_path_buf());
+            if !is_module {
                 return;
             }
             if let Some((_, inside)) = text.split_once("/__mocks__/") {
@@ -75,9 +84,12 @@ pub fn find_tests(config: &ProjectConfig, filters: &[Regex]) -> Result<Found, Te
     // Largest first: without timings from an earlier run, size is the best
     // guess at what takes longest, and starting it early shortens the run.
     found.sort_by_key(|path| std::cmp::Reverse(fs::metadata(path).map(|m| m.len()).unwrap_or(0)));
+    files.sort();
+    files.dedup();
     Ok(Found {
         tests: found,
         manual_mocks,
+        files,
     })
 }
 
@@ -91,7 +103,9 @@ pub fn compile(patterns: &[String]) -> Result<Vec<Regex>, TestError> {
         .collect()
 }
 
-fn walk(dir: &Path, skip_node_modules: bool, visit: &mut dyn FnMut(&Path)) {
+/// Everything under `dir` but version-control folders and `node_modules`,
+/// which jest-haste-map leaves out (`retainAllFiles: false`).
+fn walk(dir: &Path, visit: &mut dyn FnMut(&Path)) {
     let Ok(entries) = fs::read_dir(dir) else {
         return;
     };
@@ -104,13 +118,10 @@ fn walk(dir: &Path, skip_node_modules: bool, visit: &mut dyn FnMut(&Path)) {
         };
         let name = entry.file_name();
         if kind.is_dir() {
-            if name == ".git" || name == ".hg" || name == ".svn" {
+            if name == ".git" || name == ".hg" || name == ".svn" || name == "node_modules" {
                 continue;
             }
-            if skip_node_modules && name == "node_modules" {
-                continue;
-            }
-            walk(&path, skip_node_modules, visit);
+            walk(&path, visit);
         } else if kind.is_file() {
             visit(&path);
         }

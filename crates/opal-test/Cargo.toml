@@ -9,6 +9,7 @@ build = "build.rs"
 
 [dependencies]
 opal-core.workspace = true
+notify.workspace = true
 blake3.workspace = true
 oxc_allocator.workspace = true
 oxc_ast.workspace = true

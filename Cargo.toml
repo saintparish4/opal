@@ -62,6 +62,7 @@ console = { version = "0.16.4", default-features = false, features = ["std"] }
 # expressions, and testMatch globs compile to them. A regex engine is not a
 # thing to hand-roll.
 regex = "1"
+notify = "8.2"
 # std has no advisory file locking; this is one extern function (flock), not
 # worth a wrapper crate like fs2/fd-lock for.
 libc = "0.2.189"
