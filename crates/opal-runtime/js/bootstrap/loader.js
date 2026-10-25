@@ -142,9 +142,27 @@
     return bytes;
   }
 
+  // Whether path.resolve would return `path` as it is: absolute, with no
+  // empty, `.` or `..` segment and no trailing slash. The resolver's paths
+  // all are, and leaving node's path module unloaded for them keeps it (and
+  // the internal/errors and validators it loads) out of every run that
+  // doesn't ask for it, which is most of hello world's time.
+  function isResolved(path) {
+    if (path === "/") return true;
+    return (
+      StringPrototypeCharCodeAt(path, 0) === 47 &&
+      !StringPrototypeEndsWith(path, "/") &&
+      !StringPrototypeIncludes(path, "//") &&
+      !StringPrototypeIncludes(path, "/./") &&
+      !StringPrototypeIncludes(path, "/../") &&
+      !StringPrototypeEndsWith(path, "/.") &&
+      !StringPrototypeEndsWith(path, "/..")
+    );
+  }
+
   // Module._nodeModulePaths, from lib/internal/modules/cjs/loader.js.
   function nodeModulePaths(from) {
-    from = requireBuiltin("path").resolve(from);
+    if (typeof from !== "string" || !isResolved(from)) from = requireBuiltin("path").resolve(from);
     if (from === "/") return ["/node_modules"];
     const paths = [];
     const nm = "node_modules";
