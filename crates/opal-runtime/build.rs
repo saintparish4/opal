@@ -66,6 +66,22 @@ fn leave(code: i32) -> ! {
     std::process::exit(code)
 }
 
+/// Making the snapshot strips no TypeScript, so the build has no stripper;
+/// the runtime's is engine::typescript.
+fn strip_types_op(
+    scope: &mut v8::PinScope,
+    _: v8::FunctionCallbackArguments,
+    _: v8::ReturnValue<v8::Value>,
+) {
+    let message = v8::String::new(
+        scope,
+        "stripTypes is not available while the snapshot is made",
+    )
+    .unwrap();
+    let error = v8::Exception::error(scope, message);
+    scope.throw_exception(error);
+}
+
 macro_rules! op_table {
     ($($name:ident),* $(,)?) => {
         const OP_NAMES: &[&str] = &[$(stringify!($name)),*];

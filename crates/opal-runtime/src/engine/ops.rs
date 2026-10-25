@@ -11,7 +11,7 @@
 
 use std::io;
 
-use super::{BUILTIN_PARAMS, builtin_source, compile_builtin_source, leave};
+use super::{BUILTIN_PARAMS, builtin_source, compile_builtin_source, leave, strip_types_op};
 
 // Explicit, so build.rs (which includes this file by path) and the crate
 // find the same file.
@@ -333,6 +333,14 @@ pub fn compile_builtin<'s>(
     if let Some(function) = compile_builtin_source(scope, &id, source, &params) {
         rv.set(function.into());
     }
+}
+
+/// `stripTypes(source)`: a TypeScript file's JavaScript, its types replaced
+/// by whitespace, or `[code, message, line, snippet]` for TypeScript that
+/// can't be stripped. The runtime's own function, not build.rs's: making the
+/// snapshot never strips anything.
+pub fn strip_types(scope: &mut v8::PinScope, args: Args, rv: Ret) {
+    strip_types_op(scope, args, rv)
 }
 
 /// `readFile(path)`: a file's contents as a string, decoded as UTF-8 with

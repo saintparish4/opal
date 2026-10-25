@@ -1,0 +1,1 @@
+class P { constructor(public a: number) {} }

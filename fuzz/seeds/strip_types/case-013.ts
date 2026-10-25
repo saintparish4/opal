@@ -1,0 +1,1 @@
+new Map<string, number>(); f<T>`x`; f<T>()

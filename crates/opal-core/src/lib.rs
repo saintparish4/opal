@@ -8,6 +8,7 @@ pub mod fault;
 pub mod graph;
 pub mod hash;
 pub mod path;
+pub mod typescript;
 
 pub use cache::CacheRoot;
 pub use cas::Cas;

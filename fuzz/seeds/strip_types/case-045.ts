@@ -1,0 +1,1 @@
+class K { [key: string]: any; @dec() private y = 2 }

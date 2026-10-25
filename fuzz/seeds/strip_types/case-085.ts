@@ -1,0 +1,3 @@
+a
+namespace N {}
+(b)

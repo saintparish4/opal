@@ -1,0 +1,1 @@
+export declare const q: number; export interface I {} export default interface Foo {}

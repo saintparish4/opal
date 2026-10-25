@@ -1,0 +1,1 @@
+function f(this: Window, a?: number, ...r: string[]): asserts a is number {}

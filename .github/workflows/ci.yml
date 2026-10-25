@@ -130,8 +130,10 @@ jobs:
 
   # `opal run <file>` held to `node` on the same files: byte-for-byte stdout
   # and the exit status, for the corpora in crates/opal-cli/tests/node-diff/
-  # (util.inspect's layout, Buffer's encodings). node is pinned to the
-  # release the runtime is measured against; the test refuses any other.
+  # (util.inspect's layout, Buffer's encodings); and the TypeScript stripper
+  # held to node's own (module.stripTypeScriptTypes) on
+  # crates/opal-core/tests/strip/cases.json. node is pinned to the release
+  # the runtime is measured against; the tests refuse any other.
   node-cross-check:
     name: node cross-check (runtime)
     runs-on: ubuntu-latest
@@ -147,7 +149,9 @@ jobs:
         with:
           node-version: "24.19.0"
       - name: Cross-check
-        run: cargo test --release -p opal-cli --test node-cross-check -- --ignored
+        run: |
+          cargo test --release -p opal-cli --test node-cross-check -- --ignored
+          cargo test --release -p opal-core --test strip-cross-check -- --ignored --nocapture
 
   # `deny.toml`: licenses a static MIT binary can carry, crates.io as the only
   # source, and the crates the design rules out. Advisories are left to

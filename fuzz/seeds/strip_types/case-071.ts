@@ -1,0 +1,1 @@
+class C3 extends Base implements I<A>, J {}

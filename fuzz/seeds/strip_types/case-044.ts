@@ -1,0 +1,1 @@
+class K { static readonly x: number = 1; protected async *g(): AsyncGenerator<T> {} }

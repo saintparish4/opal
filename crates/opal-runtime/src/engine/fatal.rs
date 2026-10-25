@@ -23,10 +23,10 @@ use super::ops::write_all;
 pub(super) fn report(
     scope: &mut v8::PinScope,
     error: v8::Local<v8::Value>,
-    message: v8::Local<v8::Message>,
+    message: Option<v8::Local<v8::Message>>,
     formatted: &str,
 ) {
-    let arrow = arrow(scope, message);
+    let arrow = message.and_then(|message| arrow(scope, message));
     let text = match (arrow, error.is_native_error()) {
         (Some(arrow), true) => format!("{arrow}\n{formatted}\n"),
         (Some(arrow), false) => format!("\n{arrow}{formatted}\n"),

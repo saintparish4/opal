@@ -60,3 +60,10 @@ path = "fuzz_targets/edit.rs"
 test = false
 doc = false
 bench = false
+
+[[bin]]
+name = "strip_types"
+path = "fuzz_targets/strip_types.rs"
+test = false
+doc = false
+bench = false

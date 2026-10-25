@@ -12,6 +12,8 @@
 //   beforeExit()         emit 'beforeExit'; true if a listener scheduled work
 //   exit()               emit 'exit'; returns the exit code
 //   uncaught(error)      true if an 'uncaughtException' listener took it
+//   hasArrow(error)      false for an error whose stack shows its own source
+//   prepareStackTrace    V8's hook for formatting error.stack
 //   inspectFatal(error)  what Node prints for an error that ends the process
 //   fatalExit()          exit code 1, emit 'exit'; returns the exit code
 //   warmup()             run at build time only, so compiled code is kept
@@ -72,6 +74,17 @@
     return error;
   }
 
+  let formattingStack = false;
+  function defaultStack(error, trace) {
+    let header;
+    try {
+      header = Error.prototype.toString.call(error);
+    } catch {
+      header = "<error>";
+    }
+    return trace.length === 0 ? header : `${header}\n    at ${trace.join("\n    at ")}`;
+  }
+
   const main = {
     start(argv, argv0) {
       internals.buildingSnapshot = false;
@@ -121,6 +134,24 @@
       if (listeners("uncaughtException") === 0) return false;
       process.emit("uncaughtException", error, "uncaughtException");
       return true;
+    },
+
+    hasArrow(error) {
+      return !(error !== null && typeof error === "object" && internals.noArrow.has(error));
+    },
+
+    // V8's prepare-stack-trace hook, installed by engine/mod.rs: Node's own
+    // (internal/errors.js), which writes Node errors as `Name [CODE]: ...`
+    // and honours a user's Error.prepareStackTrace. Loading internal/errors
+    // can itself format a stack; while it loads, V8's default stands in.
+    prepareStackTrace(global, error, trace) {
+      if (formattingStack) return defaultStack(error, trace);
+      formattingStack = true;
+      try {
+        return internals.requireBuiltin("internal/errors").prepareStackTraceCallback(global, error, trace);
+      } finally {
+        formattingStack = false;
+      }
     },
 
     inspectFatal(error) {

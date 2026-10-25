@@ -24,7 +24,8 @@ pub struct RunArgs {
     #[arg(long)]
     if_present: bool,
     /// The file or script to run, then its arguments. A file is a path that
-    /// exists and ends in .js or .cjs, or has a `/` in it; its arguments are
+    /// exists and ends in .js, .cjs, .ts or .cts (types stripped, as Node
+    /// strips them), or has a `/` in it; its arguments are
     /// process.argv.slice(2). Anything else is a package.json script, whose
     /// arguments are appended to its command; with none, lists the scripts.
     /// Everything after the name is the file's or script's, flags included;
@@ -94,15 +95,11 @@ pub fn run_command(args: RunArgs) -> Result<ExitCode, Failure> {
 /// to the scripts, which say there is no such script.
 fn file_to_run(cwd: &Path, name: &str) -> Result<Option<PathBuf>, Failure> {
     let extension = Path::new(name).extension().and_then(|e| e.to_str());
-    let looks_like_file = name.contains('/') || matches!(extension, Some("js" | "cjs" | "mjs"));
+    let looks_like_file = name.contains('/')
+        || matches!(extension, Some("js" | "cjs" | "mjs" | "ts" | "cts" | "mts"));
     let path = cwd.join(name);
     if !looks_like_file || !path.is_file() {
         return Ok(None);
-    }
-    // ES modules are not run yet. Running one as CommonJS would change what
-    // it means (strict mode, `this`, top-level await), so it is refused.
-    if extension == Some("mjs") {
-        return Err(format!("{name}: ES modules are not supported by `opal run` yet").into());
     }
     // Node runs the main module by its real path, so process.argv[1] and
     // __filename name the file a symlink points at.

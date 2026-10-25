@@ -1,0 +1,3 @@
+a
+interface I {}
+`t`

@@ -254,6 +254,10 @@
   internals.requireBuiltin = requireBuiltin;
   internals.internalBinding = internalBinding;
   internals.customInspectSymbol = SymbolFor("nodejs.util.inspect.custom");
+  // Errors whose stack already says where they came from (a TypeScript
+  // error's source excerpt), so the fatal report prints no arrow of its own.
+  // A WeakSet rather than a symbol on the error, so inspect doesn't show it.
+  internals.noArrow = new WeakSet();
 
   for (const id of internals.snapshotBuiltins) requireBuiltin(id);
 })

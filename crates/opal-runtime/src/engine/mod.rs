@@ -20,6 +20,7 @@ include!("shared.rs");
 
 mod fatal;
 mod ops;
+mod typescript;
 
 use std::path::Path;
 use std::time::Duration;
@@ -59,6 +60,32 @@ macro_rules! type_references {
 }
 for_each_type_check!(type_references);
 
+/// ops::strip_types, which build.rs stands in for.
+fn strip_types_op(
+    scope: &mut v8::PinScope,
+    args: v8::FunctionCallbackArguments,
+    mut rv: v8::ReturnValue<v8::Value>,
+) {
+    let source = args.get(0).to_rust_string_lossy(scope);
+    match typescript::strip(&source) {
+        typescript::Stripped::Code(code) => {
+            if let Some(code) = v8::String::new(scope, &code) {
+                rv.set(code.into());
+            }
+        }
+        typescript::Stripped::Error(error) => {
+            let (line, snippet) = typescript::snippet(&source, error.start, error.end);
+            let values = [
+                v8::String::new(scope, error.kind.code()).unwrap().into(),
+                v8::String::new(scope, &error.message).unwrap().into(),
+                v8::Integer::new(scope, line as i32).into(),
+                v8::String::new(scope, &snippet).unwrap().into(),
+            ];
+            rv.set(v8::Array::new_with_elements(scope, &values).into());
+        }
+    }
+}
+
 /// The native functions the snapshot refers to, in the order build.rs
 /// registered them: the ops, then the type checks.
 fn external_references() -> std::borrow::Cow<'static, [v8::ExternalReference]> {
@@ -93,6 +120,37 @@ extern "C" fn on_promise_reject(message: v8::PromiseRejectMessage) {
     }
 }
 
+/// main.js's prepareStackTrace, which V8 calls through
+/// [`prepare_stack_trace`] the first time an error's stack is read.
+struct PrepareStackTrace(v8::Global<v8::Function>);
+
+fn prepare_stack_trace<'s>(
+    scope: &mut v8::PinScope<'s, '_>,
+    error: v8::Local<'s, v8::Value>,
+    sites: v8::Local<'s, v8::Array>,
+) -> v8::Local<'s, v8::Value> {
+    let function = scope
+        .get_slot::<PrepareStackTrace>()
+        .map(|prepare| v8::Local::new(scope, &prepare.0));
+    if let Some(function) = function {
+        let global = scope.get_current_context().global(scope);
+        v8::tc_scope!(let tc, scope);
+        let undefined = v8::undefined(tc).into();
+        if let Some(stack) = function.call(tc, undefined, &[global.into(), error, sites.into()]) {
+            return v8::Local::new(tc, v8::Global::new(tc, stack));
+        }
+    }
+    // The formatter threw (or is missing): what V8 itself would print.
+    let mut text = error.to_rust_string_lossy(scope);
+    for i in 0..sites.length() {
+        if let Some(site) = sites.get_index(scope, i) {
+            text.push_str("\n    at ");
+            text.push_str(&site.to_rust_string_lossy(scope));
+        }
+    }
+    v8::String::new(scope, &text).unwrap().into()
+}
+
 /// Runs `entry` as the main module with `args` as its arguments, then the
 /// event loop until nothing is left, and exits the process with the code the
 /// script left. Never returns: the isolate is not torn down, because the
@@ -118,6 +176,12 @@ pub fn run_main(entry: &Path, args: &[String]) -> ! {
     let main = scope
         .get_context_data_from_snapshot_once::<v8::Object>(0)
         .expect("the snapshot has no entry points");
+    let key = v8::String::new(scope, "prepareStackTrace").unwrap();
+    let prepare = main.get(scope, key.into()).unwrap();
+    let prepare = v8::Local::<v8::Function>::try_from(prepare).expect("main.prepareStackTrace");
+    let prepare = PrepareStackTrace(v8::Global::new(scope, prepare));
+    scope.set_slot(prepare);
+    scope.set_prepare_stack_trace_callback(prepare_stack_trace);
     trace::checkpoint("isolate from snapshot");
 
     let exec_path = std::env::current_exe()
@@ -252,7 +316,7 @@ impl Loop {
                     let thrown_message = tc.message();
                     if let (Some(thrown), Some(m)) = (thrown, thrown_message) {
                         let formatted = thrown.to_rust_string_lossy(tc);
-                        fatal::report(tc, thrown, m, &formatted);
+                        fatal::report(tc, thrown, Some(m), &formatted);
                     }
                     leave(7)
                 }
@@ -279,8 +343,11 @@ impl Loop {
                 .map(|text| text.to_rust_string_lossy(tc))
                 .unwrap_or_else(|| error.to_rust_string_lossy(tc))
         };
+        let arrow = self
+            .call(scope, "hasArrow", &[error])
+            .is_some_and(|a| a.is_true());
         let message = message.unwrap_or_else(|| v8::Exception::create_message(scope, error));
-        fatal::report(scope, error, message, &formatted);
+        fatal::report(scope, error, arrow.then_some(message), &formatted);
         leave(code)
     }
 

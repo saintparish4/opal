@@ -2,8 +2,8 @@
 
 `testing_strategy.md` §6: every parser of untrusted input gets a fuzz target,
 because a panic on install is the worst failure mode a package manager has.
-Five inputs qualify, in rough order of how little they can be trusted, and a
-sixth is here for a different reason:
+Five inputs qualify, in rough order of how little they can be trusted, and
+two more are here for different reasons:
 
 | Target      | Input                    | Why it is untrusted                       |
 | ----------- | ------------------------ | ----------------------------------------- |
@@ -13,13 +13,14 @@ sixth is here for a different reason:
 | `lockfile`  | `opal.lock`              | committed to repositories others open     |
 | `resolver`  | JS/TS source + a dependency's `exports` | every installed file is parsed, and an `exports` map decides which file a specifier reaches |
 | `edit`      | the project's own `package.json`, plus an `opal add` or `opal remove` | trusted, but hand-written, and the one file opal rewrites that it did not create |
+| `strip_types` | TypeScript source | `opal run` strips the types of every .ts file it runs, and a stack trace's line and column depend on the output keeping every byte where it was |
 
 Needs nightly, since libFuzzer builds with sanitizer flags:
 
 ```bash
 cargo install cargo-fuzz
 cargo +nightly fuzz run lockfile -- -max_total_time=300
-cargo +nightly fuzz build          # all six, no running
+cargo +nightly fuzz build          # all seven, no running
 ```
 
 `resolver` checks more than "does not panic": whatever a package's `exports`
@@ -75,3 +76,12 @@ asked about the package by then, so a broken `package.json` could be reported
 as a missing package. The manifest is now read before the change is worked
 out, held by `test_a_manifest_opal_cannot_read_is_refused_before_the_registry_is_asked`
 in `crates/opal-pm/tests/add-remove.rs`.
+
+`strip_types` checks what the stripper promises when it succeeds: the output
+is as long as the input, every line break is where it was, and every byte it
+changed is one it writes. Its seeds are the cases the stripper is held to
+node's on (`crates/opal-core/tests/strip/cases.json`):
+
+```bash
+cargo +nightly fuzz run strip_types corpus/strip_types seeds/strip_types -- -dict=strip_types.dict -timeout=10
+```

@@ -64,6 +64,7 @@ macro_rules! for_each_op {
             buffer_swap64,
             buffer_btoa,
             buffer_atob,
+            strip_types,
         }
     };
 }

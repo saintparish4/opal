@@ -1,0 +1,1 @@
+let fn2 = function <T>(): T {} 

@@ -317,3 +317,96 @@ fn warnings_print_as_node_prints_them() {
         ") [C001] CustomWarning: careful"
     );
 }
+
+/// Writes `files` into a fresh directory and runs `main` with the cache in
+/// that directory too, so a test can see what was cached.
+fn run_files(files: &[(&str, &str)], main: &str) -> (tempfile::TempDir, Run) {
+    let dir = tempfile::tempdir().unwrap();
+    for (name, source) in files {
+        let path = dir.path().join(name);
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        std::fs::write(path, source).unwrap();
+    }
+    let output = Command::new(OPAL)
+        .current_dir(dir.path())
+        .args(["run", main])
+        .env("OPAL_CACHE_DIR", dir.path().join("cache"))
+        .output()
+        .unwrap();
+    let out = Run {
+        stdout: String::from_utf8_lossy(&output.stdout).into_owned(),
+        stderr: String::from_utf8_lossy(&output.stderr).into_owned(),
+        code: output.status.code(),
+    };
+    (dir, out)
+}
+
+#[test]
+fn typescript_runs_with_its_types_stripped_and_its_columns_kept() {
+    let source = "const x: number = 1;\ninterface I { a: string }\nfunction f<T>(a: T, b?: string): T { return a as T; }\nconsole.log(f(x), new Error('at').stack!.split('\\n')[1].trim());\n";
+    let (dir, out) = run_files(&[("main.ts", source)], "main.ts");
+    let url = format!(
+        "file://{}",
+        std::fs::canonicalize(dir.path().join("main.ts"))
+            .unwrap()
+            .display()
+    );
+    assert_eq!(
+        out.stdout,
+        format!("1 at Object.<anonymous> ({url}:4:19)\n"),
+        "{}",
+        out.stderr
+    );
+    // The output was cached: an index entry names its CAS object.
+    let index = dir.path().join("cache/strip");
+    assert_eq!(std::fs::read_dir(&index).unwrap().count(), 1);
+    // A second run reads it back and prints the same.
+    let output = Command::new(OPAL)
+        .current_dir(dir.path())
+        .args(["run", "main.ts"])
+        .env("OPAL_CACHE_DIR", dir.path().join("cache"))
+        .output()
+        .unwrap();
+    assert_eq!(String::from_utf8_lossy(&output.stdout), out.stdout);
+}
+
+#[test]
+fn typescript_that_needs_a_transform_is_refused_as_node_refuses_it() {
+    let (dir, out) = run_files(&[("main.ts", "let x = 1; enum E { A }\nnext\n")], "main.ts");
+    let url = format!(
+        "file://{}",
+        std::fs::canonicalize(dir.path().join("main.ts"))
+            .unwrap()
+            .display()
+    );
+    assert!(
+        out.stderr.starts_with(&format!(
+            "{url}:1\nlet x = 1; enum E {{ A }}\n           ^^^^^^^^^^^^\nnext\n\nSyntaxError [ERR_UNSUPPORTED_TYPESCRIPT_SYNTAX]: TypeScript enum is not supported in strip-only mode\n"
+        )),
+        "{}",
+        out.stderr
+    );
+    assert_eq!(out.code, Some(1));
+}
+
+#[test]
+fn typescript_under_node_modules_is_not_stripped() {
+    let (_dir, out) = run_files(
+        &[("node_modules/p/main.ts", "let x: number = 1\n")],
+        "node_modules/p/main.ts",
+    );
+    assert!(out.stderr.contains("Error [ERR_UNSUPPORTED_NODE_MODULES_TYPE_STRIPPING]: Stripping types is currently unsupported for files under node_modules"), "{}", out.stderr);
+}
+
+#[test]
+fn an_es_module_in_a_js_or_ts_file_is_refused_too() {
+    for name in ["main.ts", "main.js", "main.mts"] {
+        let (_dir, out) = run_files(&[(name, "import x from 'y';\nconsole.log(x)\n")], name);
+        assert!(
+            out.stderr.contains("ES modules are not supported"),
+            "{name}: {}",
+            out.stderr
+        );
+        assert_eq!(out.stdout, "");
+    }
+}

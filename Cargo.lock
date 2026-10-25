@@ -908,6 +908,7 @@ dependencies = [
  "oxc_ast_visit",
  "oxc_parser",
  "oxc_span",
+ "oxc_syntax",
  "proptest",
  "serde",
  "serde_json",
@@ -938,7 +939,9 @@ dependencies = [
 name = "opal-runtime"
 version = "0.4.1"
 dependencies = [
+ "blake3",
  "libc",
+ "opal-core",
  "serde_json",
  "tempfile",
  "thiserror",
