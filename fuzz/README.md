@@ -107,7 +107,7 @@ as it runs and probes what it imported, so order, values, `.name`s, and errors
 reach stdout. A seed the bundler refuses counts as a pass only if Node also
 fails to link the program, or the refusal is one the contract lists.
 
-Its runs found five bundler bugs, all fixed and covered by fixtures. The
+Its runs found eight bundler bugs, all fixed and covered by fixtures. The
 first three, in its first minutes:
 an `import()` of the entry while its top-level `await` was pending settled at
 once, where Node waits for the entry (and so deadlocks, like the program); a
@@ -124,3 +124,56 @@ module that ran first read another's re-exported function through a
 namespace as `undefined` where ECMA-262 has already made it at link time;
 lazy modules are now generators, linked as a graph before any runs
 (`lazy-link-before-evaluate`, seeds 2034477, 2040152, 2041121, 2045733).
+
+A sixth was in the first long run's log as well (seed 1015623) and was
+found again by the third (seed 3028481): a namespace held a name that two
+`export *` reached through two `export * as` declarations of one module's
+namespace. ECMA-262 calls that one binding, V8 gives each declaration its
+own, and the name is ambiguous under Node. The linker now resolves as V8
+does (`esm-star-namespace-cells`), and its test262 counterparts, which the
+runner had filed as Node failures while the bundle passed them, now fail
+as Node fails them.
+
+The fourth long run found the seventh (seed 4191301): a namespace that
+lacked a name Node gave it. The name was ambiguous, through `export *`
+declarations that form a cycle, and V8 builds namespaces from export
+tables it fills in as it goes, so whichever namespace in the cycle it
+builds second has the name. That depends on the order of imports and on
+when each `import()` runs, so the bundler now refuses it
+(`refuse-star-cycle-ambiguous`).
+
+The fifth found the eighth (seed 6066569), with no cycle involved: a name
+one `export *` module found ambiguous, and that a module above it also got
+from another branch. ECMA-262 makes the name ambiguous for every module
+above the first; V8 leaves it out of that module's export table, so the
+module above has it from the other branch. Namespaces are now built by
+V8's algorithm (`esm-namespace-nested-ambiguous`).
+
+`bundle_source` found one: a stack overflow on 558 nested divisions. The
+parallel build ran on threads with Rust's default 2 MiB stack; they now
+get 256 MiB, and a module nested deeper than the bundler's passes can take
+is refused (`refuse-deep-nesting`).
+
+### The last runs
+
+On `98badfc`, the last commit to change the bundler, both targets ran for
+two hours at once, on the 8-thread laptop in
+[`benchmarks/BENCHMARKS.md`](../benchmarks/BENCHMARKS.md): the generator on
+four jobs, `bundle_source` on two workers.
+
+| Target | Ran | Result |
+| ------ | --- | ------ |
+| generated graphs | 157,547 programs, seeds 9,000,000 to 9,157,546, in 7,200 s | 149,884 equivalent, 7,663 refused (7,606 `E-TLA`, 57 `E-LINK`), 0 diverged |
+| `bundle_source` | 782,111 inputs (388,923 and 393,188), in 7,201 s | no crash, leak, or timeout; the corpus grew to 13,203 inputs |
+
+Every refused program is one Node runs, refused under a rule the contract
+lists. Replaying the same seeds with `--save-refused` gave the same counts
+and kept each one: 5,002 have top-level `await` in an entry that is in an
+import cycle and 2,604 import a module lazily that depends on an entry that
+awaits (rule 11), and all 57 `E-LINK` are a namespace with an ambiguous
+name over a cycle of `export *` (rule 4).
+
+`artifacts/bundle_source` holds no crash. It keeps one slow input from an
+earlier run, 18 bytes that take 153 ms on their own and passed libFuzzer's
+10-second slow-input mark only while the machine was loaded.
+

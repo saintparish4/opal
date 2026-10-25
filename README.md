@@ -124,7 +124,9 @@ What it does: ES modules and CommonJS in any mix, cycles, live bindings, dynamic
 
 What it refuses, on purpose: top-level `await` outside the entry module, `require()` of an ES module, direct `eval` in an ES module, non-JavaScript imports unless `--assets` is given, and output formats other than ES modules. Code splitting, plugins, minification, CSS processing, and HTML entry points are out of scope.
 
-How it is checked: every test fixture runs unbundled and bundled under Node and the two runs are compared; generated module graphs are fuzzed the same way; test262's module tests run through it ([results](./crates/opal-bundler/test262/RESULTS.md)); the CommonJS export lexer is a port of Node's own, checked against Node on 17,358 files from npm; and the Nest, Express, and vite-react starters run from their bundles in the [compatibility matrix](./compat/COMPATIBILITY.md).
+How it is checked: every test fixture runs unbundled and bundled under Node and the two runs are compared; generated module graphs are fuzzed the same way, 157,547 programs in the last two-hour run with none diverging ([fuzzing](./fuzz/README.md#the-bundler)); test262's module tests run through it ([results](./crates/opal-bundler/test262/RESULTS.md)); esbuild and rollup are held to the same Node runs of the same fixtures ([results](./crates/opal-bundler/tests/arbiters/RESULTS.md)); the CommonJS export lexer is a port of Node's own, checked against Node on 20,998 files from npm, the compat starters' dependencies; and the Nest, Express, and vite-react starters run from their bundles in the [compatibility matrix](./compat/COMPATIBILITY.md).
+
+How fast it is: on esbuild's three.js benchmark (3,701 files), a rebuild with the module graph cached takes 654 ms, against 708 ms for esbuild and 418 ms for bun, and a build from nothing takes 867 ms. The method and every number are in [benchmarks/BENCHMARKS.md](./benchmarks/BENCHMARKS.md#bundling-esbuilds-threejs-benchmark).
 
 ## Benchmarks
 

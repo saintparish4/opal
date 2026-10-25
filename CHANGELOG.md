@@ -8,7 +8,7 @@ Opal is pre-1.0, so a release can change behaviour you depend on. Anything that 
 
 ### Added
 
-- **`opal build`** bundles an entry file into one ES module with a source map, for Node (`--target node`, the default) or browsers (`--target browser`). The bundle behaves like the unbundled program under Node, by the contract in [crates/opal-bundler/SEMANTICS.md](./crates/opal-bundler/SEMANTICS.md), and anything the bundler cannot keep that way is refused with a code naming the module and line. `--why <module>` prints the import chain that pulls a module in.
+- **`opal build`** bundles an entry file into one ES module with a source map, for Node (`--target node`, the default) or browsers (`--target browser`). The bundle behaves like the unbundled program under Node, by the contract in [crates/opal-bundler/SEMANTICS.md](./crates/opal-bundler/SEMANTICS.md), and anything the bundler cannot keep that way is refused with a code naming the module and line. `--why <module>` prints the import chain that pulls a module in. It parses and prints modules on every core: on esbuild's three.js benchmark (r108 copied ten times, 3,701 files), a rebuild with the module graph cached takes 654 ms (esbuild 708 ms, bun 418 ms), median of 10 rounds on one 8-thread machine; see [benchmarks/BENCHMARKS.md](./benchmarks/BENCHMARKS.md#bundling-esbuilds-threejs-benchmark).
 - `opal graph` resolves a `.jsx`/`.tsx` file's JSX runtime import when asked to (the bundler asks), and can resolve JavaScript modules exactly as Node does, without the extensions and indexes TypeScript adds.
 
 ### Fixed
