@@ -68,19 +68,19 @@ The default timeouts are 900s for install, 900s for build, 600s for test, and 12
 
 The times come from a single cold run over the public registry. They're there to spot something pathological, not to compare against other tools.
 
-## Results: 2026-10-24, bundler-p0, unreleased
+## Results: 2026-10-25, bundler-p0, unreleased
 
-Opal built from the `bundler-p0` branch (`cargo build --release`), SHA-256 `52f89aa6cb72bbef2e7458b8e5757683e9e9b4a971dadf50ab84adeb10b71322`. Tool versions: Node 24.19.0, npm 12.0.2, and for the browser check Playwright 1.64.0 driving Chrome 156. Same laptop as below, with the bundler's fuzzers running on four of its cores, so the times are slower than they would otherwise be. Raw results: [`results/frameworks-20261024-231410.json`](./results/frameworks-20261024-231410.json).
+Opal built from the `bundler-p0` branch at `98badfc` (`cargo build --release`; later commits change only tests and docs), SHA-256 `c999350e8e140ef5392f922fdef661f95a574e4de57ecf60ee567e890af6db7a`. Tool versions: Node 24.19.0, npm 12.0.2, and for the browser check Playwright 1.64.0 driving Chrome 156. Same laptop as below, with the bundler's fuzzers running on six of its eight threads, so the times are slower than they would otherwise be. Raw results: [`results/frameworks-20261025-111632.json`](./results/frameworks-20261025-111632.json); the first run on this branch, before the last linker fixes, is [`results/frameworks-20261024-231410.json`](./results/frameworks-20261024-231410.json), with the same verdicts.
 
 | Framework | Resolved | install | build | test | runtime | bundle | bundle test | bundle runtime | Scripts skipped |
 |---|---|---|---|---|---|---|---|---|---|
-| next | next 16.3.2, react 19.2.8 | pass (37.89s) | pass (16.00s) | - | pass (956ms) | - | - | - | unrs-resolver@1.12.2 |
-| vite-react | vite 8.3.5, react 19.3.1 | pass (5.69s) | pass (4.29s) | - | pass (771ms) | pass (375ms) | - | pass (2.75s) | none |
-| vite-vue | vite 8.3.5, vue 3.5.44 | pass (5.29s) | pass (4.69s) | - | pass (772ms) | - | - | - | none |
-| astro | astro 7.4.2 | pass (11.84s) | pass (3.52s) | - | pass (1.78s) | - | - | - | none |
-| sveltekit | @sveltejs/kit 3.1.0, vite 8.3.5 | pass (5.75s) | pass (5.96s) | - | pass (1.54s) | - | - | - | project (prepare) |
-| nest | @nestjs/core 12.2.0, vitest 4.1.12 | pass (15.21s) | pass (4.14s) | pass (1.91s) | pass (1.02s) | pass (525ms) | pass (6.14s) | pass (518ms) | none |
-| express | express 5.3.0 | pass (1.70s) | - | - | pass (517ms) | pass (167ms) | - | pass (272ms) | none |
+| next | next 16.3.2, react 19.2.8 | pass (147.78s) | pass (44.75s) | - | pass (2.25s) | - | - | - | unrs-resolver@1.12.2 |
+| vite-react | vite 8.3.5, react 19.3.1 | pass (8.22s) | pass (6.95s) | - | pass (1.59s) | pass (837ms) | - | pass (6.09s) | none |
+| vite-vue | vite 8.3.5, vue 3.5.44 | pass (5.50s) | pass (8.10s) | - | pass (1.29s) | - | - | - | none |
+| astro | astro 7.4.2 | pass (15.17s) | pass (5.88s) | - | pass (2.56s) | - | - | - | none |
+| sveltekit | @sveltejs/kit 3.1.0, vite 8.3.5 | pass (5.24s) | pass (6.60s) | - | pass (1.57s) | - | - | - | project (prepare) |
+| nest | @nestjs/core 12.2.0, vitest 4.1.12 | pass (23.57s) | pass (4.27s) | pass (2.39s) | pass (1.56s) | pass (873ms) | pass (10.41s) | pass (804ms) | none |
+| express | express 5.3.0 | pass (4.80s) | - | - | pass (782ms) | pass (421ms) | - | pass (283ms) | none |
 
 ### What this shows
 
