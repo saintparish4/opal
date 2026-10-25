@@ -21,6 +21,9 @@ use super::{
 #[path = "ops/buffer.rs"]
 mod buffer;
 pub use buffer::*;
+#[path = "ops/fs.rs"]
+mod fs;
+pub use fs::*;
 
 type Args<'a> = v8::FunctionCallbackArguments<'a>;
 type Ret<'a> = v8::ReturnValue<'a, v8::Value>;
@@ -55,7 +58,7 @@ fn set<'s>(
 /// file or directory, open '/x'`, with `errno`, `code`, `syscall` and `path`.
 pub fn throw_io(scope: &mut v8::PinScope, error: &io::Error, syscall: &str, path: &str) {
     let errno = error.raw_os_error().unwrap_or(0);
-    let (code, description) = uv_error(errno);
+    let (code, description) = fs::uv_error(-errno);
     let text = match path {
         "" => format!("{code}: {description}, {syscall}"),
         _ => format!("{code}: {description}, {syscall} '{path}'"),
@@ -74,31 +77,6 @@ pub fn throw_io(scope: &mut v8::PinScope, error: &io::Error, syscall: &str, path
         set(scope, object, "path", path);
     }
     scope.throw_exception(exception);
-}
-
-/// libuv's name and message for an errno, which is what Node's messages
-/// quote (they differ from strerror's in places: EISDIR is "illegal
-/// operation on a directory").
-fn uv_error(errno: i32) -> (&'static str, &'static str) {
-    match errno {
-        libc::ENOENT => ("ENOENT", "no such file or directory"),
-        libc::EACCES => ("EACCES", "permission denied"),
-        libc::EPERM => ("EPERM", "operation not permitted"),
-        libc::EISDIR => ("EISDIR", "illegal operation on a directory"),
-        libc::ENOTDIR => ("ENOTDIR", "not a directory"),
-        libc::EEXIST => ("EEXIST", "file already exists"),
-        libc::ENOTEMPTY => ("ENOTEMPTY", "directory not empty"),
-        libc::EBADF => ("EBADF", "bad file descriptor"),
-        libc::EINVAL => ("EINVAL", "invalid argument"),
-        libc::EMFILE => ("EMFILE", "too many open files"),
-        libc::ELOOP => ("ELOOP", "too many symbolic links encountered"),
-        libc::ENAMETOOLONG => ("ENAMETOOLONG", "name too long"),
-        libc::EXDEV => ("EXDEV", "cross-device link not permitted"),
-        libc::EPIPE => ("EPIPE", "broken pipe"),
-        libc::ENOSPC => ("ENOSPC", "no space left on device"),
-        libc::EROFS => ("EROFS", "read-only file system"),
-        _ => ("EIO", "i/o error"),
-    }
 }
 
 /// `write(fd, data)`: writes all of `data` (a string, as UTF-8, or the bytes

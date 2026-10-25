@@ -9,13 +9,14 @@
 
 const {
   ArrayIsArray,
+  NumberIsSafeInteger,
   ObjectDefineProperty,
   ObjectSetPrototypeOf,
   StringPrototypeToWellFormed,
 } = primordials;
 
 const {
-  codes: { ERR_INVALID_ARG_TYPE },
+  codes: { ERR_INVALID_ARG_TYPE, ERR_OUT_OF_RANGE },
 } = require('internal/errors');
 const {
   format,
@@ -23,7 +24,14 @@ const {
   inspect,
   stripVTControlCharacters,
 } = require('internal/util/inspect');
-const { deprecate, promisify } = require('internal/util');
+const {
+  deprecate,
+  getSystemErrorMap,
+  getSystemErrorMessage: internalErrorMessage,
+  getSystemErrorName: internalErrorName,
+  promisify,
+} = require('internal/util');
+const { validateNumber } = require('internal/validators');
 const types = require('internal/util/types');
 
 // From lib/util.js.
@@ -48,10 +56,39 @@ function inherits(ctor, superCtor) {
   ObjectSetPrototypeOf(ctor.prototype, superCtor.prototype);
 }
 
+// From lib/util.js.
+/**
+ * @param {number} err
+ * @returns {string}
+ */
+function getSystemErrorName(err) {
+  validateNumber(err, 'err');
+  if (err >= 0 || !NumberIsSafeInteger(err)) {
+    throw new ERR_OUT_OF_RANGE('err', 'a negative integer', err);
+  }
+  return internalErrorName(err);
+}
+
+// From lib/util.js.
+/**
+ * @param {number} err
+ * @returns {string}
+ */
+function getSystemErrorMessage(err) {
+  validateNumber(err, 'err');
+  if (err >= 0 || !NumberIsSafeInteger(err)) {
+    throw new ERR_OUT_OF_RANGE('err', 'a negative integer', err);
+  }
+  return internalErrorMessage(err);
+}
+
 module.exports = {
   deprecate,
   format,
   formatWithOptions,
+  getSystemErrorMap,
+  getSystemErrorMessage,
+  getSystemErrorName,
   inherits,
   inspect,
   isArray: deprecate(ArrayIsArray,

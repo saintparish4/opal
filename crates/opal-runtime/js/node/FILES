@@ -19,3 +19,6 @@ buffer
 internal/buffer
 util/types
 internal/per_context/domexception
+fs
+internal/fs/utils
+internal/process/permission

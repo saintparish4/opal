@@ -13,6 +13,7 @@ const defaults = {
   '--expose-internals': false,
   '--frozen-intrinsics': false,
   '--no-deprecation': false,
+  '--permission': false,
   '--pending-deprecation': false,
   '--preserve-symlinks': false,
   '--preserve-symlinks-main': false,

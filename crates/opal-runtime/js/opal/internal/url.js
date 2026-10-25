@@ -7,7 +7,10 @@
 
 class URL {}
 
-module.exports = new Proxy({ URL }, {
+// With no URL objects, every path is a path.
+const toPathIfFileURL = (fileURLOrPath) => fileURLOrPath;
+
+module.exports = new Proxy({ URL, toPathIfFileURL }, {
   get(target, key) {
     if (key in target) return target[key];
     throw new Error(`internal/url.${String(key)} is not implemented by Opal yet`);

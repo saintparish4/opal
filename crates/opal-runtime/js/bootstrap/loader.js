@@ -55,6 +55,7 @@
   defineBuiltin("util", () => requireBuiltin("util"));
   defineBuiltin("util/types", () => requireBuiltin("util/types"));
   defineBuiltin("buffer", () => requireBuiltin("buffer"));
+  defineBuiltin("fs", () => requireBuiltin("fs"));
   defineBuiltin("console", () => internals.console);
   defineBuiltin("process", () => internals.process);
   defineBuiltin("timers", () => {
@@ -72,7 +73,7 @@
   // Node's other built-ins, which require() must not look for on disk.
   const unimplemented = [
     "assert", "assert/strict", "async_hooks", "child_process", "cluster", "constants", "crypto", "dgram",
-    "diagnostics_channel", "dns", "dns/promises", "domain", "fs", "fs/promises", "http", "http2", "https",
+    "diagnostics_channel", "dns", "dns/promises", "domain", "fs/promises", "http", "http2", "https",
     "inspector", "inspector/promises", "net", "os", "perf_hooks", "punycode", "querystring", "readline",
     "readline/promises", "repl", "stream", "stream/consumers", "stream/promises", "stream/web",
     "string_decoder", "sys", "timers/promises", "tls", "trace_events", "tty", "url", "v8", "vm", "wasi",

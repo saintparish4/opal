@@ -410,3 +410,36 @@ fn a_typeless_js_or_ts_file_with_module_syntax_runs_as_an_es_module() {
         assert_eq!(out.stdout, "a/b\n", "{name}: {}", out.stderr);
     }
 }
+
+#[test]
+fn fs_reads_and_writes_files_and_fails_as_node_fails() {
+    let source = "const fs = require(\"fs\");\nfs.writeFileSync(\"out.txt\", \"written\");\nconsole.log(fs.readFileSync(\"out.txt\", \"utf8\"), fs.readdirSync(\".\"));\nfs.readFileSync(\"missing.txt\");\n";
+    let (dir, out) = run(source);
+    assert_eq!(out.stdout, "written [ 'main.js', 'out.txt' ]\n");
+    assert_eq!(out.code, Some(1));
+    let path = main_path(&dir);
+    let head = format!(
+        "node:fs:622\n  return binding.open(\n                 ^\n\nError: ENOENT: no such file or directory, open 'missing.txt'\n    at Object.openSync (node:fs:622:18)\n    at Object.readFileSync (node:fs:488:35)\n    at Object.<anonymous> ({path}:4:4)\n"
+    );
+    assert!(out.stderr.starts_with(&head), "{}", out.stderr);
+    assert!(
+        out.stderr.contains(
+            "{\n  errno: -2,\n  code: 'ENOENT',\n  syscall: 'open',\n  path: 'missing.txt'\n}\n"
+        ),
+        "{}",
+        out.stderr
+    );
+}
+
+#[test]
+fn fs_functions_with_a_callback_say_they_are_not_there_yet() {
+    let (_dir, out) = run("require(\"fs\").stat(\"main.js\", () => {});\n");
+    assert_eq!(out.code, Some(1));
+    assert!(
+        out.stderr.contains(
+            "Error: Opal implements only the synchronous fs functions yet, not fs functions with a callback"
+        ),
+        "{}",
+        out.stderr
+    );
+}

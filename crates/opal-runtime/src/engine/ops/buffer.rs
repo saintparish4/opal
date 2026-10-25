@@ -13,7 +13,7 @@ use super::{Args, Ret, string, type_error};
 /// Node's `enum encoding` (src/node.h), as internal/util's encodingsMap
 /// numbers them.
 #[derive(Clone, Copy, PartialEq, Eq)]
-enum Encoding {
+pub(super) enum Encoding {
     Ascii = 0,
     Utf8 = 1,
     Base64 = 2,
@@ -25,7 +25,7 @@ enum Encoding {
 }
 
 impl Encoding {
-    fn from_value(scope: &mut v8::PinScope, value: v8::Local<v8::Value>) -> Encoding {
+    pub(super) fn from_value(scope: &mut v8::PinScope, value: v8::Local<v8::Value>) -> Encoding {
         if value.is_number() {
             return match value.int32_value(scope).unwrap_or(1) {
                 0 => Encoding::Ascii,
@@ -60,7 +60,10 @@ impl Encoding {
 
 /// The bytes a typed array, DataView or ArrayBuffer views. Valid until
 /// JavaScript runs again, which no op here lets happen while it holds them.
-fn bytes<'a>(scope: &mut v8::PinScope, value: v8::Local<v8::Value>) -> Option<&'a mut [u8]> {
+pub(super) fn bytes<'a>(
+    scope: &mut v8::PinScope,
+    value: v8::Local<v8::Value>,
+) -> Option<&'a mut [u8]> {
     let (buffer, offset, length) =
         if let Ok(view) = v8::Local::<v8::ArrayBufferView>::try_from(value) {
             (view.buffer(scope)?, view.byte_offset(), view.byte_length())
@@ -96,7 +99,11 @@ fn utf16_units(scope: &mut v8::PinScope, text: v8::Local<v8::String>) -> Vec<u16
 
 /// A string's bytes in `encoding`, as StringBytes::Write would write them
 /// with unlimited room.
-fn encode(scope: &mut v8::PinScope, text: v8::Local<v8::String>, encoding: Encoding) -> Vec<u8> {
+pub(super) fn encode(
+    scope: &mut v8::PinScope,
+    text: v8::Local<v8::String>,
+    encoding: Encoding,
+) -> Vec<u8> {
     match encoding {
         Encoding::Utf8 | Encoding::Buffer => {
             let mut out = vec![0; text.utf8_length(scope)];
@@ -331,7 +338,7 @@ fn base64_encode(src: &[u8], table: &[u8; 64], pad: bool) -> Vec<u8> {
 }
 
 /// A string of `bytes` decoded as `encoding`: StringBytes::Encode.
-fn decode<'s>(
+pub(super) fn decode<'s>(
     scope: &mut v8::PinScope<'s, '_>,
     bytes: &[u8],
     encoding: Encoding,

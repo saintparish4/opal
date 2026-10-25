@@ -24,6 +24,8 @@
     ObjectKeys,
     SafeMap,
     StringPrototypeReplace,
+    StringPrototypeSlice,
+    StringPrototypeStartsWith,
     SymbolFor,
   } = primordials;
 
@@ -144,7 +146,59 @@
       }
       return binding;
     },
-    constants: () => ({ os: ops.os_constants(), fs: {}, crypto: {}, zlib: {}, trace: {} }),
+    constants: () => ({ os: ops.os_constants(), fs: ops.fs_constants(), crypto: {}, zlib: {}, trace: {} }),
+    // libuv's error names and messages, by error number.
+    uv: () => {
+      const binding = {};
+      const map = new SafeMap();
+      for (const { 0: errno, 1: name, 2: message } of ops.uv_errors()) {
+        binding[`UV_${name}`] = errno;
+        map.set(errno, [name, message]);
+      }
+      binding.getErrorMap = () => new Map(map);
+      binding.errname = (errno) => map.get(errno)?.[0] ?? `Unknown system error ${errno}`;
+      binding.getErrorMessage = (errno) => map.get(errno)?.[1] ?? `Unknown system error ${errno}`;
+      return binding;
+    },
+    // Opal has no permission model (`--permission`), so everything is
+    // permitted.
+    permission: () => ({ has: () => true }),
+    // The synchronous half of Node's fs binding (ops/fs.rs). The callback
+    // and promise halves, which need an event loop with I/O, aren't there
+    // yet: making the request object they start with fails, naming that.
+    fs: () => {
+      const kFsStatsFieldsNumber = 18;
+      const statValues = new Float64Array(kFsStatsFieldsNumber * 2);
+      const bigintStatValues = new BigInt64Array(kFsStatsFieldsNumber * 2);
+      const statFsValues = new Float64Array(7);
+      const bigintStatFsValues = new BigInt64Array(7);
+      ops.fs_setup(statValues, bigintStatValues, statFsValues, bigintStatFsValues, requireBuiltin("buffer").Buffer.prototype);
+      const unsupported = (what) =>
+        class {
+          constructor() {
+            const error = new Error(`Opal implements only the synchronous fs functions yet, not ${what}`);
+            error.code = "ERR_OPAL_UNIMPLEMENTED";
+            throw error;
+          }
+        };
+      const binding = {
+        kFsStatsFieldsNumber,
+        statValues,
+        bigintStatValues,
+        statFsValues,
+        bigintStatFsValues,
+        kUsePromises: Symbol("fs_use_promises_symbol"),
+        FSReqCallback: unsupported("fs functions with a callback"),
+        FileHandle: unsupported("fs.promises"),
+        StatWatcher: unsupported("fs.watchFile"),
+      };
+      for (const name of ObjectKeys(ops)) {
+        if (StringPrototypeStartsWith(name, "fs_") && name !== "fs_setup" && name !== "fs_constants") {
+          binding[camelCase(StringPrototypeSlice(name, 3))] = ops[name];
+        }
+      }
+      return binding;
+    },
     config: () => ({ hasIntl: false, hasInspector: false, noBrowserGlobals: false, bits: 64 }),
     buffer: () => {
       const slice = (encoding) => (buffer, start, end) => ops.buffer_slice(buffer, start, end, encoding);
@@ -235,8 +289,10 @@
     if (cached !== undefined) return cached.exports;
     const compiled = ops.compile_builtin(id);
     if (compiled === undefined) {
-      const error = new Error(`No such built-in module: ${id}`);
-      error.code = "ERR_UNKNOWN_BUILTIN_MODULE";
+      // Node's library reached a module of its own that isn't vendored
+      // (js/node/FILES) yet, on a code path Opal doesn't support.
+      const error = new Error(`Opal does not implement this yet: it needs node:${id}, which Opal doesn't have`);
+      error.code = "ERR_OPAL_UNIMPLEMENTED";
       throw error;
     }
     const module = { exports: {}, id, loaded: false };

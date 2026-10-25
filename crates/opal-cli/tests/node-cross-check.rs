@@ -4,8 +4,8 @@
 //! line, and must print byte-for-byte what node 24.19.0 prints and exit the
 //! same way. The corpora aim at the parts of the runtime whose output has
 //! rules a near miss breaks: util.inspect's layout (console.log of any
-//! object), and Buffer's encodings and search offsets, which are ports of
-//! Node's C++.
+//! object), Buffer's encodings and search offsets, which are ports of
+//! Node's C++, and the synchronous fs functions' results and errors.
 //!
 //! Needs `node` on PATH, at the pinned version, which is why the tests are
 //! `#[ignore]`d in the ordinary suite; CI runs them in their own job:
@@ -78,6 +78,13 @@ fn inspect() {
 #[ignore = "needs node on PATH"]
 fn buffer() {
     check("buffer.js");
+}
+
+/// The synchronous fs functions, on files in a fresh temporary directory.
+#[test]
+#[ignore = "needs node on PATH"]
+fn fs() {
+    check("fs.js");
 }
 
 /// import across a project: tests/node-diff/esm/.
