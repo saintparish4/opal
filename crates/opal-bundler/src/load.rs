@@ -300,6 +300,16 @@ pub fn parse<'a>(
         Format::Esm => source_type(source.language).with_module(true),
         _ => source_type(source.language).with_script(true),
     };
+    if opal_core::graph::nests_deeper_than(text, opal_core::graph::MAX_BRACKET_NESTING) {
+        return Err(Diagnostic::new(
+            Code::Unsupported,
+            &source.path,
+            format!(
+                "brackets nest more than {} deep: the parser recurses once per bracket, and the bundler refuses a module this deep rather than overflow the stack",
+                opal_core::graph::MAX_BRACKET_NESTING
+            ),
+        ));
+    }
     let parsed = Parser::new(allocator, text, source_type)
         .with_options(ParseOptions {
             parse_regular_expression: true,
@@ -322,6 +332,16 @@ pub fn parse<'a>(
         return Err(error_at(span, error.message.to_string()));
     }
     let mut program = parsed.program;
+    if let Some(span) = deeper_than(&program, MAX_DEPTH) {
+        return Err(Diagnostic::new(
+            Code::Unsupported,
+            &source.path,
+            format!(
+                "nested more than {MAX_DEPTH} syntax nodes deep: the bundler's passes recurse once per level, and refuse a module this deep rather than overflow the stack"
+            ),
+        )
+        .at(lines.locate(text, span.start)));
+    }
 
     let semantic = SemanticBuilder::new()
         .with_check_syntax_error(true)
@@ -439,6 +459,42 @@ fn transform_options(source: &Source, settings: &TsSettings) -> TransformOptions
         options.jsx = JsxOptions::disable();
     }
     options
+}
+
+/// How deep a module's syntax tree may nest. Every recursive pass over it
+/// (scoping, compiling, analysis, printing) uses stack per level, and the
+/// build threads' stack ([`crate::STACK_SIZE`]) holds this depth with room
+/// to spare.
+pub const MAX_DEPTH: usize = 10_000;
+
+/// Where the syntax tree first nests deeper than `limit`, if it does.
+fn deeper_than(program: &Program<'_>, limit: usize) -> Option<oxc_span::Span> {
+    use oxc_ast::AstKind;
+    use oxc_ast_visit::Visit;
+    use oxc_span::GetSpan;
+    struct Depth {
+        depth: usize,
+        limit: usize,
+        found: Option<oxc_span::Span>,
+    }
+    impl<'a> Visit<'a> for Depth {
+        fn enter_node(&mut self, kind: AstKind<'a>) {
+            self.depth += 1;
+            if self.depth > self.limit && self.found.is_none() {
+                self.found = Some(kind.span());
+            }
+        }
+        fn leave_node(&mut self, _kind: AstKind<'a>) {
+            self.depth -= 1;
+        }
+    }
+    let mut visitor = Depth {
+        depth: 0,
+        limit,
+        found: None,
+    };
+    visitor.visit_program(program);
+    visitor.found
 }
 
 fn has_import_equals_require(program: &Program<'_>) -> bool {

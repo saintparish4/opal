@@ -1,0 +1,4 @@
+{
+  "why": "Brackets nested past 4,000 deep. The parser recurses once per bracket, so the bundler refuses rather than risk overflowing its stack; Node fails this one too, with \"RangeError: Maximum call stack size exceeded\". Found as a stack overflow by the bundle_source fuzzer, on a build thread with the default 2 MiB stack.",
+  "expect": { "refused": "E-UNSUPPORTED" }
+}

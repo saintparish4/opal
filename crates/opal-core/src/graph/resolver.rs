@@ -339,6 +339,15 @@ impl<'a> Resolver<'a> {
             None => return Ok(Vec::new()),
         };
 
+        if nests_deeper_than(&source, MAX_BRACKET_NESTING) {
+            self.builder.add_diagnostic(
+                path,
+                format!(
+                    "brackets nest more than {MAX_BRACKET_NESTING} deep; not parsed, so its imports are not followed"
+                ),
+            );
+            return Ok(Vec::new());
+        }
         let source_type = SourceType::from_path(path.as_path()).unwrap_or_default();
         let allocator = Allocator::default();
         let parsed = Parser::new(&allocator, &source, source_type).parse();
@@ -1030,6 +1039,32 @@ impl<'a> Visit<'a> for ImportCollector {
     }
 }
 
+/// How deep `(`, `[`, and `{` may nest in a file the resolver parses. The
+/// parser recurses once per bracket, and a file nested deeper would
+/// overflow the stack and abort the process; V8 itself rejects about 5,000
+/// nested parentheses.
+pub const MAX_BRACKET_NESTING: usize = 4_000;
+
+/// Whether `(`, `[`, and `{` nest deeper than `limit` in `source`. Brackets
+/// inside strings, comments, and regular expressions count too, so this can
+/// only overstate the depth.
+pub fn nests_deeper_than(source: &str, limit: usize) -> bool {
+    let mut depth = 0usize;
+    for byte in source.bytes() {
+        match byte {
+            b'(' | b'[' | b'{' => {
+                depth += 1;
+                if depth > limit {
+                    return true;
+                }
+            }
+            b')' | b']' | b'}' => depth = depth.saturating_sub(1),
+            _ => {}
+        }
+    }
+    false
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1138,5 +1173,14 @@ mod tests {
         let mut changed = baseline.clone();
         changed.follow_type_only_imports = true;
         assert_ne!(baseline.digest(), changed.digest());
+    }
+
+    #[test]
+    fn test_bracket_nesting_is_measured_across_kinds() {
+        assert!(!nests_deeper_than("f([{}])", 3));
+        assert!(nests_deeper_than("f([{(}])", 3));
+        // Closing more than was opened does not go below zero.
+        assert!(!nests_deeper_than(")))(((", 3));
+        assert!(nests_deeper_than(")))((((", 3));
     }
 }

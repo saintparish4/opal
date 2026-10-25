@@ -38,6 +38,13 @@ use std::path::Path;
 use std::sync::{OnceLock, mpsc};
 use std::time::{Duration, Instant};
 
+/// The stack each build thread gets. Parsing, analysis, and printing
+/// recurse once per level of nesting, and a module may nest up to
+/// [`load::MAX_DEPTH`] levels; the main thread's 8 MiB is not enough for
+/// that, let alone a spawned thread's default 2 MiB. Only the pages used
+/// are committed.
+pub const STACK_SIZE: usize = 256 * 1024 * 1024;
+
 use oxc_allocator::Allocator;
 
 use opal_core::graph::{ModuleGraph, ModuleId};
@@ -170,6 +177,11 @@ pub fn build(
             let (facts_tx, facts_rx) = mpsc::channel::<(usize, Result<Facts, Diagnostic>)>();
             let (piece_tx, piece_rx) =
                 mpsc::channel::<(usize, Result<Option<(emit::Piece, emit::Uses)>, Diagnostic>)>();
+            let stop = |go: &[mpsc::Sender<bool>]| {
+                for sender in go {
+                    let _ = sender.send(false);
+                }
+            };
             let mut go = Vec::with_capacity(threads);
             for share in shares {
                 let (go_tx, go_rx) = mpsc::channel::<bool>();
@@ -179,68 +191,77 @@ pub fn build(
                 let (sources, settings, rels, defines) = (&sources, &settings, &rels, &defines);
                 let (infos_cell, linked_cell, shared_cell) =
                     (&infos_cell, &linked_cell, &shared_cell);
-                scope.spawn(move || {
-                    let allocators: Vec<Allocator> =
-                        share.iter().map(|_| Allocator::default()).collect();
-                    let mut parsed: Vec<Option<Parsed<'_>>> = Vec::with_capacity(share.len());
-                    for (slot, &index) in share.iter().enumerate() {
-                        let source = &sources[index];
-                        let result = match &settings[index] {
-                            None => Ok((Info::opaque(source), None, None)),
-                            Some(Err(diagnostic)) => Err(diagnostic.clone()),
-                            Some(Ok(settings)) => load::parse(&allocators[slot], source, settings)
-                                .and_then(|module| {
-                                    let info = analyze::analyze(source, &module)?;
-                                    let lexed = (source.format == Format::Cjs)
-                                        .then(|| cjs_lexer::exports(&source.text));
-                                    Ok((info, lexed, Some(module)))
-                                }),
-                        };
-                        match result {
-                            Ok((info, lexed, module)) => {
-                                parsed.push(module);
-                                let _ = facts_tx.send((index, Ok((info, lexed))));
-                            }
-                            Err(diagnostic) => {
-                                parsed.push(None);
-                                let _ = facts_tx.send((index, Err(diagnostic)));
+                let spawned = std::thread::Builder::new()
+                    .name("opal-build".to_string())
+                    .stack_size(STACK_SIZE)
+                    .spawn_scoped(scope, move || {
+                        let allocators: Vec<Allocator> =
+                            share.iter().map(|_| Allocator::default()).collect();
+                        let mut parsed: Vec<Option<Parsed<'_>>> = Vec::with_capacity(share.len());
+                        for (slot, &index) in share.iter().enumerate() {
+                            let source = &sources[index];
+                            let result = match &settings[index] {
+                                None => Ok((Info::opaque(source), None, None)),
+                                Some(Err(diagnostic)) => Err(diagnostic.clone()),
+                                Some(Ok(settings)) => {
+                                    load::parse(&allocators[slot], source, settings).and_then(
+                                        |module| {
+                                            let info = analyze::analyze(source, &module)?;
+                                            let lexed = (source.format == Format::Cjs)
+                                                .then(|| cjs_lexer::exports(&source.text));
+                                            Ok((info, lexed, Some(module)))
+                                        },
+                                    )
+                                }
+                            };
+                            match result {
+                                Ok((info, lexed, module)) => {
+                                    parsed.push(module);
+                                    let _ = facts_tx.send((index, Ok((info, lexed))));
+                                }
+                                Err(diagnostic) => {
+                                    parsed.push(None);
+                                    let _ = facts_tx.send((index, Err(diagnostic)));
+                                }
                             }
                         }
-                    }
-                    drop(facts_tx);
-                    if !go_rx.recv().unwrap_or(false) {
-                        return;
-                    }
-                    let (Some(infos), Some(linked), Some(shared)) =
-                        (infos_cell.get(), linked_cell.get(), shared_cell.get())
-                    else {
-                        return;
-                    };
-                    for (slot, &index) in share.iter().enumerate() {
-                        let Some(module) = parsed[slot].take() else {
-                            continue;
+                        drop(facts_tx);
+                        if !go_rx.recv().unwrap_or(false) {
+                            return;
+                        }
+                        let (Some(infos), Some(linked), Some(shared)) =
+                            (infos_cell.get(), linked_cell.get(), shared_cell.get())
+                        else {
+                            return;
                         };
-                        let mut unit = emit::Unit {
-                            source: &sources[index],
-                            info: &infos[index],
-                            parsed: Some(module),
-                            allocator: &allocators[slot],
-                            rel: rels[index].clone(),
-                        };
-                        let _ = piece_tx.send((
-                            index,
-                            emit::print(index, &mut unit, linked, options, defines, shared),
-                        ));
-                    }
-                });
+                        for (slot, &index) in share.iter().enumerate() {
+                            let Some(module) = parsed[slot].take() else {
+                                continue;
+                            };
+                            let mut unit = emit::Unit {
+                                source: &sources[index],
+                                info: &infos[index],
+                                parsed: Some(module),
+                                allocator: &allocators[slot],
+                                rel: rels[index].clone(),
+                            };
+                            let _ = piece_tx.send((
+                                index,
+                                emit::print(index, &mut unit, linked, options, defines, shared),
+                            ));
+                        }
+                    });
+                if let Err(error) = spawned {
+                    stop(&go);
+                    return Err(Diagnostic::new(
+                        Code::Io,
+                        "",
+                        format!("could not start a build thread: {error}"),
+                    ));
+                }
             }
             drop(facts_tx);
             drop(piece_tx);
-            let stop = |go: &[mpsc::Sender<bool>]| {
-                for sender in go {
-                    let _ = sender.send(false);
-                }
-            };
 
             // Facts from every module, and the first error by module order, so
             // a failing build fails the same way however the threads ran.

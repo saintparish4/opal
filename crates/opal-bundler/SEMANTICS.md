@@ -539,7 +539,7 @@ line.
 | `E-BROWSER-FIELD` | Under `--target browser`, a package with a `browser` field in its `package.json`. | opal-core does not apply that field, so the bundle would contain different files than a browser bundler picks. |
 | `E-TS` | TypeScript that `tsc` would not emit for an ES module (`export =`, `import x = require()`), a decorator without `experimentalDecorators`, or `"jsx": "preserve"`. | Rule 13. |
 | `E-DEFINE` | An assignment to a `--define`d path. | Rule 14. |
-| `E-UNSUPPORTED` | An ES module's import of a file that is not JavaScript or JSON, without `--assets`, or a stylesheet with `url()` or `@import`, or outside a browser (rule 17; a `require()` of one is Node's own); an entry that is not JavaScript; source or defer phase imports; `arguments` at the top level of a lazily imported module (rule 10); a destructuring or `for-in`/`for-of` assignment to an import binding. | Out of scope for this version, or (the last) a form the rewriter does not turn into its `TypeError`. |
+| `E-UNSUPPORTED` | An ES module's import of a file that is not JavaScript or JSON, without `--assets`, or a stylesheet with `url()` or `@import`, or outside a browser (rule 17; a `require()` of one is Node's own); an entry that is not JavaScript; source or defer phase imports; `arguments` at the top level of a lazily imported module (rule 10); a destructuring or `for-in`/`for-of` assignment to an import binding; a module whose brackets nest more than 4,000 deep, or whose syntax tree nests more than 10,000 nodes deep. | Out of scope for this version, or (the last) a form the rewriter does not turn into its `TypeError`. |
 
 Out of scope altogether, so the command line has no flag for them: code
 splitting, plugins, CSS and HTML entry points, minification, macros,

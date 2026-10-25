@@ -52,6 +52,22 @@ pub struct BuildArgs {
 }
 
 pub fn build(args: BuildArgs) -> Result<ExitCode, Failure> {
+    // Resolving parses every module too, so the whole command runs on a
+    // thread with the build threads' stack.
+    let thread = std::thread::Builder::new()
+        .name("opal-build".to_string())
+        .stack_size(opal_bundler::STACK_SIZE)
+        // The error crosses threads as its message, which is all that is
+        // printed of it.
+        .spawn(move || build_here(args).map_err(|error| error.to_string()))
+        .map_err(|error| format!("could not start the build thread: {error}"))?;
+    match thread.join() {
+        Ok(result) => result.map_err(Failure::from),
+        Err(panic) => std::panic::resume_unwind(panic),
+    }
+}
+
+fn build_here(args: BuildArgs) -> Result<ExitCode, Failure> {
     let entry = absolute(&args.entry)?;
     let root = match &args.root {
         Some(root) => absolute(root)?,
