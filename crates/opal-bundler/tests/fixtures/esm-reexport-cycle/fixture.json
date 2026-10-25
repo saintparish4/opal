@@ -1,0 +1,3 @@
+{
+  "why": "A re-export that leads back through `export *` to the module that star-exports it: §16.2.1.7.2.2 skips the circular branch, and so does V8 when an `export *` reaches the cycle, so Node links these."
+}

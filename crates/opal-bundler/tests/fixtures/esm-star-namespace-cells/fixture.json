@@ -1,0 +1,3 @@
+{
+  "why": "Two `export *` that reach one module's namespace through different `export * as` declarations make the name ambiguous under V8, which gives each declaration its own binding; §16.2.1.7.2.2 would call them one. Found by the generated-graph fuzzer (seed 3028481)."
+}

@@ -76,9 +76,15 @@ pub enum Binding {
     Helper(&'static str),
 }
 
+/// What ResolveExport returns. A namespace reached through an export also
+/// names the module whose `import * as` or `export * as` declared it: V8
+/// gives each such declaration a binding of its own, so two `export *`
+/// that reach one namespace through different declarations are ambiguous
+/// under Node, where §16.2.1.7.2.2 calls them one binding (SEMANTICS.md
+/// rule 4). Other bindings are their own identity.
 #[derive(Clone, Debug, PartialEq, Eq)]
 enum Resolution {
-    Found(Binding),
+    Found(Binding, Option<usize>),
     Ambiguous,
     NotFound,
 }
@@ -314,6 +320,7 @@ pub fn link(
     }
     let imports = linker.resolve_imports()?;
     linker.check_indirect_exports()?;
+    linker.check_v8_linking(&order, &lazy)?;
 
     let entry_exports = match modules[entry].info.format {
         Format::Esm => linker.namespace_exports(entry)?,
@@ -968,17 +975,20 @@ impl Linker<'_, '_> {
         match self.info(module).format {
             Format::Cjs => {
                 return if self.cjs_export_names(module).iter().any(|n| n == name) {
-                    Resolution::Found(Binding::Cjs {
-                        module,
-                        name: name.to_string(),
-                    })
+                    Resolution::Found(
+                        Binding::Cjs {
+                            module,
+                            name: name.to_string(),
+                        },
+                        None,
+                    )
                 } else {
                     Resolution::NotFound
                 };
             }
             Format::Json => {
                 return if name == "default" {
-                    Resolution::Found(Binding::Json { module })
+                    Resolution::Found(Binding::Json { module }, None)
                 } else {
                     Resolution::NotFound
                 };
@@ -991,7 +1001,7 @@ impl Linker<'_, '_> {
                     && self.roles[module] == Role::Asset
                     && !path.ends_with(".css")
                 {
-                    Resolution::Found(Binding::Asset { module })
+                    Resolution::Found(Binding::Asset { module }, None)
                 } else {
                     Resolution::NotFound
                 };
@@ -1007,21 +1017,26 @@ impl Linker<'_, '_> {
         if let Some(export) = exports.iter().find(|e| e.name == name) {
             return match &export.target {
                 ExportTarget::Local(symbol) => self.resolve_local(module, *symbol, resolve_set),
-                ExportTarget::Default => Resolution::Found(Binding::Default { module }),
+                ExportTarget::Default => Resolution::Found(Binding::Default { module }, None),
                 ExportTarget::Indirect { request, name } => {
                     match self.targets[module][*request].clone() {
                         Target::Module(target) => match name {
-                            ImportName::Namespace => {
-                                Resolution::Found(Binding::Namespace { module: target })
-                            }
+                            ImportName::Namespace => Resolution::Found(
+                                Binding::Namespace { module: target },
+                                Some(module),
+                            ),
                             ImportName::Name(imported) => {
                                 self.resolve_export(target, imported, resolve_set)
                             }
                         },
-                        Target::External(s) | Target::Builtin(s) => Resolution::Found(match name {
-                            ImportName::Namespace => self.external_binding(&s, None),
-                            ImportName::Name(imported) => self.external_binding(&s, Some(imported)),
-                        }),
+                        Target::External(s) | Target::Builtin(s) => match name {
+                            ImportName::Namespace => {
+                                Resolution::Found(self.external_binding(&s, None), Some(module))
+                            }
+                            ImportName::Name(imported) => {
+                                Resolution::Found(self.external_binding(&s, Some(imported)), None)
+                            }
+                        },
                     }
                 }
             };
@@ -1029,16 +1044,16 @@ impl Linker<'_, '_> {
         if name == "default" {
             return Resolution::NotFound;
         }
-        let mut star_resolution: Option<Binding> = None;
+        let mut star_resolution: Option<(Binding, Option<usize>)> = None;
         let stars = self.info(module).esm.stars.clone();
         for (request, _) in stars {
             match self.targets[module][request].clone() {
                 Target::Module(target) => match self.resolve_export(target, name, resolve_set) {
                     Resolution::Ambiguous => return Resolution::Ambiguous,
                     Resolution::NotFound => {}
-                    Resolution::Found(binding) => match &star_resolution {
-                        None => star_resolution = Some(binding),
-                        Some(existing) if *existing == binding => {}
+                    Resolution::Found(binding, cell) => match &star_resolution {
+                        None => star_resolution = Some((binding, cell)),
+                        Some(existing) if existing.0 == binding && existing.1 == cell => {}
                         Some(_) => return Resolution::Ambiguous,
                     },
                 },
@@ -1047,7 +1062,7 @@ impl Linker<'_, '_> {
             }
         }
         match star_resolution {
-            Some(binding) => Resolution::Found(binding),
+            Some((binding, cell)) => Resolution::Found(binding, cell),
             None => Resolution::NotFound,
         }
     }
@@ -1068,17 +1083,23 @@ impl Linker<'_, '_> {
             .find(|import| import.local == symbol)
             .cloned();
         let Some(import) = import else {
-            return Resolution::Found(Binding::Local { module, symbol });
+            return Resolution::Found(Binding::Local { module, symbol }, None);
         };
         match self.targets[module][import.request].clone() {
             Target::Module(target) => match &import.name {
-                ImportName::Namespace => Resolution::Found(Binding::Namespace { module: target }),
+                ImportName::Namespace => {
+                    Resolution::Found(Binding::Namespace { module: target }, Some(module))
+                }
                 ImportName::Name(name) => self.resolve_export(target, name, resolve_set),
             },
-            Target::External(s) | Target::Builtin(s) => Resolution::Found(match &import.name {
-                ImportName::Namespace => self.external_binding(&s, None),
-                ImportName::Name(name) => self.external_binding(&s, Some(name)),
-            }),
+            Target::External(s) | Target::Builtin(s) => match &import.name {
+                ImportName::Namespace => {
+                    Resolution::Found(self.external_binding(&s, None), Some(module))
+                }
+                ImportName::Name(name) => {
+                    Resolution::Found(self.external_binding(&s, Some(name)), None)
+                }
+            },
         }
     }
 
@@ -1123,7 +1144,7 @@ impl Linker<'_, '_> {
                         ImportName::Namespace => Binding::Namespace { module: target },
                         ImportName::Name(name) => {
                             match self.resolve_export(target, name, &mut Vec::new()) {
-                                Resolution::Found(binding) => binding,
+                                Resolution::Found(binding, _) => binding,
                                 other => {
                                     return Err(self.link_error(
                                         module,
@@ -1162,7 +1183,7 @@ impl Linker<'_, '_> {
                 } = &export.target
                 {
                     let resolution = self.resolve_export(module, &export.name, &mut Vec::new());
-                    if !matches!(resolution, Resolution::Found(_)) {
+                    if !matches!(resolution, Resolution::Found(..)) {
                         return Err(self.link_error(module, *request, name, &resolution));
                     }
                 }
@@ -1225,9 +1246,9 @@ impl Linker<'_, '_> {
         let names = self.exported_names(module, &mut Vec::new())?;
         let mut exports = Vec::new();
         for name in names {
-            if let Resolution::Found(binding) = self.resolve_export(module, &name, &mut Vec::new())
-            {
-                exports.push((name, binding));
+            match self.resolve_export(module, &name, &mut Vec::new()) {
+                Resolution::Found(binding, _) => exports.push((name, binding)),
+                Resolution::Ambiguous | Resolution::NotFound => {}
             }
         }
         exports.sort_by(|a, b| a.0.encode_utf16().cmp(b.0.encode_utf16()));
@@ -1461,4 +1482,252 @@ fn captured(
         }
     }
     false
+}
+
+/// A binding as V8 identifies it while linking: by the cell it resolves
+/// to. An external's cells are named by specifier, since the bundle never
+/// links one; a namespace's by the declaration that made it.
+#[derive(Clone, Debug, PartialEq, Eq)]
+enum Cell {
+    Bundled(Binding, Option<usize>),
+    External(String, Option<String>, Option<usize>),
+}
+
+/// Why V8's ResolveExport throws.
+enum V8Error {
+    /// "Detected cycle while resolving name": a circular request asked as
+    /// must-resolve.
+    Cycle,
+    /// "does not provide an export named", or "contains conflicting star
+    /// exports".
+    Other,
+}
+
+impl Linker<'_, '_> {
+    /// Links the graph the way V8 does, to find the programs Node rejects
+    /// that §16.2.1.7.2.2 accepts. V8's ResolveExport differs from the
+    /// spec's in two ways that change an answer: it throws on a circular
+    /// request reached from an import or an indirect export (the spec
+    /// returns null), and it caches every export it resolves, so whether
+    /// it meets such a request depends on what it resolved first. V8
+    /// resolves each module's imports and then its indirect exports, in
+    /// the order modules finish linking (src/objects/source-text-module.cc,
+    /// FinishInstantiate). The bindings the bundle uses still come from the
+    /// spec's algorithm; this only refuses.
+    ///
+    /// Modules reached only through `import()` link when that runs, after
+    /// the static graph; they are modelled linking one `import()` target at
+    /// a time, in file order.
+    fn check_v8_linking(&mut self, order: &[Step], lazy: &[usize]) -> Result<(), Diagnostic> {
+        let mut sequence: Vec<usize> = order
+            .iter()
+            .filter_map(|step| match step {
+                Step::Esm(module) => Some(*module),
+                _ => None,
+            })
+            .collect();
+        let mut done: HashSet<usize> = sequence.iter().copied().collect();
+        for &root in lazy {
+            if done.contains(&root) {
+                continue;
+            }
+            // Post-order over static ES module edges, as linking finishes.
+            let mut stack = vec![(root, 0usize)];
+            done.insert(root);
+            while let Some((module, next)) = stack.last_mut() {
+                let module = *module;
+                let targets = &self.targets[module];
+                if *next >= targets.len() {
+                    sequence.push(module);
+                    stack.pop();
+                    continue;
+                }
+                let target = targets[*next].clone();
+                *next += 1;
+                if let Target::Module(t) = target
+                    && self.info(t).format == Format::Esm
+                    && done.insert(t)
+                {
+                    stack.push((t, 0));
+                }
+            }
+        }
+
+        let mut cache: HashMap<(usize, String), Cell> = HashMap::new();
+        for module in sequence {
+            let modules = self.modules;
+            let esm = &modules[module].info.esm;
+            for import in &esm.imports {
+                let (ImportName::Name(name), Target::Module(target)) =
+                    (&import.name, self.targets[module][import.request].clone())
+                else {
+                    continue;
+                };
+                if let Err(error) =
+                    self.v8_resolve(&mut cache, target, name, &mut HashSet::new(), true)
+                {
+                    return Err(self.v8_refusal(module, import.span, name, &error));
+                }
+            }
+            for export in &esm.exports {
+                if !self.v8_indirect(module, &export.target) {
+                    continue;
+                }
+                if let Err(error) =
+                    self.v8_resolve(&mut cache, module, &export.name, &mut HashSet::new(), true)
+                {
+                    return Err(self.v8_refusal(module, export.span, &export.name, &error));
+                }
+            }
+        }
+        Ok(())
+    }
+
+    /// Whether V8 holds this export as an indirect one: `export { x } from`,
+    /// or an export of a named import, which V8 rewrites to one. A
+    /// namespace import exported, and `export * as`, are its local cells.
+    fn v8_indirect(&self, module: usize, target: &ExportTarget) -> bool {
+        match target {
+            ExportTarget::Indirect {
+                name: ImportName::Name(_),
+                ..
+            } => true,
+            ExportTarget::Local(symbol) => self.info(module).esm.imports.iter().any(|import| {
+                import.local == *symbol && matches!(import.name, ImportName::Name(_))
+            }),
+            _ => false,
+        }
+    }
+
+    fn v8_refusal(
+        &self,
+        module: usize,
+        span: oxc_span::Span,
+        name: &str,
+        error: &V8Error,
+    ) -> Diagnostic {
+        let message = match error {
+            V8Error::Cycle => format!(
+                "Node rejects this program with \"SyntaxError: Detected cycle while resolving name '{name}'\": V8 resolves '{name}' here through a cycle of re-exports, where §16.2.1.7.2.2 skips the circular branch"
+            ),
+            V8Error::Other => format!(
+                "Node rejects this program with a SyntaxError resolving '{name}' here, where §16.2.1.7.2.2 resolves it: V8 resolves through its cache of earlier answers"
+            ),
+        };
+        self.refuse(Code::Link, module, span, message)
+    }
+
+    /// V8's ResolveExport, with its export cache and `must_resolve`.
+    fn v8_resolve(
+        &mut self,
+        cache: &mut HashMap<(usize, String), Cell>,
+        module: usize,
+        name: &str,
+        resolve_set: &mut HashSet<(usize, String)>,
+        must_resolve: bool,
+    ) -> Result<Option<Cell>, V8Error> {
+        if self.info(module).format != Format::Esm {
+            // A synthetic module's exports are all cells from the start.
+            return match self.resolve_export(module, name, &mut Vec::new()) {
+                Resolution::Found(binding, cell) => Ok(Some(Cell::Bundled(binding, cell))),
+                _ if must_resolve => Err(V8Error::Other),
+                _ => Ok(None),
+            };
+        }
+        let key = (module, name.to_string());
+        if let Some(cell) = cache.get(&key) {
+            return Ok(Some(cell.clone()));
+        }
+        let modules = self.modules;
+        let info = modules[module].info;
+        let export = info.esm.exports.iter().find(|e| e.name == name);
+        // Local exports are cells from the start, so they never reach the
+        // cycle check.
+        let indirect = match export.map(|e| &e.target) {
+            Some(ExportTarget::Default) => {
+                return Ok(Some(Cell::Bundled(Binding::Default { module }, None)));
+            }
+            Some(ExportTarget::Local(symbol)) => {
+                match info.esm.imports.iter().find(|i| i.local == *symbol) {
+                    None => {
+                        return Ok(Some(Cell::Bundled(
+                            Binding::Local {
+                                module,
+                                symbol: *symbol,
+                            },
+                            None,
+                        )));
+                    }
+                    Some(import) => match &import.name {
+                        ImportName::Namespace => {
+                            return Ok(Some(self.v8_namespace(module, import.request)));
+                        }
+                        ImportName::Name(imported) => Some((import.request, imported.clone())),
+                    },
+                }
+            }
+            Some(ExportTarget::Indirect { request, name }) => match name {
+                ImportName::Namespace => return Ok(Some(self.v8_namespace(module, *request))),
+                ImportName::Name(imported) => Some((*request, imported.clone())),
+            },
+            None => None,
+        };
+        if !resolve_set.insert(key.clone()) {
+            return if must_resolve {
+                Err(V8Error::Cycle)
+            } else {
+                Ok(None)
+            };
+        }
+        if let Some((request, imported)) = indirect {
+            let cell = match self.targets[module][request].clone() {
+                Target::Module(target) => {
+                    match self.v8_resolve(cache, target, &imported, resolve_set, true)? {
+                        Some(cell) => cell,
+                        None => return Err(V8Error::Other),
+                    }
+                }
+                Target::External(s) | Target::Builtin(s) => Cell::External(s, Some(imported), None),
+            };
+            cache.insert(key, cell.clone());
+            return Ok(Some(cell));
+        }
+        if name != "default" {
+            let mut unique: Option<Cell> = None;
+            for &(request, _) in &info.esm.stars {
+                let Target::Module(target) = self.targets[module][request].clone() else {
+                    continue;
+                };
+                if let Some(cell) = self.v8_resolve(cache, target, name, resolve_set, false)? {
+                    match &unique {
+                        None => unique = Some(cell),
+                        Some(existing) if *existing == cell => {}
+                        Some(_) => return Err(V8Error::Other),
+                    }
+                }
+            }
+            if let Some(cell) = unique {
+                cache.insert(key, cell.clone());
+                return Ok(Some(cell));
+            }
+        }
+        if must_resolve {
+            Err(V8Error::Other)
+        } else {
+            Ok(None)
+        }
+    }
+
+    /// The cell V8 makes for `import * as ns` or `export * as ns` in
+    /// `module`: one of that module's own.
+    fn v8_namespace(&self, module: usize, request: usize) -> Cell {
+        match &self.targets[module][request] {
+            Target::Module(target) => {
+                Cell::Bundled(Binding::Namespace { module: *target }, Some(module))
+            }
+            Target::External(s) | Target::Builtin(s) => {
+                Cell::External(s.clone(), None, Some(module))
+            }
+        }
+    }
 }

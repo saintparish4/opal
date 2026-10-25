@@ -196,6 +196,29 @@ namespace. Importing an ambiguous or missing name is a link error in Node,
 a `SyntaxError` before any code runs, so the bundler refuses it
 ([`E-LINK`](#refusals)).
 
+Two cases follow V8 rather than the spec. First, the spec resolves a namespace
+re-export, `export * as ns from "m"` or `import * as ns from "m"; export
+{ ns }`, to `m`'s namespace itself, so two `export *` that reach it through
+different declarations name one binding; test262's
+`ambiguous-export-bindings/namespace-unambiguous-*` tests say so. V8 gives
+each declaration a binding of its own, so Node calls the name ambiguous and
+fails those tests. The bundler does what Node does: one declaration
+reached twice is one binding, two declarations are ambiguous.
+
+Second, a circular request. The spec's ResolveExport returns null when it
+meets a `(module, name)` it is already resolving, and moves on. V8 throws
+`SyntaxError: Detected cycle while resolving name` when an import or an
+indirect export (`export { x } from`) meets one, and returns null only when
+an `export *` does. V8 also caches every export it resolves, so whether it
+meets a cycle depends on what it resolved first: it resolves each module's
+imports, then its indirect exports, as each module finishes linking
+(FinishInstantiate in V8's `source-text-module.cc`). The bundler runs that
+algorithm over the graph after the spec's, and refuses a program it
+rejects ([`E-LINK`](#refusals)). The bindings still come from the spec's
+algorithm. Modules reached only through `import()` are modelled as linking
+one `import()` target at a time, in file order. test262's
+`instn-star-iee-multi-cycle-same-name` is such a program; Node fails it.
+
 ### 5. `this`, `arguments`, and strictness
 
 - At the top level of an ES module, `this` is `undefined` (§9.1.1.5.4
@@ -489,7 +512,7 @@ line.
 | Code | What | Why |
 |---|---|---|
 | `E-PARSE` | A module does not parse. | Node would throw a `SyntaxError` before running anything. |
-| `E-LINK` | An import names a missing or ambiguous export, a CommonJS name the lexer does not find, or JSON without `type: 'json'`; or a static import cannot be resolved, including one Node does not complete (`./x` for `./x.js`). | Node fails to link the graph, before any code runs. |
+| `E-LINK` | An import names a missing or ambiguous export, a CommonJS name the lexer does not find, or JSON without `type: 'json'`; a cycle of re-exports V8 rejects (rule 4); or a static import cannot be resolved, including one Node does not complete (`./x` for `./x.js`). | Node fails to link the graph, before any code runs. |
 | `E-TLA` | Top-level `await` outside the entry module, or in an entry that is in a cycle; or a lazily imported module that depends on an entry that awaits. | Rule 11. |
 | `E-REQUIRE-ESM` | A CommonJS module `require()`s an ES module. | Node 24 runs it with its own cycle and async-module errors (`ERR_REQUIRE_CYCLE_MODULE`, `ERR_REQUIRE_ASYNC_MODULE`) that this version does not reproduce. |
 | `E-DYNAMIC` | `import()` with options; or `import()` inside a sloppy CommonJS module. | Rule 10. The bundler does not read import attributes at run time, and a sloppy module is compiled at run time without access to the bundle's loader. |
@@ -537,6 +560,16 @@ or named here as the exception to it.
   (`Cannot assign to read only property 'x' of object '[object Module]'`).
   A trap cannot tell whether its caller is strict, so throwing V8's message
   itself would make a sloppy caller throw where it should fail silently.
+- **A namespace object as the receiver of an ordinary `[[Set]]`, while
+  the binding is uninitialized.** `Reflect.set(obj, "x", v, ns)`, or
+  `super.x = v` where `this` is a namespace, reads the receiver's own
+  descriptor (§10.1.9.2 OrdinarySetWithOwnDescriptor), which for a binding
+  in its TDZ throws `ReferenceError`, as the bundle's proxy does. V8 does
+  not read it for a namespace and returns `false`, a `TypeError` in strict
+  code; test262's `namespace/internals/super-access-to-tdz-binding` fails
+  in Node for this. A proxy's descriptor trap cannot tell this read from
+  `Object.getOwnPropertyDescriptor(ns, "x")`, which throws
+  `ReferenceError` in V8 too.
 - **`node:module` through its namespace or default import.**
   `import { createRequire } from 'node:module'` gets the bundle's
   `createRequire` (rule 6); `module.createRequire` through `import module

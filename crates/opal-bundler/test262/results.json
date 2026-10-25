@@ -828,13 +828,13 @@
    "path": "test/language/module-code/ambiguous-export-bindings/namespace-unambiguous-if-export-star-as-from-and-import-star-as-and-export.js",
    "verdict": "node-fails",
    "node": "threw SyntaxError: The requested module './namespace-unambiguous-if-import-star-as-and-export.js' contains conflicting star exports for name 'foo'",
-   "bundle": "exit 0"
+   "bundle": "E-LINK"
   },
   {
    "path": "test/language/module-code/ambiguous-export-bindings/namespace-unambiguous-if-export-star-as-from.js",
    "verdict": "node-fails",
    "node": "threw SyntaxError: The requested module './namespace-unambiguous-if-export-star-as-from.js' contains conflicting star exports for name 'foo'",
-   "bundle": "exit 0"
+   "bundle": "E-LINK"
   },
   {
    "path": "test/language/module-code/ambiguous-export-bindings/namespace-unambiguous-if-import-source-and-export.js",
@@ -846,7 +846,7 @@
    "path": "test/language/module-code/ambiguous-export-bindings/namespace-unambiguous-if-import-star-as-and-export.js",
    "verdict": "node-fails",
    "node": "threw SyntaxError: The requested module './namespace-unambiguous-if-import-star-as-and-export.js' contains conflicting star exports for name 'foo'",
-   "bundle": "exit 0"
+   "bundle": "E-LINK"
   },
   {
    "path": "test/language/module-code/ambiguous-export-bindings/omitted-from-namespace.js",
@@ -1872,7 +1872,7 @@
    "path": "test/language/module-code/instn-star-iee-multi-cycle-same-name.js",
    "verdict": "node-fails",
    "node": "threw SyntaxError: Detected cycle while resolving name 'foo' in './instn-star-iee-multi-cycle-same-name-a_FIXTURE.js'",
-   "bundle": "exit 0"
+   "bundle": "E-LINK"
   },
   {
    "path": "test/language/module-code/instn-star-iee-single-cycle-same-name.js",
@@ -2164,9 +2164,10 @@
   },
   {
    "path": "test/language/module-code/namespace/internals/super-access-to-tdz-binding.js",
-   "verdict": "node-fails",
+   "verdict": "node-diverges",
    "node": "threw Test262Error: Expected a ReferenceError but got a TypeError",
-   "bundle": "exit 0"
+   "bundle": "exit 0",
+   "note": "V8 does not read a namespace receiver's descriptor in OrdinarySet; SEMANTICS.md, Divergences the bundler does not refuse: a namespace object as the receiver of an ordinary [[Set]]."
   },
   {
    "path": "test/language/module-code/namespace/internals/super-set-to-tdz-binding-with-accessor.js",

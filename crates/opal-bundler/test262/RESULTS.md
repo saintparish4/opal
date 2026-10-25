@@ -6,7 +6,8 @@ test262 at `d53ebc8b1931d9f1541e43d59650776e4b766248`, Node v24.19.0. Every test
 |---|---|
 | pass | 580 |
 | refused-by-design | 21 |
-| node-fails | 121 |
+| node-fails | 120 |
+| node-diverges | 1 |
 | not-applicable | 9 |
 | total | 731 |
 
@@ -17,6 +18,12 @@ test262 at `d53ebc8b1931d9f1541e43d59650776e4b766248`, Node v24.19.0. Every test
 | `E-DYNAMIC` | 1 | `import()` the bundler cannot resolve statically (rule 10). |
 | `E-TLA` | 18 | Top-level `await` outside the entry module (rule 11). |
 | `E-UNSUPPORTED` | 2 | A file type the bundler does not load. |
+
+## Failing in Node, passing in the bundle
+
+| Test | Node | Bundle | Note |
+|---|---|---|---|
+| `test/language/module-code/namespace/internals/super-access-to-tdz-binding.js` | threw Test262Error: Expected a ReferenceError but got a TypeError | exit 0 | V8 does not read a namespace receiver's descriptor in OrdinarySet; SEMANTICS.md, Divergences the bundler does not refuse: a namespace object as the receiver of  |
 
 ## Failing in Node itself
 
@@ -126,10 +133,10 @@ test262 at `d53ebc8b1931d9f1541e43d59650776e4b766248`, Node v24.19.0. Every test
 | `test/language/import/import-defer/evaluation-triggers/trigger-ownPropertyKeys.js` | threw SyntaxError: Unexpected token '*' | E-UNSUPPORTED |  |
 | `test/language/import/import-defer/syntax/import-attributes.js` | threw SyntaxError: Unexpected token '*' | E-UNSUPPORTED |  |
 | `test/language/import/import-defer/syntax/valid-defer-namespace.js` | threw SyntaxError: Unexpected token '*' | E-UNSUPPORTED |  |
-| `test/language/module-code/ambiguous-export-bindings/namespace-unambiguous-if-export-star-as-from-and-import-star-as-and-export.js` | threw SyntaxError: The requested module './namespace-unambiguous-if-import-star-as-and-export.js' contains conflicting star exports for name 'foo' | exit 0 |  |
-| `test/language/module-code/ambiguous-export-bindings/namespace-unambiguous-if-export-star-as-from.js` | threw SyntaxError: The requested module './namespace-unambiguous-if-export-star-as-from.js' contains conflicting star exports for name 'foo' | exit 0 |  |
+| `test/language/module-code/ambiguous-export-bindings/namespace-unambiguous-if-export-star-as-from-and-import-star-as-and-export.js` | threw SyntaxError: The requested module './namespace-unambiguous-if-import-star-as-and-export.js' contains conflicting star exports for name 'foo' | E-LINK |  |
+| `test/language/module-code/ambiguous-export-bindings/namespace-unambiguous-if-export-star-as-from.js` | threw SyntaxError: The requested module './namespace-unambiguous-if-export-star-as-from.js' contains conflicting star exports for name 'foo' | E-LINK |  |
 | `test/language/module-code/ambiguous-export-bindings/namespace-unambiguous-if-import-source-and-export.js` | threw Error: Cannot find package '<module source>' imported from <work>/test/language/module-code/ambiguous-export-bindings/namespace-import-source-and-export-1 | E-UNSUPPORTED |  |
-| `test/language/module-code/ambiguous-export-bindings/namespace-unambiguous-if-import-star-as-and-export.js` | threw SyntaxError: The requested module './namespace-unambiguous-if-import-star-as-and-export.js' contains conflicting star exports for name 'foo' | exit 0 |  |
+| `test/language/module-code/ambiguous-export-bindings/namespace-unambiguous-if-import-star-as-and-export.js` | threw SyntaxError: The requested module './namespace-unambiguous-if-import-star-as-and-export.js' contains conflicting star exports for name 'foo' | E-LINK |  |
 | `test/language/module-code/import-attributes/import-attribute-key-identifiername.js` | threw TypeError: Import attribute "if" with value "" is not supported in <work>/test/language/module-code/import-attributes/import-attribute-1_FIXTURE.js | E-LINK |  |
 | `test/language/module-code/import-attributes/import-attribute-key-string-double.js` | threw TypeError: Import attribute "test262x" with value "" is not supported in <work>/test/language/module-code/import-attributes/import-attribute-1_FIXTURE.js | E-LINK |  |
 | `test/language/module-code/import-attributes/import-attribute-key-string-single.js` | threw TypeError: Import attribute "test262x" with value "" is not supported in <work>/test/language/module-code/import-attributes/import-attribute-1_FIXTURE.js | E-LINK |  |
@@ -138,8 +145,7 @@ test262 at `d53ebc8b1931d9f1541e43d59650776e4b766248`, Node v24.19.0. Every test
 | `test/language/module-code/import-attributes/import-attribute-trlng-comma.js` | threw TypeError: Import attribute "test262" with value "" is not supported in <work>/test/language/module-code/import-attributes/import-attribute-1_FIXTURE.js | E-LINK |  |
 | `test/language/module-code/import-attributes/import-attribute-value-string-double.js` | threw TypeError: Import attribute "test262" with value "x" is not supported in <work>/test/language/module-code/import-attributes/import-attribute-1_FIXTURE.js | E-LINK |  |
 | `test/language/module-code/import-attributes/import-attribute-value-string-single.js` | threw TypeError: Import attribute "test262" with value "x" is not supported in <work>/test/language/module-code/import-attributes/import-attribute-1_FIXTURE.js | E-LINK |  |
-| `test/language/module-code/instn-star-iee-multi-cycle-same-name.js` | threw SyntaxError: Detected cycle while resolving name 'foo' in './instn-star-iee-multi-cycle-same-name-a_FIXTURE.js' | exit 0 |  |
-| `test/language/module-code/namespace/internals/super-access-to-tdz-binding.js` | threw Test262Error: Expected a ReferenceError but got a TypeError | exit 0 |  |
+| `test/language/module-code/instn-star-iee-multi-cycle-same-name.js` | threw SyntaxError: Detected cycle while resolving name 'foo' in './instn-star-iee-multi-cycle-same-name-a_FIXTURE.js' | E-LINK |  |
 | `test/language/module-code/source-phase-import/reexport-source-binding-named-import.js` | threw Error: Cannot find package '<module source>' imported from <work>/test/language/module-code/source-phase-import/reexport-source-binding_FIXTURE.js | E-UNSUPPORTED |  |
 | `test/language/module-code/source-phase-import/reexport-source-binding-namespace-get.js` | threw Error: Cannot find package '<module source>' imported from <work>/test/language/module-code/source-phase-import/reexport-source-binding_FIXTURE.js | E-UNSUPPORTED |  |
 | `test/language/module-code/top-level-await/rejection-order.js` | threw UnhandledPromiseRejection: This error originated either by throwing inside of an async function without a catch block, or by rejecting a promise which was | E-TLA |  |

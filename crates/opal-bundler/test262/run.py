@@ -18,11 +18,16 @@ Each test then gets a verdict:
   pass               the bundled run passes
   refused-by-design  the bundler refused with a code SEMANTICS.md lists, and
                      the test is outside what that rule allows
-  node-fails         Node fails the unbundled test too, so there is nothing
-                     for the bundle to match
+  node-fails         Node fails the unbundled test too, and the bundle fails
+                     or is refused, so neither runs the test as written
+  node-diverges      Node fails the test and the bundle runs and passes it: the
+                     bundle follows the spec where Node does not, which the
+                     contract counts as a divergence from Node; it needs an
+                     entry in annotations.json naming where SEMANTICS.md
+                     lists it
   bug                anything else; it needs an entry in annotations.json
 
-The run fails if any `bug` has no annotation, and --write rewrites
+The run fails if any `bug` or `node-diverges` has no annotation, and --write rewrites
 results.json and RESULTS.md next to this file.
 
     python3 crates/opal-bundler/test262/run.py --opal target/debug/opal --write
@@ -132,7 +137,7 @@ def main():
                 features = ",".join(result["features"])
                 print(f"  {result['path']}  [{features}]", file=sys.stderr)
                 print(f"      node: {result['node']['detail']}  bundle: {result['bundle'].get('refused') or result['bundle']['detail']}", file=sys.stderr)
-    unannotated = [r for r in results if r["verdict"] == "bug" and not r.get("note")]
+    unannotated = [r for r in results if r["verdict"] in ("bug", "node-diverges") and not r.get("note")]
     if args.write:
         write_results(results, node_version)
     if unannotated:
@@ -307,7 +312,10 @@ def classify(result, annotations, node_only):
     elif node_only:
         result["verdict"] = "baseline-pass" if node["ok"] else "node-fails"
     elif not node["ok"]:
-        result["verdict"] = "node-fails"
+        # A refusal is never a divergence: building nothing is the bundle's
+        # way of failing before any code runs.
+        ran_and_passed = bundle["ok"] and not bundle.get("refused")
+        result["verdict"] = "node-diverges" if ran_and_passed else "node-fails"
     elif bundle["ok"]:
         result["verdict"] = "pass"
     elif bundle.get("refused") and bundle["refused"] not in ("E-UNKNOWN", "E-PARSE", "E-LINK"):
@@ -316,7 +324,7 @@ def classify(result, annotations, node_only):
         result["verdict"] = "bug"
 
 
-ORDER = ["pass", "refused-by-design", "node-fails", "bug", "baseline-pass", "not-applicable"]
+ORDER = ["pass", "refused-by-design", "node-fails", "node-diverges", "bug", "baseline-pass", "not-applicable"]
 
 
 def summarize(results, node_version, args):
@@ -378,7 +386,11 @@ def write_results(results, node_version):
         for code, items in sorted(refused.items()):
             lines.append(f"| `{code}` | {len(items)} | {REFUSAL_RULES.get(code, 'see SEMANTICS.md')} |")
 
-    for verdict, heading in (("bug", "Bugs"), ("node-fails", "Failing in Node itself")):
+    for verdict, heading in (
+        ("bug", "Bugs"),
+        ("node-diverges", "Failing in Node, passing in the bundle"),
+        ("node-fails", "Failing in Node itself"),
+    ):
         items = [r for r in records if r["verdict"] == verdict]
         if not items:
             continue
