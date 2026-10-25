@@ -1,0 +1,283 @@
+{
+  "meta": {
+    "date": "2026-10-25T02:00:25-04:00",
+    "host": "Linux 6.6.87.2-microsoft-standard-WSL2, 8 threads",
+    "fixture": "three.js r108 src x10, 3701 files",
+    "runs": 10,
+    "versions": {
+      "opal": "opal 0.4.1 (84c7a7f)",
+      "esbuild": "0.28.2",
+      "rolldown": "rolldown v1.2.13",
+      "bun": "1.4.2",
+      "node": "v24.19.0",
+      "opal baseline": "opal 0.4.1 (84c7a7f)"
+    },
+    "repository": "v0.3.0-77-gc66e8702bf41-dirty",
+    "opal_binary_sha256": "25589d72d4d5210bbd226340b109b417f4c40d30d2084589c6ddedd6ddcb759d",
+    "opal_phases_ms": {
+      "graph cache empty": {
+        "resolve": 277.8,
+        "parse": 160.2,
+        "link": 64.0,
+        "print": 169.7,
+        "write": 527.3
+      },
+      "graph cache warm": {
+        "resolve": 56.9,
+        "parse": 187.4,
+        "link": 66.8,
+        "print": 174.6,
+        "write": 82.8
+      }
+    },
+    "opal_baseline_sha256": "e1be6d0e6f3f7bd81bc7b82495f882fb1479216d457b67cc3badf154819235e9",
+    "opal_baseline_phases_ms": {
+      "resolve": 56.2,
+      "parse": 409.1,
+      "link": 187.2,
+      "print": 299.1,
+      "write": 82.7
+    }
+  },
+  "results": {
+    "opal (graph cache empty)": {
+      "command": "<opal> build src/entry.js --root . --outdir out/opal --cache-dir <work>/opal-cache",
+      "works": true,
+      "check": "ok",
+      "bytes": 11082080,
+      "times": [
+        0.8245,
+        1.1191,
+        0.8476,
+        0.8562,
+        0.8788,
+        1.1278,
+        1.0807,
+        0.8375,
+        0.8065,
+        0.877
+      ],
+      "peak_rss_mb": [
+        302.1,
+        301.6,
+        301.9,
+        301.6,
+        301.1,
+        301.4,
+        301.6,
+        301.6,
+        301.4,
+        301.6
+      ],
+      "median": 0.8666,
+      "min": 0.8065,
+      "max": 1.1278,
+      "median_peak_rss_mb": 301.6
+    },
+    "opal (graph cache warm)": {
+      "command": "<opal> build src/entry.js --root . --outdir out/opal --cache-dir <work>/opal-cache",
+      "works": true,
+      "check": "ok",
+      "bytes": 11082080,
+      "times": [
+        0.6813,
+        0.7549,
+        0.6692,
+        0.6575,
+        0.6424,
+        0.6408,
+        0.6505,
+        0.6455,
+        0.6236,
+        0.6901
+      ],
+      "peak_rss_mb": [
+        302.2,
+        302.1,
+        301.6,
+        301.8,
+        302.1,
+        302.0,
+        302.2,
+        302.1,
+        302.7,
+        302.1
+      ],
+      "median": 0.6539999999999999,
+      "min": 0.6236,
+      "max": 0.7549,
+      "median_peak_rss_mb": 302.1
+    },
+    "opal baseline (graph cache warm)": {
+      "command": "<baseline> build src/entry.js --root . --outdir out/opal-baseline --cache-dir <work>/opal-baseline-cache",
+      "works": true,
+      "check": "ok",
+      "bytes": 11082080,
+      "times": [
+        1.1158,
+        1.5731,
+        1.1487,
+        1.1004,
+        1.1669,
+        1.0995,
+        1.0991,
+        1.0787,
+        1.2135,
+        1.1061
+      ],
+      "peak_rss_mb": [
+        285.1,
+        285.2,
+        285.3,
+        284.9,
+        284.9,
+        285.3,
+        285.2,
+        285.1,
+        285.1,
+        285.3
+      ],
+      "same_bundle_and_map_as_opal": true,
+      "median": 1.1109499999999999,
+      "min": 1.0787,
+      "max": 1.5731,
+      "median_peak_rss_mb": 285.15
+    },
+    "esbuild": {
+      "command": "<repo>/crates/opal-bundler/tools/node_modules/@esbuild/linux-x64/bin/esbuild src/entry.js --bundle --format=esm --sourcemap --outfile=out/esbuild/entry.js --log-level=warning",
+      "works": true,
+      "check": "ok",
+      "bytes": 10796871,
+      "times": [
+        0.6979,
+        0.7009,
+        0.7052,
+        0.6933,
+        0.7264,
+        0.7033,
+        0.7719,
+        0.7156,
+        0.7106,
+        0.7104
+      ],
+      "peak_rss_mb": [
+        534.6,
+        535.1,
+        536.6,
+        535.5,
+        536.9,
+        535.1,
+        535.4,
+        535.6,
+        535.6,
+        535.0
+      ],
+      "median": 0.7078,
+      "min": 0.6933,
+      "max": 0.7719,
+      "median_peak_rss_mb": 535.45
+    },
+    "esbuild --minify": {
+      "command": "<repo>/crates/opal-bundler/tools/node_modules/@esbuild/linux-x64/bin/esbuild src/entry.js --bundle --format=esm --sourcemap --minify --outfile=out/esbuild-min/entry.js --log-level=warning",
+      "works": true,
+      "check": "ok",
+      "bytes": 6083428,
+      "times": [
+        0.7192,
+        0.7091,
+        0.6577,
+        0.8157,
+        0.7066,
+        0.7397,
+        0.7224,
+        0.7034,
+        0.6954,
+        0.7925
+      ],
+      "peak_rss_mb": [
+        532.8,
+        531.4,
+        530.8,
+        532.5,
+        531.5,
+        530.7,
+        533.2,
+        530.6,
+        533.7,
+        532.5
+      ],
+      "median": 0.71415,
+      "min": 0.6577,
+      "max": 0.8157,
+      "median_peak_rss_mb": 532.0
+    },
+    "rolldown": {
+      "command": "<repo>/crates/opal-bundler/tools/node_modules/.bin/rolldown src/entry.js --format esm --sourcemap --dir out/rolldown --logLevel silent",
+      "works": true,
+      "check": "ok",
+      "bytes": 10117703,
+      "times": [
+        1.6587,
+        1.7038,
+        1.7145,
+        1.6807,
+        1.6826,
+        1.6506,
+        1.6555,
+        1.6677,
+        1.6832,
+        1.7663
+      ],
+      "peak_rss_mb": [
+        718.8,
+        718.2,
+        731.6,
+        730.7,
+        731.6,
+        722.7,
+        717.5,
+        738.4,
+        711.8,
+        721.1
+      ],
+      "median": 1.68165,
+      "min": 1.6506,
+      "max": 1.7663,
+      "median_peak_rss_mb": 721.9000000000001
+    },
+    "bun": {
+      "command": "bun build src/entry.js --format=esm --sourcemap=external --outdir=out/bun",
+      "works": true,
+      "check": "ok",
+      "bytes": 10634050,
+      "times": [
+        0.4134,
+        0.4025,
+        0.4212,
+        0.4224,
+        0.4373,
+        0.4126,
+        0.4147,
+        0.403,
+        0.4213,
+        0.4262
+      ],
+      "peak_rss_mb": [
+        337.6,
+        335.4,
+        335.1,
+        336.6,
+        335.0,
+        334.9,
+        336.0,
+        336.3,
+        335.9,
+        334.9
+      ],
+      "median": 0.41795000000000004,
+      "min": 0.4025,
+      "max": 0.4373,
+      "median_peak_rss_mb": 335.65
+    }
+  }
+}
