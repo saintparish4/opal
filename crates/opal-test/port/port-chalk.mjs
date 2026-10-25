@@ -62,7 +62,8 @@ const REQUIRES = {
 
 function render([source, target, packageDir]) {
   const manifest = JSON.parse(fs.readFileSync(path.join(packageDir, 'package.json'), 'utf8'));
-  const code = fs.readFileSync(source, 'utf8').replace(/require\('([^']+)'\)/g, (whole, request) => {
+  // LF throughout, as git stores it (color-name ships with CRLF).
+  const code = fs.readFileSync(source, 'utf8').replaceAll('\r\n', '\n').replace(/require\('([^']+)'\)/g, (whole, request) => {
     if (!(request in REQUIRES)) throw new Error(`${source}: unexpected require('${request}')`);
     return `require('${REQUIRES[request]}')`;
   });
@@ -95,7 +96,7 @@ for (const [, , packageDir] of FILES) {
   const manifest = JSON.parse(fs.readFileSync(path.join(packageDir, 'package.json'), 'utf8'));
   const license = fs.readdirSync(packageDir).find(name => /^licen[sc]e/i.test(name));
   if (license) {
-    const text = fs.readFileSync(path.join(packageDir, license), 'utf8');
+    const text = fs.readFileSync(path.join(packageDir, license), 'utf8').replaceAll('\r\n', '\n');
     fs.writeFileSync(path.join(RUNNERS, '..', 'LICENSES', `${manifest.name}.txt`), text);
   }
 }
