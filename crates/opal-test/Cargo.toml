@@ -1,0 +1,18 @@
+[package]
+name = "opal-test"
+description = "opal test: a Jest-semantics test runner over Node workers."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+opal-core.workspace = true
+blake3.workspace = true
+regex.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = [ "crates/opal-core", "crates/opal-cli", "crates/opal-pm" ] # TODO: add more crates
+members = [ "crates/opal-core", "crates/opal-cli", "crates/opal-pm", "crates/opal-test" ] # TODO: add more crates
 
 [workspace.package]
 version = "0.4.1"
@@ -11,6 +11,7 @@ repository = "https://github.com/saintparish4/opal"
 [workspace.dependencies]
 opal-core = { path = "crates/opal-core" }
 opal-pm = { path = "crates/opal-pm" }
+opal-test = { path = "crates/opal-test" }
 
 blake3 = "1.8.6"
 oxc_allocator = "0.152.0"
@@ -51,6 +52,10 @@ indicatif = "0.18"
 # fills the last column wraps early in some terminals, and indicatif's next
 # redraw then clears the wrong row.
 console = { version = "0.16.4", default-features = false, features = ["std"] }
+# Jest's testRegex, testPathIgnorePatterns and path patterns are regular
+# expressions, and testMatch globs compile to them. A regex engine is not a
+# thing to hand-roll.
+regex = "1"
 # std has no advisory file locking; this is one extern function (flock), not
 # worth a wrapper crate like fs2/fd-lock for.
 libc = "0.2.189"
