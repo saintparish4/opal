@@ -1,6 +1,6 @@
 // pretty-format, as Jest 30 has it: the serializer behind snapshots, matcher
 // messages and `.each` titles. Ported from jest/packages/pretty-format/src
-// (index.ts, collections.ts and the AsymmetricMatcher, ReactElement,
+// (index.ts, collections.ts and the AsymmetricMatcher, Immutable, ReactElement,
 // ReactTestComponent, DOMElement and DOMCollection plugins), keeping its
 // output byte for byte, because a snapshot written by Jest has to read back
 // the same here. Colors are left out: nothing opal prints highlights values.
@@ -662,10 +662,90 @@ const DOMCollection = {
     (OBJECT_NAMES.has(val.constructor.name) || ARRAY_REGEXP.test(val.constructor.name)),
 };
 
+// Immutable.js, from the sentinels immutable-js puts on its collections.
+const IS_ITERABLE_SENTINEL = '@@__IMMUTABLE_ITERABLE__@@';
+const IS_LIST_SENTINEL = '@@__IMMUTABLE_LIST__@@';
+const IS_KEYED_SENTINEL = '@@__IMMUTABLE_KEYED__@@';
+const IS_MAP_SENTINEL = '@@__IMMUTABLE_MAP__@@';
+const IS_ORDERED_SENTINEL = '@@__IMMUTABLE_ORDERED__@@';
+const IS_RECORD_SENTINEL = '@@__IMMUTABLE_RECORD__@@';
+const IS_SEQ_SENTINEL = '@@__IMMUTABLE_SEQ__@@';
+const IS_SET_SENTINEL = '@@__IMMUTABLE_SET__@@';
+const IS_STACK_SENTINEL = '@@__IMMUTABLE_STACK__@@';
+const getImmutableName = name => `Immutable.${name}`;
+const printAsLeaf = name => `[${name}]`;
+const LAZY = '…';
+
+const printImmutableEntries = (val, config, indentation, depth, refs, printer, type) =>
+  ++depth > config.maxDepth
+    ? printAsLeaf(getImmutableName(type))
+    : `${getImmutableName(type)} {${printIteratorEntries(val.entries(), config, indentation, depth, refs, printer)}}`;
+
+function getRecordEntries(val) {
+  let i = 0;
+  return {
+    next() {
+      if (i < val._keys.length) {
+        const key = val._keys[i++];
+        return {done: false, value: [key, val.get(key)]};
+      }
+      return {done: true, value: undefined};
+    },
+  };
+}
+
+function printImmutableRecord(val, config, indentation, depth, refs, printer) {
+  const name = getImmutableName(val._name || 'Record');
+  return ++depth > config.maxDepth
+    ? printAsLeaf(name)
+    : `${name} {${printIteratorEntries(getRecordEntries(val), config, indentation, depth, refs, printer)}}`;
+}
+
+function printImmutableSeq(val, config, indentation, depth, refs, printer) {
+  const name = getImmutableName('Seq');
+  if (++depth > config.maxDepth) return printAsLeaf(name);
+  if (val[IS_KEYED_SENTINEL]) {
+    return `${name} {${
+      val._iter || val._object
+        ? printIteratorEntries(val.entries(), config, indentation, depth, refs, printer)
+        : LAZY
+    }}`;
+  }
+  return `${name} [${
+    val._iter || val._array || val._collection || val._iterable
+      ? printIteratorValues(val.values(), config, indentation, depth, refs, printer)
+      : LAZY
+  }]`;
+}
+
+const printImmutableValues = (val, config, indentation, depth, refs, printer, type) =>
+  ++depth > config.maxDepth
+    ? printAsLeaf(getImmutableName(type))
+    : `${getImmutableName(type)} [${printIteratorValues(val.values(), config, indentation, depth, refs, printer)}]`;
+
+const Immutable = {
+  serialize(val, config, indentation, depth, refs, printer) {
+    if (val[IS_MAP_SENTINEL]) {
+      return printImmutableEntries(val, config, indentation, depth, refs, printer, val[IS_ORDERED_SENTINEL] ? 'OrderedMap' : 'Map');
+    }
+    if (val[IS_LIST_SENTINEL]) return printImmutableValues(val, config, indentation, depth, refs, printer, 'List');
+    if (val[IS_SET_SENTINEL]) {
+      return printImmutableValues(val, config, indentation, depth, refs, printer, val[IS_ORDERED_SENTINEL] ? 'OrderedSet' : 'Set');
+    }
+    if (val[IS_STACK_SENTINEL]) return printImmutableValues(val, config, indentation, depth, refs, printer, 'Stack');
+    if (val[IS_SEQ_SENTINEL]) return printImmutableSeq(val, config, indentation, depth, refs, printer);
+    return printImmutableRecord(val, config, indentation, depth, refs, printer);
+  },
+  // Compared with true, so a proxy that answers any key (identity-obj-proxy)
+  // isn't taken for a collection.
+  test: val => val && (val[IS_ITERABLE_SENTINEL] === true || val[IS_RECORD_SENTINEL] === true),
+};
+
 module.exports = {
   format,
+  default: format,
   DEFAULT_OPTIONS,
-  plugins: {AsymmetricMatcher, DOMCollection, DOMElement, ReactElement, ReactTestComponent},
+  plugins: {AsymmetricMatcher, DOMCollection, DOMElement, Immutable, ReactElement, ReactTestComponent},
   printListItems,
   printObjectProperties,
 };

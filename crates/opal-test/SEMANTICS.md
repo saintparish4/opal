@@ -13,6 +13,7 @@ opal test promises Jest 30.5.2's behavior for files written against Jest's globa
 - [Calling a test or hook](#calling-a-test-or-hook)
 - [Where an error is charged](#where-an-error-is-charged)
 - [What a file reports](#what-a-file-reports)
+- [expect](#expect)
 - [Checked so far](#checked-so-far)
 - [Not yet](#not-yet)
 
@@ -119,16 +120,29 @@ From `runAndTransformResultsToJestFormat` in `jestAdapterInit.ts`, `TestSchedule
 - A file that declares no tests at all fails: "Your test suite must contain at least one test."
 - `--json` writes Jest's aggregated result, field for field.
 
+## expect
+
+`expect` is Jest's own: `expect`, `@jest/expect-utils`, `jest-matcher-utils`, `jest-diff`, `@jest/diff-sequences` and `@jest/get-type` at v30.5.2. [`port/port.mjs`](./port/port.mjs) carries them over as the `runtime/jest-*.cjs` files.
+
+- **What the port changes.** It strips the types with Node's own stripper and rewrites ES modules to CommonJS the way Babel does. Nothing else in the code changes, and `port.mjs --check` verifies that the committed files still match.
+- **What it maps out.** chalk becomes a shim without colors. pretty-format becomes opal's own port (`runtime/format.cjs`). Three functions of `jest-util` and `jest-message-util` come from `runtime/support.cjs`.
+- **Where it runs.** `expect` is evaluated inside each test file's context, as Jest loads it, so `instanceof` checks and assertion counts see the test's own realm.
+
+Messages have no colors. Stack traces in them leave out opal's runtime frames the way Jest leaves out its own.
+
 ## Checked so far
 
 | check | result |
 |---|---|
 | `compat/test-lifecycle.py`, seeds 2 to 6, 1,000 files each | 5,000 of 5,000 files identical to Jest, about 32,000 tests, on verdicts and on the order every hook and test ran |
 | the same with `-t '[13579]$'` and `-t 'describe1\|test2'` (seed 8) | 2,000 of 2,000 identical |
+| `compat/test-expect.cjs`, seeds 1 to 3, 20,000 cases each, against Jest's installed `expect` build | 300,000 calls to `toEqual`, `toStrictEqual`, `toMatchObject`, `toContainEqual` and `toContain`: no verdict differs, and no failure message differs by a byte |
+| the same with a bug planted, `Object.is` replaced by `===` in equality, or `-0` printed as `0` | caught: 380 verdicts, or 1,688 messages, differ in 5,000 cases |
+| `compat/test-runners.py --opal`, the Jest-dialect fixtures | everything matches Jest except the fixtures that need mock functions or snapshots; all 21 planted failures opal faced fail |
 
 ## Not yet
 
-- **`expect`, snapshots, mock functions and module mocking.** The runtime has placeholders that throw rather than pass.
+- **Snapshots, mock functions and module mocking.** The runtime has placeholders that throw rather than pass.
 - **TypeScript and ESM test files.**
 - **Watch mode.**
 - **Vitest's dialect.**

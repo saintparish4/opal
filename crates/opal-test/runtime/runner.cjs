@@ -12,48 +12,45 @@ const vm = require('vm');
 const {createEnvironment} = require('./environment.cjs');
 const {Loader} = require('./loader.cjs');
 
-const FRAMEWORK_FILES = [
-  'errors.cjs',
-  'format.cjs',
-  'each.cjs',
-  'circus.cjs',
-  'expect.cjs',
-  'mock.cjs',
-  'framework.cjs',
-];
-
-// Compiled once per worker, run in each file's context.
-let frameworkScripts = null;
+// Everything in this folder but the host side below runs inside each test
+// file's context, loaded on first require. Compiled once per worker, run in
+// each file's context.
+const HOST_FILES = new Set(['worker.cjs', 'config.cjs', 'environment.cjs', 'loader.cjs', 'runner.cjs']);
+const frameworkScripts = new Map();
 
 function frameworkScript(name) {
-  if (!frameworkScripts) {
-    frameworkScripts = new Map();
-    for (const file of FRAMEWORK_FILES) {
-      const filename = path.join(__dirname, file);
-      const source = fs.readFileSync(filename, 'utf8');
-      frameworkScripts.set(
-        file,
-        new vm.Script(`(function (exports, require, module) {${source}\n})`, {filename}),
-      );
-    }
+  let script = frameworkScripts.get(name);
+  if (!script) {
+    const filename = path.join(__dirname, name);
+    const source = fs.readFileSync(filename, 'utf8');
+    script = new vm.Script(`(function (exports, require, module, __filename, __dirname) {${source}\n})`, {filename});
+    frameworkScripts.set(name, script);
   }
-  return frameworkScripts.get(name);
+  return script;
 }
 
-function loadFramework(context) {
+const isFrameworkFile = name =>
+  name.endsWith('.cjs') && !HOST_FILES.has(name) && fs.existsSync(path.join(__dirname, name));
+
+// A `require` for the runtime's in-context modules, one registry per context.
+function frameworkRequire(context) {
   const loaded = new Map();
   const requireInternal = request => {
     const name = request.startsWith('./') ? request.slice(2) : request;
-    if (!FRAMEWORK_FILES.includes(name)) return require(request);
+    if (!isFrameworkFile(name)) return require(request);
     const cached = loaded.get(name);
     if (cached) return cached.exports;
     const module = {exports: {}};
     loaded.set(name, module);
-    frameworkScript(name).runInContext(context).call(module.exports, module.exports, requireInternal, module);
+    frameworkScript(name)
+      .runInContext(context)
+      .call(module.exports, module.exports, requireInternal, module, path.join(__dirname, name), __dirname);
     return module.exports;
   };
-  return requireInternal('framework.cjs');
+  return requireInternal;
 }
+
+const loadFramework = context => frameworkRequire(context)('framework.cjs');
 
 // Jest's BufferedConsole, in outline: what a test logs is kept with the file
 // and printed under it, not interleaved with other workers' output.
@@ -170,4 +167,4 @@ async function runTestFile(testPath, {config, globalConfig}) {
   return result;
 }
 
-module.exports = {runTestFile};
+module.exports = {frameworkRequire, runTestFile};

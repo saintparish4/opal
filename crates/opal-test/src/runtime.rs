@@ -10,26 +10,7 @@ use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 
-macro_rules! runtime_files {
-    ($($name:literal),* $(,)?) => {
-        &[$(($name, include_str!(concat!("../runtime/", $name)))),*]
-    };
-}
-
-const FILES: &[(&str, &str)] = runtime_files![
-    "worker.cjs",
-    "config.cjs",
-    "environment.cjs",
-    "loader.cjs",
-    "runner.cjs",
-    "framework.cjs",
-    "errors.cjs",
-    "circus.cjs",
-    "each.cjs",
-    "format.cjs",
-    "expect.cjs",
-    "mock.cjs",
-];
+const FILES: &[(&str, &str)] = include!(concat!(env!("OUT_DIR"), "/runtime_files.rs"));
 
 /// The folder holding `worker.cjs`.
 pub fn unpack(cache: &Path) -> io::Result<PathBuf> {
