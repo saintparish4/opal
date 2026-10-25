@@ -366,3 +366,130 @@ fn test_realistic_project_matches_its_golden_snapshot() {
         "resolved graph changed shape; re-run with UPDATE_GOLDEN=1 if intended"
     );
 }
+
+#[test]
+fn test_jsx_runtime_is_an_edge_only_when_asked_for_and_only_from_jsx() {
+    let project = Project::new();
+    project
+        .write(
+            "app.tsx",
+            "import { Card } from './card.jsx';\nexport const App = () => <Card />;\n",
+        )
+        .write("card.jsx", "export const Card = () => <div />;\n")
+        .write(
+            "classic.jsx",
+            "/** @jsxRuntime classic */\nexport const C = () => <div />;\n",
+        )
+        .write(
+            "preact.jsx",
+            "/** @jsxImportSource preact */\nexport const P = () => <div />;\n",
+        )
+        .write("plain.tsx", "export const none = 1;\n")
+        .write("node_modules/react/package.json", "{\"name\": \"react\"}\n")
+        .write(
+            "node_modules/react/jsx-runtime.js",
+            "exports.jsx = () => {};\n",
+        )
+        .write(
+            "node_modules/preact/package.json",
+            "{\"name\": \"preact\"}\n",
+        )
+        .write(
+            "node_modules/preact/jsx-runtime.js",
+            "exports.jsx = () => {};\n",
+        );
+
+    // Off by default: the graph is the files' own imports.
+    let resolution = graph_of(&project, "app.tsx");
+    assert_eq!(
+        specifiers(&resolution, "app.tsx"),
+        vec![("./card.jsx".to_string(), "card.jsx".to_string())]
+    );
+
+    let options = ResolverOptions {
+        jsx_runtime: Some("react".to_string()),
+        ..ResolverOptions::default()
+    };
+    assert_ne!(options.digest(), ResolverOptions::default().digest());
+    let edges = |file: &str| {
+        let resolution = resolve(&project.root(), &entry(file), &options).unwrap();
+        specifiers(&resolution, file)
+    };
+    assert_eq!(
+        edges("app.tsx"),
+        vec![
+            ("./card.jsx".to_string(), "card.jsx".to_string()),
+            (
+                "react/jsx-runtime".to_string(),
+                "node_modules/react/jsx-runtime.js".to_string()
+            ),
+        ]
+    );
+    assert_eq!(edges("classic.jsx"), vec![]);
+    assert_eq!(
+        edges("preact.jsx"),
+        vec![(
+            "preact/jsx-runtime".to_string(),
+            "node_modules/preact/jsx-runtime.js".to_string()
+        )]
+    );
+    assert_eq!(edges("plain.tsx"), vec![]);
+}
+
+#[test]
+fn test_node_exact_resolves_a_javascript_importer_as_node_does() {
+    let project = Project::new();
+    project
+        .write(
+            "main.mjs",
+            "import './exact.mjs';\nimport './no-extension';\nimport './folder';\nimport 'pkg';\nimport 'pkg/sub';\n",
+        )
+        .write(
+            "main.cjs",
+            "require('./no-extension');\nrequire('./only-cjs');\nrequire('./folder');\nrequire('pkg/sub');\n",
+        )
+        .write("exact.mjs", "")
+        .write("no-extension.js", "")
+        .write("only-cjs.cjs", "")
+        .write("folder/index.js", "")
+        .write("node_modules/pkg/package.json", "{\"main\": \"./lib\"}\n")
+        .write("node_modules/pkg/lib.js", "")
+        .write("node_modules/pkg/sub.js", "")
+        .write("ts.ts", "import './no-extension';\n");
+
+    let options = ResolverOptions {
+        node_exact: true,
+        ..ResolverOptions::default()
+    };
+    let edges = |file: &str| {
+        let resolution = resolve(&project.root(), &entry(file), &options).unwrap();
+        specifiers(&resolution, file)
+    };
+    let resolved = |to: &str| to.to_string();
+    // import: the file as named; a package main through legacyMainResolve.
+    assert_eq!(
+        edges("main.mjs"),
+        vec![
+            ("./exact.mjs".to_string(), resolved("exact.mjs")),
+            ("./no-extension".to_string(), resolved("unresolved")),
+            ("./folder".to_string(), resolved("unresolved")),
+            ("pkg".to_string(), resolved("node_modules/pkg/lib.js")),
+            ("pkg/sub".to_string(), resolved("unresolved")),
+        ]
+    );
+    // require: .js, .json, .node, and directory indexes, but not .cjs.
+    assert_eq!(
+        edges("main.cjs"),
+        vec![
+            ("./no-extension".to_string(), resolved("no-extension.js")),
+            ("./only-cjs".to_string(), resolved("unresolved")),
+            ("./folder".to_string(), resolved("folder/index.js")),
+            ("pkg/sub".to_string(), resolved("node_modules/pkg/sub.js")),
+        ]
+    );
+    // A TypeScript importer is compiled, not run by Node: permissive.
+    assert_eq!(
+        edges("ts.ts"),
+        vec![("./no-extension".to_string(), resolved("no-extension.js"))]
+    );
+}

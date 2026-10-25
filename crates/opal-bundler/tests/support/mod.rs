@@ -6,6 +6,9 @@
 use std::path::{Path, PathBuf};
 
 use opal_bundler::oracle::{self, Node, Observation};
+use opal_bundler::{BuildOptions, Define, Target};
+use opal_core::graph::resolve;
+use opal_core::path::NormalizedPath;
 
 /// Where each fixture's bundle is written, inside the copied program. Inside
 /// rather than beside it, so the bundle reaches the original files by the
@@ -21,6 +24,10 @@ pub enum Expect {
     /// Only for the oracle's own fixtures: a hand-written bundle that is
     /// wrong on purpose, which the oracle must catch.
     Diverges,
+    /// A divergence SEMANTICS.md lists: the runs must differ, and only in
+    /// stdout lines containing `lines`. If they stop differing, the contract
+    /// is out of date.
+    KnownDivergence { section: String, lines: String },
 }
 
 #[derive(Clone, Debug)]
@@ -66,7 +73,8 @@ pub fn load(dir: &Path) -> Fixture {
     let entry = match config.get("entry").and_then(|v| v.as_str()) {
         Some(entry) => entry.to_string(),
         None => [
-            "main.mjs", "main.js", "main.cjs", "main.ts", "main.mts", "main.tsx",
+            "main.mjs", "main.js", "main.cjs", "main.ts", "main.mts", "main.cts", "main.tsx",
+            "main.jsx",
         ]
         .iter()
         .find(|candidate| dir.join(candidate).is_file())
@@ -77,9 +85,13 @@ pub fn load(dir: &Path) -> Fixture {
         None => Expect::Equivalent,
         Some(serde_json::Value::String(text)) if text == "equivalent" => Expect::Equivalent,
         Some(serde_json::Value::String(text)) if text == "diverges" => Expect::Diverges,
-        Some(value) => match value.get("refused").and_then(|v| v.as_str()) {
-            Some(code) => Expect::Refused(code.to_string()),
-            None => panic!("{name}: unknown expect {value}"),
+        Some(value) => match (value.get("refused"), value.get("known-divergence")) {
+            (Some(code), _) => Expect::Refused(code.as_str().unwrap().to_string()),
+            (_, Some(known)) => Expect::KnownDivergence {
+                section: known["section"].as_str().unwrap().to_string(),
+                lines: known["lines"].as_str().unwrap().to_string(),
+            },
+            _ => panic!("{name}: unknown expect {value}"),
         },
     };
     Fixture {
@@ -161,11 +173,37 @@ pub fn run(fixture: &Fixture, bundler: Bundler<'_>, node: &Node) -> Outcome {
         (_, Ok(bundle)) => bundle,
     };
 
+    let mut node = node.clone();
+    if let Some(env) = fixture.config.get("env").and_then(|v| v.as_object()) {
+        for (key, value) in env {
+            node = node.with_env(key, value.as_str().unwrap_or_default());
+        }
+    }
     let observe = |file: &Path| -> Result<Observation, String> {
         node.observe(&program, file, &scratch)
             .map_err(|error| error.to_string())
     };
-    let original = match observe(&program.join(&fixture.entry)) {
+    let original_file = match original_program(fixture, &program) {
+        Ok(file) => file,
+        Err(error) => return Outcome::Fail(format!("original: {error}")),
+    };
+    let flags: Vec<String> = fixture
+        .config
+        .get("node_flags")
+        .and_then(|v| v.as_array())
+        .map(|flags| {
+            flags
+                .iter()
+                .filter_map(|f| f.as_str().map(str::to_string))
+                .collect()
+        })
+        .unwrap_or_default();
+    let original = match node
+        .clone()
+        .with_flags(&flags)
+        .observe(&program, &original_file, &scratch)
+        .map_err(|e| e.to_string())
+    {
         Ok(observation) => observation,
         Err(error) => return Outcome::Fail(format!("original: {error}")),
     };
@@ -174,6 +212,30 @@ pub fn run(fixture: &Fixture, bundler: Bundler<'_>, node: &Node) -> Outcome {
         Err(error) => return Outcome::Fail(format!("bundle: {error}")),
     };
 
+    if let Expect::KnownDivergence { section, lines } = &fixture.expect {
+        let keep = |bytes: &[u8]| -> String {
+            String::from_utf8_lossy(bytes)
+                .lines()
+                .filter(|line| !line.contains(lines.as_str()))
+                .collect::<Vec<_>>()
+                .join("\n")
+        };
+        if oracle::compare(&original, &bundled).is_ok() {
+            return Outcome::Fail(format!(
+                "now equivalent: SEMANTICS.md ({section}) lists a divergence that no longer happens"
+            ));
+        }
+        let mut original_rest = original.clone();
+        let mut bundled_rest = bundled.clone();
+        original_rest.stdout = keep(&original.stdout).into_bytes();
+        bundled_rest.stdout = keep(&bundled.stdout).into_bytes();
+        return match oracle::compare(&original_rest, &bundled_rest) {
+            Ok(()) => Outcome::Pass(format!("known divergence ({section})")),
+            Err(divergence) => Outcome::Fail(format!(
+                "diverged beyond the known divergence ({section}):\n{divergence}"
+            )),
+        };
+    }
     match (oracle::compare(&original, &bundled), &fixture.expect) {
         (Ok(()), Expect::Equivalent) => Outcome::Pass("equivalent".to_string()),
         (Err(divergence), Expect::Diverges) => Outcome::Pass(format!(
@@ -185,6 +247,7 @@ pub fn run(fixture: &Fixture, bundler: Bundler<'_>, node: &Node) -> Outcome {
         }
         (Err(divergence), _) => Outcome::Fail(format!("diverged:\n{divergence}")),
         (Ok(()), Expect::Refused(_)) => unreachable!("a refusal returns before running"),
+        (_, Expect::KnownDivergence { .. }) => unreachable!("handled above"),
     }
 }
 
@@ -234,4 +297,98 @@ pub fn run_all(fixtures: &[Fixture], bundler: Bundler<'_>) -> usize {
     }
     eprintln!("{} passed, {failed} failed", results.len() - failed);
     failed
+}
+
+/// The build options a fixture's `fixture.json` asks for.
+pub fn options(fixture: &Fixture) -> BuildOptions {
+    let mut options = BuildOptions::default();
+    if let Some(target) = fixture.config.get("target").and_then(|v| v.as_str()) {
+        options.target = Target::parse(target).expect("target is node or browser");
+    }
+    if let Some(externals) = fixture.config.get("external").and_then(|v| v.as_array()) {
+        options.externals = externals
+            .iter()
+            .filter_map(|v| v.as_str().map(str::to_string))
+            .collect();
+    }
+    if let Some(defines) = fixture.config.get("define").and_then(|v| v.as_object()) {
+        for (path, value) in defines {
+            let value = value
+                .as_str()
+                .expect("a define's value is JavaScript source in a string");
+            options
+                .defines
+                .push(Define::parse(&format!("{path}={value}")).unwrap());
+        }
+    }
+    options
+}
+
+/// Resolves and bundles a copied fixture into its out-dir.
+pub fn build_fixture(fixture: &Fixture, program: &Path) -> Result<PathBuf, (String, String)> {
+    let options = options(fixture);
+    let root = NormalizedPath::from_native(&std::fs::canonicalize(program).unwrap()).unwrap();
+    let resolver = options
+        .target
+        .resolver_options(Some(options.jsx_import_source.clone()));
+    let resolution = resolve(&root, &NormalizedPath::new(&fixture.entry), &resolver)
+        .map_err(|error| ("E-IO".to_string(), error.to_string()))?;
+    let out = root.as_path().join(OUT_DIR);
+    let mut output = opal_bundler::build(&resolution.graph, &out, &options)
+        .map_err(|diagnostic| (diagnostic.code.to_string(), diagnostic.to_string()))?;
+    opal_bundler::write(&out, &mut output)
+        .map_err(|diagnostic| (diagnostic.code.to_string(), diagnostic.to_string()))?;
+    Ok(out.join(&output.file_name))
+}
+
+/// The tools the tests compare against, installed by `npm ci` in
+/// crates/opal-bundler/tools.
+pub fn tool(name: &str) -> PathBuf {
+    let path = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("tools/node_modules/.bin")
+        .join(name);
+    assert!(
+        path.exists(),
+        "{} is missing: run `npm ci` in crates/opal-bundler/tools",
+        path.display()
+    );
+    path
+}
+
+/// The program the bundle is held to. Usually the fixture's files run by
+/// Node as they are; with `"original": "tsc"`, what `tsc` emits from the
+/// fixture's tsconfig.json, which is the reference SEMANTICS.md rule 13
+/// names for TypeScript Node cannot strip, and for JSX.
+fn original_program(fixture: &Fixture, program: &Path) -> Result<PathBuf, String> {
+    match fixture.config.get("original").and_then(|v| v.as_str()) {
+        None => Ok(program.join(&fixture.entry)),
+        Some("tsc") => {
+            let out = program.join(".tsc-out");
+            let compiled = std::process::Command::new(tool("tsc"))
+                .args(["-p", "tsconfig.json", "--outDir"])
+                .arg(&out)
+                .current_dir(program)
+                .output()
+                .map_err(|error| format!("tsc: {error}"))?;
+            let entry = Path::new(&fixture.entry);
+            let js = out.join(entry.with_extension(
+                match entry.extension().and_then(|e| e.to_str()) {
+                    Some("mts") => "mjs",
+                    Some("cts") => "cjs",
+                    _ => "js",
+                },
+            ));
+            // Type errors do not change what tsc emits, so the program is
+            // whatever it wrote; only a missing file is a failure.
+            if !js.is_file() {
+                return Err(format!(
+                    "tsc emitted no {}:\n{}",
+                    js.display(),
+                    String::from_utf8_lossy(&compiled.stdout)
+                ));
+            }
+            Ok(js)
+        }
+        Some(other) => Err(format!("unknown original {other:?}")),
+    }
 }

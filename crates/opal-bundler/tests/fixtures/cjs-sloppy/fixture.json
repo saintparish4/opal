@@ -1,0 +1,1 @@
+{ "why": "Rule 6: a sloppy-mode CommonJS module stays sloppy (this in plain calls, implicit globals, silent failed assignments, mapped arguments, with, legacy octal), and a strict one stays strict." }

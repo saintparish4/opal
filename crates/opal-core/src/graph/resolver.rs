@@ -108,7 +108,37 @@ pub struct ResolverOptions {
     /// `import type { T } from './t'` erases at compile time, so by default it
     /// is not an edge. Type-checking tools would want it on.
     pub follow_type_only_imports: bool,
+    /// The import source of the JSX automatic runtime (`react`), or `None`
+    /// for no JSX edges. When set, a `.jsx` or `.tsx` file that contains JSX
+    /// also depends on `<source>/jsx-runtime`, the import a JSX compiler
+    /// adds. A `@jsxImportSource` pragma overrides the source for its file,
+    /// and `@jsxRuntime classic` removes the edge, as they do for the
+    /// compiler.
+    pub jsx_runtime: Option<String>,
+    /// Resolve a JavaScript importer's specifiers exactly as Node 24 does:
+    /// an `import` of a relative path names the file itself, with no
+    /// extension or directory index added; a `require` adds only `.js`,
+    /// `.json`, and `.node`; and a package `main` follows Node's legacy main
+    /// resolution. Off, the resolver also accepts what TypeScript and
+    /// bundlers accept. TypeScript and JSX importers resolve the permissive
+    /// way either way, since what runs them is a compiler, not Node.
+    pub node_exact: bool,
 }
+
+/// How a specifier may be completed into a file.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Probing {
+    /// Extensions from the options, directory indexes, and TypeScript's
+    /// `.js` to `.ts` rewrite.
+    Permissive,
+    /// Node's ES module resolution: the file as named.
+    NodeEsm,
+    /// Node's CommonJS resolution: `.js`, `.json`, `.node`, and indexes.
+    NodeCjs,
+}
+
+/// `Module._extensions` in Node 24, the only extensions `require()` adds.
+const NODE_EXTENSIONS: [&str; 3] = [".js", ".json", ".node"];
 
 impl Default for ResolverOptions {
     fn default() -> Self {
@@ -121,6 +151,8 @@ impl Default for ResolverOptions {
             .collect(),
             conditions: vec!["node".to_string()],
             follow_type_only_imports: false,
+            jsx_runtime: None,
+            node_exact: false,
         }
     }
 }
@@ -138,6 +170,15 @@ impl ResolverOptions {
             builder.push_str(condition);
         }
         builder.push_u64(u64::from(self.follow_type_only_imports));
+        // Only when set, so a graph resolved without JSX edges keeps the key
+        // it had before the option existed.
+        if let Some(source) = &self.jsx_runtime {
+            builder.push_str("jsx-runtime");
+            builder.push_str(source);
+        }
+        if self.node_exact {
+            builder.push_str("node-exact");
+        }
         builder.finish()
     }
 }
@@ -187,6 +228,8 @@ struct Resolver<'a> {
     /// What each loaded file turned out to be. Kept because an extensionless
     /// file's kind is decided by its first line, which only `load` has seen.
     kinds: HashMap<NormalizedPath, SourceKind>,
+    /// How the specifier being resolved may be completed.
+    probing: Probing,
 }
 
 impl<'a> Resolver<'a> {
@@ -200,6 +243,7 @@ impl<'a> Resolver<'a> {
             manifests: HashMap::new(),
             sources: HashMap::new(),
             kinds: HashMap::new(),
+            probing: Probing::Permissive,
         }
     }
 
@@ -218,6 +262,7 @@ impl<'a> Resolver<'a> {
         while let Some((id, path)) = queue.pop_front() {
             for (specifier, kind) in self.dependencies_of(&path)? {
                 let directory = path.parent().unwrap_or_else(|| self.root.clone());
+                self.probing = self.probing_for(&path, kind);
                 let target = self.resolve_specifier(&directory, &specifier, kind);
                 let target = match target {
                     Target::Builtin(name) => DependencyTarget::Builtin { name },
@@ -314,8 +359,21 @@ impl<'a> Resolver<'a> {
         let mut collector = ImportCollector {
             found: Vec::new(),
             follow_type_only: self.options.follow_type_only_imports,
+            has_jsx: false,
         };
         collector.visit_program(&parsed.program);
+        if collector.has_jsx
+            && let Some(source) = jsx_runtime_source(
+                self.options.jsx_runtime.as_deref(),
+                &source,
+                &parsed.program.comments,
+            )
+        {
+            collector.push(
+                &format!("{source}/jsx-runtime"),
+                DependencyKind::StaticImport,
+            );
+        }
 
         let mut seen = HashSet::new();
         Ok(collector
@@ -502,10 +560,37 @@ impl<'a> Resolver<'a> {
         conditions
     }
 
+    fn probing_for(&self, importer: &NormalizedPath, kind: DependencyKind) -> Probing {
+        if !self.options.node_exact || self.kind_of(importer) != SourceKind::JavaScript {
+            return Probing::Permissive;
+        }
+        if kind.is_require_like() {
+            Probing::NodeCjs
+        } else {
+            Probing::NodeEsm
+        }
+    }
+
     /// File, then file+extension, then directory index.
     fn resolve_path(&mut self, candidate: &NormalizedPath) -> Option<NormalizedPath> {
         if self.probe(candidate) {
             return Some(candidate.clone());
+        }
+        match self.probing {
+            // Node's ESM resolver does not complete a path; a directory is
+            // ERR_UNSUPPORTED_DIR_IMPORT and a missing extension is
+            // ERR_MODULE_NOT_FOUND.
+            Probing::NodeEsm => return None,
+            Probing::NodeCjs => {
+                for extension in NODE_EXTENSIONS {
+                    let with_extension = candidate.with_suffix(extension);
+                    if self.probe(&with_extension) {
+                        return Some(with_extension);
+                    }
+                }
+                return self.resolve_directory(candidate);
+            }
+            Probing::Permissive => {}
         }
         for extension in &self.options.extensions.clone() {
             let with_extension = candidate.with_suffix(extension);
@@ -534,6 +619,9 @@ impl<'a> Resolver<'a> {
     }
 
     fn resolve_directory(&mut self, directory: &NormalizedPath) -> Option<NormalizedPath> {
+        if self.probing != Probing::Permissive {
+            return self.resolve_directory_as_node(directory);
+        }
         if let Some(manifest) = self.manifest(directory)
             && let Some(main) = manifest.get("main").and_then(Value::as_str)
         {
@@ -549,6 +637,40 @@ impl<'a> Resolver<'a> {
             }
         }
         for extension in &self.options.extensions.clone() {
+            let candidate = directory.join("index").with_suffix(extension);
+            if self.probe(&candidate) {
+                return Some(candidate);
+            }
+        }
+        None
+    }
+
+    /// A directory as Node finds its file: `main` as named, with each
+    /// extension, or as a directory's index, then the directory's own index.
+    /// This is `tryPackage` for `require()` and `legacyMainResolve` for
+    /// `import`, which try the same list.
+    fn resolve_directory_as_node(&mut self, directory: &NormalizedPath) -> Option<NormalizedPath> {
+        if let Some(manifest) = self.manifest(directory)
+            && let Some(main) = manifest.get("main").and_then(Value::as_str)
+        {
+            let main = directory.join(main);
+            if self.probe(&main) {
+                return Some(main);
+            }
+            for extension in NODE_EXTENSIONS {
+                let candidate = main.with_suffix(extension);
+                if self.probe(&candidate) {
+                    return Some(candidate);
+                }
+            }
+            for extension in NODE_EXTENSIONS {
+                let candidate = main.join("index").with_suffix(extension);
+                if self.probe(&candidate) {
+                    return Some(candidate);
+                }
+            }
+        }
+        for extension in NODE_EXTENSIONS {
             let candidate = directory.join("index").with_suffix(extension);
             if self.probe(&candidate) {
                 return Some(candidate);
@@ -809,6 +931,32 @@ fn source_kind_of(path: &NormalizedPath) -> SourceKind {
 struct ImportCollector {
     found: Vec<(String, DependencyKind)>,
     follow_type_only: bool,
+    has_jsx: bool,
+}
+
+/// The JSX runtime a file's JSX compiles against: its `@jsxImportSource`
+/// pragma, else the configured default, and none under `@jsxRuntime classic`.
+fn jsx_runtime_source<'s>(
+    default: Option<&'s str>,
+    source: &'s str,
+    comments: &[oxc_ast::Comment],
+) -> Option<&'s str> {
+    let default = default?;
+    let mut chosen = default;
+    for comment in comments {
+        let text = &source[comment.span.start as usize..comment.span.end as usize];
+        if let Some(rest) = text.split("@jsxRuntime").nth(1)
+            && rest.split_whitespace().next() == Some("classic")
+        {
+            return None;
+        }
+        if let Some(rest) = text.split("@jsxImportSource").nth(1)
+            && let Some(name) = rest.split_whitespace().next()
+        {
+            chosen = name.trim_end_matches("*/");
+        }
+    }
+    Some(chosen)
 }
 
 impl ImportCollector {
@@ -860,6 +1008,16 @@ impl<'a> Visit<'a> for ImportCollector {
             self.push(&source.value, DependencyKind::Require);
         }
         walk::walk_call_expression(self, call);
+    }
+
+    fn visit_jsx_element(&mut self, element: &oxc_ast::ast::JSXElement<'a>) {
+        self.has_jsx = true;
+        walk::walk_jsx_element(self, element);
+    }
+
+    fn visit_jsx_fragment(&mut self, fragment: &oxc_ast::ast::JSXFragment<'a>) {
+        self.has_jsx = true;
+        walk::walk_jsx_fragment(self, fragment);
     }
 
     fn visit_ts_import_equals_declaration(&mut self, declaration: &TSImportEqualsDeclaration<'a>) {

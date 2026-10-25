@@ -9,14 +9,25 @@ repository.workspace = true
 [features]
 # The differential oracle (src/oracle.rs) spawns `node`. Tests and the fuzz
 # workspace turn it on; the opal binary never does.
-oracle = ["dep:serde_json"]
+oracle = []
 
 [dependencies]
 opal-core.workspace = true
-serde_json = { workspace = true, optional = true }
+oxc_allocator.workspace = true
+oxc_ast.workspace = true
+oxc_ast_visit.workspace = true
+oxc_codegen.workspace = true
+oxc_parser = { workspace = true, features = ["regular_expression"] }
+oxc_semantic.workspace = true
+oxc_sourcemap.workspace = true
+oxc_span.workspace = true
+oxc_syntax.workspace = true
+oxc_transformer.workspace = true
+serde_json.workspace = true
 thiserror.workspace = true
 
 [dev-dependencies]
 opal-bundler = { path = ".", features = ["oracle"] }
+opal-core.workspace = true
 serde_json.workspace = true
 tempfile.workspace = true

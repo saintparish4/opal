@@ -1,12 +1,14 @@
 //! The `opal` binary.
 //!
-//! Implements: resolving a module graph, installing dependencies, adding and
-//! removing them, inspecting the shared cache, and upgrading itself. `run`,
-//! `build`, and `test` are not here, because a command that exists and does
+//! Implements: resolving a module graph, bundling it, installing
+//! dependencies, adding and removing them, inspecting the shared cache, and
+//! upgrading itself. `run` and `test` are not here, because a command that exists and does
 //! nothing is worse than one that does not exist. The same goes for `update`
 //! and the analysis commands — they arrive with the phase that implements
 //! them.
 
+#[path = "commands/build.rs"]
+mod build;
 mod progress;
 mod style;
 mod upgrade;
@@ -59,6 +61,8 @@ struct Cli {
 enum Command {
     /// Resolve a module graph from an entry file.
     Graph(GraphArgs),
+    /// Bundle an entry into one ES module that behaves like the unbundled program.
+    Build(build::BuildArgs),
     /// Install the dependencies in package.json, or add the packages named.
     Install(InstallArgs),
     /// Add dependencies to package.json and install them.
@@ -251,6 +255,7 @@ fn run(cli: Cli) -> Result<ExitCode, Failure> {
     };
     match command {
         Command::Graph(args) => graph(args),
+        Command::Build(args) => build::build(args),
         Command::Install(args) => {
             let change = adding(&args.packages, &args.save)?;
             install_command("install", args.project, args.frozen_lockfile, change)

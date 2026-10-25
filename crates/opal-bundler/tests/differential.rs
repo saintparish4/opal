@@ -17,25 +17,23 @@ use std::path::{Path, PathBuf};
 use opal_bundler::oracle::Node;
 use support::{Fixture, OUT_DIR};
 
-/// Until the linker exists, a fixture's bundle is the one written by hand
-/// next to it, in `hand-bundle.mjs`.
-fn hand_bundle(fixture: &Fixture, program: &Path) -> Result<PathBuf, (String, String)> {
-    let source = fixture.dir.join("hand-bundle.mjs");
-    if !source.is_file() {
-        return Err((
-            "NO-BUNDLER".to_string(),
-            "no hand-written bundle, and no bundler yet".to_string(),
-        ));
-    }
+/// A fixture with a `hand-bundle.mjs` tests the oracle itself: that bundle
+/// is used as written. Every other fixture is resolved by opal-core and
+/// bundled by `opal_bundler::build`, with the options in its fixture.json.
+fn bundle(fixture: &Fixture, program: &Path) -> Result<PathBuf, (String, String)> {
     let out = program.join(OUT_DIR);
     std::fs::create_dir_all(&out).unwrap();
-    let stem = Path::new(&fixture.entry)
-        .file_stem()
-        .unwrap()
-        .to_string_lossy();
-    let bundle = out.join(format!("{stem}.mjs"));
-    std::fs::copy(&source, &bundle).unwrap();
-    Ok(bundle)
+    let hand = fixture.dir.join("hand-bundle.mjs");
+    if hand.is_file() {
+        let stem = Path::new(&fixture.entry)
+            .file_stem()
+            .unwrap()
+            .to_string_lossy();
+        let bundle = out.join(format!("{stem}.mjs"));
+        std::fs::copy(&hand, &bundle).unwrap();
+        return Ok(bundle);
+    }
+    support::build_fixture(fixture, program)
 }
 
 #[test]
@@ -43,7 +41,7 @@ fn hand_bundle(fixture: &Fixture, program: &Path) -> Result<PathBuf, (String, St
 fn test_every_fixture_matches_its_expectation() {
     let fixtures = support::load_all();
     assert!(!fixtures.is_empty(), "no fixtures matched");
-    let failed = support::run_all(&fixtures, &hand_bundle);
+    let failed = support::run_all(&fixtures, &bundle);
     assert_eq!(failed, 0, "{failed} fixture(s) failed; see the table above");
 }
 

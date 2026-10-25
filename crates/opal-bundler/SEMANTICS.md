@@ -39,7 +39,15 @@ contract, not gaps in it.
   sets by default, `node`, `import` or `require`, `module-sync`, and
   `node-addons` (`lib/internal/modules/esm/utils.js:74-87`). For
   `--target browser` it asks for `browser`, `import` or `require`, and
-  `default`.
+  `default`. Either way it asks opal-core to resolve a JavaScript module's
+  specifiers exactly as Node does (`node_exact`): an `import` of a
+  relative path names the file, with no extension or directory index
+  added; a `require()` adds only `.js`, `.json`, and `.node`, the keys of
+  Node 24's `Module._extensions`; a package `main` is completed as
+  `legacyMainResolve` completes it. A TypeScript or JSX module's
+  specifiers resolve as `tsc` resolves them, extensions and indexes and
+  the `.js` to `.ts` rewrite included, since a compiler, not Node, is what
+  reads them.
 - **TypeScript**: what `tsc` emits for the `compilerOptions` listed in
   [rule 13](#13-typescript-and-jsx), with `isolatedModules` semantics.
 
@@ -148,6 +156,10 @@ the error is the uncaught error of the program.
   module reads.
 - **Calls.** Calling an imported function passes `this` as `undefined`, as
   a call through an import binding does in the original.
+- **TDZ messages** are the one place a name is not kept: V8 names the
+  identifier the reading code wrote, and in the bundle a read through an
+  import is a read of the exporting module's binding. See
+  [Divergences](#divergences-no-build-can-detect).
 
 ### 4. Module namespace objects
 
@@ -224,6 +236,17 @@ parameters `exports, require, module, __filename, __dirname`, called with
 - **`__filename` and `__dirname`** are the original file's path and
   directory, computed at run time from the bundle's own location, so they
   match the unbundled program wherever the checkout is.
+- **A CommonJS entry that throws at its top level** is an uncaught
+  exception at once in Node, before any pending microtask runs: monitors
+  see it, then a handler if there is one, and otherwise the process exits
+  with code 1 (`lib/internal/process/execution.js`,
+  `createOnGlobalUncaughtException`). The bundle is an ES module, where the
+  same throw would be a rejection one microtask later, so the bundle's
+  loader reports it the way Node does.
+- **`createRequire` imported from `node:module`** returns a `require` that
+  resolves with Node's resolver from the given location and returns the
+  bundled instance when the file it finds is in the bundle. Node's own
+  `createRequire` would load the original file a second time.
 
 A CommonJS module cannot `require()` an ES module in the bundle
 ([`E-REQUIRE-ESM`](#refusals)).
@@ -287,6 +310,11 @@ order, starting from the imported module. A module that is only reached
 through dynamic imports is run lazily, by a function in the bundle, and
 keeps rules 2 to 4 exactly, TDZ included.
 
+A link error in a lazily imported module (a missing export, an
+unresolved specifier) makes Node reject that `import()` when it runs. The
+bundler refuses the build instead ([`E-LINK`](#refusals)): a refusal is
+always allowed, and this one is rare.
+
 If such a module's evaluation throws, the promise rejects with that error,
 and later imports of it, or of a module in the same cycle that was still
 on the stack, reject with the same error (§16.2.1.6.1.3.1).
@@ -322,6 +350,9 @@ them without a scheduler this version does not have.
 - An external that an ES module imports is resolved by Node from the
   bundle's location; a `require()` of one is resolved from the original
   module's location ([rule 6](#6-commonjs-modules)).
+- `export * from` an external or builtin is refused when the bundle needs
+  the re-exporting module's names, since they are not known until the
+  external runs ([`E-LINK`](#refusals)).
 
 ### 13. TypeScript and JSX
 
@@ -360,20 +391,24 @@ arrow functions, or side-effect-free classes; and classes with no
 initializers that could have an effect. An identifier read is not
 side-effect free, since it can throw in the TDZ.
 
-A module whose package declares `"sideEffects": false`, or whose path does
-not match the globs in its `sideEffects` array, is left out entirely when
-nothing reads its exports. That is the package author's statement about
-the package, not something the bundler checked, and it is the one place a
-bundle may diverge from the program: when the statement is false. Which
-packages in the compatibility matrix make that statement, and whether it
-held, is recorded in `compat/COMPATIBILITY.md`.
+A module whose nearest `package.json` declares `"sideEffects": false`, or
+an array of globs its path (relative to the package) matches none of, is
+taken at its word: any of its top-level statements nothing reads may go,
+pure or not. A glob with no `/` matches at any depth, as webpack reads
+the field. That is the package author's statement, not something the
+bundler checked, and it is the one place a bundle may diverge from the
+program: when the statement is false. The entry is never shaken this way.
+Which packages in the compatibility matrix make that statement, and
+whether it held, is recorded in `compat/COMPATIBILITY.md`.
 
 ### 16. Determinism
 
 The bundle and its source map are a function of the graph snapshot, the
 options, and the opal version, and nothing else: not the absolute path of
 the checkout, the time, the machine, or the order the filesystem lists
-directories. Paths in the output are relative to the out-dir.
+directories. Paths in the output are relative to the out-dir, so with the
+out-dir inside the project root (the default, `<root>/dist`) the bundle
+does not depend on where the project is.
 
 ## Refusals
 
@@ -383,7 +418,7 @@ line.
 | Code | What | Why |
 |---|---|---|
 | `E-PARSE` | A module does not parse. | Node would throw a `SyntaxError` before running anything. |
-| `E-LINK` | An import names a missing or ambiguous export, a CommonJS name the lexer does not find, or JSON without `type: 'json'`; or a static import cannot be resolved. | Node fails to link the graph, before any code runs. |
+| `E-LINK` | An import names a missing or ambiguous export, a CommonJS name the lexer does not find, or JSON without `type: 'json'`; or a static import cannot be resolved, including one Node does not complete (`./x` for `./x.js`). | Node fails to link the graph, before any code runs. |
 | `E-TLA` | Top-level `await` outside the entry module, or in an entry that is in a cycle. | Rule 11. |
 | `E-REQUIRE-ESM` | A CommonJS module `require()`s an ES module. | Node 24 runs it with its own cycle and async-module errors (`ERR_REQUIRE_CYCLE_MODULE`, `ERR_REQUIRE_ASYNC_MODULE`) that this version does not reproduce. |
 | `E-DYNAMIC` | `import()` of anything but a string literal resolved by the graph or naming an external or builtin; or `import()` inside a sloppy CommonJS module. | Rule 10. The second needs the module's own loader, which a runtime-compiled function does not have. |
@@ -411,6 +446,28 @@ them, so the bundler cannot refuse them. Each is off the list in
   and prints `[Module: null prototype] { … }`. The bundle's namespace
   objects are proxies that keep every internal method of §10.4.6, and
   `util.inspect` prints them as `[Object: null prototype] [Module] { … }`.
+- **TDZ messages.** A `ReferenceError` for a binding read before its
+  declaration ran has the right class, and a message naming the identifier
+  as the bundle wrote it. V8 names the identifier the reading code wrote:
+  for a read through an import, that is the importing module's local name
+  (`import { shared as fromMain }` reads as `fromMain`), and in the bundle
+  the read is of the exporting module's binding, whose name is the
+  exporting module's (or the name the bundle gave it, when two modules
+  declare the same one). The message matches whenever the names do.
+  Making it match always would mean wrapping every read across modules in
+  a cycle in a function, which is the cost the bundle does not pay.
+  `tests/fixtures/esm-tdz-renamed` pins this.
+- **Errors writing to a namespace object.** `ns.x = 1`, `delete ns.x`, and
+  `Object.defineProperty(ns, …)` fail as §10.4.6 says and throw
+  `TypeError` in strict code, with a message from the proxy (`'set' on
+  proxy: trap returned falsish for property 'x'`) instead of V8's
+  (`Cannot assign to read only property 'x' of object '[object Module]'`).
+  A trap cannot tell whether its caller is strict, so throwing V8's message
+  itself would make a sloppy caller throw where it should fail silently.
+- **`node:module` through its namespace or default import.**
+  `import { createRequire } from 'node:module'` gets the bundle's
+  `createRequire` (rule 6); `module.createRequire` through `import module
+  from 'node:module'` is Node's own, which loads the original files.
 - **Stack traces.** Frames name the bundle file, unless the module is a
   sloppy CommonJS module under `--target node` ([rule 6](#6-commonjs-modules)).
 - **A static import graph that throws, followed by a dynamic import of a

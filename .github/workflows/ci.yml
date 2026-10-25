@@ -122,8 +122,33 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version: "24"
+      - name: Install the tools fixtures compare against
+        run: npm ci --prefix crates/opal-bundler/tools
       - name: Differential
         run: cargo test -p opal-bundler --test differential -- --ignored --nocapture
+      - name: CommonJS lexer against Node's
+        run: cargo test -p opal-bundler --test cjs-lexer -- --ignored --nocapture
+
+  # crates/opal-bundler/test262: every module test of test262 run as written
+  # and bundled. The run fails on a failure without an annotation.
+  bundler-test262:
+    name: Bundler test262
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Install Rust toolchain
+        run: rustup show
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+      - name: Install Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - name: Build opal
+        run: cargo build -p opal-cli
+      - name: test262
+        run: python3 crates/opal-bundler/test262/run.py --opal target/debug/opal
 
   # `deny.toml`: licenses a static MIT binary can carry, crates.io as the only
   # source, and the crates the design rules out. Advisories are left to

@@ -4,747 +4,747 @@
  "tests": [
   {
    "path": "test/language/export/escaped-as-export-specifier.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected identifier 'as'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/export/escaped-default.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected token 'export'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/export/escaped-from.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected identifier 'from'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/import/dup-bound-names.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Identifier 'x' has already been declared",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/import/escaped-as-import-specifier.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Identifier 'a' has already been declared",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/import/escaped-as-namespace-import.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: 'as' must not contain escaped characters",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/import/escaped-from.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: 'from' must not contain escaped characters",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/import/import-attributes/json-extensibility-array.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/import/import-attributes/json-extensibility-object.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/import/import-attributes/json-idempotency.js",
-   "verdict": "baseline-pass",
+   "verdict": "refused-by-design",
    "node": "async complete",
-   "bundle": "not run"
+   "bundle": "E-DYNAMIC"
   },
   {
    "path": "test/language/import/import-attributes/json-invalid.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: <work>/test/language/import/import-attributes/json-invalid_FIXTURE.json: Expected property name or '}' in JSON at position 4 (line 2 column 3)",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/import/import-attributes/json-named-bindings.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: The requested module './json-named-bindings_FIXTURE.json' does not provide an export named 'name'",
-   "bundle": "not run"
+   "bundle": "E-LINK"
   },
   {
    "path": "test/language/import/import-attributes/json-value-array.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/import/import-attributes/json-value-boolean.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/import/import-attributes/json-value-null.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/import/import-attributes/json-value-number.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/import/import-attributes/json-value-object.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/import/import-attributes/json-value-string.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/import/import-attributes/json-via-namespace.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/import/import-attributes/text-empty.js",
    "verdict": "node-fails",
    "node": "threw TypeError: Import attribute \"type\" with value \"text\" is not supported in <work>/test/language/import/import-attributes/text-empty_FIXTURE",
-   "bundle": "not run"
+   "bundle": "E-LINK"
   },
   {
    "path": "test/language/import/import-attributes/text-javascript.js",
    "verdict": "node-fails",
    "node": "threw TypeError: Import attribute \"type\" with value \"text\" is not supported in <work>/test/language/import/import-attributes/text-javascript_FIXTURE.js",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/import/import-attributes/text-self.js",
    "verdict": "node-fails",
    "node": "threw TypeError: Import attribute \"type\" with value \"text\" is not supported in <work>/test/language/import/import-attributes/text-self.js",
-   "bundle": "not run"
+   "bundle": "E-LINK"
   },
   {
    "path": "test/language/import/import-attributes/text-string.js",
    "verdict": "node-fails",
    "node": "threw TypeError: Import attribute \"type\" with value \"text\" is not supported in <work>/test/language/import/import-attributes/text-string_FIXTURE",
-   "bundle": "not run"
+   "bundle": "E-LINK"
   },
   {
    "path": "test/language/import/import-attributes/text-via-namespace.js",
    "verdict": "node-fails",
    "node": "threw TypeError: Import attribute \"type\" with value \"text\" is not supported in <work>/test/language/import/import-attributes/text-via-namespace_FIXTURE",
-   "bundle": "not run"
+   "bundle": "E-LINK"
   },
   {
    "path": "test/language/import/import-bytes/bytes-from-empty.js",
    "verdict": "node-fails",
    "node": "threw TypeError: Unknown file extension \".bin\" for <work>/test/language/import/import-bytes/bytes-from-empty_FIXTURE.bin",
-   "bundle": "not run"
+   "bundle": "E-LINK"
   },
   {
    "path": "test/language/import/import-bytes/bytes-from-js.js",
    "verdict": "node-fails",
    "node": "threw TypeError: Import attribute \"type\" with value \"bytes\" is not supported in <work>/test/language/import/import-bytes/bytes-from-js_FIXTURE.js",
-   "bundle": "not run"
+   "bundle": "E-LINK"
   },
   {
    "path": "test/language/import/import-bytes/bytes-from-json.js",
    "verdict": "node-fails",
    "node": "threw TypeError: Import attribute \"type\" with value \"bytes\" is not supported in <work>/test/language/import/import-bytes/bytes-from-json_FIXTURE.json",
-   "bundle": "not run"
+   "bundle": "E-LINK"
   },
   {
    "path": "test/language/import/import-bytes/bytes-from-png.js",
    "verdict": "node-fails",
    "node": "threw TypeError: Unknown file extension \".png\" for <work>/test/language/import/import-bytes/bytes-from-png_FIXTURE.png",
-   "bundle": "not run"
+   "bundle": "E-LINK"
   },
   {
    "path": "test/language/import/import-bytes/bytes-from-txt.js",
    "verdict": "node-fails",
    "node": "threw TypeError: Unknown file extension \".txt\" for <work>/test/language/import/import-bytes/bytes-from-txt_FIXTURE.txt",
-   "bundle": "not run"
+   "bundle": "E-LINK"
   },
   {
    "path": "test/language/import/import-defer/deferred-namespace-object/exotic-object-behavior.js",
    "verdict": "node-fails",
    "node": "threw SyntaxError: Unexpected token '*'",
-   "bundle": "not run"
+   "bundle": "E-UNSUPPORTED"
   },
   {
    "path": "test/language/import/import-defer/deferred-namespace-object/identity.js",
    "verdict": "node-fails",
    "node": "threw SyntaxError: Unexpected token '*'",
-   "bundle": "not run"
+   "bundle": "E-UNSUPPORTED"
   },
   {
    "path": "test/language/import/import-defer/deferred-namespace-object/json-module.js",
    "verdict": "node-fails",
    "node": "threw SyntaxError: Unexpected token '*'",
-   "bundle": "not run"
+   "bundle": "E-UNSUPPORTED"
   },
   {
    "path": "test/language/import/import-defer/deferred-namespace-object/reexport-deferred-ns-evaluation.js",
    "verdict": "node-fails",
    "node": "threw SyntaxError: Unexpected token '*'",
-   "bundle": "not run"
+   "bundle": "E-UNSUPPORTED"
   },
   {
    "path": "test/language/import/import-defer/deferred-namespace-object/to-string-tag.js",
    "verdict": "node-fails",
    "node": "threw SyntaxError: Unexpected token '*'",
-   "bundle": "not run"
+   "bundle": "E-UNSUPPORTED"
   },
   {
    "path": "test/language/import/import-defer/errors/get-other-while-dep-evaluating-async/main.js",
    "verdict": "node-fails",
    "node": "threw SyntaxError: Unexpected token '*'",
-   "bundle": "not run"
+   "bundle": "E-UNSUPPORTED"
   },
   {
    "path": "test/language/import/import-defer/errors/get-other-while-dep-evaluating/main.js",
    "verdict": "node-fails",
    "node": "threw SyntaxError: Unexpected token '*'",
-   "bundle": "not run"
+   "bundle": "E-UNSUPPORTED"
   },
   {
    "path": "test/language/import/import-defer/errors/get-other-while-evaluating-async/main.js",
    "verdict": "node-fails",
    "node": "threw SyntaxError: Unexpected token '*'",
-   "bundle": "not run"
+   "bundle": "E-UNSUPPORTED"
   },
   {
    "path": "test/language/import/import-defer/errors/get-other-while-evaluating/main.js",
    "verdict": "node-fails",
    "node": "threw SyntaxError: Unexpected token '*'",
-   "bundle": "not run"
+   "bundle": "E-UNSUPPORTED"
   },
   {
    "path": "test/language/import/import-defer/errors/get-self-while-defer-evaluating/main.js",
    "verdict": "node-fails",
    "node": "threw SyntaxError: Unexpected token '*'",
-   "bundle": "not run"
+   "bundle": "E-UNSUPPORTED"
   },
   {
    "path": "test/language/import/import-defer/errors/get-self-while-evaluating-async/main.js",
    "verdict": "node-fails",
    "node": "threw SyntaxError: Unexpected token '*'",
-   "bundle": "not run"
+   "bundle": "E-UNSUPPORTED"
   },
   {
    "path": "test/language/import/import-defer/errors/get-self-while-evaluating.js",
    "verdict": "node-fails",
    "node": "threw SyntaxError: Unexpected token '*'",
-   "bundle": "not run"
+   "bundle": "E-UNSUPPORTED"
   },
   {
    "path": "test/language/import/import-defer/errors/module-throws/defer-import-after-evaluation.js",
    "verdict": "node-fails",
    "node": "SyntaxError: Unexpected token '*'",
-   "bundle": "not run"
+   "bundle": "E-UNSUPPORTED"
   },
   {
    "path": "test/language/import/import-defer/errors/module-throws/third-party-evaluation-after-defer-import.js",
    "verdict": "node-fails",
    "node": "threw SyntaxError: Unexpected token '*'",
-   "bundle": "not run"
+   "bundle": "E-UNSUPPORTED"
   },
   {
    "path": "test/language/import/import-defer/errors/module-throws/trigger-evaluation.js",
    "verdict": "node-fails",
    "node": "threw SyntaxError: Unexpected token '*'",
-   "bundle": "not run"
+   "bundle": "E-UNSUPPORTED"
   },
   {
    "path": "test/language/import/import-defer/errors/resolution-error/import-defer-of-missing-module-fails.js",
-   "verdict": "baseline-pass",
+   "verdict": "refused-by-design",
    "node": "async complete",
-   "bundle": "not run"
+   "bundle": "E-UNSUPPORTED"
   },
   {
    "path": "test/language/import/import-defer/errors/syntax-error/import-defer-of-syntax-error-fails.js",
-   "verdict": "baseline-pass",
+   "verdict": "refused-by-design",
    "node": "threw SyntaxError: Unexpected token '*'",
-   "bundle": "not run"
+   "bundle": "E-UNSUPPORTED"
   },
   {
    "path": "test/language/import/import-defer/evaluation-sync/import-defer-does-not-evaluate.js",
    "verdict": "node-fails",
    "node": "threw SyntaxError: Unexpected token '*'",
-   "bundle": "not run"
+   "bundle": "E-UNSUPPORTED"
   },
   {
    "path": "test/language/import/import-defer/evaluation-sync/module-imported-defer-and-eager.js",
    "verdict": "node-fails",
    "node": "threw SyntaxError: Unexpected token '*'",
-   "bundle": "not run"
+   "bundle": "E-UNSUPPORTED"
   },
   {
    "path": "test/language/import/import-defer/evaluation-top-level-await/async-cycle-dependency-of-deferred-module/main.js",
    "verdict": "node-fails",
    "node": "threw SyntaxError: Unexpected token '*'",
-   "bundle": "not run"
+   "bundle": "E-UNSUPPORTED"
   },
   {
    "path": "test/language/import/import-defer/evaluation-top-level-await/flattening-order/main.js",
    "verdict": "node-fails",
    "node": "threw SyntaxError: Unexpected token '*'",
-   "bundle": "not run"
+   "bundle": "E-UNSUPPORTED"
   },
   {
    "path": "test/language/import/import-defer/evaluation-top-level-await/import-defer-async-module/main.js",
    "verdict": "node-fails",
    "node": "threw SyntaxError: Unexpected token '*'",
-   "bundle": "not run"
+   "bundle": "E-UNSUPPORTED"
   },
   {
    "path": "test/language/import/import-defer/evaluation-top-level-await/import-defer-transitive-async-module/main.js",
    "verdict": "node-fails",
    "node": "threw SyntaxError: Unexpected token '*'",
-   "bundle": "not run"
+   "bundle": "E-UNSUPPORTED"
   },
   {
    "path": "test/language/import/import-defer/evaluation-top-level-await/sync-dependency-of-deferred-async-module/main.js",
    "verdict": "node-fails",
    "node": "threw SyntaxError: Unexpected token '*'",
-   "bundle": "not run"
+   "bundle": "E-UNSUPPORTED"
   },
   {
    "path": "test/language/import/import-defer/evaluation-triggers/ignore-exported-then-defineOwnProperty.js",
    "verdict": "node-fails",
    "node": "threw SyntaxError: Unexpected token '*'",
-   "bundle": "not run"
+   "bundle": "E-UNSUPPORTED"
   },
   {
    "path": "test/language/import/import-defer/evaluation-triggers/ignore-exported-then-delete.js",
    "verdict": "node-fails",
    "node": "threw SyntaxError: Unexpected token '*'",
-   "bundle": "not run"
+   "bundle": "E-UNSUPPORTED"
   },
   {
    "path": "test/language/import/import-defer/evaluation-triggers/ignore-exported-then-get-in-prototype.js",
    "verdict": "node-fails",
    "node": "threw SyntaxError: Unexpected token '*'",
-   "bundle": "not run"
+   "bundle": "E-UNSUPPORTED"
   },
   {
    "path": "test/language/import/import-defer/evaluation-triggers/ignore-exported-then-get.js",
    "verdict": "node-fails",
    "node": "threw SyntaxError: Unexpected token '*'",
-   "bundle": "not run"
+   "bundle": "E-UNSUPPORTED"
   },
   {
    "path": "test/language/import/import-defer/evaluation-triggers/ignore-exported-then-getOwnProperty.js",
    "verdict": "node-fails",
    "node": "threw SyntaxError: Unexpected token '*'",
-   "bundle": "not run"
+   "bundle": "E-UNSUPPORTED"
   },
   {
    "path": "test/language/import/import-defer/evaluation-triggers/ignore-exported-then-hasProperty-in-prototype.js",
    "verdict": "node-fails",
    "node": "threw SyntaxError: Unexpected token '*'",
-   "bundle": "not run"
+   "bundle": "E-UNSUPPORTED"
   },
   {
    "path": "test/language/import/import-defer/evaluation-triggers/ignore-exported-then-hasProperty.js",
    "verdict": "node-fails",
    "node": "threw SyntaxError: Unexpected token '*'",
-   "bundle": "not run"
+   "bundle": "E-UNSUPPORTED"
   },
   {
    "path": "test/language/import/import-defer/evaluation-triggers/ignore-exported-then-super-get.js",
    "verdict": "node-fails",
    "node": "threw SyntaxError: Unexpected token '*'",
-   "bundle": "not run"
+   "bundle": "E-UNSUPPORTED"
   },
   {
    "path": "test/language/import/import-defer/evaluation-triggers/ignore-exported-then-super-property-define.js",
    "verdict": "node-fails",
    "node": "threw SyntaxError: Unexpected token '*'",
-   "bundle": "not run"
+   "bundle": "E-UNSUPPORTED"
   },
   {
    "path": "test/language/import/import-defer/evaluation-triggers/ignore-exported-then-super-property-set-exported.js",
    "verdict": "node-fails",
    "node": "threw SyntaxError: Unexpected token '*'",
-   "bundle": "not run"
+   "bundle": "E-UNSUPPORTED"
   },
   {
    "path": "test/language/import/import-defer/evaluation-triggers/ignore-getPrototypeOf.js",
    "verdict": "node-fails",
    "node": "threw SyntaxError: Unexpected token '*'",
-   "bundle": "not run"
+   "bundle": "E-UNSUPPORTED"
   },
   {
    "path": "test/language/import/import-defer/evaluation-triggers/ignore-isExtensible.js",
    "verdict": "node-fails",
    "node": "threw SyntaxError: Unexpected token '*'",
-   "bundle": "not run"
+   "bundle": "E-UNSUPPORTED"
   },
   {
    "path": "test/language/import/import-defer/evaluation-triggers/ignore-not-exported-then-defineOwnProperty.js",
    "verdict": "node-fails",
    "node": "threw SyntaxError: Unexpected token '*'",
-   "bundle": "not run"
+   "bundle": "E-UNSUPPORTED"
   },
   {
    "path": "test/language/import/import-defer/evaluation-triggers/ignore-not-exported-then-delete.js",
    "verdict": "node-fails",
    "node": "threw SyntaxError: Unexpected token '*'",
-   "bundle": "not run"
+   "bundle": "E-UNSUPPORTED"
   },
   {
    "path": "test/language/import/import-defer/evaluation-triggers/ignore-not-exported-then-get-in-prototype.js",
    "verdict": "node-fails",
    "node": "threw SyntaxError: Unexpected token '*'",
-   "bundle": "not run"
+   "bundle": "E-UNSUPPORTED"
   },
   {
    "path": "test/language/import/import-defer/evaluation-triggers/ignore-not-exported-then-get.js",
    "verdict": "node-fails",
    "node": "threw SyntaxError: Unexpected token '*'",
-   "bundle": "not run"
+   "bundle": "E-UNSUPPORTED"
   },
   {
    "path": "test/language/import/import-defer/evaluation-triggers/ignore-not-exported-then-getOwnProperty.js",
    "verdict": "node-fails",
    "node": "threw SyntaxError: Unexpected token '*'",
-   "bundle": "not run"
+   "bundle": "E-UNSUPPORTED"
   },
   {
    "path": "test/language/import/import-defer/evaluation-triggers/ignore-not-exported-then-hasProperty-in-prototype.js",
    "verdict": "node-fails",
    "node": "threw SyntaxError: Unexpected token '*'",
-   "bundle": "not run"
+   "bundle": "E-UNSUPPORTED"
   },
   {
    "path": "test/language/import/import-defer/evaluation-triggers/ignore-not-exported-then-hasProperty.js",
    "verdict": "node-fails",
    "node": "threw SyntaxError: Unexpected token '*'",
-   "bundle": "not run"
+   "bundle": "E-UNSUPPORTED"
   },
   {
    "path": "test/language/import/import-defer/evaluation-triggers/ignore-not-exported-then-super-get.js",
    "verdict": "node-fails",
    "node": "threw SyntaxError: Unexpected token '*'",
-   "bundle": "not run"
+   "bundle": "E-UNSUPPORTED"
   },
   {
    "path": "test/language/import/import-defer/evaluation-triggers/ignore-not-exported-then-super-property-define.js",
    "verdict": "node-fails",
    "node": "threw SyntaxError: Unexpected token '*'",
-   "bundle": "not run"
+   "bundle": "E-UNSUPPORTED"
   },
   {
    "path": "test/language/import/import-defer/evaluation-triggers/ignore-not-exported-then-super-property-set-exported.js",
    "verdict": "node-fails",
    "node": "threw SyntaxError: Unexpected token '*'",
-   "bundle": "not run"
+   "bundle": "E-UNSUPPORTED"
   },
   {
    "path": "test/language/import/import-defer/evaluation-triggers/ignore-preventExtensions.js",
    "verdict": "node-fails",
    "node": "threw SyntaxError: Unexpected token '*'",
-   "bundle": "not run"
+   "bundle": "E-UNSUPPORTED"
   },
   {
    "path": "test/language/import/import-defer/evaluation-triggers/ignore-private-name-access.js",
    "verdict": "node-fails",
    "node": "threw SyntaxError: Unexpected token '*'",
-   "bundle": "not run"
+   "bundle": "E-UNSUPPORTED"
   },
   {
    "path": "test/language/import/import-defer/evaluation-triggers/ignore-set-string-exported.js",
    "verdict": "node-fails",
    "node": "threw SyntaxError: Unexpected token '*'",
-   "bundle": "not run"
+   "bundle": "E-UNSUPPORTED"
   },
   {
    "path": "test/language/import/import-defer/evaluation-triggers/ignore-set-string-not-exported.js",
    "verdict": "node-fails",
    "node": "threw SyntaxError: Unexpected token '*'",
-   "bundle": "not run"
+   "bundle": "E-UNSUPPORTED"
   },
   {
    "path": "test/language/import/import-defer/evaluation-triggers/ignore-setPrototypeOf.js",
    "verdict": "node-fails",
    "node": "threw SyntaxError: Unexpected token '*'",
-   "bundle": "not run"
+   "bundle": "E-UNSUPPORTED"
   },
   {
    "path": "test/language/import/import-defer/evaluation-triggers/ignore-symbol-other-defineOwnProperty.js",
    "verdict": "node-fails",
    "node": "threw SyntaxError: Unexpected token '*'",
-   "bundle": "not run"
+   "bundle": "E-UNSUPPORTED"
   },
   {
    "path": "test/language/import/import-defer/evaluation-triggers/ignore-symbol-other-delete.js",
    "verdict": "node-fails",
    "node": "threw SyntaxError: Unexpected token '*'",
-   "bundle": "not run"
+   "bundle": "E-UNSUPPORTED"
   },
   {
    "path": "test/language/import/import-defer/evaluation-triggers/ignore-symbol-other-get-in-prototype.js",
    "verdict": "node-fails",
    "node": "threw SyntaxError: Unexpected token '*'",
-   "bundle": "not run"
+   "bundle": "E-UNSUPPORTED"
   },
   {
    "path": "test/language/import/import-defer/evaluation-triggers/ignore-symbol-other-get.js",
    "verdict": "node-fails",
    "node": "threw SyntaxError: Unexpected token '*'",
-   "bundle": "not run"
+   "bundle": "E-UNSUPPORTED"
   },
   {
    "path": "test/language/import/import-defer/evaluation-triggers/ignore-symbol-other-getOwnProperty.js",
    "verdict": "node-fails",
    "node": "threw SyntaxError: Unexpected token '*'",
-   "bundle": "not run"
+   "bundle": "E-UNSUPPORTED"
   },
   {
    "path": "test/language/import/import-defer/evaluation-triggers/ignore-symbol-other-hasProperty-in-prototype.js",
    "verdict": "node-fails",
    "node": "threw SyntaxError: Unexpected token '*'",
-   "bundle": "not run"
+   "bundle": "E-UNSUPPORTED"
   },
   {
    "path": "test/language/import/import-defer/evaluation-triggers/ignore-symbol-other-hasProperty.js",
    "verdict": "node-fails",
    "node": "threw SyntaxError: Unexpected token '*'",
-   "bundle": "not run"
+   "bundle": "E-UNSUPPORTED"
   },
   {
    "path": "test/language/import/import-defer/evaluation-triggers/ignore-symbol-other-super-get.js",
    "verdict": "node-fails",
    "node": "threw SyntaxError: Unexpected token '*'",
-   "bundle": "not run"
+   "bundle": "E-UNSUPPORTED"
   },
   {
    "path": "test/language/import/import-defer/evaluation-triggers/ignore-symbol-other-super-property-define.js",
    "verdict": "node-fails",
    "node": "threw SyntaxError: Unexpected token '*'",
-   "bundle": "not run"
+   "bundle": "E-UNSUPPORTED"
   },
   {
    "path": "test/language/import/import-defer/evaluation-triggers/ignore-symbol-other-super-property-set-exported.js",
    "verdict": "node-fails",
    "node": "threw SyntaxError: Unexpected token '*'",
-   "bundle": "not run"
+   "bundle": "E-UNSUPPORTED"
   },
   {
    "path": "test/language/import/import-defer/evaluation-triggers/ignore-symbol-toStringTag-defineOwnProperty.js",
    "verdict": "node-fails",
    "node": "threw SyntaxError: Unexpected token '*'",
-   "bundle": "not run"
+   "bundle": "E-UNSUPPORTED"
   },
   {
    "path": "test/language/import/import-defer/evaluation-triggers/ignore-symbol-toStringTag-delete.js",
    "verdict": "node-fails",
    "node": "threw SyntaxError: Unexpected token '*'",
-   "bundle": "not run"
+   "bundle": "E-UNSUPPORTED"
   },
   {
    "path": "test/language/import/import-defer/evaluation-triggers/ignore-symbol-toStringTag-get-in-prototype.js",
    "verdict": "node-fails",
    "node": "threw SyntaxError: Unexpected token '*'",
-   "bundle": "not run"
+   "bundle": "E-UNSUPPORTED"
   },
   {
    "path": "test/language/import/import-defer/evaluation-triggers/ignore-symbol-toStringTag-get.js",
    "verdict": "node-fails",
    "node": "threw SyntaxError: Unexpected token '*'",
-   "bundle": "not run"
+   "bundle": "E-UNSUPPORTED"
   },
   {
    "path": "test/language/import/import-defer/evaluation-triggers/ignore-symbol-toStringTag-getOwnProperty.js",
    "verdict": "node-fails",
    "node": "threw SyntaxError: Unexpected token '*'",
-   "bundle": "not run"
+   "bundle": "E-UNSUPPORTED"
   },
   {
    "path": "test/language/import/import-defer/evaluation-triggers/ignore-symbol-toStringTag-hasProperty-in-prototype.js",
    "verdict": "node-fails",
    "node": "threw SyntaxError: Unexpected token '*'",
-   "bundle": "not run"
+   "bundle": "E-UNSUPPORTED"
   },
   {
    "path": "test/language/import/import-defer/evaluation-triggers/ignore-symbol-toStringTag-hasProperty.js",
    "verdict": "node-fails",
    "node": "threw SyntaxError: Unexpected token '*'",
-   "bundle": "not run"
+   "bundle": "E-UNSUPPORTED"
   },
   {
    "path": "test/language/import/import-defer/evaluation-triggers/ignore-symbol-toStringTag-super-get.js",
    "verdict": "node-fails",
    "node": "threw SyntaxError: Unexpected token '*'",
-   "bundle": "not run"
+   "bundle": "E-UNSUPPORTED"
   },
   {
    "path": "test/language/import/import-defer/evaluation-triggers/ignore-symbol-toStringTag-super-property-define.js",
    "verdict": "node-fails",
    "node": "threw SyntaxError: Unexpected token '*'",
-   "bundle": "not run"
+   "bundle": "E-UNSUPPORTED"
   },
   {
    "path": "test/language/import/import-defer/evaluation-triggers/ignore-symbol-toStringTag-super-property-set-exported.js",
    "verdict": "node-fails",
    "node": "threw SyntaxError: Unexpected token '*'",
-   "bundle": "not run"
+   "bundle": "E-UNSUPPORTED"
   },
   {
    "path": "test/language/import/import-defer/evaluation-triggers/trigger-exported-string-defineOwnProperty.js",
    "verdict": "node-fails",
    "node": "threw SyntaxError: Unexpected token '*'",
-   "bundle": "not run"
+   "bundle": "E-UNSUPPORTED"
   },
   {
    "path": "test/language/import/import-defer/evaluation-triggers/trigger-exported-string-delete.js",
    "verdict": "node-fails",
    "node": "threw SyntaxError: Unexpected token '*'",
-   "bundle": "not run"
+   "bundle": "E-UNSUPPORTED"
   },
   {
    "path": "test/language/import/import-defer/evaluation-triggers/trigger-exported-string-get-in-prototype.js",
    "verdict": "node-fails",
    "node": "threw SyntaxError: Unexpected token '*'",
-   "bundle": "not run"
+   "bundle": "E-UNSUPPORTED"
   },
   {
    "path": "test/language/import/import-defer/evaluation-triggers/trigger-exported-string-get.js",
    "verdict": "node-fails",
    "node": "threw SyntaxError: Unexpected token '*'",
-   "bundle": "not run"
+   "bundle": "E-UNSUPPORTED"
   },
   {
    "path": "test/language/import/import-defer/evaluation-triggers/trigger-exported-string-getOwnProperty.js",
    "verdict": "node-fails",
    "node": "threw SyntaxError: Unexpected token '*'",
-   "bundle": "not run"
+   "bundle": "E-UNSUPPORTED"
   },
   {
    "path": "test/language/import/import-defer/evaluation-triggers/trigger-exported-string-hasProperty-in-prototype.js",
    "verdict": "node-fails",
    "node": "threw SyntaxError: Unexpected token '*'",
-   "bundle": "not run"
+   "bundle": "E-UNSUPPORTED"
   },
   {
    "path": "test/language/import/import-defer/evaluation-triggers/trigger-exported-string-hasProperty.js",
    "verdict": "node-fails",
    "node": "threw SyntaxError: Unexpected token '*'",
-   "bundle": "not run"
+   "bundle": "E-UNSUPPORTED"
   },
   {
    "path": "test/language/import/import-defer/evaluation-triggers/trigger-exported-string-super-get.js",
    "verdict": "node-fails",
    "node": "threw SyntaxError: Unexpected token '*'",
-   "bundle": "not run"
+   "bundle": "E-UNSUPPORTED"
   },
   {
    "path": "test/language/import/import-defer/evaluation-triggers/trigger-exported-string-super-property-define.js",
    "verdict": "node-fails",
    "node": "threw SyntaxError: Unexpected token '*'",
-   "bundle": "not run"
+   "bundle": "E-UNSUPPORTED"
   },
   {
    "path": "test/language/import/import-defer/evaluation-triggers/trigger-exported-string-super-property-set-exported.js",
    "verdict": "node-fails",
    "node": "threw SyntaxError: Unexpected token '*'",
-   "bundle": "not run"
+   "bundle": "E-UNSUPPORTED"
   },
   {
    "path": "test/language/import/import-defer/evaluation-triggers/trigger-not-exported-string-defineOwnProperty.js",
    "verdict": "node-fails",
    "node": "threw SyntaxError: Unexpected token '*'",
-   "bundle": "not run"
+   "bundle": "E-UNSUPPORTED"
   },
   {
    "path": "test/language/import/import-defer/evaluation-triggers/trigger-not-exported-string-delete.js",
    "verdict": "node-fails",
    "node": "threw SyntaxError: Unexpected token '*'",
-   "bundle": "not run"
+   "bundle": "E-UNSUPPORTED"
   },
   {
    "path": "test/language/import/import-defer/evaluation-triggers/trigger-not-exported-string-get-in-prototype.js",
    "verdict": "node-fails",
    "node": "threw SyntaxError: Unexpected token '*'",
-   "bundle": "not run"
+   "bundle": "E-UNSUPPORTED"
   },
   {
    "path": "test/language/import/import-defer/evaluation-triggers/trigger-not-exported-string-get.js",
    "verdict": "node-fails",
    "node": "threw SyntaxError: Unexpected token '*'",
-   "bundle": "not run"
+   "bundle": "E-UNSUPPORTED"
   },
   {
    "path": "test/language/import/import-defer/evaluation-triggers/trigger-not-exported-string-getOwnProperty.js",
    "verdict": "node-fails",
    "node": "threw SyntaxError: Unexpected token '*'",
-   "bundle": "not run"
+   "bundle": "E-UNSUPPORTED"
   },
   {
    "path": "test/language/import/import-defer/evaluation-triggers/trigger-not-exported-string-hasProperty-in-prototype.js",
    "verdict": "node-fails",
    "node": "threw SyntaxError: Unexpected token '*'",
-   "bundle": "not run"
+   "bundle": "E-UNSUPPORTED"
   },
   {
    "path": "test/language/import/import-defer/evaluation-triggers/trigger-not-exported-string-hasProperty.js",
    "verdict": "node-fails",
    "node": "threw SyntaxError: Unexpected token '*'",
-   "bundle": "not run"
+   "bundle": "E-UNSUPPORTED"
   },
   {
    "path": "test/language/import/import-defer/evaluation-triggers/trigger-not-exported-string-super-get.js",
    "verdict": "node-fails",
    "node": "threw SyntaxError: Unexpected token '*'",
-   "bundle": "not run"
+   "bundle": "E-UNSUPPORTED"
   },
   {
    "path": "test/language/import/import-defer/evaluation-triggers/trigger-not-exported-string-super-property-define.js",
    "verdict": "node-fails",
    "node": "threw SyntaxError: Unexpected token '*'",
-   "bundle": "not run"
+   "bundle": "E-UNSUPPORTED"
   },
   {
    "path": "test/language/import/import-defer/evaluation-triggers/trigger-not-exported-string-super-property-set-exported.js",
    "verdict": "node-fails",
    "node": "threw SyntaxError: Unexpected token '*'",
-   "bundle": "not run"
+   "bundle": "E-UNSUPPORTED"
   },
   {
    "path": "test/language/import/import-defer/evaluation-triggers/trigger-ownPropertyKey-names.js",
    "verdict": "node-fails",
    "node": "threw SyntaxError: Unexpected token '*'",
-   "bundle": "not run"
+   "bundle": "E-UNSUPPORTED"
   },
   {
    "path": "test/language/import/import-defer/evaluation-triggers/trigger-ownPropertyKeys-symbols.js",
    "verdict": "node-fails",
    "node": "threw SyntaxError: Unexpected token '*'",
-   "bundle": "not run"
+   "bundle": "E-UNSUPPORTED"
   },
   {
    "path": "test/language/import/import-defer/evaluation-triggers/trigger-ownPropertyKeys.js",
    "verdict": "node-fails",
    "node": "threw SyntaxError: Unexpected token '*'",
-   "bundle": "not run"
+   "bundle": "E-UNSUPPORTED"
   },
   {
    "path": "test/language/import/import-defer/syntax/import-attributes.js",
    "verdict": "node-fails",
    "node": "threw SyntaxError: Unexpected token '*'",
-   "bundle": "not run"
+   "bundle": "E-UNSUPPORTED"
   },
   {
    "path": "test/language/import/import-defer/syntax/invalid-default-and-defer-namespace.js",
@@ -784,2079 +784,2079 @@
   },
   {
    "path": "test/language/import/import-defer/syntax/valid-default-binding-named-defer.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/import/import-defer/syntax/valid-defer-namespace.js",
    "verdict": "node-fails",
    "node": "threw SyntaxError: Unexpected token '*'",
-   "bundle": "not run"
+   "bundle": "E-UNSUPPORTED"
   },
   {
    "path": "test/language/module-code/ambiguous-export-bindings/error-export-from-named-as.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: The requested module './error-export-from-named_FIXTURE.js' contains conflicting star exports for name 'x'",
-   "bundle": "not run"
+   "bundle": "E-LINK"
   },
   {
    "path": "test/language/module-code/ambiguous-export-bindings/error-export-from-named.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: The requested module './error-export-from-named_FIXTURE.js' contains conflicting star exports for name 'x'",
-   "bundle": "not run"
+   "bundle": "E-LINK"
   },
   {
    "path": "test/language/module-code/ambiguous-export-bindings/error-import-named-as.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: The requested module './error-import-named_FIXTURE.js' contains conflicting star exports for name 'x'",
-   "bundle": "not run"
+   "bundle": "E-LINK"
   },
   {
    "path": "test/language/module-code/ambiguous-export-bindings/error-import-named.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: The requested module './error-import-named_FIXTURE.js' contains conflicting star exports for name 'x'",
-   "bundle": "not run"
+   "bundle": "E-LINK"
   },
   {
    "path": "test/language/module-code/ambiguous-export-bindings/import-and-export-propagates-binding.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/ambiguous-export-bindings/namespace-unambiguous-if-export-star-as-from-and-import-star-as-and-export.js",
    "verdict": "node-fails",
    "node": "threw SyntaxError: The requested module './namespace-unambiguous-if-import-star-as-and-export.js' contains conflicting star exports for name 'foo'",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/ambiguous-export-bindings/namespace-unambiguous-if-export-star-as-from.js",
    "verdict": "node-fails",
    "node": "threw SyntaxError: The requested module './namespace-unambiguous-if-export-star-as-from.js' contains conflicting star exports for name 'foo'",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/ambiguous-export-bindings/namespace-unambiguous-if-import-source-and-export.js",
    "verdict": "node-fails",
    "node": "threw Error: Cannot find package '<module source>' imported from <work>/test/language/module-code/ambiguous-export-bindings/namespace-import-source-and-export-1_FIXTURE.js",
-   "bundle": "not run"
+   "bundle": "E-UNSUPPORTED"
   },
   {
    "path": "test/language/module-code/ambiguous-export-bindings/namespace-unambiguous-if-import-star-as-and-export.js",
    "verdict": "node-fails",
    "node": "threw SyntaxError: The requested module './namespace-unambiguous-if-import-star-as-and-export.js' contains conflicting star exports for name 'foo'",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/ambiguous-export-bindings/omitted-from-namespace.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/comment-multi-line-html-close.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: HTML comments are not allowed in modules",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/comment-single-line-html-close.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: HTML comments are not allowed in modules",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/comment-single-line-html-open.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: HTML comments are not allowed in modules",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/early-dup-export-as-star-as.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Duplicate export of 'z'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/early-dup-export-decl.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Identifier 'f' has already been declared",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/early-dup-export-dflt-id.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Duplicate export of 'default'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/early-dup-export-dflt.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected token 'var'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/early-dup-export-id-as.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Duplicate export of 'z'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/early-dup-export-id.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Duplicate export of 'x'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/early-dup-export-star-as-dflt.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Duplicate export of 'default'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/early-dup-lables.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Label 'label' has already been declared",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/early-dup-lex.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Identifier 'x' has already been declared",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/early-dup-top-function-async-generator.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Identifier 'x' has already been declared",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/early-dup-top-function-async.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Identifier 'x' has already been declared",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/early-dup-top-function-generator.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Identifier 'x' has already been declared",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/early-dup-top-function.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Identifier 'x' has already been declared",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/early-export-global.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Export 'Number' is not defined in module",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/early-export-ill-formed-string.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Invalid module export name: contains unpaired surrogate",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/early-export-unresolvable.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Export 'unresolvable' is not defined in module",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/early-import-arguments.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected eval or arguments in strict mode",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/early-import-as-arguments.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected eval or arguments in strict mode",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/early-import-as-eval.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected eval or arguments in strict mode",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/early-import-eval.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected eval or arguments in strict mode",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/early-lex-and-var.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Identifier 'x' has already been declared",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/early-new-target.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: new.target expression is not allowed here",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/early-strict-mode.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected strict mode reserved word",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/early-super.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: 'super' keyword unexpected here",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/early-undef-break.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Undefined label 'undef'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/early-undef-continue.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Undefined label 'undef'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/eval-export-cls-semi.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/eval-export-dflt-cls-anon-semi.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/eval-export-dflt-cls-anon.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/eval-export-dflt-cls-name-meth.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/eval-export-dflt-cls-named-semi.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/eval-export-dflt-cls-named.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/eval-export-dflt-expr-cls-anon.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/eval-export-dflt-expr-cls-name-meth.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/eval-export-dflt-expr-cls-named.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/eval-export-dflt-expr-err-eval.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw Test262Error: ",
-   "bundle": "not run"
+   "bundle": "threw Test262Error: "
   },
   {
    "path": "test/language/module-code/eval-export-dflt-expr-err-get-value.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw ReferenceError: unresolvable is not defined",
-   "bundle": "not run"
+   "bundle": "threw ReferenceError: unresolvable is not defined"
   },
   {
    "path": "test/language/module-code/eval-export-dflt-expr-fn-anon.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/eval-export-dflt-expr-fn-named.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/eval-export-dflt-expr-gen-anon.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/eval-export-dflt-expr-gen-named.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/eval-export-dflt-expr-in.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/eval-export-dflt-fun-anon-semi.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/eval-export-dflt-fun-named-semi.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/eval-export-dflt-gen-anon-semi.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/eval-export-dflt-gen-named-semi.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/eval-export-fun-semi.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/eval-export-gen-semi.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/eval-gtbndng-indirect-trlng-comma.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/eval-gtbndng-indirect-update-as.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/eval-gtbndng-indirect-update-dflt.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/eval-gtbndng-indirect-update.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/eval-gtbndng-local-bndng-cls.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/eval-gtbndng-local-bndng-const.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/eval-gtbndng-local-bndng-let.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/eval-gtbndng-local-bndng-var.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/eval-rqstd-abrupt.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw TypeError: ",
-   "bundle": "not run"
+   "bundle": "threw TypeError: "
   },
   {
    "path": "test/language/module-code/eval-rqstd-once.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/eval-rqstd-order.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/eval-self-abrupt.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw Test262Error: ",
-   "bundle": "not run"
+   "bundle": "threw Test262Error: "
   },
   {
    "path": "test/language/module-code/eval-self-once.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/eval-this.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/export-default-asyncfunction-declaration-binding-exists.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Identifier 'A' has already been declared",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/export-default-asyncfunction-declaration-binding.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/export-default-asyncgenerator-declaration-binding-exists.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Identifier 'AG' has already been declared",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/export-default-asyncgenerator-declaration-binding.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/export-default-function-declaration-binding-exists.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Identifier 'F' has already been declared",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/export-default-function-declaration-binding.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/export-default-generator-declaration-binding-exists.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Identifier 'G' has already been declared",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/export-default-generator-declaration-binding.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/export-expname-binding-index.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/export-expname-binding-string.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/export-expname-from-as-unpaired-surrogate.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: String literal module export names must be followed by a 'from' clause",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/export-expname-from-binding-string.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/export-expname-from-star-string.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/export-expname-from-star-unpaired-surrogate.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected token 'export'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/export-expname-from-star.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/export-expname-from-string-binding.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/export-expname-from-string-string.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/export-expname-from-string.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/export-expname-from-unpaired-surrogate.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Invalid module export name: contains unpaired surrogate",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/export-expname-import-string-binding.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/export-expname-import-unpaired-surrogate.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Invalid module export name: contains unpaired surrogate",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/export-expname-string-binding.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: String literal module export names must be followed by a 'from' clause",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/export-expname-unpaired-surrogate.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Invalid module export name: contains unpaired surrogate",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/export-star-as-dflt.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/import-attributes/allow-nlt-before-with.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: The requested module './ensure-linking-error_FIXTURE.js' does not provide an export named 'nonExistent'",
-   "bundle": "not run"
+   "bundle": "E-LINK"
   },
   {
    "path": "test/language/module-code/import-attributes/early-dup-attribute-key-export.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Import attribute has duplicate key 'type'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/import-attributes/early-dup-attribute-key-import-nobinding.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Import attribute has duplicate key 'type'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/import-attributes/early-dup-attribute-key-import-withbinding.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Import attribute has duplicate key 'type'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/import-attributes/import-attribute-empty.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/import-attributes/import-attribute-key-identifiername.js",
    "verdict": "node-fails",
    "node": "threw TypeError: Import attribute \"if\" with value \"\" is not supported in <work>/test/language/module-code/import-attributes/import-attribute-1_FIXTURE.js",
-   "bundle": "not run"
+   "bundle": "E-LINK"
   },
   {
    "path": "test/language/module-code/import-attributes/import-attribute-key-string-double.js",
    "verdict": "node-fails",
    "node": "threw TypeError: Import attribute \"test262x\" with value \"\" is not supported in <work>/test/language/module-code/import-attributes/import-attribute-1_FIXTURE.js",
-   "bundle": "not run"
+   "bundle": "E-LINK"
   },
   {
    "path": "test/language/module-code/import-attributes/import-attribute-key-string-single.js",
    "verdict": "node-fails",
    "node": "threw TypeError: Import attribute \"test262x\" with value \"\" is not supported in <work>/test/language/module-code/import-attributes/import-attribute-1_FIXTURE.js",
-   "bundle": "not run"
+   "bundle": "E-LINK"
   },
   {
    "path": "test/language/module-code/import-attributes/import-attribute-many.js",
    "verdict": "node-fails",
    "node": "threw TypeError: Import attribute \"test262_1\" with value \"\" is not supported in <work>/test/language/module-code/import-attributes/import-attribute-1_FIXTURE.js",
-   "bundle": "not run"
+   "bundle": "E-LINK"
   },
   {
    "path": "test/language/module-code/import-attributes/import-attribute-newlines.js",
    "verdict": "node-fails",
    "node": "threw TypeError: Import attribute \"test262\" with value \"\" is not supported in <work>/test/language/module-code/import-attributes/import-attribute-1_FIXTURE.js",
-   "bundle": "not run"
+   "bundle": "E-LINK"
   },
   {
    "path": "test/language/module-code/import-attributes/import-attribute-trlng-comma.js",
    "verdict": "node-fails",
    "node": "threw TypeError: Import attribute \"test262\" with value \"\" is not supported in <work>/test/language/module-code/import-attributes/import-attribute-1_FIXTURE.js",
-   "bundle": "not run"
+   "bundle": "E-LINK"
   },
   {
    "path": "test/language/module-code/import-attributes/import-attribute-value-string-double.js",
    "verdict": "node-fails",
    "node": "threw TypeError: Import attribute \"test262\" with value \"x\" is not supported in <work>/test/language/module-code/import-attributes/import-attribute-1_FIXTURE.js",
-   "bundle": "not run"
+   "bundle": "E-LINK"
   },
   {
    "path": "test/language/module-code/import-attributes/import-attribute-value-string-single.js",
    "verdict": "node-fails",
    "node": "threw TypeError: Import attribute \"test262\" with value \"x\" is not supported in <work>/test/language/module-code/import-attributes/import-attribute-1_FIXTURE.js",
-   "bundle": "not run"
+   "bundle": "E-LINK"
   },
   {
    "path": "test/language/module-code/instn-iee-bndng-cls.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/instn-iee-bndng-const.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/instn-iee-bndng-fun.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/instn-iee-bndng-gen.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/instn-iee-bndng-let.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/instn-iee-bndng-var.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/instn-iee-err-circular-as.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Detected cycle while resolving name 'x' in './instn-iee-err-circular.js'",
-   "bundle": "not run"
+   "bundle": "E-LINK"
   },
   {
    "path": "test/language/module-code/instn-iee-err-circular.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Detected cycle while resolving name 'x' in './instn-iee-err-circular_FIXTURE.js'",
-   "bundle": "not run"
+   "bundle": "E-LINK"
   },
   {
    "path": "test/language/module-code/instn-iee-err-dflt-thru-star-as.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: The requested module './instn-iee-err-dflt-thru-star-int_FIXTURE.js' does not provide an export named 'default'",
-   "bundle": "not run"
+   "bundle": "E-LINK"
   },
   {
    "path": "test/language/module-code/instn-iee-err-dflt-thru-star.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: The requested module './instn-iee-err-dflt-thru-star-int_FIXTURE.js' does not provide an export named 'default'",
-   "bundle": "not run"
+   "bundle": "E-LINK"
   },
   {
    "path": "test/language/module-code/instn-iee-err-not-found-as.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: The requested module './instn-iee-err-not-found-empty_FIXTURE.js' does not provide an export named 'x'",
-   "bundle": "not run"
+   "bundle": "E-LINK"
   },
   {
    "path": "test/language/module-code/instn-iee-err-not-found.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: The requested module './instn-iee-err-not-found-empty_FIXTURE.js' does not provide an export named 'x'",
-   "bundle": "not run"
+   "bundle": "E-LINK"
   },
   {
    "path": "test/language/module-code/instn-iee-iee-cycle.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/instn-iee-star-cycle.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/instn-iee-trlng-comma.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/instn-local-bndng-cls.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/instn-local-bndng-const.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/instn-local-bndng-export-cls.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/instn-local-bndng-export-const.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/instn-local-bndng-export-fun.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/instn-local-bndng-export-gen.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/instn-local-bndng-export-let.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/instn-local-bndng-export-var.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/instn-local-bndng-for-dup.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/instn-local-bndng-for.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/instn-local-bndng-fun.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/instn-local-bndng-gen.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/instn-local-bndng-let.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/instn-local-bndng-var-dup.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/instn-local-bndng-var.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/instn-named-bndng-cls.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/instn-named-bndng-const.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/instn-named-bndng-dflt-cls.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/instn-named-bndng-dflt-expr.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/instn-named-bndng-dflt-fun-anon.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/instn-named-bndng-dflt-fun-named.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/instn-named-bndng-dflt-gen-anon.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/instn-named-bndng-dflt-gen-named.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/instn-named-bndng-dflt-named.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/instn-named-bndng-dflt-star.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/instn-named-bndng-fun.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/instn-named-bndng-gen.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/instn-named-bndng-let.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/instn-named-bndng-trlng-comma.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/instn-named-bndng-var.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/instn-named-err-dflt-thru-star-as.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: The requested module './instn-named-err-dflt-thru-star-int_FIXTURE.js' does not provide an export named 'default'",
-   "bundle": "not run"
+   "bundle": "E-LINK"
   },
   {
    "path": "test/language/module-code/instn-named-err-dflt-thru-star-dflt.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: The requested module './instn-named-err-dflt-thru-star-int_FIXTURE.js' does not provide an export named 'default'",
-   "bundle": "not run"
+   "bundle": "E-LINK"
   },
   {
    "path": "test/language/module-code/instn-named-err-not-found-as.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: The requested module './instn-named-err-not-found-empty_FIXTURE.js' does not provide an export named 'x'",
-   "bundle": "not run"
+   "bundle": "E-LINK"
   },
   {
    "path": "test/language/module-code/instn-named-err-not-found-dflt.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: The requested module './instn-named-err-not-found-empty_FIXTURE.js' does not provide an export named 'default'",
-   "bundle": "not run"
+   "bundle": "E-LINK"
   },
   {
    "path": "test/language/module-code/instn-named-err-not-found.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: The requested module './instn-named-err-not-found-empty_FIXTURE.js' does not provide an export named 'x'",
-   "bundle": "not run"
+   "bundle": "E-LINK"
   },
   {
    "path": "test/language/module-code/instn-named-id-name.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/instn-named-iee-cycle.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/instn-named-star-cycle.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/instn-once.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/instn-resolve-empty-export.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Invalid left-hand side expression in postfix operation",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/instn-resolve-empty-import.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Invalid left-hand side expression in postfix operation",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/instn-resolve-err-syntax-1.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Illegal break statement",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/instn-resolve-err-syntax-2.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Invalid left-hand side expression in postfix operation",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/instn-resolve-order-depth.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Invalid left-hand side expression in postfix operation",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/instn-resolve-order-src.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Invalid left-hand side expression in postfix operation",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/instn-same-global.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/instn-star-as-props-dflt-skip.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/instn-star-binding.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/instn-star-equality.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/instn-star-err-not-found.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: The requested module './instn-star-err-not-found-empty_FIXTURE.js' does not provide an export named 'x'",
-   "bundle": "not run"
+   "bundle": "E-LINK"
   },
   {
    "path": "test/language/module-code/instn-star-id-name.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/instn-star-iee-cycle.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/instn-star-iee-multi-cycle-same-name.js",
    "verdict": "node-fails",
    "node": "threw SyntaxError: Detected cycle while resolving name 'foo' in './instn-star-iee-multi-cycle-same-name-a_FIXTURE.js'",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/instn-star-iee-single-cycle-same-name.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/instn-star-props-circular.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/instn-star-props-dflt-keep-indirect.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/instn-star-props-dflt-keep-local.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/instn-star-props-dflt-skip.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/instn-star-props-nrml.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/instn-star-star-cycle.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/instn-uniq-env-rec.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/invalid-private-names-call-expression-bad-reference.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Private field '#x' must be declared in an enclosing class",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/invalid-private-names-call-expression-this.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Private field '#x' must be declared in an enclosing class",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/invalid-private-names-member-expression-bad-reference.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Private field '#x' must be declared in an enclosing class",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/invalid-private-names-member-expression-this.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Private field '#x' must be declared in an enclosing class",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/namespace/Symbol.iterator.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/namespace/Symbol.toStringTag.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/namespace/internals/define-own-property.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/namespace/internals/delete-exported-init.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/namespace/internals/delete-exported-uninit.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/namespace/internals/delete-non-exported.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/namespace/internals/enumerate-binding-uninit.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/namespace/internals/get-nested-namespace-dflt-skip.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/namespace/internals/get-nested-namespace-props-nrml.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/namespace/internals/get-own-property-str-found-init.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/namespace/internals/get-own-property-str-found-uninit.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/namespace/internals/get-own-property-str-not-found.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/namespace/internals/get-own-property-sym.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/namespace/internals/get-prototype-of.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/namespace/internals/get-str-found-init.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/namespace/internals/get-str-found-uninit.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/namespace/internals/get-str-initialize.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/namespace/internals/get-str-not-found.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/namespace/internals/get-str-update.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/namespace/internals/get-sym-found.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/namespace/internals/get-sym-not-found.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/namespace/internals/has-property-str-found-init.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/namespace/internals/has-property-str-found-uninit.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/namespace/internals/has-property-str-not-found.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/namespace/internals/has-property-sym-found.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/namespace/internals/has-property-sym-not-found.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/namespace/internals/is-extensible.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/namespace/internals/object-hasOwnProperty-binding-uninit.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/namespace/internals/object-keys-binding-uninit.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/namespace/internals/object-propertyIsEnumerable-binding-uninit.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/namespace/internals/own-property-keys-binding-types.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/namespace/internals/own-property-keys-sort.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/namespace/internals/prevent-extensions.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/namespace/internals/set-prototype-of-null.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/namespace/internals/set-prototype-of.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/namespace/internals/set.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/namespace/internals/super-access-to-tdz-binding.js",
    "verdict": "node-fails",
    "node": "threw Test262Error: Expected a ReferenceError but got a TypeError",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/namespace/internals/super-set-to-tdz-binding-with-accessor.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/parse-err-decl-pos-export-arrow-function.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected token 'export'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/parse-err-decl-pos-export-block-stmt-list.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected token 'export'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/parse-err-decl-pos-export-block-stmt.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected token 'export'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/parse-err-decl-pos-export-class-decl-meth-static.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected token 'export'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/parse-err-decl-pos-export-class-decl-meth.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected token 'export'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/parse-err-decl-pos-export-class-decl-method-gen-static.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected token 'export'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/parse-err-decl-pos-export-class-decl-method-gen.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected token 'export'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/parse-err-decl-pos-export-class-expr-meth-gen-static.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected token 'export'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/parse-err-decl-pos-export-class-expr-meth-gen.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected token 'export'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/parse-err-decl-pos-export-class-expr-meth-static.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected token 'export'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/parse-err-decl-pos-export-class-expr-meth.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected token 'export'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/parse-err-decl-pos-export-do-while.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected token 'export'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/parse-err-decl-pos-export-for-const.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected token 'export'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/parse-err-decl-pos-export-for-in-const.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected token 'export'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/parse-err-decl-pos-export-for-in-let.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected token 'export'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/parse-err-decl-pos-export-for-in-lhs.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected token 'export'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/parse-err-decl-pos-export-for-in-var.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected token 'export'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/parse-err-decl-pos-export-for-let.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected token 'export'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/parse-err-decl-pos-export-for-lhs.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected token 'export'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/parse-err-decl-pos-export-for-of-const.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected token 'export'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/parse-err-decl-pos-export-for-of-let.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected token 'export'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/parse-err-decl-pos-export-for-of-lhs.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected token 'export'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/parse-err-decl-pos-export-for-of-var.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected token 'export'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/parse-err-decl-pos-export-for-var.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected token 'export'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/parse-err-decl-pos-export-function-decl.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected token 'export'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/parse-err-decl-pos-export-function-expr.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected token 'export'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/parse-err-decl-pos-export-generator-decl.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected token 'export'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/parse-err-decl-pos-export-generator-expr.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected token 'export'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/parse-err-decl-pos-export-if-else.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected token 'export'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/parse-err-decl-pos-export-if-if.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected token 'export'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/parse-err-decl-pos-export-labeled.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected token 'export'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/parse-err-decl-pos-export-object-gen-method.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected token 'export'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/parse-err-decl-pos-export-object-getter.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected token 'export'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/parse-err-decl-pos-export-object-method.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected token 'export'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/parse-err-decl-pos-export-object-setter.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected token 'export'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/parse-err-decl-pos-export-switch-case-dflt.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected token 'export'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/parse-err-decl-pos-export-switch-case.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected token 'export'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/parse-err-decl-pos-export-switch-dftl.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected token 'export'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/parse-err-decl-pos-export-try-catch-finally.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected token 'export'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/parse-err-decl-pos-export-try-catch.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected token 'export'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/parse-err-decl-pos-export-try-finally.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected token 'export'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/parse-err-decl-pos-export-try-try.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected token 'export'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/parse-err-decl-pos-export-while.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected token 'export'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/parse-err-decl-pos-import-arrow-function.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected identifier 'v'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/parse-err-decl-pos-import-block-stmt-list.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected identifier 'v'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/parse-err-decl-pos-import-block-stmt.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected identifier 'v'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/parse-err-decl-pos-import-class-decl-meth-static.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected identifier 'v'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/parse-err-decl-pos-import-class-decl-meth.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected identifier 'v'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/parse-err-decl-pos-import-class-decl-method-gen-static.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected identifier 'v'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/parse-err-decl-pos-import-class-decl-method-gen.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected identifier 'v'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/parse-err-decl-pos-import-class-expr-meth-gen-static.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected identifier 'v'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/parse-err-decl-pos-import-class-expr-meth-gen.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected identifier 'v'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/parse-err-decl-pos-import-class-expr-meth-static.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected identifier 'v'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/parse-err-decl-pos-import-class-expr-meth.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected identifier 'v'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/parse-err-decl-pos-import-do-while.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected identifier 'v'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/parse-err-decl-pos-import-for-const.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected identifier 'v'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/parse-err-decl-pos-import-for-in-const.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected identifier 'v'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/parse-err-decl-pos-import-for-in-let.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected identifier 'v'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/parse-err-decl-pos-import-for-in-lhs.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected identifier 'v'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/parse-err-decl-pos-import-for-in-var.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected identifier 'v'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/parse-err-decl-pos-import-for-let.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected identifier 'v'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/parse-err-decl-pos-import-for-lhs.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected identifier 'v'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/parse-err-decl-pos-import-for-of-const.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected identifier 'v'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/parse-err-decl-pos-import-for-of-let.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected identifier 'v'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/parse-err-decl-pos-import-for-of-lhs.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected identifier 'v'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/parse-err-decl-pos-import-for-of-var.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected identifier 'v'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/parse-err-decl-pos-import-for-var.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected identifier 'v'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/parse-err-decl-pos-import-function-decl.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected identifier 'v'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/parse-err-decl-pos-import-function-expr.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected identifier 'v'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/parse-err-decl-pos-import-generator-decl.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected identifier 'v'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/parse-err-decl-pos-import-generator-expr.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected identifier 'v'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/parse-err-decl-pos-import-if-else.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected identifier 'v'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/parse-err-decl-pos-import-if-if.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected identifier 'v'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/parse-err-decl-pos-import-labeled.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected identifier 'v'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/parse-err-decl-pos-import-object-gen-method.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected identifier 'v'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/parse-err-decl-pos-import-object-getter.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected identifier 'v'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/parse-err-decl-pos-import-object-method.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected identifier 'v'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/parse-err-decl-pos-import-object-setter.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected identifier 'v'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/parse-err-decl-pos-import-switch-case-dflt.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected identifier 'v'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/parse-err-decl-pos-import-switch-case.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected identifier 'v'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/parse-err-decl-pos-import-switch-dftl.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected identifier 'v'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/parse-err-decl-pos-import-try-catch-finally.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected identifier 'v'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/parse-err-decl-pos-import-try-catch.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected identifier 'v'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/parse-err-decl-pos-import-try-finally.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected identifier 'v'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/parse-err-decl-pos-import-try-try.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected identifier 'v'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/parse-err-decl-pos-import-while.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected identifier 'v'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/parse-err-export-dflt-const.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected token 'const'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/parse-err-export-dflt-expr.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected token ','",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/parse-err-export-dflt-let.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected strict mode reserved word",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/parse-err-export-dflt-var.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected token 'var'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/parse-err-hoist-lex-fun.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Identifier 'f' has already been declared",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/parse-err-hoist-lex-gen.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Identifier 'g' has already been declared",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/parse-err-invoke-anon-fun-decl.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected token ')'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/parse-err-invoke-anon-gen-decl.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected token ')'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/parse-err-return.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Illegal return statement",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/parse-err-semi-dflt-expr.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected token 'null'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/parse-err-semi-export-star.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected token 'null'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/parse-err-semi-name-space-export.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected token 'null'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/parse-err-semi-named-export-from.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected token 'null'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/parse-err-semi-named-export.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected token 'null'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/parse-err-syntax-1.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected token '?'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/parse-err-syntax-2.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Invalid left-hand side expression in postfix operation",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/parse-err-yield.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected strict mode reserved word",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/parse-export-empty.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/private-identifiers-not-empty.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Private field '#f' must be declared in an enclosing class",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/privatename-not-valid-earlyerr-module-1.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Private field '#x' must be declared in an enclosing class",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/privatename-not-valid-earlyerr-module-2.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Private field '#x' must be declared in an enclosing class",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/privatename-not-valid-earlyerr-module-3.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Private field '#x' must be declared in an enclosing class",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/privatename-not-valid-earlyerr-module-4.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Private field '#x' must be declared in an enclosing class",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/privatename-not-valid-earlyerr-module-5.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Private field '#x' must be declared in an enclosing class",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/privatename-not-valid-earlyerr-module-6.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Private field '#x' must be declared in an enclosing class",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/privatename-not-valid-earlyerr-module-7.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Private field '#x' must be declared in an enclosing class",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/privatename-not-valid-earlyerr-module-8.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Private field '#x' must be declared in an enclosing class",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/privatename-valid-no-earlyerr.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/source-phase-import/import-source.js",
@@ -2868,97 +2868,97 @@
    "path": "test/language/module-code/source-phase-import/reexport-source-binding-named-import.js",
    "verdict": "node-fails",
    "node": "threw Error: Cannot find package '<module source>' imported from <work>/test/language/module-code/source-phase-import/reexport-source-binding_FIXTURE.js",
-   "bundle": "not run"
+   "bundle": "E-UNSUPPORTED"
   },
   {
    "path": "test/language/module-code/source-phase-import/reexport-source-binding-namespace-get.js",
    "verdict": "node-fails",
    "node": "threw Error: Cannot find package '<module source>' imported from <work>/test/language/module-code/source-phase-import/reexport-source-binding_FIXTURE.js",
-   "bundle": "not run"
+   "bundle": "E-UNSUPPORTED"
   },
   {
    "path": "test/language/module-code/top-level-await/async-module-does-not-block-sibling-modules.js",
-   "verdict": "baseline-pass",
+   "verdict": "refused-by-design",
    "node": "async complete",
-   "bundle": "not run"
+   "bundle": "E-TLA"
   },
   {
    "path": "test/language/module-code/top-level-await/await-awaits-thenable-not-callable.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "async complete",
-   "bundle": "not run"
+   "bundle": "async complete"
   },
   {
    "path": "test/language/module-code/top-level-await/await-awaits-thenables-that-throw.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "async complete",
-   "bundle": "not run"
+   "bundle": "async complete"
   },
   {
    "path": "test/language/module-code/top-level-await/await-awaits-thenables.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "async complete",
-   "bundle": "not run"
+   "bundle": "async complete"
   },
   {
    "path": "test/language/module-code/top-level-await/await-dynamic-import-rejection.js",
-   "verdict": "baseline-pass",
+   "verdict": "refused-by-design",
    "node": "threw TypeError: I reject this!",
-   "bundle": "not run"
+   "bundle": "E-TLA"
   },
   {
    "path": "test/language/module-code/top-level-await/await-dynamic-import-resolution.js",
-   "verdict": "baseline-pass",
+   "verdict": "refused-by-design",
    "node": "async complete",
-   "bundle": "not run"
+   "bundle": "E-TLA"
   },
   {
    "path": "test/language/module-code/top-level-await/await-expr-func-expression.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "async complete",
-   "bundle": "not run"
+   "bundle": "async complete"
   },
   {
    "path": "test/language/module-code/top-level-await/await-expr-new-expr-reject.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "async complete",
-   "bundle": "not run"
+   "bundle": "async complete"
   },
   {
    "path": "test/language/module-code/top-level-await/await-expr-new-expr.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "async complete",
-   "bundle": "not run"
+   "bundle": "async complete"
   },
   {
    "path": "test/language/module-code/top-level-await/await-expr-regexp.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "async complete",
-   "bundle": "not run"
+   "bundle": "async complete"
   },
   {
    "path": "test/language/module-code/top-level-await/await-expr-reject-throws.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "async complete",
-   "bundle": "not run"
+   "bundle": "async complete"
   },
   {
    "path": "test/language/module-code/top-level-await/await-expr-resolution.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "async complete",
-   "bundle": "not run"
+   "bundle": "async complete"
   },
   {
    "path": "test/language/module-code/top-level-await/await-void-expr.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "async complete",
-   "bundle": "not run"
+   "bundle": "async complete"
   },
   {
    "path": "test/language/module-code/top-level-await/dfs-invariant.js",
-   "verdict": "baseline-pass",
+   "verdict": "refused-by-design",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "E-TLA"
   },
   {
    "path": "test/language/module-code/top-level-await/dynamic-import-of-waiting-module.js",
@@ -2968,93 +2968,93 @@
   },
   {
    "path": "test/language/module-code/top-level-await/dynamic-import-rejection.js",
-   "verdict": "baseline-pass",
+   "verdict": "refused-by-design",
    "node": "async complete",
-   "bundle": "not run"
+   "bundle": "E-TLA"
   },
   {
    "path": "test/language/module-code/top-level-await/dynamic-import-resolution.js",
-   "verdict": "baseline-pass",
+   "verdict": "refused-by-design",
    "node": "async complete",
-   "bundle": "not run"
+   "bundle": "E-TLA"
   },
   {
    "path": "test/language/module-code/top-level-await/early-errors-await-not-simple-assignment-target.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Invalid left-hand side in assignment",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/top-level-await/fulfillment-order.js",
-   "verdict": "baseline-pass",
+   "verdict": "refused-by-design",
    "node": "async complete",
-   "bundle": "not run"
+   "bundle": "E-TLA"
   },
   {
    "path": "test/language/module-code/top-level-await/if-await-expr.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "async complete",
-   "bundle": "not run"
+   "bundle": "async complete"
   },
   {
    "path": "test/language/module-code/top-level-await/module-async-import-async-resolution-ticks.js",
-   "verdict": "baseline-pass",
+   "verdict": "refused-by-design",
    "node": "async complete",
-   "bundle": "not run"
+   "bundle": "E-TLA"
   },
   {
    "path": "test/language/module-code/top-level-await/module-graphs-does-not-hang.js",
-   "verdict": "baseline-pass",
+   "verdict": "refused-by-design",
    "node": "async complete",
-   "bundle": "not run"
+   "bundle": "E-TLA"
   },
   {
    "path": "test/language/module-code/top-level-await/module-import-rejection-body.js",
-   "verdict": "baseline-pass",
+   "verdict": "refused-by-design",
    "node": "threw TypeError: I reject this!",
-   "bundle": "not run"
+   "bundle": "E-TLA"
   },
   {
    "path": "test/language/module-code/top-level-await/module-import-rejection-tick.js",
-   "verdict": "baseline-pass",
+   "verdict": "refused-by-design",
    "node": "threw RangeError: ",
-   "bundle": "not run"
+   "bundle": "E-TLA"
   },
   {
    "path": "test/language/module-code/top-level-await/module-import-rejection.js",
-   "verdict": "baseline-pass",
+   "verdict": "refused-by-design",
    "node": "threw TypeError: error in the default export line",
-   "bundle": "not run"
+   "bundle": "E-TLA"
   },
   {
    "path": "test/language/module-code/top-level-await/module-import-resolution.js",
-   "verdict": "baseline-pass",
+   "verdict": "refused-by-design",
    "node": "async complete",
-   "bundle": "not run"
+   "bundle": "E-TLA"
   },
   {
    "path": "test/language/module-code/top-level-await/module-import-unwrapped.js",
-   "verdict": "baseline-pass",
+   "verdict": "refused-by-design",
    "node": "async complete",
-   "bundle": "not run"
+   "bundle": "E-TLA"
   },
   {
    "path": "test/language/module-code/top-level-await/module-self-import-async-resolution-ticks.js",
-   "verdict": "baseline-pass",
+   "verdict": "refused-by-design",
    "node": "async complete",
-   "bundle": "not run"
+   "bundle": "E-TLA"
   },
   {
    "path": "test/language/module-code/top-level-await/module-sync-import-async-resolution-ticks.js",
-   "verdict": "baseline-pass",
+   "verdict": "refused-by-design",
    "node": "async complete",
-   "bundle": "not run"
+   "bundle": "E-TLA"
   },
   {
    "path": "test/language/module-code/top-level-await/new-await-parens.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "async complete",
-   "bundle": "not run"
+   "bundle": "async complete"
   },
   {
    "path": "test/language/module-code/top-level-await/new-await-script-code.js",
@@ -3064,1329 +3064,1329 @@
   },
   {
    "path": "test/language/module-code/top-level-await/new-await.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected reserved word",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/top-level-await/no-operand.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected token ';'",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/top-level-await/pending-async-dep-from-cycle.js",
-   "verdict": "baseline-pass",
+   "verdict": "refused-by-design",
    "node": "async complete",
-   "bundle": "not run"
+   "bundle": "E-TLA"
   },
   {
    "path": "test/language/module-code/top-level-await/rejection-order.js",
    "verdict": "node-fails",
    "node": "threw UnhandledPromiseRejection: This error originated either by throwing inside of an async function without a catch block, or by rejecting a promise which was not handled with .catch(). The promise rejected with the reason \"[object Object]\".",
-   "bundle": "not run"
+   "bundle": "E-TLA"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/await-expr-dyn-import.js",
-   "verdict": "baseline-pass",
+   "verdict": "refused-by-design",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "E-DYNAMIC"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/block-await-expr-array-literal.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/block-await-expr-func-expression.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/block-await-expr-identifier.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/block-await-expr-literal-number.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/block-await-expr-literal-string.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/block-await-expr-nested.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/block-await-expr-new-expr.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/block-await-expr-null.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/block-await-expr-obj-literal.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/block-await-expr-regexp.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/block-await-expr-template-literal.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/block-await-expr-this.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/catch-parameter.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/early-does-not-propagate-to-fn-declaration-body.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected reserved word",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/early-does-not-propagate-to-fn-declaration-params.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected reserved word",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/early-does-not-propagate-to-fn-expr-body.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected reserved word",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/early-does-not-propagate-to-fn-expr-params.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Unexpected reserved word",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/early-no-escaped-await.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "threw SyntaxError: Keyword must not contain escaped characters",
-   "bundle": "not run"
+   "bundle": "E-PARSE"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/export-class-decl-await-expr-array-literal.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/export-class-decl-await-expr-func-expression.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/export-class-decl-await-expr-identifier.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/export-class-decl-await-expr-literal-number.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/export-class-decl-await-expr-literal-string.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/export-class-decl-await-expr-nested.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/export-class-decl-await-expr-new-expr.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/export-class-decl-await-expr-null.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/export-class-decl-await-expr-obj-literal.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/export-class-decl-await-expr-regexp.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/export-class-decl-await-expr-template-literal.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/export-class-decl-await-expr-this.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/export-dflt-assign-expr-await-expr-array-literal.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/export-dflt-assign-expr-await-expr-func-expression.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/export-dflt-assign-expr-await-expr-identifier.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/export-dflt-assign-expr-await-expr-literal-number.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/export-dflt-assign-expr-await-expr-literal-string.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/export-dflt-assign-expr-await-expr-nested.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/export-dflt-assign-expr-await-expr-new-expr.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/export-dflt-assign-expr-await-expr-null.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/export-dflt-assign-expr-await-expr-obj-literal.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/export-dflt-assign-expr-await-expr-regexp.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/export-dflt-assign-expr-await-expr-template-literal.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/export-dflt-assign-expr-await-expr-this.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/export-dft-class-decl-await-expr-array-literal.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/export-dft-class-decl-await-expr-func-expression.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/export-dft-class-decl-await-expr-identifier.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/export-dft-class-decl-await-expr-literal-number.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/export-dft-class-decl-await-expr-literal-string.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/export-dft-class-decl-await-expr-nested.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/export-dft-class-decl-await-expr-new-expr.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/export-dft-class-decl-await-expr-null.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/export-dft-class-decl-await-expr-obj-literal.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/export-dft-class-decl-await-expr-regexp.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/export-dft-class-decl-await-expr-template-literal.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/export-dft-class-decl-await-expr-this.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/export-lex-decl-await-expr-array-literal.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/export-lex-decl-await-expr-func-expression.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/export-lex-decl-await-expr-identifier.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/export-lex-decl-await-expr-literal-number.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/export-lex-decl-await-expr-literal-string.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/export-lex-decl-await-expr-nested.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/export-lex-decl-await-expr-new-expr.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/export-lex-decl-await-expr-null.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/export-lex-decl-await-expr-obj-literal.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/export-lex-decl-await-expr-regexp.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/export-lex-decl-await-expr-template-literal.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/export-lex-decl-await-expr-this.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/export-var-await-expr-array-literal.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/export-var-await-expr-func-expression.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/export-var-await-expr-identifier.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/export-var-await-expr-literal-number.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/export-var-await-expr-literal-string.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/export-var-await-expr-nested.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/export-var-await-expr-new-expr.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/export-var-await-expr-null.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/export-var-await-expr-obj-literal.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/export-var-await-expr-regexp.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/export-var-await-expr-template-literal.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/export-var-await-expr-this.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/for-await-await-expr-array-literal.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/for-await-await-expr-func-expression.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/for-await-await-expr-identifier.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/for-await-await-expr-literal-number.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/for-await-await-expr-literal-string.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/for-await-await-expr-nested.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/for-await-await-expr-new-expr.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/for-await-await-expr-null.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/for-await-await-expr-obj-literal.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/for-await-await-expr-regexp.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/for-await-await-expr-template-literal.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/for-await-await-expr-this.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/for-await-expr-array-literal.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/for-await-expr-func-expression.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/for-await-expr-identifier.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/for-await-expr-literal-number.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/for-await-expr-literal-string.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/for-await-expr-nested.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/for-await-expr-new-expr.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/for-await-expr-null.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/for-await-expr-obj-literal.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/for-await-expr-regexp.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/for-await-expr-template-literal.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/for-await-expr-this.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/for-in-await-expr-array-literal.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/for-in-await-expr-func-expression.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/for-in-await-expr-identifier.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/for-in-await-expr-literal-number.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/for-in-await-expr-literal-string.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/for-in-await-expr-nested.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/for-in-await-expr-new-expr.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/for-in-await-expr-null.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/for-in-await-expr-obj-literal.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/for-in-await-expr-regexp.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/for-in-await-expr-template-literal.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/for-in-await-expr-this.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/for-of-await-expr-array-literal.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/for-of-await-expr-func-expression.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/for-of-await-expr-identifier.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/for-of-await-expr-literal-number.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/for-of-await-expr-literal-string.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/for-of-await-expr-nested.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/for-of-await-expr-new-expr.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/for-of-await-expr-null.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/for-of-await-expr-obj-literal.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/for-of-await-expr-regexp.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/for-of-await-expr-template-literal.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/for-of-await-expr-this.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/if-block-await-expr-array-literal.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/if-block-await-expr-func-expression.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/if-block-await-expr-identifier.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/if-block-await-expr-literal-number.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/if-block-await-expr-literal-string.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/if-block-await-expr-nested.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/if-block-await-expr-new-expr.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/if-block-await-expr-null.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/if-block-await-expr-obj-literal.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/if-block-await-expr-regexp.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/if-block-await-expr-template-literal.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/if-block-await-expr-this.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/if-expr-await-expr-array-literal.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/if-expr-await-expr-func-expression.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/if-expr-await-expr-identifier.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/if-expr-await-expr-literal-number.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/if-expr-await-expr-literal-string.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/if-expr-await-expr-nested.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/if-expr-await-expr-new-expr.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/if-expr-await-expr-null.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/if-expr-await-expr-obj-literal.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/if-expr-await-expr-regexp.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/if-expr-await-expr-template-literal.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/if-expr-await-expr-this.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/top-level-await-expr-array-literal.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/top-level-await-expr-func-expression.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/top-level-await-expr-identifier.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/top-level-await-expr-literal-number.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/top-level-await-expr-literal-string.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/top-level-await-expr-nested.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/top-level-await-expr-new-expr.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/top-level-await-expr-null.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/top-level-await-expr-obj-literal.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/top-level-await-expr-regexp.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/top-level-await-expr-template-literal.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/top-level-await-expr-this.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/try-await-expr-array-literal.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/try-await-expr-func-expression.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/try-await-expr-identifier.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/try-await-expr-literal-number.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/try-await-expr-literal-string.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/try-await-expr-nested.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/try-await-expr-new-expr.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/try-await-expr-null.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/try-await-expr-obj-literal.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/try-await-expr-regexp.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/try-await-expr-template-literal.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/try-await-expr-this.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/typeof-await-expr-array-literal.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/typeof-await-expr-func-expression.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/typeof-await-expr-identifier.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/typeof-await-expr-literal-number.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/typeof-await-expr-literal-string.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/typeof-await-expr-nested.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/typeof-await-expr-new-expr.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/typeof-await-expr-null.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/typeof-await-expr-obj-literal.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/typeof-await-expr-regexp.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/typeof-await-expr-template-literal.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/typeof-await-expr-this.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/void-await-expr-array-literal.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/void-await-expr-func-expression.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/void-await-expr-identifier.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/void-await-expr-literal-number.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/void-await-expr-literal-string.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/void-await-expr-nested.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/void-await-expr-new-expr.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/void-await-expr-null.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/void-await-expr-obj-literal.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/void-await-expr-regexp.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/void-await-expr-template-literal.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/void-await-expr-this.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/while-await-expr-array-literal.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/while-await-expr-func-expression.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/while-await-expr-identifier.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/while-await-expr-literal-number.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/while-await-expr-literal-string.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/while-await-expr-nested.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/while-await-expr-new-expr.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/while-await-expr-null.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/while-await-expr-obj-literal.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/while-await-expr-regexp.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/while-await-expr-template-literal.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/while-await-expr-this.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "not run"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/top-level-ticks-2.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "async complete",
-   "bundle": "not run"
+   "bundle": "async complete"
   },
   {
    "path": "test/language/module-code/top-level-await/top-level-ticks.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "async complete",
-   "bundle": "not run"
+   "bundle": "async complete"
   },
   {
    "path": "test/language/module-code/top-level-await/unobservable-global-async-evaluation-count-reset.js",
-   "verdict": "baseline-pass",
+   "verdict": "refused-by-design",
    "node": "async complete",
-   "bundle": "not run"
+   "bundle": "E-TLA"
   },
   {
    "path": "test/language/module-code/top-level-await/void-await-expr.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "async complete",
-   "bundle": "not run"
+   "bundle": "async complete"
   },
   {
    "path": "test/language/module-code/top-level-await/while-dynamic-evaluation.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "async complete",
-   "bundle": "not run"
+   "bundle": "async complete"
   },
   {
    "path": "test/language/module-code/verify-dfs.js",
-   "verdict": "baseline-pass",
+   "verdict": "pass",
    "node": "async complete",
-   "bundle": "not run"
+   "bundle": "async complete"
   }
  ]
 }

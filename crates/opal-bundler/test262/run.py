@@ -58,8 +58,9 @@ TIMEOUT = 20
 EARLY_REFUSALS = {"parse": {"E-PARSE"}, "resolution": {"E-LINK", "E-PARSE"}}
 
 PRELUDE = r"""
-import { readFileSync, writeFileSync } from 'node:fs';
-import vm from 'node:vm';
+'use strict';
+const { readFileSync, writeFileSync } = require('node:fs');
+const vm = require('node:vm');
 const includes = (process.env.OPAL_T262_INCLUDES || '').split(',').filter(Boolean);
 const harness = process.env.OPAL_T262_HARNESS;
 const report = process.env.OPAL_T262_REPORT;
@@ -161,7 +162,7 @@ def prepare(checkout, work, path_filter):
     makes every .js file an ES module, and returns the module tests."""
     (work / "package.json").write_text('{"type": "module"}\n')
     (work / "prelude").mkdir()
-    (work / "prelude" / "prelude.mjs").write_text(PRELUDE)
+    (work / "prelude" / "prelude.cjs").write_text(PRELUDE)
     shutil.copytree(checkout / "harness", work / "harness")
     tests = []
     for directory in DIRECTORIES:
@@ -257,7 +258,7 @@ def run_node(file, meta, work, node):
     env.pop("NODE_OPTIONS", None)
     try:
         done = subprocess.run(
-            [node, "--disable-warning=ExperimentalWarning", "--import", (work / "prelude" / "prelude.mjs").as_uri(), str(file)],
+            [node, "--disable-warning=ExperimentalWarning", "--require", str(work / "prelude" / "prelude.cjs"), str(file)],
             cwd=file.parent,
             env=env,
             capture_output=True,

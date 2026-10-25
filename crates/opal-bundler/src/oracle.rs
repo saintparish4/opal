@@ -6,8 +6,12 @@
 //! uncaught error. This module observes exactly those and nothing else, so a
 //! passing comparison means what the contract says it means.
 //!
-//! The uncaught error is read by a preloaded hook (`node --import`), through
-//! `process.on('uncaughtExceptionMonitor')`. A monitor sees the error before
+//! The uncaught error is read by a preloaded hook (`node --require`), through
+//! `process.on('uncaughtExceptionMonitor')`. The hook is a CommonJS module
+//! on purpose: preloading with `--import` makes Node run a CommonJS entry
+//! through its ES module loader, which changes `module.id`, `require.main`
+//! errors, and the origin of an uncaught error. The oracle must not change
+//! the program it observes, and `--require` does not. A monitor sees the error before
 //! Node's default handler prints it and does not change what happens next:
 //! the exit code and the printed trace are Node's own. The trace itself is
 //! not observed (it names files and lines), so the hook writes a marker to
@@ -31,7 +35,8 @@ const MARKER: &str = "\u{0}opal-oracle-uncaught\u{0}";
 /// an error whose origin is `unhandledRejection`, which is how Node 24
 /// reports a throw at the top level of an ES module: module evaluation is a
 /// promise, and the handler receives the rejection.
-const HOOK: &str = r#"import { closeSync, openSync, writeSync } from 'node:fs';
+const HOOK: &str = r#"'use strict';
+const { closeSync, openSync, writeSync } = require('node:fs');
 const report = process.env.OPAL_ORACLE_REPORT;
 delete process.env.OPAL_ORACLE_REPORT;
 process.on('uncaughtExceptionMonitor', (error, origin) => {
@@ -100,6 +105,10 @@ pub enum OracleError {
 pub struct Node {
     program: String,
     timeout: Duration,
+    /// Set for both runs, so a fixture can give the program its environment.
+    env: Vec<(String, String)>,
+    /// Extra node flags, for one run.
+    flags: Vec<String>,
 }
 
 impl Default for Node {
@@ -107,6 +116,8 @@ impl Default for Node {
         Self {
             program: std::env::var("OPAL_NODE").unwrap_or_else(|_| "node".to_string()),
             timeout: Duration::from_secs(20),
+            env: Vec::new(),
+            flags: Vec::new(),
         }
     }
 }
@@ -114,6 +125,16 @@ impl Default for Node {
 impl Node {
     pub fn with_timeout(mut self, timeout: Duration) -> Self {
         self.timeout = timeout;
+        self
+    }
+
+    pub fn with_flags(mut self, flags: &[String]) -> Self {
+        self.flags.extend(flags.iter().cloned());
+        self
+    }
+
+    pub fn with_env(mut self, key: &str, value: &str) -> Self {
+        self.env.push((key.to_string(), value.to_string()));
         self
     }
 
@@ -139,7 +160,7 @@ impl Node {
         scratch: &Path,
     ) -> Result<Observation, OracleError> {
         std::fs::create_dir_all(scratch)?;
-        let hook = scratch.join("opal-oracle-hook.mjs");
+        let hook = scratch.join("opal-oracle-hook.cjs");
         if !hook.exists() {
             std::fs::write(&hook, HOOK)?;
         }
@@ -148,8 +169,9 @@ impl Node {
 
         let mut child = Command::new(&self.program)
             .arg("--disable-warning=ExperimentalWarning")
-            .arg("--import")
-            .arg(file_url(&hook))
+            .args(&self.flags)
+            .arg("--require")
+            .arg(&hook)
             .arg(file)
             .current_dir(cwd)
             .env("OPAL_ORACLE_REPORT", &report)
@@ -157,6 +179,7 @@ impl Node {
             .env("TZ", "UTC")
             .env("LANG", "C")
             .env("NO_COLOR", "1")
+            .envs(self.env.iter().map(|(k, v)| (k.as_str(), v.as_str())))
             .stdin(Stdio::null())
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
