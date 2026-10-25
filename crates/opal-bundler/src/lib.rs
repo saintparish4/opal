@@ -29,6 +29,8 @@ pub mod shake;
 pub mod tsconfig;
 
 #[cfg(feature = "oracle")]
+pub mod generate;
+#[cfg(feature = "oracle")]
 pub mod oracle;
 
 use std::collections::HashMap;

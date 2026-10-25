@@ -148,6 +148,9 @@ pub struct Linked {
     /// Top-level statements each eager module leaves out (rule 15), by
     /// index in its program body.
     pub removed: HashMap<usize, HashSet<usize>>,
+    /// The entry awaits at its top level, so it is still evaluating after
+    /// the bundle's synchronous code.
+    pub entry_async: bool,
 }
 
 impl Linked {
@@ -263,6 +266,7 @@ pub fn link(
     }
     let (lazy, cycle_of) = linker.lazy_modules();
     linker.check_top_level_await(entry, &order)?;
+    linker.check_lazy_waits_for_entry(entry, &lazy)?;
     // Every CommonJS module an ES module requests gets a module record, and
     // so export names, even when nothing names one of them (`import 'x'`).
     for module in 0..modules.len() {
@@ -317,6 +321,7 @@ pub fn link(
         requires: linker.requires,
         prefix,
         removed,
+        entry_async: modules[entry].info.esm.top_level_await.is_some(),
     })
 }
 
@@ -769,6 +774,29 @@ impl Linker<'_, '_> {
                     module,
                     span,
                     "top-level await in an entry module that is in an import cycle".to_string(),
+                ));
+            }
+        }
+        Ok(())
+    }
+
+    /// A lazy module that statically depends on an entry awaiting at its
+    /// top level would, in Node, wait for the entry while the rest of its
+    /// graph runs (§16.2.1.6.1.3.2, ExecuteAsyncModule); the bundle runs a
+    /// lazy module's graph at once, so it refuses instead.
+    fn check_lazy_waits_for_entry(&self, entry: usize, lazy: &[usize]) -> Result<(), Diagnostic> {
+        if self.info(entry).esm.top_level_await.is_none() {
+            return Ok(());
+        }
+        for module in lazy {
+            if self.reaches(*module, entry, &[]) {
+                return Err(Diagnostic::new(
+                    Code::Tla,
+                    &self.info(*module).path,
+                    format!(
+                        "this module is imported with import(), and it depends on the entry ({}), which awaits at its top level: Node makes it wait for the entry, and the bundle cannot",
+                        self.info(entry).path
+                    ),
                 ));
             }
         }

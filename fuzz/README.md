@@ -75,3 +75,42 @@ asked about the package by then, so a broken `package.json` could be reported
 as a missing package. The manifest is now read before the change is worked
 out, held by `test_a_manifest_opal_cannot_read_is_refused_before_the_registry_is_asked`
 in `crates/opal-pm/tests/add-remove.rs`.
+
+## The bundler
+
+Two targets fuzz `opal build`, and they hold it to different things.
+
+| Target | Input | What must hold |
+| ------ | ----- | -------------- |
+| `bundle_source` | any text, as an ES module entry and as a CommonJS one | the bundler builds it or refuses it, never panics, and what it builds parses |
+| `bundle_graph` | the fuzzer's bytes as a seed for a generated module graph | the bundle, run under Node, is indistinguishable from the program |
+
+`bundle_graph` spawns `node` twice per input, so it runs at tens of inputs a
+second, not thousands, and coverage guidance buys little: the program's shape
+comes from a seeded generator (`crates/opal-bundler/src/generate.rs`), not
+from the bytes' structure. The long runs therefore use the generator's own
+driver, which runs fresh seeds on every core and saves each divergent program:
+
+```bash
+cargo run --release -p opal-bundler --features oracle --example generated-graphs -- \
+    --seconds 3600 --jobs 6 --first-seed 1000000 --failures target/generated-failures
+cargo +nightly fuzz run bundle_source corpus/bundle_source seeds/bundle_source -- -timeout=10
+```
+
+The generator builds two to eight modules, mixing ES modules with strict and
+sloppy CommonJS, importing each other in every form `SEMANTICS.md` covers
+(named, default, namespace, side-effect, `export … from`, `export *`,
+`export * as`, `require()`, `import()`), with cycles, top-level names drawn
+from a small pool so modules collide in the bundle's scope, live bindings
+mutated across modules, and reads that may land in the TDZ. Every module logs
+as it runs and probes what it imported, so order, values, `.name`s, and errors
+reach stdout. A seed the bundler refuses counts as a pass only if Node also
+fails to link the program, or the refusal is one the contract lists.
+
+Its first runs found three bundler bugs, now fixed and covered by fixtures:
+an `import()` of the entry while its top-level `await` was pending settled at
+once, where Node waits for the entry (and so deadlocks, like the program); a
+lazily imported module that depends on such an entry ran at once, where Node
+makes it wait (now refused, `E-TLA`); and the oracle compared the file and
+line in Node's "unsettled top-level await" warning, which name the bundle
+instead of the program.

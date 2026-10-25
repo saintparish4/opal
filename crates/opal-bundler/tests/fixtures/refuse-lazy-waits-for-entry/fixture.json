@@ -1,0 +1,1 @@
+{ "why": "Rule 11: Node makes lazy.mjs wait for the entry, which is awaiting it; the bundle cannot interleave that, so it refuses.", "expect": { "refused": "E-TLA" } }

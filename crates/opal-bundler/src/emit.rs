@@ -252,6 +252,11 @@ pub fn emit(
         text.push_str(runtime::CJS_MAIN);
     }
     out.push(&runtime::with_prefix(&text, p));
+    if linked.entry_async {
+        out.push(&format!(
+            "let {p}entryFinish;\nconst {p}entryDone = new {p}Promise((resolve) => {{ {p}entryFinish = resolve; }});"
+        ));
+    }
 
     // Paths of the modules that read their own location.
     for module in &paths {
@@ -405,6 +410,10 @@ pub fn emit(
             Step::Cjs(module) => out.push(&cjs_step(*module, linked, p)),
             Step::Json(module) => out.push(&json_step(*module, linked, p)),
         }
+    }
+
+    if linked.entry_async {
+        out.push(&format!("{p}entryFinish();"));
     }
 
     // The bundle exports what the entry exports.
@@ -596,6 +605,7 @@ fn print_module(
         renamed: &renamed,
         linked,
         is_entry: module == linked.entry,
+        entry_async: linked.entry_async,
         node: options.target == Runtime::Node,
         defines,
         error: None,
@@ -744,6 +754,8 @@ struct Rewriter<'a, 'r> {
     renamed: &'r HashMap<SymbolId, (String, String)>,
     linked: &'r Linked,
     is_entry: bool,
+    /// The entry module uses top-level await.
+    entry_async: bool,
     node: bool,
     defines: &'r Defines,
     error: Option<Diagnostic>,
@@ -1066,6 +1078,12 @@ impl<'a> VisitMut<'a> for Rewriter<'a, '_> {
             let p = self.prefix;
             let thunk = match target {
                 Some(Target::Module(t)) => match self.linked.roles[t] {
+                    // The entry, while its top-level await is pending, is
+                    // still evaluating: an import() of it settles when it
+                    // completes, as §16.2.1.6.1.3 has it wait.
+                    Role::Eager if t == self.linked.entry && self.entry_async => {
+                        format!("() => {p}entryDone.then(() => {p}ns{t})")
+                    }
                     Role::Eager => format!("() => {p}ns{t}"),
                     Role::Lazy => format!("() => ({p}init{t}(), {p}ns{t})"),
                     Role::Cjs => format!("() => {p}cjsNs({p}m{t}, {p}names{t}, {p}sorted{t})"),

@@ -220,6 +220,7 @@ impl Node {
         if let Some(at) = find(&stderr, MARKER.as_bytes()) {
             stderr.truncate(at);
         }
+        let stderr = without_locations(&stderr);
 
         let uncaught = match std::fs::read_to_string(&report) {
             Ok(text) if !text.is_empty() => Some(parse_report(&text)?),
@@ -253,6 +254,33 @@ fn parse_report(text: &str) -> Result<Uncaught, OracleError> {
         name: field("name"),
         message: field("message"),
     })
+}
+
+/// Node's own warning that a top-level await never settled names the file
+/// and line it is waiting at, and quotes that line, which differ between a program and its bundle
+/// and are not observed (SEMANTICS.md, "What is observed"). That it was
+/// printed is observed, and so is the exit code 13 that follows.
+fn without_locations(stderr: &[u8]) -> Vec<u8> {
+    const UNSETTLED: &str = "Warning: Detected unsettled top-level await at ";
+    let text = String::from_utf8_lossy(stderr);
+    if !text.contains(UNSETTLED) {
+        return stderr.to_vec();
+    }
+    // The warning is its own line, then the awaiting source line and a
+    // caret under it: all three say where, so all three go.
+    let mut out = String::new();
+    let mut skip = 0;
+    for line in text.split_inclusive('\n') {
+        if skip > 0 {
+            skip -= 1;
+        } else if line.starts_with(UNSETTLED) {
+            out.push_str("Warning: Detected unsettled top-level await\n");
+            skip = 2;
+        } else {
+            out.push_str(line);
+        }
+    }
+    out.into_bytes()
 }
 
 fn find(haystack: &[u8], needle: &[u8]) -> Option<usize> {

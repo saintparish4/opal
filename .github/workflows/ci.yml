@@ -128,6 +128,8 @@ jobs:
         run: cargo test -p opal-bundler --test differential -- --ignored --nocapture
       - name: CommonJS lexer against Node's
         run: cargo test -p opal-bundler --test cjs-lexer -- --ignored --nocapture
+      - name: Generated module graphs
+        run: cargo test -p opal-bundler --test generated -- --ignored --nocapture
 
   # crates/opal-bundler/test262: every module test of test262 run as written
   # and bundled. The run fails on a failure without an annotation.

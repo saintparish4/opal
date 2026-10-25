@@ -91,6 +91,9 @@ These are not observed, and may differ:
 - Text of an error message that names the importing file's path, such as
   `ERR_MODULE_NOT_FOUND`'s "imported from …". The error's class and code
   are still observed.
+- Where Node's own warnings point: the file, line, and quoted source in
+  "Warning: Detected unsettled top-level await at …". That the warning is
+  printed is observed, and so is the exit code 13 that follows.
 
 ## Rules
 
@@ -330,7 +333,12 @@ bundle. Any other `import()` argument is refused ([`E-DYNAMIC`](#refusals)).
 ### 11. Top-level await
 
 The entry module may use top-level `await`, unless it is in a cycle: no
-module runs after the entry, so suspending it changes no order. Top-level
+module runs after the entry, so suspending it changes no order. While it is
+suspended it is still evaluating, so an `import()` of the entry settles only
+when the entry completes, as in Node. A module that is reached only through
+`import()` and statically depends on such an entry is refused: Node makes it
+wait for the entry while the rest of its graph runs, and the bundle would run
+all of it at once. Top-level
 `await` anywhere else is refused for now ([`E-TLA`](#refusals)): ECMA-262
 lets sibling modules run while an async module is suspended
 (§16.2.1.6.1.3.2 ExecuteAsyncModule, §16.2.1.6.1.3.3
@@ -419,7 +427,7 @@ line.
 |---|---|---|
 | `E-PARSE` | A module does not parse. | Node would throw a `SyntaxError` before running anything. |
 | `E-LINK` | An import names a missing or ambiguous export, a CommonJS name the lexer does not find, or JSON without `type: 'json'`; or a static import cannot be resolved, including one Node does not complete (`./x` for `./x.js`). | Node fails to link the graph, before any code runs. |
-| `E-TLA` | Top-level `await` outside the entry module, or in an entry that is in a cycle. | Rule 11. |
+| `E-TLA` | Top-level `await` outside the entry module, or in an entry that is in a cycle; or a lazily imported module that depends on an entry that awaits. | Rule 11. |
 | `E-REQUIRE-ESM` | A CommonJS module `require()`s an ES module. | Node 24 runs it with its own cycle and async-module errors (`ERR_REQUIRE_CYCLE_MODULE`, `ERR_REQUIRE_ASYNC_MODULE`) that this version does not reproduce. |
 | `E-DYNAMIC` | `import()` of anything but a string literal resolved by the graph or naming an external or builtin; or `import()` inside a sloppy CommonJS module. | Rule 10. The second needs the module's own loader, which a runtime-compiled function does not have. |
 | `E-IMPORT-META` | A use of `import.meta` rule 9 does not list. | Rule 9. |
