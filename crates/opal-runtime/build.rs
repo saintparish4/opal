@@ -274,8 +274,8 @@ fn discover_builtins(js: &Path) -> Vec<(String, PathBuf)> {
                     let id = relative.to_string_lossy().replace('\\', "/");
                     let source = std::fs::read(&path).unwrap();
                     assert!(
-                        source.is_ascii(),
-                        "{}: built-in sources must be ASCII, so V8 can use them in place",
+                        std::str::from_utf8(&source).is_ok(),
+                        "{}: built-in sources must be UTF-8",
                         path.display()
                     );
                     if let Some((_, other)) = found.iter().find(|(name, _)| *name == id) {

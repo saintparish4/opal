@@ -217,7 +217,7 @@ fn retry<T: Into<i64> + Copy>(mut call: impl FnMut() -> T) -> Result<T, i32> {
 }
 
 /// Throws Node's UVException: `CODE: message, syscall 'path' -> 'dest'`.
-fn throw_uv(
+pub(super) fn throw_uv(
     scope: &mut v8::PinScope,
     error: i32,
     syscall: &str,
@@ -398,6 +398,27 @@ fn mode_arg(scope: &mut v8::PinScope, value: v8::Local<v8::Value>, default: i32)
         return None;
     }
     Some(mode)
+}
+
+/// Whether the call is the callback or promise form: a request object (or
+/// kUsePromises) at `index`, where node_file.cc looks for one. Those need
+/// file I/O on the event loop, which Opal's doesn't have yet, so this throws
+/// an error saying so, once the arguments have been checked as Node checks
+/// them, so that a bad argument is still Node's error.
+fn asynchronous(scope: &mut v8::PinScope, args: &Args, index: i32) -> bool {
+    if args.get(index).is_undefined() {
+        return false;
+    }
+    let message = string(
+        scope,
+        "Opal implements only the synchronous fs functions yet, not fs functions with a callback or promise",
+    );
+    let exception = v8::Exception::error(scope, message);
+    let object = v8::Local::<v8::Object>::try_from(exception).unwrap();
+    let code = string(scope, "ERR_OPAL_UNIMPLEMENTED").into();
+    set(scope, object, "code", code);
+    scope.throw_exception(exception);
+    true
 }
 
 fn int(scope: &mut v8::PinScope, value: v8::Local<v8::Value>) -> i32 {
@@ -659,10 +680,16 @@ fn stat_path(scope: &mut v8::PinScope, args: Args, mut rv: Ret, follow: bool) {
 }
 
 pub fn fs_stat(scope: &mut v8::PinScope, args: Args, rv: Ret) {
+    if asynchronous(scope, &args, 2) {
+        return;
+    }
     stat_path(scope, args, rv, true);
 }
 
 pub fn fs_lstat(scope: &mut v8::PinScope, args: Args, rv: Ret) {
+    if asynchronous(scope, &args, 2) {
+        return;
+    }
     stat_path(scope, args, rv, false);
 }
 
@@ -671,6 +698,9 @@ pub fn fs_fstat(scope: &mut v8::PinScope, args: Args, mut rv: Ret) {
     let Some(fd) = fd_arg(scope, args.get(0)) else {
         return;
     };
+    if asynchronous(scope, &args, 2) {
+        return;
+    }
     let bigint = args.get(1).is_true();
     match stat(Target::Fd(fd)) {
         Ok(fields) => rv.set(fill_stats(scope, &fields, bigint, false)),
@@ -683,6 +713,9 @@ pub fn fs_fstat(scope: &mut v8::PinScope, args: Args, mut rv: Ret) {
 /// ffree.
 #[allow(clippy::unnecessary_cast)] // as in stat_fields
 pub fn fs_statfs(scope: &mut v8::PinScope, args: Args, mut rv: Ret) {
+    if asynchronous(scope, &args, 2) {
+        return;
+    }
     let path = path_arg(scope, args.get(0));
     let bigint = args.get(1).is_true();
     // SAFETY: statfs writes a statfs struct, which may be zeroed.
@@ -722,6 +755,9 @@ pub fn fs_access(scope: &mut v8::PinScope, args: Args, _: Ret) {
     let Some(mode) = mode_arg(scope, args.get(1), libc::F_OK) else {
         return;
     };
+    if asynchronous(scope, &args, 2) {
+        return;
+    }
     // SAFETY: the path is a C string.
     if let Err(e) = check(unsafe { libc::access(c_path(&path).as_ptr(), mode) }) {
         throw_uv(scope, e, "access", Some(&path), None);
@@ -749,6 +785,9 @@ fn close(fd: i32) {
 
 /// `open(path, flags, mode)`: the new file descriptor.
 pub fn fs_open(scope: &mut v8::PinScope, args: Args, mut rv: Ret) {
+    if asynchronous(scope, &args, 3) {
+        return;
+    }
     let path = path_arg(scope, args.get(0));
     let flags = int(scope, args.get(1));
     let mode = uint(scope, args.get(2));
@@ -763,6 +802,9 @@ pub fn fs_close(scope: &mut v8::PinScope, args: Args, _: Ret) {
     let Some(fd) = fd_arg(scope, args.get(0)) else {
         return;
     };
+    if asynchronous(scope, &args, 1) {
+        return;
+    }
     // SAFETY: as in close().
     if let Err(e) = check(unsafe { libc::close(fd) }) {
         throw_uv(scope, e, "close", None, None);
@@ -813,6 +855,9 @@ pub fn fs_read(scope: &mut v8::PinScope, args: Args, mut rv: Ret) {
     let Some(fd) = fd_arg(scope, args.get(0)) else {
         return;
     };
+    if asynchronous(scope, &args, 5) {
+        return;
+    }
     let Some(buf) = window(scope, &args, 1) else {
         return;
     };
@@ -844,6 +889,9 @@ fn vectored(scope: &mut v8::PinScope, args: Args, mut rv: Ret, writing: bool) {
     let Some(fd) = fd_arg(scope, args.get(0)) else {
         return;
     };
+    if asynchronous(scope, &args, 3) {
+        return;
+    }
     let Some(vecs) = iovecs(scope, args.get(1)) else {
         return type_error(scope, "buffers must be an array of ArrayBufferViews");
     };
@@ -900,6 +948,9 @@ pub fn fs_write_buffer<'s>(
     let Some(fd) = fd_arg(scope, args.get(0)) else {
         return;
     };
+    if asynchronous(scope, &args, 5) {
+        return;
+    }
     let Some(buf) = window(scope, &args, 1) else {
         return;
     };
@@ -920,6 +971,9 @@ pub fn fs_write_string<'s>(
     let Some(fd) = fd_arg(scope, args.get(0)) else {
         return;
     };
+    if asynchronous(scope, &args, 4) {
+        return;
+    }
     let Some(text) = args.get(1).to_string(scope) else {
         return;
     };
@@ -1035,10 +1089,16 @@ fn path_call(
 }
 
 pub fn fs_rmdir(scope: &mut v8::PinScope, args: Args, _: Ret) {
+    if asynchronous(scope, &args, 1) {
+        return;
+    }
     path_call(scope, &args, "rmdir", libc::rmdir);
 }
 
 pub fn fs_unlink(scope: &mut v8::PinScope, args: Args, _: Ret) {
+    if asynchronous(scope, &args, 1) {
+        return;
+    }
     path_call(scope, &args, "unlink", libc::unlink);
 }
 
@@ -1059,16 +1119,25 @@ fn two_path_call(
 
 /// `rename(oldPath, newPath)`.
 pub fn fs_rename(scope: &mut v8::PinScope, args: Args, _: Ret) {
+    if asynchronous(scope, &args, 2) {
+        return;
+    }
     two_path_call(scope, &args, "rename", libc::rename);
 }
 
 /// `link(existingPath, newPath)`.
 pub fn fs_link(scope: &mut v8::PinScope, args: Args, _: Ret) {
+    if asynchronous(scope, &args, 2) {
+        return;
+    }
     two_path_call(scope, &args, "link", libc::link);
 }
 
 /// `symlink(target, path, flags)`; the flags only matter on Windows.
 pub fn fs_symlink(scope: &mut v8::PinScope, args: Args, _: Ret) {
+    if asynchronous(scope, &args, 3) {
+        return;
+    }
     two_path_call(scope, &args, "symlink", libc::symlink);
 }
 
@@ -1082,6 +1151,9 @@ fn fd_call(
     let Some(fd) = fd_arg(scope, args.get(0)) else {
         return;
     };
+    if asynchronous(scope, args, 1) {
+        return;
+    }
     // SAFETY: a bad descriptor is EBADF.
     if let Err(e) = check(unsafe { call(fd) }) {
         throw_uv(scope, e, syscall, None, None);
@@ -1104,6 +1176,9 @@ pub fn fs_ftruncate(scope: &mut v8::PinScope, args: Args, _: Ret) {
     let Some(fd) = fd_arg(scope, args.get(0)) else {
         return;
     };
+    if asynchronous(scope, &args, 2) {
+        return;
+    }
     let length = args.get(1).integer_value(scope).unwrap_or(0);
     // SAFETY: a bad descriptor is EBADF.
     if let Err(e) = check(unsafe { libc::ftruncate(fd, length) }) {
@@ -1113,6 +1188,9 @@ pub fn fs_ftruncate(scope: &mut v8::PinScope, args: Args, _: Ret) {
 
 /// `chmod(path, mode)`.
 pub fn fs_chmod(scope: &mut v8::PinScope, args: Args, _: Ret) {
+    if asynchronous(scope, &args, 2) {
+        return;
+    }
     let path = path_arg(scope, args.get(0));
     let mode = uint(scope, args.get(1)) as libc::mode_t;
     // SAFETY: the path is a C string.
@@ -1126,6 +1204,9 @@ pub fn fs_fchmod(scope: &mut v8::PinScope, args: Args, _: Ret) {
     let Some(fd) = fd_arg(scope, args.get(0)) else {
         return;
     };
+    if asynchronous(scope, &args, 2) {
+        return;
+    }
     let mode = uint(scope, args.get(1)) as libc::mode_t;
     // SAFETY: a bad descriptor is EBADF.
     if let Err(e) = check(unsafe { libc::fchmod(fd, mode) }) {
@@ -1150,11 +1231,17 @@ fn chown_path(
 
 /// `chown(path, uid, gid)`.
 pub fn fs_chown(scope: &mut v8::PinScope, args: Args, _: Ret) {
+    if asynchronous(scope, &args, 3) {
+        return;
+    }
     chown_path(scope, &args, "chown", libc::chown);
 }
 
 /// `lchown(path, uid, gid)`.
 pub fn fs_lchown(scope: &mut v8::PinScope, args: Args, _: Ret) {
+    if asynchronous(scope, &args, 3) {
+        return;
+    }
     chown_path(scope, &args, "lchown", libc::lchown);
 }
 
@@ -1163,6 +1250,9 @@ pub fn fs_fchown(scope: &mut v8::PinScope, args: Args, _: Ret) {
     let Some(fd) = fd_arg(scope, args.get(0)) else {
         return;
     };
+    if asynchronous(scope, &args, 3) {
+        return;
+    }
     let uid = uint(scope, args.get(1));
     let gid = uint(scope, args.get(2));
     // SAFETY: a bad descriptor is EBADF.
@@ -1223,11 +1313,17 @@ fn utimes_path(scope: &mut v8::PinScope, args: &Args, syscall: &str, flags: i32)
 
 /// `utimes(path, atime, mtime)`, in seconds.
 pub fn fs_utimes(scope: &mut v8::PinScope, args: Args, _: Ret) {
+    if asynchronous(scope, &args, 3) {
+        return;
+    }
     utimes_path(scope, &args, "utime", 0);
 }
 
 /// `lutimes(path, atime, mtime)`.
 pub fn fs_lutimes(scope: &mut v8::PinScope, args: Args, _: Ret) {
+    if asynchronous(scope, &args, 3) {
+        return;
+    }
     utimes_path(scope, &args, "lutime", libc::AT_SYMLINK_NOFOLLOW);
 }
 
@@ -1236,6 +1332,9 @@ pub fn fs_futimes(scope: &mut v8::PinScope, args: Args, _: Ret) {
     let Some(fd) = fd_arg(scope, args.get(0)) else {
         return;
     };
+    if asynchronous(scope, &args, 3) {
+        return;
+    }
     let times = times(scope, &args);
     // SAFETY: times is two timespecs.
     if let Err(e) = check(unsafe { libc::futimens(fd, times.as_ptr()) }) {
@@ -1247,6 +1346,9 @@ pub fn fs_futimes(scope: &mut v8::PinScope, args: Args, _: Ret) {
 /// made (undefined when there was none to make), as Node's MKDirpSync
 /// reports it.
 pub fn fs_mkdir(scope: &mut v8::PinScope, args: Args, mut rv: Ret) {
+    if asynchronous(scope, &args, 3) {
+        return;
+    }
     let path = path_arg(scope, args.get(0));
     let mode = uint(scope, args.get(1)) as libc::mode_t;
     if !args.get(2).is_true() {
@@ -1342,6 +1444,9 @@ fn dirent_type(kind: std::fs::FileType) -> i32 {
 /// `readdir(path, encoding, withFileTypes)`: the names, sorted bytewise as
 /// libuv's scandir sorts them, and with withFileTypes `[names, types]`.
 pub fn fs_readdir(scope: &mut v8::PinScope, args: Args, mut rv: Ret) {
+    if asynchronous(scope, &args, 3) {
+        return;
+    }
     let path = path_arg(scope, args.get(0));
     let with_types = args.get(2).is_true();
     let fail = |scope: &mut v8::PinScope, error: std::io::Error| {
@@ -1385,6 +1490,9 @@ pub fn fs_readdir(scope: &mut v8::PinScope, args: Args, mut rv: Ret) {
 
 /// `readlink(path, encoding)`.
 pub fn fs_readlink(scope: &mut v8::PinScope, args: Args, mut rv: Ret) {
+    if asynchronous(scope, &args, 2) {
+        return;
+    }
     let path = path_arg(scope, args.get(0));
     match std::fs::read_link(std::ffi::OsStr::from_bytes(&path)) {
         Ok(target) => {
@@ -1401,6 +1509,9 @@ pub fn fs_readlink(scope: &mut v8::PinScope, args: Args, mut rv: Ret) {
 
 /// `realpath(path, encoding)`: realpath(3), as uv_fs_realpath calls it.
 pub fn fs_realpath(scope: &mut v8::PinScope, args: Args, mut rv: Ret) {
+    if asynchronous(scope, &args, 2) {
+        return;
+    }
     let path = path_arg(scope, args.get(0));
     // SAFETY: the path is a C string; realpath mallocs the result.
     let resolved = unsafe { libc::realpath(c_path(&path).as_ptr(), std::ptr::null_mut()) };
@@ -1417,6 +1528,9 @@ pub fn fs_realpath(scope: &mut v8::PinScope, args: Args, mut rv: Ret) {
 
 /// `mkdtemp(prefix, encoding)`: the directory made.
 pub fn fs_mkdtemp(scope: &mut v8::PinScope, args: Args, mut rv: Ret) {
+    if asynchronous(scope, &args, 2) {
+        return;
+    }
     let mut template = path_arg(scope, args.get(0));
     template.extend_from_slice(b"XXXXXX");
     let mut buf = template.clone();
@@ -1442,6 +1556,9 @@ pub fn fs_copy_file(scope: &mut v8::PinScope, args: Args, _: Ret) {
     let Some(mode) = mode_arg(scope, args.get(2), 0) else {
         return;
     };
+    if asynchronous(scope, &args, 3) {
+        return;
+    }
     if let Err(e) = copy_file(&src, &dest, mode) {
         throw_uv(scope, e, "copyfile", Some(&src), Some(&dest));
     }

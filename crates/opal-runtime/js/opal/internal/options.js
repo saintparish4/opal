@@ -10,6 +10,7 @@ const defaults = {
   __proto__: null,
   '--diagnostic-dir': '',
   '--disable-warning': [],
+  '--enable-source-maps': false,
   '--expose-internals': false,
   '--frozen-intrinsics': false,
   '--no-deprecation': false,

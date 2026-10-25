@@ -10,14 +10,18 @@
   "use strict";
 
   const {
+    ArrayPrototypeConcat,
     ErrorCaptureStackTrace,
+    ReflectApply,
     StringPrototypeIncludes,
     StringPrototypeReplaceAll,
     StringPrototypeRepeat,
   } = primordials;
   const inspector = () => internals.requireBuiltin("internal/util/inspect");
-  const formatWithOptions = (...args) => inspector().formatWithOptions(...args);
-  const inspect = (...args) => inspector().inspect(...args);
+  // Arguments are passed on through Reflect, not spread: spreading uses
+  // the array iterator, which user code can replace.
+  const formatWithOptions = (...args) => ReflectApply(inspector().formatWithOptions, undefined, args);
+  const inspect = (...args) => ReflectApply(inspector().inspect, undefined, args);
 
   // What formatWithOptions returns for arguments that are all strings and
   // whose first has no `%`: them, joined by spaces. Undefined otherwise.
@@ -41,7 +45,7 @@
   const timers = new Map();
 
   function write(fd, args) {
-    let string = plainText(args) ?? formatWithOptions(kNoColorInspectOptions, ...args);
+    let string = plainText(args) ?? ReflectApply(formatWithOptions, undefined, ArrayPrototypeConcat([kNoColorInspectOptions], args));
     if (groupIndent.length !== 0) {
       if (string.includes("\n")) {
         string = StringPrototypeReplaceAll(string, "\n", `\n${groupIndent}`);
@@ -93,7 +97,7 @@
     if (data === undefined) {
       write(1, [`${label}: ${formatTime(duration)}`]);
     } else {
-      write(1, [`${label}: ${formatTime(duration)}`, ...data]);
+      write(1, ArrayPrototypeConcat([`${label}: ${formatTime(duration)}`], data));
     }
     return true;
   }
@@ -125,7 +129,10 @@
       timeLogImpl("timeLog", label, data);
     },
     trace: function trace(...args) {
-      const err = { name: "Trace", message: formatWithOptions(kNoColorInspectOptions, ...args) };
+      const err = {
+        name: "Trace",
+        message: ReflectApply(formatWithOptions, undefined, ArrayPrototypeConcat([kNoColorInspectOptions], args)),
+      };
       ErrorCaptureStackTrace(err, trace);
       this.error(err.stack);
     },
@@ -136,7 +143,7 @@
         } else {
           args.unshift("Assertion failed");
         }
-        this.warn(...args);
+        ReflectApply(this.warn, this, args);
       }
     },
     clear() {},
@@ -157,7 +164,7 @@
     },
     group(...data) {
       if (data.length > 0) {
-        this.log(...data);
+        ReflectApply(this.log, this, data);
       }
       groupIndent += StringPrototypeRepeat(" ", kGroupIndentationWidth);
     },
@@ -166,7 +173,7 @@
     },
     // A table is not implemented yet; the data is still printed.
     table(data, ...rest) {
-      this.log(data, ...rest);
+      ReflectApply(this.log, this, ArrayPrototypeConcat([data], rest));
     },
   };
   console.debug = console.log;

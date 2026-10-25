@@ -20,10 +20,13 @@
   const {
     ArrayPrototypeIncludes,
     ArrayPrototypeJoin,
+    ArrayPrototypeMap,
     ArrayPrototypePush,
+    ArrayPrototypeSlice,
     ArrayPrototypeSplice,
     ObjectDefineProperty,
     ReflectApply,
+    ReflectConstruct,
     RegExpPrototypeExec,
     SafeMap,
     StringPrototypeCharCodeAt,
@@ -56,6 +59,8 @@
   defineBuiltin("util/types", () => requireBuiltin("util/types"));
   defineBuiltin("buffer", () => requireBuiltin("buffer"));
   defineBuiltin("fs", () => requireBuiltin("fs"));
+  defineBuiltin("assert", () => requireBuiltin("assert"));
+  defineBuiltin("assert/strict", () => requireBuiltin("assert").strict);
   defineBuiltin("console", () => internals.console);
   defineBuiltin("process", () => internals.process);
   defineBuiltin("timers", () => {
@@ -72,7 +77,7 @@
 
   // Node's other built-ins, which require() must not look for on disk.
   const unimplemented = [
-    "assert", "assert/strict", "async_hooks", "child_process", "cluster", "constants", "crypto", "dgram",
+    "async_hooks", "child_process", "cluster", "constants", "crypto", "dgram",
     "diagnostics_channel", "dns", "dns/promises", "domain", "fs/promises", "http", "http2", "https",
     "inspector", "inspector/promises", "net", "os", "perf_hooks", "punycode", "querystring", "readline",
     "readline/promises", "repl", "stream", "stream/consumers", "stream/promises", "stream/web",
@@ -99,6 +104,7 @@
   }
 
   function isBuiltin(request) {
+    if (typeof request !== "string") return false;
     const scheme = StringPrototypeStartsWith(request, "node:");
     const name = scheme ? StringPrototypeSlice(request, 5) : request;
     return (
@@ -212,7 +218,9 @@
   Module.isBuiltin = isBuiltin;
 
   function emitResolutionWarnings() {
-    for (const [message, type, code] of ops.take_resolution_warnings()) {
+    const warnings = ops.take_resolution_warnings();
+    for (let i = 0; i < warnings.length; i++) {
+      const { 0: message, 1: type, 2: code } = warnings[i];
       internals.process.emitWarning(message, type, code);
     }
   }
@@ -250,9 +258,11 @@
         return error;
       }
       default: {
-        const [, code, hint, ...args] = failure;
-        const values = args.map((a) => (a === "true" ? true : a === "false" ? false : a === null ? undefined : a));
-        const error = new (errors()[code])(...values);
+        const { 1: code, 2: hint } = failure;
+        const values = ArrayPrototypeMap(ArrayPrototypeSlice(failure, 3), (a) =>
+          a === "true" ? true : a === "false" ? false : a === null ? undefined : a,
+        );
+        const error = ReflectConstruct(errors()[code], values);
         if (hint !== null) {
           const stack = error.stack;
           const end = StringPrototypeIndexOf(stack, "\n");
@@ -352,7 +362,7 @@
       if (isBuiltin(request)) return null;
       const relative = request[0] === "." && (request.length === 1 || request[1] === "." || request[1] === "/");
       if (relative) return [module.filename ? dirname(module.filename) : "."];
-      return module.paths ? [...module.paths] : [];
+      return module.paths ? ArrayPrototypeSlice(module.paths) : [];
     };
     require.main = mainModule;
     require.extensions = Module._extensions;
@@ -392,7 +402,7 @@
     // What Node's internal/modules/typescript.js throws: the error, with
     // where it is and swc's excerpt of the source above its stack, and no
     // arrow pointing into the runtime's own code.
-    const [code, message, line, snippet] = stripped;
+    const { 0: code, 1: message, 2: line, 3: snippet } = stripped;
     const error = new (errors()[code])(message);
     error.stack = `${pathToFileURL(filename)}:${line}\n${snippet}\n${error.stack}`;
     internals.noArrow.add(error);

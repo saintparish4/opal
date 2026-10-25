@@ -22,3 +22,14 @@ internal/per_context/domexception
 fs
 internal/fs/utils
 internal/process/permission
+assert
+internal/assert/assertion_error
+internal/assert/utils
+internal/assert/calltracker
+internal/assert/myers_diff
+internal/util/colors
+internal/util/comparisons
+internal/util/debuglog
+internal/errors/error_source
+internal/source_map/source_map_cache
+internal/deps/acorn/acorn/dist/acorn

@@ -144,6 +144,36 @@
     return ops.cwd();
   };
 
+  // The process's user and group ids (POSIX only, as in Node).
+  process.getuid = function getuid() {
+    return ops.credentials()[0];
+  };
+  process.geteuid = function geteuid() {
+    return ops.credentials()[1];
+  };
+  process.getgid = function getgid() {
+    return ops.credentials()[2];
+  };
+  process.getegid = function getegid() {
+    return ops.credentials()[3];
+  };
+  process.getgroups = function getgroups() {
+    return ops.credentials()[4];
+  };
+
+  // process.umask and process.chdir, from
+  // lib/internal/bootstrap/switches/does_own_process_state.js.
+  process.umask = function umask(mask) {
+    if (mask !== undefined) {
+      mask = require("internal/validators").parseFileMode(mask, "mask");
+    }
+    return ops.umask(mask);
+  };
+  process.chdir = function chdir(directory) {
+    require("internal/validators").validateString(directory, "directory");
+    ops.chdir(directory);
+  };
+
   // process.hrtime, from lib/internal/process/per_thread.js, reading the
   // monotonic clock as nanoseconds.
   process.hrtime = function hrtime(time) {
@@ -212,7 +242,7 @@
   };
 
   process._rawDebug = function _rawDebug(...args) {
-    ops.write(2, `${require("internal/util/inspect").format(...args)}\n`);
+    ops.write(2, `${ReflectApply(require("internal/util/inspect").format, undefined, args)}\n`);
   };
 
   // process.stdout and process.stderr: writes go straight to the fd, one

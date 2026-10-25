@@ -130,6 +130,7 @@
       getProxyDetails: ops.proxy_details,
       previewEntries: ops.preview_entries,
       getConstructorName: ops.constructor_name,
+      getCallSites: ops.call_sites,
       getExternalValue: () => 0n,
       privateSymbols,
       constructSharedArrayBuffer: (length) => new SharedArrayBuffer(length),
@@ -160,12 +161,24 @@
       binding.getErrorMessage = (errno) => map.get(errno)?.[1] ?? `Unknown system error ${errno}`;
       return binding;
     },
+    // Where V8 places an error. Source maps aren't supported, so turning
+    // them on changes nothing.
+    errors: () => ({
+      getErrorSourcePositions: ops.error_source_positions,
+      setSourceMapsEnabled() {},
+    }),
+    // Tracing is never on: every category's enabled flag reads 0.
+    trace_events: () => ({
+      getCategoryEnabledBuffer: () => new Uint8Array(1),
+      trace() {},
+      isTraceCategoryEnabled: () => false,
+    }),
     // Opal has no permission model (`--permission`), so everything is
     // permitted.
     permission: () => ({ has: () => true }),
     // The synchronous half of Node's fs binding (ops/fs.rs). The callback
     // and promise halves, which need an event loop with I/O, aren't there
-    // yet: making the request object they start with fails, naming that.
+    // yet: the binding refuses a call that passes it a request.
     fs: () => {
       const kFsStatsFieldsNumber = 18;
       const statValues = new Float64Array(kFsStatsFieldsNumber * 2);
@@ -181,6 +194,13 @@
             throw error;
           }
         };
+      // The request a callback-form call passes the binding. Making one is
+      // fine; the binding refuses it once it has checked the arguments.
+      class FSReqCallback {
+        constructor(bigint) {
+          this.bigint = bigint;
+        }
+      }
       const binding = {
         kFsStatsFieldsNumber,
         statValues,
@@ -188,7 +208,7 @@
         statFsValues,
         bigintStatFsValues,
         kUsePromises: Symbol("fs_use_promises_symbol"),
-        FSReqCallback: unsupported("fs functions with a callback"),
+        FSReqCallback,
         FileHandle: unsupported("fs.promises"),
         StatWatcher: unsupported("fs.watchFile"),
       };
@@ -299,6 +319,8 @@
     modules.set(id, module);
     compiled(module.exports, requireBuiltin, module, proc, internalBinding, primordials);
     module.loaded = true;
+    // What Node's startup does with a module once it exists (pre_execution).
+    if (id === "internal/util/debuglog") module.exports.initializeDebugEnv(proc.env.NODE_DEBUG);
     return module.exports;
   }
 

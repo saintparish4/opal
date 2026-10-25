@@ -11,6 +11,7 @@
   "use strict";
 
   const {
+    ArrayPrototypeConcat,
     ArrayPrototypeIncludes,
     ArrayPrototypePush,
     ObjectKeys,
@@ -18,6 +19,7 @@
     PromiseResolve,
     SafeMap,
     SafeSet,
+    StringPrototypeIndexOf,
     StringPrototypeLastIndexOf,
     StringPrototypeSlice,
     StringPrototypeStartsWith,
@@ -41,10 +43,10 @@
 
   function fileURLToPath(url) {
     let rest = StringPrototypeSlice(url, "file://".length);
-    for (const mark of ["?", "#"]) {
-      const at = rest.indexOf(mark);
-      if (at !== -1) rest = StringPrototypeSlice(rest, 0, at);
-    }
+    const query = StringPrototypeIndexOf(rest, "?");
+    if (query !== -1) rest = StringPrototypeSlice(rest, 0, query);
+    const hash = StringPrototypeIndexOf(rest, "#");
+    if (hash !== -1) rest = StringPrototypeSlice(rest, 0, hash);
     return decodeURIComponent(rest);
   }
 
@@ -77,7 +79,7 @@
       case ".js":
       case ".ts": {
         const typescript = ext === ".ts";
-        const [type, packageJson] = ops.package_type(path);
+        const { 0: type, 1: packageJson } = ops.package_type(path);
         if (type === "module" || type === "commonjs") return { format: type, typescript };
         const source = loader.sourceOf(path);
         const isModule = detect(source, path);
@@ -161,12 +163,14 @@
     records.set(url, record);
     if (format === "module") {
       const code = source ?? loader.sourceOf(path);
-      const [id, requests] = ops.esm_compile(code, url);
+      const { 0: id, 1: requests } = ops.esm_compile(code, url);
       record.id = id;
       const links = [];
-      for (const [specifier, attributes] of requests) {
+      for (let i = 0; i < requests.length; i++) {
+        const { 0: specifier, 1: attributes } = requests[i];
         let kind = "";
-        for (const [key, value] of attributes) {
+        for (let j = 0; j < attributes.length; j++) {
+          const { 0: key, 1: value } = attributes[j];
           if (key === "type") kind = value;
           else throw new (errors().ERR_IMPORT_ATTRIBUTE_UNSUPPORTED)(key, value, url);
         }
@@ -218,9 +222,10 @@
     } catch {
       return names;
     }
-    const [exportNames, reexports] = lex(source);
-    for (const name of exportNames) names.add(name);
-    for (const reexport of reexports) {
+    const { 0: exportNames, 1: reexports } = lex(source);
+    for (let i = 0; i < exportNames.length; i++) names.add(exportNames[i]);
+    for (let i = 0; i < reexports.length; i++) {
+      const reexport = reexports[i];
       let resolved;
       try {
         resolved = loader.Module._resolveFilename(reexport, { filename: path }, false);
@@ -263,8 +268,9 @@
     const exports = loader.loadBuiltin(resolved.builtin)();
     const names = ObjectKeys(exports).filter((name) => name !== "default");
     const record = { url: resolved.url, format: "builtin", id: undefined };
-    record.id = ops.esm_synthetic(resolved.url, [...names, "default"], (id) => {
-      for (const name of names) {
+    record.id = ops.esm_synthetic(resolved.url, ArrayPrototypeConcat(names, "default"), (id) => {
+      for (let i = 0; i < names.length; i++) {
+        const name = names[i];
         let value;
         try {
           value = exports[name];
@@ -305,8 +311,8 @@
   function commonjsExportHint(error, record) {
     const match = /module '(.*)' does not provide an export named '(.+)'/.exec(error.message);
     if (match === null) return;
-    const [, childSpecifier, name] = match;
-    const dependency = record.dependencies?.find(([specifier]) => specifier === childSpecifier);
+    const { 1: childSpecifier, 2: name } = match;
+    const dependency = record.dependencies?.find((dependency) => dependency[0] === childSpecifier);
     if (dependency === undefined || dependency[1] !== "commonjs") return;
     const importStatement = error.stack.split("\n", 2)[1];
     const oneLineNamedImports = /{.*}/.exec(importStatement);
@@ -347,12 +353,12 @@
   function requireModule(module, path, parent) {
     const record = recordFor({ path, url: loader.pathToFileURL(path) }, "");
     instantiate(record);
-    const [status, isAsync] = ops.esm_status(record.id);
+    const { 0: status, 1: isAsync } = ops.esm_status(record.id);
     if (isAsync && status < 4) {
       throw new (errors().ERR_REQUIRE_ASYNC_MODULE)(path, parent?.filename);
     }
     const promise = ops.esm_evaluate(record.id);
-    const [state, value] = ops.promise_details(promise);
+    const { 0: state, 1: value } = ops.promise_details(promise);
     if (state === 2) {
       // Handled here: the error is require()'s to throw.
       promise.then(undefined, () => {});

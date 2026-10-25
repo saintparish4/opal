@@ -10,6 +10,7 @@
 (function (internals, ops, primordials) {
   "use strict";
 
+  const { ReflectApply } = primordials;
 
   const TIMEOUT_MAX = 2 ** 31 - 1;
 
@@ -187,8 +188,9 @@
     }
     const callback = timer._onTimeout;
     const args = timer._timerArgs;
-    if (args.length === 0) callback.call(timer);
-    else callback.apply(timer, args);
+    // Through Reflect, not the callback's own call and apply, which code
+    // may have replaced.
+    ReflectApply(callback, timer, args);
     return true;
   }
 
@@ -260,8 +262,7 @@
       immediate._destroyed = true;
       if (immediate._refed) refedImmediates--;
       const args = immediate._argv;
-      if (args.length === 0) immediate._onImmediate();
-      else immediate._onImmediate(...args);
+      ReflectApply(immediate._onImmediate, immediate, args);
       return true;
     }
     return false;

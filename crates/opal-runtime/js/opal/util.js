@@ -31,7 +31,14 @@ const {
   getSystemErrorName: internalErrorName,
   promisify,
 } = require('internal/util');
-const { validateNumber } = require('internal/validators');
+const {
+  validateBoolean,
+  validateInteger,
+  validateNumber,
+  validateObject,
+} = require('internal/validators');
+const { getOptionValue } = require('internal/options');
+const binding = internalBinding('util');
 const types = require('internal/util/types');
 
 // From lib/util.js.
@@ -82,10 +89,52 @@ function getSystemErrorMessage(err) {
   return internalErrorMessage(err);
 }
 
+// From lib/util.js, without source maps, which Opal doesn't support: with
+// none, mapCallSite is never reached.
+/**
+ * Returns the callSite
+ * @param {number} frameCount
+ * @param {CallSiteOptions} options
+ * @returns {CallSite[]}
+ */
+function getCallSites(frameCount = 10, options) {
+  // If options is not provided check if frameCount is an object
+  if (options === undefined) {
+    if (typeof frameCount === 'object') {
+      // If frameCount is an object, it is the options object
+      options = frameCount;
+      validateObject(options, 'options');
+      if (options.sourceMap !== undefined) {
+        validateBoolean(options.sourceMap, 'options.sourceMap');
+      }
+      frameCount = 10;
+    } else {
+      // If options is not provided, set it to an empty object
+      options = {};
+    };
+  } else {
+    // If options is provided, validate it
+    validateObject(options, 'options');
+    if (options.sourceMap !== undefined) {
+      validateBoolean(options.sourceMap, 'options.sourceMap');
+    }
+  }
+
+  // Using kDefaultMaxCallStackSizeToCapture as reference
+  validateInteger(frameCount, 'frameCount', 1, 200);
+  if (options.sourceMap === true || (getOptionValue('--enable-source-maps') && options.sourceMap !== false)) {
+    const error = new Error('util.getCallSites with source maps is not supported by Opal yet');
+    error.code = 'ERR_OPAL_UNIMPLEMENTED';
+    throw error;
+  }
+  return binding.getCallSites(frameCount);
+};
+
 module.exports = {
   deprecate,
   format,
   formatWithOptions,
+  getCallSites,
   getSystemErrorMap,
   getSystemErrorMessage,
   getSystemErrorName,

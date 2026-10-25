@@ -103,7 +103,7 @@
         if (!tickQueue.isEmpty()) continue;
         const rejected = ops.take_unhandled_rejection();
         if (rejected === undefined) return undefined;
-        const [reason, promise] = rejected;
+        const { 0: reason, 1: promise } = rejected;
         if (listeners("unhandledRejection") > 0) {
           process.emit("unhandledRejection", reason, promise);
           continue;

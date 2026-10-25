@@ -199,6 +199,78 @@ pub fn hrtime(scope: &mut v8::PinScope, _: Args, mut rv: Ret) {
     rv.set(v8::BigInt::new_from_u64(scope, ns).into());
 }
 
+/// `credentials()`: [uid, euid, gid, egid, groups], for process.getuid and
+/// the rest. groups ends with the effective gid when getgroups leaves it
+/// out, as node_credentials.cc's GetGroups does.
+pub fn credentials(scope: &mut v8::PinScope, _: Args, mut rv: Ret) {
+    // SAFETY: these calls can't fail.
+    let (uid, euid, gid, egid) = unsafe {
+        (
+            libc::getuid(),
+            libc::geteuid(),
+            libc::getgid(),
+            libc::getegid(),
+        )
+    };
+    // SAFETY: a count of 0 asks only for the number of groups.
+    let count = unsafe { libc::getgroups(0, std::ptr::null_mut()) }.max(0) as usize;
+    let mut groups = vec![0 as libc::gid_t; count];
+    // SAFETY: groups has room for count entries.
+    let got = unsafe { libc::getgroups(count as i32, groups.as_mut_ptr()) }.max(0) as usize;
+    groups.truncate(got);
+    if !groups.contains(&egid) {
+        groups.push(egid);
+    }
+    let groups: Vec<_> = groups
+        .iter()
+        .map(|&g| v8::Integer::new_from_unsigned(scope, g).into())
+        .collect();
+    let groups = v8::Array::new_with_elements(scope, &groups);
+    let items = [
+        v8::Integer::new_from_unsigned(scope, uid).into(),
+        v8::Integer::new_from_unsigned(scope, euid).into(),
+        v8::Integer::new_from_unsigned(scope, gid).into(),
+        v8::Integer::new_from_unsigned(scope, egid).into(),
+        groups.into(),
+    ];
+    rv.set(v8::Array::new_with_elements(scope, &items).into());
+}
+
+/// `umask(mask)`: sets the file mode creation mask and returns the old
+/// one, or with no mask returns the current one (node_process_methods.cc).
+pub fn umask(scope: &mut v8::PinScope, args: Args, mut rv: Ret) {
+    let mask = args.get(0);
+    // SAFETY: umask can't fail.
+    let old = if mask.is_undefined() {
+        let old = unsafe { libc::umask(0) };
+        unsafe { libc::umask(old) };
+        old
+    } else {
+        let mask = mask.uint32_value(scope).unwrap_or(0) as libc::mode_t;
+        unsafe { libc::umask(mask) }
+    };
+    rv.set_uint32(old as u32);
+}
+
+/// `chdir(directory)`: changes the working directory, or throws Node's
+/// error, which names the old one and the new one.
+pub fn chdir(scope: &mut v8::PinScope, args: Args, _: Ret) {
+    let directory = args.get(0).to_rust_string_lossy(scope);
+    if let Err(error) = std::env::set_current_dir(&directory) {
+        let cwd = std::env::current_dir()
+            .map(|p| p.to_string_lossy().into_owned())
+            .unwrap_or_default();
+        let errno = -error.raw_os_error().unwrap_or(libc::EIO);
+        fs::throw_uv(
+            scope,
+            errno,
+            "chdir",
+            Some(cwd.as_bytes()),
+            Some(directory.as_bytes()),
+        );
+    }
+}
+
 /// `sleep(ms)`: internalBinding('util').sleep, which blocks the thread.
 pub fn sleep(scope: &mut v8::PinScope, args: Args, _: Ret) {
     let ms = args.get(0).number_value(scope).unwrap_or(0.0);
@@ -282,8 +354,9 @@ pub fn compile_function<'s>(
 /// `compileBuiltin(id, params?)`: the built-in module `id` (js/node/<id>.js
 /// or js/opal/<id>.js), compiled as the body of a function of `params`
 /// (BUILTIN_PARAMS by default), or undefined when there is no such module.
-/// Its source is embedded in the binary, and is ASCII (build.rs checks), so
-/// V8 reads it in place as a one-byte string instead of copying it.
+/// Its source is embedded in the binary. An ASCII one, which nearly all are,
+/// V8 reads in place as a one-byte string; any other (acorn's, with its
+/// Unicode tables) is copied into a string of V8's own.
 pub fn compile_builtin<'s>(
     scope: &mut v8::PinScope<'s, '_>,
     args: v8::FunctionCallbackArguments<'s>,
@@ -293,7 +366,12 @@ pub fn compile_builtin<'s>(
     let Some(source) = builtin_source(&id) else {
         return;
     };
-    let Some(source) = v8::String::new_external_onebyte_static(scope, source.as_bytes()) else {
+    let source = if source.is_ascii() {
+        v8::String::new_external_onebyte_static(scope, source.as_bytes())
+    } else {
+        v8::String::new(scope, source)
+    };
+    let Some(source) = source else {
         return type_error(scope, "built-in source is too large");
     };
     let mut params = Vec::new();
@@ -726,6 +804,71 @@ pub fn preview_entries(scope: &mut v8::PinScope, args: Args, mut rv: Ret) {
     }
     let is_key_value = v8::Boolean::new(scope, is_key_value).into();
     rv.set(v8::Array::new_with_elements(scope, &[entries.into(), is_key_value]).into());
+}
+
+/// `errorSourcePositions(error)`: internalBinding('errors')
+/// .getErrorSourcePositions, where V8 places an error: the line of source
+/// it was thrown from, the script's name, and the line and start column
+/// (node_errors.cc). assert.ok quotes the expression from it.
+pub fn error_source_positions(scope: &mut v8::PinScope, args: Args, mut rv: Ret) {
+    let message = v8::Exception::create_message(scope, args.get(0));
+    let object = v8::Object::new(scope);
+    let line: v8::Local<v8::Value> = match message.get_source_line(scope) {
+        Some(line) => line.into(),
+        None => v8::undefined(scope).into(),
+    };
+    set(scope, object, "sourceLine", line);
+    let resource = message
+        .get_script_resource_name(scope)
+        .unwrap_or_else(|| v8::undefined(scope).into());
+    set(scope, object, "scriptResourceName", resource);
+    let number = v8::Integer::new(scope, message.get_line_number(scope).unwrap_or(0) as i32).into();
+    set(scope, object, "lineNumber", number);
+    let column = v8::Integer::new(scope, message.get_start_column() as i32).into();
+    set(scope, object, "startColumn", column);
+    rv.set(object.into());
+}
+
+/// `callSites(frameCount)`: internalBinding('util').getCallSites, the
+/// caller's stack as plain objects, without the frame of the function that
+/// asked (node_util.cc).
+pub fn call_sites(scope: &mut v8::PinScope, args: Args, mut rv: Ret) {
+    let count = args.get(0).int32_value(scope).unwrap_or(10).max(0) as usize;
+    let Some(trace) = v8::StackTrace::current_stack_trace(scope, count + 1) else {
+        return rv.set(v8::Array::new(scope, 0).into());
+    };
+    let names = [
+        "functionName",
+        "scriptId",
+        "scriptName",
+        "lineNumber",
+        "columnNumber",
+        "column",
+    ]
+    .map(|name| v8::Local::<v8::Name>::from(string(scope, name)));
+    let mut sites = Vec::new();
+    for i in 1..trace.get_frame_count() {
+        let Some(frame) = trace.get_frame(scope, i) else {
+            continue;
+        };
+        let empty = || v8::String::empty(scope);
+        let function = frame.get_function_name(scope).unwrap_or_else(empty);
+        let script = frame.get_script_name(scope).unwrap_or_else(empty);
+        let id = string(scope, &frame.get_script_id().to_string());
+        let line = v8::Integer::new(scope, frame.get_line_number() as i32);
+        let column = v8::Integer::new(scope, frame.get_column() as i32);
+        let values: [v8::Local<v8::Value>; 6] = [
+            function.into(),
+            id.into(),
+            script.into(),
+            line.into(),
+            column.into(),
+            column.into(),
+        ];
+        let null = v8::null(scope).into();
+        sites.push(v8::Object::with_prototype_and_properties(scope, null, &names, &values).into());
+    }
+    rv.set(v8::Array::new_with_elements(scope, &sites).into());
 }
 
 /// `constructorName(object)`: internalBinding('util').getConstructorName,
