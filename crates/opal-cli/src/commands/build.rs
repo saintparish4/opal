@@ -35,6 +35,11 @@ pub struct BuildArgs {
     /// Replace a global path with an expression: --define process.env.NODE_ENV='"production"'. Repeatable.
     #[arg(long = "define")]
     pub defines: Vec<String>,
+    /// Import non-JavaScript files as Vite does: a default import is the
+    /// URL of a copy in <outdir>/assets, and a .css import links the
+    /// stylesheet (browser only). See SEMANTICS.md rule 17.
+    #[arg(long)]
+    pub assets: bool,
     /// Print why a module (root-relative path) is in the bundle, and build nothing.
     #[arg(long)]
     pub why: Option<String>,
@@ -58,6 +63,7 @@ pub fn build(args: BuildArgs) -> Result<ExitCode, Failure> {
     let mut options = BuildOptions {
         target,
         externals: args.externals.clone(),
+        assets: args.assets,
         ..BuildOptions::default()
     };
     for define in &args.defines {
@@ -109,6 +115,13 @@ pub fn build(args: BuildArgs) -> Result<ExitCode, Failure> {
         output.code.len().div_ceil(1024),
         total
     );
+    if !output.trusted.is_empty() {
+        let statements: usize = output.trusted.iter().map(|(_, count)| count).sum();
+        println!(
+            "left out {statements} statements on the word of {} modules' \"sideEffects\" (crates/opal-bundler/SEMANTICS.md rule 15)",
+            output.trusted.len()
+        );
+    }
     if args.timings {
         let t = &output.timings;
         println!(

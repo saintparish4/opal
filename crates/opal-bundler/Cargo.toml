@@ -36,3 +36,7 @@ tempfile.workspace = true
 [[example]]
 name = "generated-graphs"
 required-features = ["oracle"]
+
+[[example]]
+name = "side-effects-survey"
+required-features = ["oracle"]

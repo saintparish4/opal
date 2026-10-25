@@ -24,6 +24,21 @@ Every script runs through npm with the project's own node_modules, which is
 what a user does: opal is only the installer. A check that depends on one
 that failed is not run, and is shown as such rather than as a pass.
 
+Three scaffolds are also bundled by `opal build`, and the bundle is checked
+instead of the project's own build:
+  bundle          `opal build` of the entry has to succeed
+  bundle test     the scaffold's unit tests, each bundled with vitest kept
+                  external, have to pass under the project's own vitest (nest)
+  bundle runtime  for --target node, `node <bundle>` on a free port has to
+                  answer HTTP 200 (nest, express); for --target browser, the
+                  bundle is served with the scaffold's index.html and public/
+                  files, loaded in Chromium through Playwright, and has to show
+                  no console error, page error, or failed request, and its
+                  counter has to count (vite-react)
+The browser check needs the tools in crates/opal-bundler/tools (`npm ci`
+there) and a Chromium for Playwright (`npx playwright install chromium`, or
+OPAL_CHROMIUM naming one).
+
 Opal does not run install scripts and says so in a warning naming each
 package it skipped. That list is parsed out of its output into the "scripts
 skipped" column, so a pass is never read as "nothing was skipped".
@@ -77,6 +92,13 @@ FRAMEWORKS = {
         "build": "build", "output": "dist/index.html",
         "serve": ["preview", "--port", "{port}", "--strictPort", "--host", "127.0.0.1"],
         "path": "/", "versions": ["vite", "react"],
+        # The scaffold imports CSS and images, which only --assets bundles
+        # (crates/opal-bundler/SEMANTICS.md rule 17), and React reads
+        # process.env.NODE_ENV, which a browser does not have.
+        "bundle": {"entry": "src/main.tsx", "target": "browser", "assets": True,
+                   "define": {"process.env.NODE_ENV": '"production"'},
+                   "page": "index.html", "script": "/src/main.tsx",
+                   "click": "button.counter", "expect": "Count is 1"},
     },
     "vite-vue": {
         "build": "build", "output": "dist/index.html",
@@ -102,11 +124,17 @@ FRAMEWORKS = {
     "nest": {
         "build": "build", "output": "dist/main.js", "test": "test",
         "serve": ["start:prod"], "path": "/", "versions": ["@nestjs/core", "vitest"],
+        "bundle": {"entry": "src/main.ts", "tests": ["src/app.controller.spec.ts"]},
     },
-    "express": {"serve": ["start"], "path": "/health", "versions": ["express"]},
+    "express": {
+        "serve": ["start"], "path": "/health", "versions": ["express"],
+        "bundle": {"entry": "server.js"},
+    },
 }
-CHECKS = ["install", "build", "test", "runtime"]
-DEFAULT_TIMEOUTS = {"install": 900, "build": 900, "test": 600, "runtime": 120}
+CHECKS = ["install", "build", "test", "runtime", "bundle", "bundle test", "bundle runtime"]
+DEFAULT_TIMEOUTS = {"install": 900, "build": 900, "test": 600, "runtime": 120,
+                    "bundle": 300, "bundle test": 600, "bundle runtime": 120}
+TOOLS = HERE.parent / "crates" / "opal-bundler" / "tools"
 # Copied scaffolds never bring these along, so a stray local install in the
 # repository can't turn a run into a warm one.
 NOT_COPIED = ["SCAFFOLD", "node_modules", "opal.lock", "package-lock.json",
@@ -330,7 +358,134 @@ def check_framework(name, config, opal, work, base_env, timeouts):
                   f"server's process group was killed", flush=True)
     else:
         result["runtime"] = {"status": "not run"}
+
+    for check in ("bundle", "bundle test", "bundle runtime"):
+        result[check] = None
+    if "bundle" in config:
+        if installed:
+            check_bundle(name, config["bundle"], config, opal, project, logs, env, timeouts,
+                         result, finish, work)
+        else:
+            for check in ("bundle", "bundle test", "bundle runtime"):
+                result[check] = {"status": "not run"}
     return result
+
+
+def build_command(opal, entry, project, outdir, bundle, cache, externals=()):
+    command = [opal, "build", project / entry, "--root", project, "--outdir", outdir,
+               "--cache-dir", cache, "--target", bundle.get("target", "node")]
+    if bundle.get("assets"):
+        command.append("--assets")
+    for path, value in bundle.get("define", {}).items():
+        command += ["--define", f"{path}={value}"]
+    for external in externals:
+        command += ["--external", external]
+    return command
+
+
+def check_bundle(name, bundle, config, opal, project, logs, env, timeouts, result, finish, work):
+    """The three bundle checks: build, test, and run the bundle."""
+    cache = Path(env["OPAL_CACHE_DIR"])
+    outdir = project / "dist-opal"
+    log = logs / "bundle.log"
+    code, seconds = run(build_command(opal, bundle["entry"], project, outdir, bundle, cache),
+                        project, env, log, timeouts["bundle"])
+    output = outdir / (Path(bundle["entry"]).stem + ".mjs")
+    built = finish("bundle", code, seconds, log, None if output.exists() else output.name)
+    result["bundle"]["summary"] = next((line for line in log.read_text(errors="replace").splitlines()
+                                        if " modules into " in line), "")
+
+    if "tests" in bundle:
+        if built:
+            # Each test file bundled, with vitest itself left to the runner:
+            # its describe/it/expect are the runner's, and a second copy in
+            # the bundle would register tests nobody runs.
+            tests_dir = project / "opal-tests"
+            log = logs / "bundle-test.log"
+            total = 0.0
+            code = 0
+            for test in bundle["tests"]:
+                code, seconds = run(build_command(opal, test, project, tests_dir, bundle, cache,
+                                                  externals=["vitest"]),
+                                    project, env, log, timeouts["bundle"])
+                total += seconds
+                if code != 0:
+                    break
+            if code == 0:
+                (project / "vitest.opal.config.mjs").write_text(
+                    "export default { test: { globals: true, include: ['opal-tests/**/*.mjs'] } };\n")
+                code, seconds = run(["npm", "exec", "--", "vitest", "run", "--config",
+                                     "vitest.opal.config.mjs"], project, env, log, timeouts["bundle test"])
+                total += seconds
+            finish("bundle test", code, total, log)
+        else:
+            result["bundle test"] = {"status": "not run"}
+
+    if not built:
+        result["bundle runtime"] = {"status": "not run"}
+        return
+    port = free_port()
+    log = logs / "bundle-runtime.log"
+    if bundle.get("target") == "browser":
+        ok, seconds, reason, detail = browse(bundle, project, outdir, output, port, env, log,
+                                             timeouts["bundle runtime"])
+        url = "http://127.0.0.1:<port>/"
+    else:
+        url = f"http://127.0.0.1:{port}{config['path']}"
+        ok, seconds, reason = serve(["node", output], project, {**env, "PORT": str(port)}, log,
+                                    url, timeouts["bundle runtime"])
+        url = f"http://127.0.0.1:<port>{config['path']}"
+        detail = None
+    entry = {"status": "pass" if ok else "fail", "seconds": round(seconds, 3), "url": url,
+             "reason": reason}
+    if detail:
+        entry["page"] = detail
+    if not ok:
+        entry["tail"] = tail(log, work)
+    result["bundle runtime"] = entry
+    report(name, "bundle runtime", entry)
+
+
+def browse(bundle, project, outdir, output, port, env, log, timeout):
+    """Serves the bundle as the scaffold's own page would load it, and loads
+    it in Chromium. (ok, seconds, reason, what the page showed)"""
+    site = project / "opal-site"
+    if site.exists():
+        shutil.rmtree(site)
+    shutil.copytree(outdir, site)
+    if (project / "public").is_dir():
+        shutil.copytree(project / "public", site, dirs_exist_ok=True)
+    page = (project / bundle["page"]).read_text()
+    if bundle["script"] not in page:
+        return False, 0.0, f"{bundle['page']} does not load {bundle['script']}", None
+    (site / "index.html").write_text(page.replace(bundle["script"], "/" + output.name))
+    started = time.perf_counter()
+    with open(log, "w") as out:
+        server = subprocess.Popen([sys.executable, "-m", "http.server", str(port), "--bind", "127.0.0.1"],
+                                  cwd=site, stdout=out, stderr=subprocess.STDOUT, start_new_session=True)
+        try:
+            deadline = time.perf_counter() + 10
+            while not still_listening(port) and time.perf_counter() < deadline:
+                time.sleep(0.1)
+            command = ["node", TOOLS / "browser-check.mjs", f"http://127.0.0.1:{port}/"]
+            if "click" in bundle:
+                command += ["--click", bundle["click"], "--expect", bundle["expect"]]
+            try:
+                checked = subprocess.run([str(c) for c in command], capture_output=True, text=True,
+                                         timeout=timeout, env=env)
+            except subprocess.TimeoutExpired:
+                return False, time.perf_counter() - started, f"timeout {timeout}s", None
+            out.write(checked.stdout + checked.stderr)
+        finally:
+            kill_group(server)
+    seconds = time.perf_counter() - started
+    try:
+        detail = json.loads(checked.stdout.strip().splitlines()[-1])
+    except (ValueError, IndexError):
+        return False, seconds, f"browser check failed: {checked.stderr.strip()[:200]}", None
+    if detail["ok"]:
+        return True, seconds, f"no console errors; {bundle.get('click', 'page')} shows {detail.get('text')!r}", detail
+    return False, seconds, "; ".join(detail["problems"])[:300], detail
 
 
 def commands(config):
@@ -340,6 +495,10 @@ def commands(config):
             listed[check] = f"npm run {config[check]}"
     script, *args = config["serve"]
     listed["runtime"] = " ".join(npm_command(script, args, "<port>"))
+    if "bundle" in config:
+        bundle = config["bundle"]
+        listed["bundle"] = " ".join(str(c) for c in build_command(
+            "opal", bundle["entry"], Path("."), Path("dist-opal"), bundle, Path("<cache>")))
     return listed
 
 
@@ -360,8 +519,8 @@ def table(results, meta):
         f"Frameworks: opal {meta['versions']['opal']} (SHA-256 {meta['opal_binary']['sha256']}), "
         f"node {meta['versions']['node']}, npm {meta['versions']['npm']}, {meta['date']}",
         "",
-        "| Framework | Resolved | install | build | test | runtime | Scripts skipped |",
-        "|---|---|---|---|---|---|---|",
+        "| Framework | Resolved | install | build | test | runtime | bundle | bundle test | bundle runtime | Scripts skipped |",
+        "|---|---|---|---|---|---|---|---|---|---|",
     ]
     for result in results:
         resolved = ", ".join(f"{package} {version or '?'}"

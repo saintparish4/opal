@@ -173,6 +173,39 @@ fn source_type(language: Language) -> SourceType {
     }
 }
 
+/// Packages whose `"sideEffects": false` the compatibility survey found
+/// false (compat/COMPATIBILITY.md, "sideEffects"): importing each one for
+/// nothing but its effects adds globals, which a bundle that took the claim
+/// leaves out. Their claim is not honored, in any version, since a later
+/// one that fixed it is only bundled a little larger.
+const KNOWN_FALSE_CLAIMS: &[&str] = &[
+    // Symbol(matchers-object) and two more on globalThis.
+    "@vitest/expect",
+    // Symbol(undici.globalDispatcher.1) and .2, through its undici import.
+    "h3",
+    // __zod_globalConfig and __zod_globalRegistry: zod's own modules set
+    // them, which its sideEffects array says have no effect, and
+    // zod-validation-error, which imports zod, says the same of itself.
+    "zod",
+    "zod-validation-error",
+];
+
+/// `node_modules/<name>` or `node_modules/@scope/<name>`, the last one in
+/// the path.
+fn package_name(file: &Path) -> Option<String> {
+    let parts: Vec<String> = file
+        .components()
+        .map(|c| c.as_os_str().to_string_lossy().to_string())
+        .collect();
+    let at = parts.iter().rposition(|part| part == "node_modules")?;
+    let first = parts.get(at + 1)?;
+    if first.starts_with('@') {
+        Some(format!("{first}/{}", parts.get(at + 2)?))
+    } else {
+        Some(first.clone())
+    }
+}
+
 /// The nearest `package.json` of each directory, and what the bundler reads
 /// from it: `type` (rule 1) and `sideEffects` (rule 15).
 #[derive(Default)]
@@ -199,6 +232,12 @@ impl PackageTypes {
         let Some((dir, manifest)) = file.parent().and_then(|d| self.nearest(d)) else {
             return false;
         };
+        // The package a file belongs to is the directory under its last
+        // node_modules: a package can ship package.json stubs in subpath
+        // directories, with sideEffects and no name (zod's v4/core does).
+        if package_name(file).is_some_and(|name| KNOWN_FALSE_CLAIMS.contains(&name.as_str())) {
+            return false;
+        }
         match manifest.get("sideEffects") {
             Some(Value::Bool(false)) => true,
             Some(Value::Array(patterns)) => {

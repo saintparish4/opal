@@ -64,8 +64,14 @@ pub struct BuildOutput {
     pub file_name: String,
     pub code: String,
     pub map: String,
+    /// Files written next to the bundle (rule 17): path relative to the
+    /// out-dir, and bytes.
+    pub assets: Vec<(String, Vec<u8>)>,
     /// Modules in the bundle.
     pub modules: usize,
+    /// Statements left out only because a package's `sideEffects` said they
+    /// do nothing (rule 15): module path, and how many.
+    pub trusted: Vec<(String, usize)>,
     pub timings: Timings,
 }
 
@@ -205,7 +211,13 @@ pub fn build(
         file_name,
         code: bundle.code,
         map: bundle.map,
+        assets: bundle.assets,
         modules,
+        trusted: linked
+            .trusted
+            .iter()
+            .map(|(module, count)| (sources[*module].path.clone(), *count))
+            .collect(),
         timings: Timings {
             parse: parse_time,
             link: link_time,
@@ -224,6 +236,13 @@ pub fn write(outdir: &Path, output: &mut BuildOutput) -> Result<(), Diagnostic> 
         Diagnostic::new(Code::Io, "", format!("{}: {error}", outdir.display()))
     };
     std::fs::create_dir_all(outdir).map_err(io)?;
+    for (name, bytes) in &output.assets {
+        let path = outdir.join(name);
+        if let Some(parent) = path.parent() {
+            std::fs::create_dir_all(parent).map_err(io)?;
+        }
+        opal_core::atomic::write_atomic(&path, bytes, None).map_err(io)?;
+    }
     opal_core::atomic::write_atomic(
         &outdir.join(format!("{}.map", output.file_name)),
         output.map.as_bytes(),

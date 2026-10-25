@@ -115,15 +115,16 @@ opal build src/main.ts --target browser    # resolves with the browser condition
 opal build src/main.ts --external react    # keeps a package out of the bundle
 opal build src/main.ts --define process.env.NODE_ENV='"production"'
 opal build src/main.ts --why node_modules/ms/index.js   # the import chain that pulls a module in
+opal build src/main.tsx --target browser --assets      # images and stylesheets, as Vite imports them
 ```
 
 It aims to be small and exact rather than complete. A bundle has to be indistinguishable from the unbundled program when Node runs it: same output, same exit code, same uncaught error, same evaluation order, same `.name` on every function and class, same CommonJS and JSON semantics. The contract is [crates/opal-bundler/SEMANTICS.md](./crates/opal-bundler/SEMANTICS.md), with every rule's ECMA-262 clause or Node source line. Where the bundler cannot keep a rule, it refuses with a code (`E-TLA`, `E-LINK`, …) that names the module and line, instead of writing a bundle that might behave differently.
 
 What it does: ES modules and CommonJS in any mix, cycles, live bindings, dynamic `import()`, TypeScript and JSX compiled as `tsc` compiles them, JSON, `import.meta`, Node builtins, externals, `--define`, and tree shaking of declarations that provably do nothing.
 
-What it refuses, on purpose: top-level `await` outside the entry module, `require()` of an ES module, `import()` of anything but a string literal, direct `eval` in an ES module, CSS and other non-JavaScript imports, and output formats other than ES modules. Code splitting, plugins, minification, and HTML entry points are out of scope.
+What it refuses, on purpose: top-level `await` outside the entry module, `require()` of an ES module, direct `eval` in an ES module, non-JavaScript imports unless `--assets` is given, and output formats other than ES modules. Code splitting, plugins, minification, CSS processing, and HTML entry points are out of scope.
 
-How it is checked: every test fixture runs unbundled and bundled under Node and the two runs are compared; test262's module tests run through it ([results](./crates/opal-bundler/test262/RESULTS.md)); and the CommonJS export lexer is a port of Node's own, checked against Node on 17,358 files from npm.
+How it is checked: every test fixture runs unbundled and bundled under Node and the two runs are compared; generated module graphs are fuzzed the same way; test262's module tests run through it ([results](./crates/opal-bundler/test262/RESULTS.md)); the CommonJS export lexer is a port of Node's own, checked against Node on 17,358 files from npm; and the Nest, Express, and vite-react starters run from their bundles in the [compatibility matrix](./compat/COMPATIBILITY.md).
 
 ## Benchmarks
 

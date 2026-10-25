@@ -133,6 +133,8 @@ pub struct Info {
     pub names: HashSet<String>,
     /// `import()` calls with a literal specifier, in source order.
     pub dynamic_imports: Vec<(String, Span)>,
+    /// An `import()` of anything else, resolved when it runs (rule 10).
+    pub runtime_imports: bool,
 }
 
 impl Info {
@@ -147,6 +149,7 @@ impl Info {
             globals: Vec::new(),
             names: HashSet::new(),
             dynamic_imports: Vec::new(),
+            runtime_imports: false,
         }
     }
 }
@@ -171,6 +174,7 @@ pub fn analyze(source: &Source, parsed: &Parsed<'_>) -> Result<Info, Diagnostic>
         globals: Vec::new(),
         names: HashSet::new(),
         dynamic_imports: Vec::new(),
+        runtime_imports: false,
     };
     for name in scoping.symbol_names() {
         info.names.insert(name.to_string());
@@ -204,6 +208,7 @@ pub fn analyze(source: &Source, parsed: &Parsed<'_>) -> Result<Info, Diagnostic>
         uses: HashMap::new(),
         top_level_await: None,
         dynamic_imports: Vec::new(),
+        runtime_imports: false,
         refusal: None,
         direct_eval: false,
         skip_meta: HashSet::new(),
@@ -214,6 +219,7 @@ pub fn analyze(source: &Source, parsed: &Parsed<'_>) -> Result<Info, Diagnostic>
     }
     info.direct_eval = walker.direct_eval;
     info.dynamic_imports = walker.dynamic_imports;
+    info.runtime_imports = walker.runtime_imports;
 
     if source.format == Format::Esm {
         info.esm = esm_entries(&parsed.program, scoping, root, &refuse)?;
@@ -514,6 +520,7 @@ struct Walker<'s> {
     uses: HashMap<SymbolId, Uses>,
     top_level_await: Option<Span>,
     dynamic_imports: Vec<(String, Span)>,
+    runtime_imports: bool,
     refusal: Option<(Code, Span, String)>,
     direct_eval: bool,
     /// `import.meta` nodes already accounted for by their parent.
@@ -649,18 +656,23 @@ impl<'a> Visit<'a> for Walker<'_> {
                 .map(|cooked| cooked.to_string()),
             _ => None,
         };
-        match literal {
-            None => self.refuse(
-                Code::Dynamic,
-                expression.span,
-                "import() of an expression: only a string literal can be resolved when bundling",
-            ),
-            Some(_) if self.format == Format::Cjs && !self.strict => self.refuse(
+        if self.format == Format::Cjs && !self.strict {
+            self.refuse(
                 Code::Dynamic,
                 expression.span,
                 "import() in a sloppy-mode CommonJS module, which the bundle compiles at run time without a module loader",
-            ),
-            Some(specifier) => self.dynamic_imports.push((specifier, expression.span)),
+            );
+        } else if expression.options.is_some() {
+            self.refuse(
+                Code::Dynamic,
+                expression.span,
+                "import() with options: the bundler does not read import attributes at run time",
+            );
+        } else {
+            match literal {
+                None => self.runtime_imports = true,
+                Some(specifier) => self.dynamic_imports.push((specifier, expression.span)),
+            }
         }
         walk::walk_import_expression(self, expression);
     }

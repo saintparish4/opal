@@ -60,6 +60,10 @@ pub enum Binding {
     Json {
         module: usize,
     },
+    /// The URL of a copied asset (rule 17).
+    Asset {
+        module: usize,
+    },
     /// A binding of an external or builtin, by its index in `externals`;
     /// `None` is its namespace.
     External {
@@ -91,6 +95,9 @@ pub enum Role {
     Json,
     /// Loaded by Node at run time from its original location.
     Opaque,
+    /// A file an ES module imports under `--assets` (rule 17), copied into
+    /// the out-dir.
+    Asset,
 }
 
 /// One step of the eager evaluation order.
@@ -101,6 +108,9 @@ pub enum Step {
     /// module record runs it (if no `require()` has) and takes the snapshot.
     Cjs(usize),
     Json(usize),
+    /// A stylesheet's place in the order: it is linked into the document
+    /// when this step runs (rule 17).
+    Stylesheet(usize),
 }
 
 /// An external or builtin an ES module imports, hoisted to the top.
@@ -148,9 +158,18 @@ pub struct Linked {
     /// Top-level statements each eager module leaves out (rule 15), by
     /// index in its program body.
     pub removed: HashMap<usize, HashSet<usize>>,
+    /// Of those, the ones the bundler could not prove pure and removed on
+    /// the package's `sideEffects` word, per module.
+    pub trusted: BTreeMap<usize, usize>,
     /// The entry awaits at its top level, so it is still evaluating after
     /// the bundle's synchronous code.
     pub entry_async: bool,
+    /// Some import() is resolved when it runs, so every module has a
+    /// namespace it can be found by (rule 10).
+    pub runtime_imports: bool,
+    /// Modules before this index are the graph's; the rest are the
+    /// bundler's own helpers.
+    pub graph_modules: usize,
 }
 
 impl Linked {
@@ -182,6 +201,7 @@ impl Linked {
                 Reference::Name(format!("{p}c{module}_{index}"))
             }
             Binding::Json { module } => Reference::Name(format!("{p}json{module}")),
+            Binding::Asset { module } => Reference::Name(format!("{p}asset{module}")),
             Binding::Helper(name) => Reference::Name(format!("{p}{name}")),
             Binding::External { index, name: None } => Reference::Name(format!("{p}x{index}")),
             Binding::External {
@@ -256,6 +276,7 @@ pub fn link(
         externals: Vec::new(),
         external_index: HashMap::new(),
         cjs_names: HashMap::new(),
+        runtime_imports: false,
     };
     linker.resolve_requests(entry)?;
     let order = linker.evaluation_order(entry);
@@ -288,7 +309,8 @@ pub fn link(
         Format::Esm => linker.namespace_exports(entry)?,
         _ => Vec::new(),
     };
-    let namespaces = linker.namespaces(&imports, &entry_exports)?;
+    let runtime_imports = linker.runtime_imports;
+    let namespaces = linker.namespaces(&imports, &entry_exports, runtime_imports)?;
 
     let removed = shake(
         modules,
@@ -298,6 +320,14 @@ pub fn link(
         &entry_exports,
         entry,
     );
+    let trusted: BTreeMap<usize, usize> = removed
+        .iter()
+        .filter_map(|(module, indexes)| {
+            let statements = &modules[*module].info.esm.statements;
+            let count = indexes.iter().filter(|i| !statements[**i].pure).count();
+            (count > 0).then_some((*module, count))
+        })
+        .collect();
     let prefix = choose_prefix(modules, &linker.roles);
     let names = rename(modules, &linker.roles, &imports, &prefix);
     let cjs_exports: BTreeMap<usize, Vec<String>> = linker
@@ -321,7 +351,10 @@ pub fn link(
         requires: linker.requires,
         prefix,
         removed,
+        trusted,
         entry_async: modules[entry].info.esm.top_level_await.is_some(),
+        runtime_imports,
+        graph_modules: graph.len(),
     })
 }
 
@@ -392,6 +425,8 @@ struct Linker<'l, 's> {
     external_index: HashMap<String, usize>,
     /// CommonJS module -> its export names as an ES module sees them.
     cjs_names: HashMap<usize, Vec<String>>,
+    /// Some import() is resolved when it runs.
+    runtime_imports: bool,
 }
 
 impl Linker<'_, '_> {
@@ -517,6 +552,23 @@ impl Linker<'_, '_> {
                                         ),
                                     ));
                                 }
+                                (Format::Opaque, _) if self.options.assets => {
+                                    let path = &self.info(*t).path;
+                                    if path.ends_with(".css")
+                                        && self.options.target != Runtime::Browser
+                                    {
+                                        return Err(self.refuse(
+                                            Code::Unsupported,
+                                            module,
+                                            request.span,
+                                            format!(
+                                                "{:?}: a stylesheet has nowhere to go outside a browser",
+                                                request.specifier
+                                            ),
+                                        ));
+                                    }
+                                    self.roles[*t] = Role::Asset;
+                                }
                                 (Format::Opaque, _) => {
                                     return Err(self.refuse(
                                         Code::Unsupported,
@@ -555,21 +607,22 @@ impl Linker<'_, '_> {
                     }
                     self.targets[module] = targets;
                     let mut requires = Vec::new();
-                    for (specifier, span) in &info.dynamic_imports {
+                    if info.runtime_imports {
+                        self.runtime_imports = true;
+                    }
+                    for (specifier, _) in &info.dynamic_imports {
                         match self.lookup(module, specifier, false) {
+                            // JSON needs an import attribute, which a plain
+                            // import() does not give: Node rejects it, and
+                            // so does the run-time import the bundle makes.
+                            Some(Target::Module(t)) if self.info(t).format == Format::Json => {
+                                self.runtime_imports = true;
+                            }
                             Some(target) => {
-                                if let Target::Module(t) = &target {
-                                    if self.info(*t).format == Format::Json {
-                                        return Err(self.refuse(
-                                            Code::Dynamic,
-                                            module,
-                                            *span,
-                                            "import() of JSON needs `{ with: { type: 'json' } }`, which the bundler does not read yet".to_string(),
-                                        ));
-                                    }
-                                    if seen.insert(*t) {
-                                        queue.push(*t);
-                                    }
+                                if let Target::Module(t) = &target
+                                    && seen.insert(*t)
+                                {
+                                    queue.push(*t);
                                 }
                                 requires.push((
                                     specifier.clone(),
@@ -577,17 +630,8 @@ impl Linker<'_, '_> {
                                     target,
                                 ));
                             }
-                            None => {
-                                return Err(self.refuse(
-                                    Code::Dynamic,
-                                    module,
-                                    *span,
-                                    format!(
-                                        "import({specifier:?}) is not resolved by the module graph: {}",
-                                        self.unresolved_reason(module, specifier)
-                                    ),
-                                ));
-                            }
+                            // Not resolved now: resolved when it runs (rule 10).
+                            None => self.runtime_imports = true,
                         }
                     }
                     self.requires[module] = requires;
@@ -597,6 +641,9 @@ impl Linker<'_, '_> {
                 }
                 Format::Cjs => {
                     self.roles[module] = Role::Cjs;
+                    if info.runtime_imports {
+                        self.runtime_imports = true;
+                    }
                     let Some(graph_id) = self.modules[module].graph_id else {
                         continue;
                     };
@@ -631,7 +678,11 @@ impl Linker<'_, '_> {
                     self.requires[module] = requires;
                 }
                 Format::Json => self.roles[module] = Role::Json,
-                Format::Opaque => self.roles[module] = Role::Opaque,
+                Format::Opaque => {
+                    if self.roles[module] != Role::Asset {
+                        self.roles[module] = Role::Opaque;
+                    }
+                }
             }
         }
         Ok(())
@@ -672,7 +723,11 @@ impl Linker<'_, '_> {
                 Format::Esm => stack.push((*t, 0)),
                 Format::Cjs => order.push(Step::Cjs(*t)),
                 Format::Json => order.push(Step::Json(*t)),
-                Format::Opaque => {}
+                Format::Opaque => {
+                    if self.info(*t).path.ends_with(".css") {
+                        order.push(Step::Stylesheet(*t));
+                    }
+                }
             }
         }
         order
@@ -918,7 +973,19 @@ impl Linker<'_, '_> {
                     Resolution::NotFound
                 };
             }
-            Format::Opaque => return Resolution::NotFound,
+            // An asset's one export is its URL (rule 17); a stylesheet has
+            // none, since Vite gives a plain CSS import no value.
+            Format::Opaque => {
+                let path = &self.info(module).path;
+                return if name == "default"
+                    && self.roles[module] == Role::Asset
+                    && !path.ends_with(".css")
+                {
+                    Resolution::Found(Binding::Asset { module })
+                } else {
+                    Resolution::NotFound
+                };
+            }
             Format::Esm => {}
         }
         if resolve_set.iter().any(|(m, n)| *m == module && n == name) {
@@ -1163,8 +1230,16 @@ impl Linker<'_, '_> {
         &mut self,
         imports: &[Vec<Binding>],
         entry_exports: &[(String, Binding)],
+        runtime_imports: bool,
     ) -> Result<BTreeMap<usize, Vec<(String, Binding)>>, Diagnostic> {
         let mut needed: Vec<usize> = Vec::new();
+        if runtime_imports {
+            // An import() resolved when it runs can reach any module.
+            needed.extend(
+                (0..self.modules.len())
+                    .filter(|m| matches!(self.roles[*m], Role::Eager | Role::Lazy | Role::Cjs)),
+            );
+        }
         let note = |binding: &Binding, needed: &mut Vec<usize>| {
             if let Binding::Namespace { module } = binding {
                 needed.push(*module);

@@ -3,7 +3,9 @@
 Does a project Opal installed build, pass its tests, and serve? Each framework's own starter project is installed with `opal install`, then built, tested, and started with that framework's own tools. [`benchmarks/BENCHMARKS.md`](../benchmarks/BENCHMARKS.md) covers how fast Opal installs; this file covers whether what it installs works.
 
 - [Method](#method)
+- [Results: 2026-10-24, bundler-p0, unreleased](#results-2026-10-24-bundler-p0-unreleased)
 - [Results: 2026-10-14, v0.4.0 baseline, before v0.4.1](#results-2026-10-14-v040-baseline-before-v041)
+- [`sideEffects`: which packages say it, and whether it held](#sideeffects-which-packages-say-it-and-whether-it-held)
 - [Reproducing](#reproducing)
 - [Regenerating or adding a scaffold](#regenerating-or-adding-a-scaffold)
 
@@ -48,6 +50,9 @@ Some notes on individual scaffolds:
 - **build**: `npm run build` exited 0, and the output named above exists.
 - **test**: `npm test` exited 0.
 - **runtime**: the server answered HTTP 200 within the timeout. The time runs from starting the npm script to the first 200.
+- **bundle**: `opal build` of the scaffold's entry exited 0 and wrote the bundle (nest: `src/main.ts`; express: `server.js`; vite-react: `src/main.tsx` with `--target browser --assets --define process.env.NODE_ENV='"production"'`). The bundle replaces the project's own build in the next two columns.
+- **bundle test**: each unit test file, bundled with `--external vitest` (the runner's own `describe` and `expect` have to be the runner's), passed under the project's own vitest (nest).
+- **bundle runtime**: for Node, `node <bundle>` on a free port answered HTTP 200 (nest, express). For the browser, the bundle was served with the scaffold's `index.html` (its script tag pointed at the bundle) and `public/` files, loaded in Chromium through Playwright, and showed no console error, page error, failed request, or HTTP error, and clicking its counter made it read `Count is 1` (vite-react).
 - **Scripts skipped**: what Opal's install-scripts warning names. That means dependencies whose install scripts Opal didn't run, plus `project (...)` for the project's own lifecycle scripts. A pass in the other columns means the app worked without those scripts on these checks. It doesn't mean the scripts do nothing.
 
 A cell reads one of four ways:
@@ -62,6 +67,27 @@ Failures stay in the table, and the harness exits non-zero if any cell failed. F
 The default timeouts are 900s for install, 900s for build, 600s for test, and 120s for runtime.
 
 The times come from a single cold run over the public registry. They're there to spot something pathological, not to compare against other tools.
+
+## Results: 2026-10-24, bundler-p0, unreleased
+
+Opal built from the `bundler-p0` branch (`cargo build --release`), SHA-256 `52f89aa6cb72bbef2e7458b8e5757683e9e9b4a971dadf50ab84adeb10b71322`. Tool versions: Node 24.19.0, npm 12.0.2, and for the browser check Playwright 1.64.0 driving Chrome 156. Same laptop as below, with the bundler's fuzzers running on four of its cores, so the times are slower than they would otherwise be. Raw results: [`results/frameworks-20261024-231410.json`](./results/frameworks-20261024-231410.json).
+
+| Framework | Resolved | install | build | test | runtime | bundle | bundle test | bundle runtime | Scripts skipped |
+|---|---|---|---|---|---|---|---|---|---|
+| next | next 16.3.2, react 19.2.8 | pass (37.89s) | pass (16.00s) | - | pass (956ms) | - | - | - | unrs-resolver@1.12.2 |
+| vite-react | vite 8.3.5, react 19.3.1 | pass (5.69s) | pass (4.29s) | - | pass (771ms) | pass (375ms) | - | pass (2.75s) | none |
+| vite-vue | vite 8.3.5, vue 3.5.44 | pass (5.29s) | pass (4.69s) | - | pass (772ms) | - | - | - | none |
+| astro | astro 7.4.2 | pass (11.84s) | pass (3.52s) | - | pass (1.78s) | - | - | - | none |
+| sveltekit | @sveltejs/kit 3.1.0, vite 8.3.5 | pass (5.75s) | pass (5.96s) | - | pass (1.54s) | - | - | - | project (prepare) |
+| nest | @nestjs/core 12.2.0, vitest 4.1.12 | pass (15.21s) | pass (4.14s) | pass (1.91s) | pass (1.02s) | pass (525ms) | pass (6.14s) | pass (518ms) | none |
+| express | express 5.3.0 | pass (1.70s) | - | - | pass (517ms) | pass (167ms) | - | pass (272ms) | none |
+
+### What this shows
+
+- **Every install, build, test, and server passed again**, now with the newer releases the scaffolds' ranges float to.
+- **Three scaffolds run from their bundle.** Nest's bundle holds 854 modules (Nest's packages, Express under it, RxJS, and the app's decorated TypeScript with its `design:paramtypes` metadata), starts, and answers `Hello World!`; its unit test, bundled with the app, passes under vitest, and fails when the service's string is changed. Express's bundle holds 140 CommonJS modules, sloppy ones compiled at run time with their own file names. vite-react's bundle holds React, ReactDOM, and the app compiled from TSX, with its two stylesheets linked and three images copied under `--assets`.
+- **The other four are not bundled, on purpose.** Next.js, Astro, SvelteKit, and Vue's single-file components each need their framework's own compiler, which is not a bundler's job here.
+- **What it took.** The nest scaffold was the first real program to call `import()` with a variable (`@nestjs/common`'s `loadPackage`), which the bundler refused until run-time resolution (SEMANTICS.md rule 10) existed. vite-react imports CSS and images, which no runtime gives a meaning to, so the bundle takes Vite's under `--assets` (rule 17).
 
 ## Results: 2026-10-14, v0.4.0 baseline, before v0.4.1
 
@@ -85,6 +111,29 @@ Tool versions: opal 0.4.0, Node 24.19.0, npm 12.0.2. The machine is the laptop: 
 - **sveltekit:** Opal didn't run the project's `prepare` script (`svelte-kit sync || echo ''`), and the build and preview passed anyway. This matches the release plan's expectation that SvelteKit's Vite plugin runs the sync itself during a build. Only the build and the preview server were checked. The dev server and `npm run check` weren't, though `check` runs `svelte-kit sync` in its own script.
 - **next:** Opal skipped one install script, `unrs-resolver`'s `postinstall` (`node postinstall.js`). `unrs-resolver` reaches the tree through `eslint-config-next`'s import resolver (`eslint-import-resolver-typescript`), and the matrix doesn't run `npm run lint`. So this run says nothing about whether that script mattered.
 
+## `sideEffects`: which packages say it, and whether it held
+
+SEMANTICS.md rule 15 takes a package at its word when its `package.json` says `"sideEffects": false`: any of its top-level statements nothing reads may be left out, pure or not. That is the one place a bundle may diverge from the program, so this survey checks the word against the packages the seven scaffolds install.
+
+[`crates/opal-bundler/examples/side-effects-survey.rs`](../crates/opal-bundler/examples/side-effects-survey.rs) walks each scaffold's `node_modules` after `opal install` (run 2026-10-24, the same tree as the table above):
+
+- **220 packages** have the field: 215 say `false`, 4 say `true`, and 1 (`zod`) gives an array of three paths (`./compile.js`, `./compile.cjs`, `./src/compile.ts`). The bundler reads all three forms, and the array the way webpack does.
+- **Most of what they call side-effect free is not provably so.** Of the ES modules the field covers, many have a top-level statement the bundler's own analysis cannot prove pure, typically a call (`createLogger()`, `Object.freeze(…)`). That code is what a claim lets the bundler drop.
+
+Then each package that says `false` and that the project can import by name is probed. A program imports it for nothing but its effects, between a module that records `globalThis` and eleven built-ins' prototypes and statics and one that prints what changed. It runs unbundled and bundled with the claim honored, and the oracle compares the runs.
+
+| Probed | Code left out on the claim, same behavior | Code left out, different behavior | Nothing left out on the claim | Not importable by name |
+|---|---|---|---|---|
+| 198 | 93 | 3 | 102 | 17 |
+
+"Nothing left out" is mostly packages whose entry is CommonJS, which rule 15 does not shake, so for them the probe tests nothing. The three where the claim was false each put names on `globalThis` when imported:
+
+- **`@vitest/expect` 4.1.12**: `Symbol(matchers-object)`, `Symbol($$jest-matchers-object)`, `Symbol(asymmetric-matchers-object)`.
+- **`h3` 1.15.11**: `Symbol(undici.globalDispatcher.1)` and `.2`.
+- **`zod-validation-error` 4.0.2**: `__zod_globalConfig` and `__zod_globalRegistry`. Those come from `zod`'s own `v4/core` modules, which a `package.json` stub in that directory (no `name`, `"sideEffects": false`) calls pure, so `zod`'s claim is false too.
+
+The bundler does not honor the claims of these four packages (`KNOWN_FALSE_CLAIMS` in `crates/opal-bundler/src/load.rs`, matched by the package directory under `node_modules`, since a stub `package.json` has no name). With that list, the probe gives 95 claims exercised and 0 false. The three scaffolds bundled above left out no statement on any claim: their claiming dependencies arrive as CommonJS.
+
 ## Reproducing
 
 ```sh
@@ -94,11 +143,18 @@ python3 compat/frameworks.py --opal ./opal --timeout build=1800,runtime=300     
 python3 compat/frameworks.py --opal ./opal next --keep                           # keep scratch to debug
 ```
 
+The `sideEffects` survey and probe, over installed scaffolds:
+
+```sh
+cargo run --release -p opal-bundler --features oracle --example side-effects-survey -- --probe <scaffold>...
+```
+
 You need:
 
 - Python 3.9+;
 - network access, for the registry and for the Google fonts that Next.js's build downloads;
-- `node` and `npm` on `PATH`.
+- `node` and `npm` on `PATH`;
+- for the vite-react bundle's page load, the tools in `crates/opal-bundler/tools` (`npm ci` there) and a Chromium Playwright can launch (`npx playwright install chromium` in that folder, or `OPAL_CHROMIUM` naming a Chrome).
 
 **Scratch:** the harness works in a fresh `opal-compat-*` folder in the system temp folder (`--work` puts it somewhere else) and deletes it at the end unless you pass `--keep`.
 

@@ -94,6 +94,8 @@ pub struct BuildOptions {
     /// The JSX automatic runtime's import source, when a tsconfig does not
     /// name one.
     pub jsx_import_source: String,
+    /// Rule 17: import non-JavaScript files with Vite's semantics.
+    pub assets: bool,
 }
 
 impl Default for BuildOptions {
@@ -103,6 +105,7 @@ impl Default for BuildOptions {
             externals: Vec::new(),
             defines: Vec::new(),
             jsx_import_source: "react".to_string(),
+            assets: false,
         }
     }
 }

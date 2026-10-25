@@ -4,8 +4,8 @@ test262 at `d53ebc8b1931d9f1541e43d59650776e4b766248`, Node v24.19.0. Every test
 
 | Verdict | Tests |
 |---|---|
-| pass | 579 |
-| refused-by-design | 22 |
+| pass | 580 |
+| refused-by-design | 21 |
 | node-fails | 121 |
 | not-applicable | 9 |
 | total | 731 |
@@ -14,7 +14,7 @@ test262 at `d53ebc8b1931d9f1541e43d59650776e4b766248`, Node v24.19.0. Every test
 
 | Code | Tests | Rule |
 |---|---|---|
-| `E-DYNAMIC` | 2 | `import()` the bundler cannot resolve statically (rule 10). |
+| `E-DYNAMIC` | 1 | `import()` the bundler cannot resolve statically (rule 10). |
 | `E-TLA` | 18 | Top-level `await` outside the entry module (rule 11). |
 | `E-UNSUPPORTED` | 2 | A file type the bundler does not load. |
 

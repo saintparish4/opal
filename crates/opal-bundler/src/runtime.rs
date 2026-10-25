@@ -90,6 +90,64 @@ pub const IMPORT: &str = r#"function $$import(thunk) {
 }
 "#;
 
+/// `import()` of anything the graph did not resolve (rule 10): resolved
+/// when it runs, a relative specifier against the original module and a
+/// bare one by Node from the bundle's location, which finds the same
+/// package only if the original module would find it in the same
+/// node_modules directory; that is checked, and a difference throws rather
+/// than loading another copy. A module in the bundle is the bundled one.
+pub const IMPORT_ANY_NODE: &str = r#"const $$byURL = { __proto__: null };
+function $$packageDir(name, file) {
+  const paths = $$nodeModulePaths($$dirname(file));
+  for (let i = 0; i < paths.length; i++) if ($$existsSync($$join(paths[i], name))) return paths[i];
+}
+function $$importAny(specifier, parentURL) {
+  let text;
+  try {
+    text = `${specifier}`;
+  } catch (error) {
+    return $$Promise.reject(error);
+  }
+  return $$import(() => {
+    let url;
+    if (text.startsWith("./") || text.startsWith("../") || text.startsWith("/")) {
+      url = new $$URL(text, parentURL).href;
+    } else if (/^[A-Za-z][A-Za-z\d+.-]*:/.test(text)) {
+      url = text;
+    } else {
+      url = import.meta.resolve(text);
+      if (!$$isBuiltin(text)) {
+        const name = text.startsWith("@") ? text.split("/", 2).join("/") : text.split("/", 1)[0];
+        const original = $$packageDir(name, $$fileURLToPath(parentURL));
+        const bundle = $$packageDir(name, $$fileURLToPath($$base));
+        if (original !== bundle) {
+          throw new Error("opal: import(" + JSON.stringify(text) + ") finds " + name + " in " + original + " from the module that imports it, and in " + bundle + " from the bundle; bundle it, or keep the bundle where both find the same copy");
+        }
+      }
+    }
+    const bundled = $$byURL[url];
+    return bundled !== undefined ? bundled() : import(url);
+  });
+}
+"#;
+
+pub const IMPORT_ANY_BROWSER: &str = r#"const $$byURL = { __proto__: null };
+function $$importAny(specifier, parentURL) {
+  let text;
+  try {
+    text = `${specifier}`;
+  } catch (error) {
+    return $$Promise.reject(error);
+  }
+  return $$import(() => {
+    const relative = text.startsWith("./") || text.startsWith("../") || text.startsWith("/");
+    const url = relative ? new $$URL(text, parentURL).href : import.meta.resolve(text);
+    const bundled = $$byURL[url];
+    return bundled !== undefined ? bundled() : import(url);
+  });
+}
+"#;
+
 pub const SET_NAME: &str = r#"function $$setName(f, name) {
   $$define(f, "name", { __proto__: null, value: name });
 }
@@ -381,6 +439,16 @@ function $$cjsNs(record, names, sorted) {
     getters[sorted[i]] = () => value;
   }
   return (record.ns = $$ns(sorted, getters));
+}
+"#;
+
+/// A stylesheet an ES module imports under `--assets`, linked into the
+/// document when the import's step runs (rule 17).
+pub const STYLESHEET: &str = r#"function $$css(href) {
+  const link = document.createElement("link");
+  link.rel = "stylesheet";
+  link.href = href;
+  document.head.appendChild(link);
 }
 "#;
 

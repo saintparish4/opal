@@ -3088,9 +3088,9 @@
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/await-expr-dyn-import.js",
-   "verdict": "refused-by-design",
+   "verdict": "pass",
    "node": "exit 0",
-   "bundle": "E-DYNAMIC"
+   "bundle": "exit 0"
   },
   {
    "path": "test/language/module-code/top-level-await/syntax/block-await-expr-array-literal.js",

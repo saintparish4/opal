@@ -44,6 +44,9 @@ pub struct Unit<'a> {
 pub struct Bundle {
     pub code: String,
     pub map: String,
+    /// Files to write next to the bundle: path relative to the out-dir, and
+    /// bytes (rule 17).
+    pub assets: Vec<(String, Vec<u8>)>,
 }
 
 /// The text of the bundle so far, with each piece's source map and the line
@@ -180,6 +183,12 @@ pub fn emit(
             p,
         ));
     }
+    if node && uses.import_any {
+        out.push(&runtime::with_prefix(
+            "import { existsSync as $$existsSync } from \"node:fs\";\nimport { isBuiltin as $$isBuiltin, _nodeModulePaths as $$nodeModulePaths } from \"node:module\";\nimport { join as $$join } from \"node:path\";",
+            p,
+        ));
+    }
     if node && has_cjs {
         out.push(&runtime::with_prefix(
             "import { createRequire as $$createRequireReal, Module as $$NodeModule } from \"node:module\";\nimport { compileFunction as $$compileFunction } from \"node:vm\";",
@@ -217,8 +226,15 @@ pub fn emit(
     if !linked.lazy.is_empty() {
         text.push_str(runtime::LAZY);
     }
-    if uses.import {
+    if uses.import || uses.import_any {
         text.push_str(runtime::IMPORT);
+    }
+    if uses.import_any {
+        text.push_str(if node {
+            runtime::IMPORT_ANY_NODE
+        } else {
+            runtime::IMPORT_ANY_BROWSER
+        });
     }
     if !fixups.is_empty() || uses.set_name || has_cjs {
         text.push_str(runtime::SET_NAME);
@@ -268,6 +284,46 @@ pub fn emit(
         } else {
             out.push(&format!("const {p}url{module} = {p}fileURL({rel});"));
         }
+    }
+
+    // Assets (rule 17): each file copied under assets/ with its content's
+    // hash in the name, and its URL from the bundle's own location.
+    let mut assets = Vec::new();
+    for (module, role) in linked.roles.iter().enumerate() {
+        if *role != Role::Asset {
+            continue;
+        }
+        let source = units[module].source;
+        let bytes = std::fs::read(&source.absolute).map_err(|error| {
+            Diagnostic::new(Code::Io, &source.path, format!("cannot read: {error}"))
+        })?;
+        if source.path.ends_with(".css") {
+            let text = String::from_utf8_lossy(&bytes);
+            if text.contains("url(") || text.contains("@import") {
+                return Err(Diagnostic::new(
+                    Code::Unsupported,
+                    &source.path,
+                    "a stylesheet with url() or @import: the bundler copies stylesheets as they are and does not follow what they reference",
+                ));
+            }
+        }
+        let file = std::path::Path::new(&source.path);
+        let stem = file
+            .file_stem()
+            .map_or_else(String::new, |s| s.to_string_lossy().to_string());
+        let extension = file
+            .extension()
+            .map_or_else(String::new, |e| format!(".{}", e.to_string_lossy()));
+        let hash = opal_core::hash::ContentHash::of(&bytes).to_hex();
+        let name = format!("assets/{stem}-{}{extension}", &hash[..8]);
+        out.push(&format!(
+            "const {p}asset{module} = new {p}URL({}, import.meta.url).href;",
+            json_string(&format!("./{name}"))
+        ));
+        assets.push((name, bytes));
+    }
+    if assets.iter().any(|(name, _)| name.ends_with(".css")) {
+        out.push(&runtime::with_prefix(runtime::STYLESHEET, p));
     }
 
     // Bundle-level bindings of CommonJS snapshots and JSON modules.
@@ -355,6 +411,28 @@ pub fn emit(
         ));
     }
 
+    // Every module an import() resolved at run time can find, by the URL
+    // of its original file.
+    if uses.import_any {
+        for (module, role) in linked.roles.iter().enumerate() {
+            let thunk = match role {
+                Role::Eager => format!("() => {p}ns{module}"),
+                Role::Lazy => format!("() => ({p}init{module}(), {p}ns{module})"),
+                Role::Cjs => {
+                    format!("() => {p}cjsNs({p}m{module}, {p}names{module}, {p}sorted{module})")
+                }
+                _ => continue,
+            };
+            if module >= linked.graph_modules {
+                continue;
+            }
+            out.push(&format!(
+                "{p}byURL[{p}fileURL({})] = {thunk};",
+                json_string(&units[module].rel)
+            ));
+        }
+    }
+
     // Lazy modules.
     for module in &linked.lazy {
         let piece = pieces.remove(module).expect("every lazy module is printed");
@@ -404,6 +482,7 @@ pub fn emit(
             }
             Step::Cjs(module) => out.push(&cjs_step(*module, linked, p)),
             Step::Json(module) => out.push(&json_step(*module, linked, p)),
+            Step::Stylesheet(module) => out.push(&format!("{p}css({p}asset{module});")),
         }
     }
 
@@ -430,6 +509,7 @@ pub fn emit(
     Ok(Bundle {
         code: out.text,
         map,
+        assets,
     })
 }
 
@@ -531,6 +611,9 @@ fn dependency_steps(module: usize, linked: &Linked, units: &[Unit<'_>], p: &str)
             Role::Json => {
                 let _ = writeln!(text, "{}", json_step(*t, linked, p));
             }
+            Role::Asset if units[*t].source.path.ends_with(".css") => {
+                let _ = writeln!(text, "{p}css({p}asset{t});");
+            }
             _ => {}
         }
     }
@@ -541,6 +624,7 @@ fn dependency_steps(module: usize, linked: &Linked, units: &[Unit<'_>], p: &str)
 #[derive(Default)]
 struct Uses {
     import: bool,
+    import_any: bool,
     set_name: bool,
     const_assign: bool,
 }
@@ -1068,14 +1152,24 @@ impl<'a> VisitMut<'a> for Rewriter<'a, '_> {
                 self.fail(Code::Dynamic, span, "import() with options is not bundled");
                 return;
             }
-            let Some(specifier) = specifier else {
-                return;
-            };
-            let target = self.linked.requires[self.module]
-                .iter()
-                .find(|(s, kind, _)| *s == specifier && !kind.is_require_like())
-                .map(|(_, _, target)| target.clone());
+            let target = specifier.as_ref().and_then(|specifier| {
+                self.linked.requires[self.module]
+                    .iter()
+                    .find(|(s, kind, _)| s == specifier && !kind.is_require_like())
+                    .map(|(_, _, target)| target.clone())
+            });
             let p = self.prefix;
+            if target.is_none() {
+                // Resolved when it runs (rule 10): an expression, or a
+                // literal the graph did not resolve.
+                self.uses.import_any = true;
+                self.needs_paths = true;
+                let mut source = import.source.take_in(&self.allocator);
+                self.visit_expression(&mut source);
+                let text = format!("{p}importAny(__hole0, {p}url{})", self.module);
+                *expression = self.template(&text, vec![source], span);
+                return;
+            }
             let thunk = match target {
                 Some(Target::Module(t)) => match self.linked.roles[t] {
                     // The entry, while its top-level await is pending, is

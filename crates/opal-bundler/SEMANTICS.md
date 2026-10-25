@@ -328,7 +328,22 @@ language. The bundle settles it after the current synchronous code, in a
 later microtask turn; how many turns later is not observed.
 
 `import()` of an external or builtin module stays an `import()` in the
-bundle. Any other `import()` argument is refused ([`E-DYNAMIC`](#refusals)).
+bundle.
+
+Any other `import()` (an expression, or a literal the graph did not
+resolve) is resolved when it runs, as Node resolves it. The specifier is
+converted to a string first, synchronously, as EvaluateImportCall does
+(§13.3.10.2). A relative one resolves against the original module's URL;
+an absolute URL is used as it is; a bare one is resolved by Node from the
+bundle's location, with `import.meta.resolve`. From there it finds the same
+package as from the original module only if both find it in the same
+`node_modules` directory: the bundle checks that, and throws an `Error`
+naming both directories when they differ, instead of loading a copy the
+original program would not have. A file in the bundle is the bundled
+module, with the namespace it has there; anything else Node loads. Since
+such an import can reach any module, a bundle that has one builds a
+namespace object for every module and exempts their exports from tree
+shaking. `import()` with options is refused ([`E-DYNAMIC`](#refusals)).
 
 ### 11. Top-level await
 
@@ -406,8 +421,15 @@ pure or not. A glob with no `/` matches at any depth, as webpack reads
 the field. That is the package author's statement, not something the
 bundler checked, and it is the one place a bundle may diverge from the
 program: when the statement is false. The entry is never shaken this way.
+
 Which packages in the compatibility matrix make that statement, and
-whether it held, is recorded in `compat/COMPATIBILITY.md`.
+whether it held, is recorded in `compat/COMPATIBILITY.md`: each package
+that says `false` was imported for its effects alone, bundled with the
+claim honored and not, and the runs compared. Four claims were false
+(`@vitest/expect`, `h3`, `zod`, `zod-validation-error`), and the bundler
+does not honor those, in any version (`KNOWN_FALSE_CLAIMS` in `src/load.rs`).
+A package is the directory under the last `node_modules` in a file's path,
+since a package can carry a nameless `package.json` stub in a subpath.
 
 ### 16. Determinism
 
@@ -417,6 +439,28 @@ the checkout, the time, the machine, or the order the filesystem lists
 directories. Paths in the output are relative to the out-dir, so with the
 out-dir inside the project root (the default, `<root>/dist`) the bundle
 does not depend on where the project is.
+
+### 17. Assets, with `--assets`
+
+No runtime gives `import logo from './logo.svg'` or `import './app.css'` a
+meaning: Node refuses both, and a browser refuses to run a stylesheet as a
+module. Vite gives them one, and scaffolds such as vite-react are written
+against it. With `--assets`, the bundle takes Vite's, narrowly:
+
+- An ES module's import of any file that is not JavaScript or JSON copies
+  it to `<out-dir>/assets/<name>-<hash>.<ext>`, where the hash is of its
+  bytes.
+- The default import of such a file is the copy's URL, resolved against
+  the bundle's own URL. It is its one export.
+- A `.css` file has no export. Importing it links the stylesheet into
+  `document.head` at its place in rule 2's order. Vite's production build
+  links it in the page before any script runs, so the bundle's stylesheet
+  applies a moment later than Vite's; nothing a script can read differs
+  but layout measured before it loads. A stylesheet with `url()` or
+  `@import` is refused, since following them is CSS bundling. Outside
+  `--target browser`, a stylesheet is refused ([`E-UNSUPPORTED`](#refusals)).
+
+Without `--assets`, all of these are refused, as Node refuses them.
 
 ## Refusals
 
@@ -429,7 +473,7 @@ line.
 | `E-LINK` | An import names a missing or ambiguous export, a CommonJS name the lexer does not find, or JSON without `type: 'json'`; or a static import cannot be resolved, including one Node does not complete (`./x` for `./x.js`). | Node fails to link the graph, before any code runs. |
 | `E-TLA` | Top-level `await` outside the entry module, or in an entry that is in a cycle; or a lazily imported module that depends on an entry that awaits. | Rule 11. |
 | `E-REQUIRE-ESM` | A CommonJS module `require()`s an ES module. | Node 24 runs it with its own cycle and async-module errors (`ERR_REQUIRE_CYCLE_MODULE`, `ERR_REQUIRE_ASYNC_MODULE`) that this version does not reproduce. |
-| `E-DYNAMIC` | `import()` of anything but a string literal resolved by the graph or naming an external or builtin; or `import()` inside a sloppy CommonJS module. | Rule 10. The second needs the module's own loader, which a runtime-compiled function does not have. |
+| `E-DYNAMIC` | `import()` with options; or `import()` inside a sloppy CommonJS module. | Rule 10. The bundler does not read import attributes at run time, and a sloppy module is compiled at run time without access to the bundle's loader. |
 | `E-IMPORT-META` | A use of `import.meta` rule 9 does not list. | Rule 9. |
 | `E-EVAL` | Direct `eval` in an ES module. | `eval` can name any binding by its original name, and the bundle renames bindings. |
 | `E-CJS-API` | `require.cache`, `require.extensions`, or `module.constructor` in a CommonJS module. | They expose Node's module system itself, which the bundle replaces. |
@@ -437,7 +481,7 @@ line.
 | `E-BROWSER-FIELD` | Under `--target browser`, a package with a `browser` field in its `package.json`. | opal-core does not apply that field, so the bundle would contain different files than a browser bundler picks. |
 | `E-TS` | TypeScript that `tsc` would not emit under `isolatedModules`, or a decorator without `experimentalDecorators`. | Rule 13. |
 | `E-DEFINE` | An assignment to a `--define`d path. | Rule 14. |
-| `E-UNSUPPORTED` | A file type the bundler does not load (CSS, images, `.node` addons, WebAssembly). | Out of scope for this version. |
+| `E-UNSUPPORTED` | An ES module's import of a file that is not JavaScript or JSON, without `--assets`; a stylesheet with `url()` or `@import`, or outside a browser. `require()` of one is Node's own. | Rule 17. |
 
 Out of scope altogether, and refused by the command line rather than per
 module: code splitting, plugins, CSS and HTML entry points, minification,
