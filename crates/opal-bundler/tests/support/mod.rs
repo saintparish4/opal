@@ -173,6 +173,11 @@ pub fn run(fixture: &Fixture, bundler: Bundler<'_>, node: &Node) -> Outcome {
         (_, Ok(bundle)) => bundle,
     };
 
+    if !fixture.dir.join("hand-bundle.mjs").is_file()
+        && let Err(failure) = check_output(fixture, &program, &bundle, bundler)
+    {
+        return Outcome::Fail(failure);
+    }
     let mut node = node.clone();
     if let Some(env) = fixture.config.get("env").and_then(|v| v.as_object()) {
         for (key, value) in env {
@@ -391,4 +396,68 @@ fn original_program(fixture: &Fixture, program: &Path) -> Result<PathBuf, String
         }
         Some(other) => Err(format!("unknown original {other:?}")),
     }
+}
+
+/// Step 5's checks on a bundle, none of which trust the bundler: a second
+/// parser accepts it (`node --check`), its source map round-trips through
+/// @jridgewell/trace-mapping (tools/sourcemap-check.mjs), and building the
+/// same program from a different path gives the same bytes.
+fn check_output(
+    fixture: &Fixture,
+    program: &Path,
+    bundle: &Path,
+    bundler: Bundler<'_>,
+) -> Result<(), String> {
+    let node = std::env::var("OPAL_NODE").unwrap_or_else(|_| "node".to_string());
+    let checked = std::process::Command::new(&node)
+        .arg("--check")
+        .arg(bundle)
+        .output()
+        .map_err(|error| format!("node --check: {error}"))?;
+    if !checked.status.success() {
+        return Err(format!(
+            "node --check rejects the bundle:\n{}",
+            String::from_utf8_lossy(&checked.stderr)
+        ));
+    }
+    let script = Path::new(env!("CARGO_MANIFEST_DIR")).join("tools/sourcemap-check.mjs");
+    let mapped = std::process::Command::new(&node)
+        .arg(&script)
+        .arg(bundle)
+        .output()
+        .map_err(|error| format!("sourcemap-check: {error}"))?;
+    if !mapped.status.success() {
+        return Err(format!(
+            "the source map does not round-trip:\n{}{}",
+            String::from_utf8_lossy(&mapped.stdout),
+            String::from_utf8_lossy(&mapped.stderr)
+        ));
+    }
+    // The same program at another path, deeper and differently named.
+    let other = tempfile::tempdir().unwrap();
+    let elsewhere = other.path().join("somewhere/else entirely/program");
+    copy_program(fixture, &elsewhere);
+    let again = bundler(fixture, &elsewhere)
+        .map_err(|(code, message)| format!("the second build refused {code}: {message}"))?;
+    for (first, second) in [
+        (bundle.to_path_buf(), again.clone()),
+        (map_of(bundle), map_of(&again)),
+    ] {
+        let a = std::fs::read(&first).unwrap();
+        let b = std::fs::read(&second).unwrap();
+        if a != b {
+            return Err(format!(
+                "not deterministic: {} differs when the project is at another path",
+                first.file_name().unwrap().to_string_lossy()
+            ));
+        }
+    }
+    let _ = program;
+    Ok(())
+}
+
+fn map_of(bundle: &Path) -> PathBuf {
+    let mut name = bundle.as_os_str().to_owned();
+    name.push(".map");
+    PathBuf::from(name)
 }

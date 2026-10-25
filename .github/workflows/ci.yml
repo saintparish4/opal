@@ -152,6 +152,46 @@ jobs:
       - name: test262
         run: python3 crates/opal-bundler/test262/run.py --opal target/debug/opal
 
+  # SEMANTICS.md rule 16: a bundle is a function of the graph, the options,
+  # and the opal version. Each OS bundles every fixture from its own temp
+  # path and publishes the checksums; the next job fails if they differ.
+  bundler-checksums:
+    name: Bundle checksums (${{ matrix.os }})
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Install Rust toolchain
+        run: rustup show
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+      - name: Build opal
+        run: cargo build -p opal-cli
+      - name: Checksums
+        run: python3 crates/opal-bundler/tests/checksums.py --opal target/debug/opal > bundle-checksums.txt
+      - name: Upload
+        uses: actions/upload-artifact@v7
+        with:
+          name: bundle-checksums-${{ matrix.os }}
+          path: bundle-checksums.txt
+
+  bundler-checksums-compare:
+    name: Bundle checksums match across OSes
+    needs: bundler-checksums
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download
+        uses: actions/download-artifact@v7
+        with:
+          pattern: bundle-checksums-*
+      - name: Compare
+        run: |
+          cat bundle-checksums-ubuntu-latest/bundle-checksums.txt
+          diff bundle-checksums-ubuntu-latest/bundle-checksums.txt bundle-checksums-macos-latest/bundle-checksums.txt
+
   # `deny.toml`: licenses a static MIT binary can carry, crates.io as the only
   # source, and the crates the design rules out. Advisories are left to
   # audit.yml, so the result depends on the tree alone and can gate a merge.

@@ -938,6 +938,7 @@ impl<'a> Rewriter<'a, '_> {
                             {
                                 binding.symbol_id.set(Some(symbol));
                                 binding.name = id.name;
+                                binding.span = id.span;
                             }
                             statement
                         }
@@ -977,12 +978,16 @@ impl<'a> Rewriter<'a, '_> {
         element
     }
 
-    /// `{ N: <expression> }.N`: the same NamedEvaluation the original binding
+    /// `({ "N": <expression> })["N"]`: the same NamedEvaluation the original binding
     /// name gave it (§10.2.9).
     fn named(&self, name: &str, expression: Expression<'a>) -> Expression<'a> {
+        // String keys: a literal property name gives NamedEvaluation the
+        // same name (§13.2.5.5), and the template then writes no identifier
+        // a source map could point at the wrong token for.
         let span = expression.span();
+        let key = json_string(name);
         self.template(
-            &format!("({{ {name}: __hole0 }}).{name}"),
+            &format!("({{ {key}: __hole0 }})[{key}]"),
             vec![expression],
             span,
         )
@@ -1321,10 +1326,12 @@ fn is_anonymous_function(expression: &Expression<'_>) -> bool {
     }
 }
 
-/// Puts holes into a parsed template and gives its nodes a real span, so
-/// the source map points at the code it replaced.
+/// Puts holes into a parsed template, and gives the template's own nodes
+/// empty spans, so the only mappings are the holes' own.
 struct Filler<'a> {
     holes: Vec<Option<Expression<'a>>>,
+    /// Where the template's own nodes sit: an empty span, so they carry no
+    /// mapping and nothing points at original code they did not come from.
     span: Span,
 }
 
@@ -1342,6 +1349,6 @@ impl<'a> VisitMut<'a> for Filler<'a> {
     }
 
     fn visit_span(&mut self, span: &mut Span) {
-        *span = self.span;
+        *span = Span::empty(self.span.start);
     }
 }
