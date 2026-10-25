@@ -1,0 +1,10 @@
+# Standalone workspace on purpose: the engine-floor prototypes are measurements,
+# and deno_core (V8, tokio, serde_v8) must not enter opal's own Cargo.lock until
+# the engine is chosen.
+[workspace]
+resolver = "3"
+members = ["deno", "node"]
+
+[profile.release]
+codegen-units = 1
+lto = "thin"

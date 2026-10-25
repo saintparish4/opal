@@ -1,0 +1,9 @@
+{
+  "name": "engine-floor-runners",
+  "private": true,
+  "description": "The reference test runners the engine-floor prototypes are timed against, pinned.",
+  "devDependencies": {
+    "jest": "30.5.2",
+    "vitest": "4.1.12"
+  }
+}

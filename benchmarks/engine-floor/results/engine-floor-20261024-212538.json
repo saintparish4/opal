@@ -1,0 +1,96 @@
+{
+ "environment": {
+  "date": "2026-10-24T21:25:26",
+  "commit": "fce59dc",
+  "cpu": "AMD Ryzen 5 5625U with Radeon Graphics",
+  "cpus": 8,
+  "kernel": "6.6.87.2-microsoft-standard-WSL2",
+  "node": "v24.19.0",
+  "bun": "1.4.2",
+  "hyperfine": "hyperfine 1.20.0",
+  "deno_core": "0.413.0",
+  "engine_deno_bytes": 66927560,
+  "loadavg_start": [
+   "4.74",
+   "5.01",
+   "3.64"
+  ]
+ },
+ "scenarios": {},
+ "resources": {
+  "hello": {
+   "floor: empty static binary": {
+    "peak_rss_kb": 512,
+    "minor_faults": 42,
+    "major_faults_max": 0
+   },
+   "node hello.js": {
+    "peak_rss_kb": 45424,
+    "minor_faults": 2880,
+    "major_faults_max": 0
+   },
+   "bun hello.js": {
+    "peak_rss_kb": 12032,
+    "minor_faults": 716,
+    "major_faults_max": 0
+   },
+   "A deno_core, no snapshot": {
+    "peak_rss_kb": 25396,
+    "minor_faults": 1624,
+    "major_faults_max": 0
+   },
+   "A deno_core, snapshot": {
+    "peak_rss_kb": 19072,
+    "minor_faults": 1225,
+    "major_faults_max": 0
+   },
+   "B node orchestrator": {
+    "peak_rss_kb": 45308,
+    "minor_faults": 2952,
+    "major_faults_max": 0
+   }
+  },
+  "one": {
+   "jest 30.5.2": {
+    "peak_rss_kb": 95624,
+    "minor_faults": 12330,
+    "major_faults_max": 0
+   },
+   "vitest 4.1.12": {
+    "peak_rss_kb": 131476,
+    "minor_faults": 23192,
+    "major_faults_max": 0
+   },
+   "bun test": {
+    "peak_rss_kb": 17920,
+    "minor_faults": 914,
+    "major_faults_max": 0
+   },
+   "node --test": {
+    "peak_rss_kb": 53760,
+    "minor_faults": 8407,
+    "major_faults_max": 0
+   },
+   "A deno_core, no snapshot": {
+    "peak_rss_kb": 26112,
+    "minor_faults": 1721,
+    "major_faults_max": 0
+   },
+   "A deno_core, snapshot": {
+    "peak_rss_kb": 20480,
+    "minor_faults": 1347,
+    "major_faults_max": 0
+   },
+   "B node orchestrator": {
+    "peak_rss_kb": 46576,
+    "minor_faults": 3153,
+    "major_faults_max": 0
+   },
+   "B node orchestrator, snapshot": {
+    "peak_rss_kb": 46864,
+    "minor_faults": 6105,
+    "major_faults_max": 0
+   }
+  }
+ }
+}
