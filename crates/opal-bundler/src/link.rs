@@ -1267,40 +1267,125 @@ impl Linker<'_, '_> {
         Ok(names)
     }
 
-    /// A namespace's exports: every exported name that resolves, sorted by
-    /// code unit (§16.2.1.13 GetModuleNamespace, §10.4.6.11).
+    /// A namespace's exports, sorted by code unit (§10.4.6.11), with the
+    /// names V8 gives it.
+    ///
+    /// ECMA-262 takes every exported name that ResolveExport resolves
+    /// (§16.2.1.13 GetModuleNamespace). V8 builds the names another way
+    /// (FetchStarExports in `source-text-module.cc`): a module's table is
+    /// its own exports, plus each name its `export *` modules' tables
+    /// provide with one binding. A name a star module found ambiguous is
+    /// left out of that module's table, so a module above it that gets the
+    /// name from another branch has it, where the spec calls it ambiguous.
+    /// Without a cycle of `export *` that algorithm is deterministic, and
+    /// the bundle follows it. With one, V8 reads tables that are still
+    /// partial and keeps what it read, so the names depend on which
+    /// namespace it built first; the bundle builds such a namespace only
+    /// when the two algorithms cannot disagree, and refuses otherwise.
     fn namespace_exports(&mut self, module: usize) -> Result<Vec<(String, Binding)>, Diagnostic> {
         let names = self.exported_names(module, &mut Vec::new())?;
-        let mut exports = Vec::new();
+        let mut spec = Vec::new();
         let mut ambiguous = None;
         for name in names {
             match self.resolve_export(module, &name, &mut Vec::new()) {
-                Resolution::Found(binding, _) => exports.push((name, binding)),
+                Resolution::Found(binding, cell) => spec.push((name, (binding, cell))),
                 Resolution::Ambiguous => {
                     ambiguous.get_or_insert(name);
                 }
                 Resolution::NotFound => {}
             }
         }
-        // V8 builds a namespace from the export tables of the modules it
-        // star-exports, and keeps there what it found (FetchStarExports).
-        // Where `export *` declarations form a cycle, a namespace built
-        // earlier can leave one of those tables partial, and a later one
-        // then takes an ambiguous name from it instead of leaving it out:
-        // which namespace has the name depends on which V8 built first.
-        if let Some(name) = ambiguous
-            && self.reaches_star_cycle(module)
+        let v8 = self.v8_star_table(module, &mut HashSet::new())?;
+        let mut exports: Vec<(String, (Binding, Option<usize>))> = if self
+            .reaches_star_cycle(module)
         {
-            return Err(Diagnostic::new(
-                Code::Link,
-                &self.info(module).path,
-                format!(
-                    "this module's namespace has an ambiguous name, '{name}', through `export *` declarations that form a cycle: V8 leaves it out or puts it in depending on which namespace in the cycle it builds first"
-                ),
-            ));
-        }
+            // The first name the two algorithms disagree on, or one the
+            // spec finds ambiguous, which V8 may yet put in.
+            let differs = v8
+                .iter()
+                .find(|(name, cell)| !spec.iter().any(|(n, c)| n == *name && c == *cell))
+                .map(|(name, _)| name.clone())
+                .or_else(|| {
+                    spec.iter()
+                        .find(|(name, _)| !v8.contains_key(name))
+                        .map(|(name, _)| name.clone())
+                });
+            if let Some(name) = ambiguous.or(differs) {
+                return Err(Diagnostic::new(
+                    Code::Link,
+                    &self.info(module).path,
+                    format!(
+                        "this module's namespace reaches `export *` declarations that form a cycle, and has a name, '{name}', that V8 leaves out or puts in depending on which namespace in the cycle it builds first"
+                    ),
+                ));
+            }
+            spec
+        } else {
+            v8.into_iter().collect()
+        };
         exports.sort_by(|a, b| a.0.encode_utf16().cmp(b.0.encode_utf16()));
-        Ok(exports)
+        Ok(exports
+            .into_iter()
+            .map(|(name, (binding, _))| (name, binding))
+            .collect())
+    }
+
+    /// V8's export table for `module` after FetchStarExports, built fresh:
+    /// each name with the binding it resolves to.
+    fn v8_star_table(
+        &mut self,
+        module: usize,
+        visited: &mut HashSet<usize>,
+    ) -> Result<BTreeMap<String, (Binding, Option<usize>)>, Diagnostic> {
+        let mut table = BTreeMap::new();
+        let own: Vec<String> = match self.info(module).format {
+            Format::Esm => self
+                .info(module)
+                .esm
+                .exports
+                .iter()
+                .map(|e| e.name.clone())
+                .collect(),
+            _ => self.exported_names(module, &mut Vec::new())?,
+        };
+        for name in own {
+            if let Resolution::Found(binding, cell) =
+                self.resolve_export(module, &name, &mut Vec::new())
+            {
+                table.insert(name, (binding, cell));
+            }
+        }
+        if self.info(module).format != Format::Esm || !visited.insert(module) {
+            return Ok(table);
+        }
+        let mut more: BTreeMap<String, Option<(Binding, Option<usize>)>> = BTreeMap::new();
+        let modules = self.modules;
+        for &(request, _) in &modules[module].info.esm.stars {
+            let Target::Module(target) = self.targets[module][request].clone() else {
+                // An external's names are refused by exported_names.
+                continue;
+            };
+            for (name, cell) in self.v8_star_table(target, visited)? {
+                if name == "default" || table.contains_key(&name) {
+                    continue;
+                }
+                match more.get(&name) {
+                    None => {
+                        more.insert(name, Some(cell));
+                    }
+                    Some(Some(existing)) if *existing != cell => {
+                        more.insert(name, None);
+                    }
+                    Some(_) => {}
+                }
+            }
+        }
+        for (name, cell) in more {
+            if let Some(cell) = cell {
+                table.insert(name, cell);
+            }
+        }
+        Ok(table)
     }
 
     /// Whether following `export *` from `module` reaches a cycle of them.

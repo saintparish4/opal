@@ -1,0 +1,3 @@
+{
+  "why": "`log` is ambiguous in `mid`'s namespace, and `top` also gets it, unambiguously, through `other`. ECMA-262 calls it ambiguous in `top` too; V8 leaves an ambiguous name out of `mid`'s export table, so `top`'s namespace has `other`'s `log`. Found by the generated-graph fuzzer (seed 6066569)."
+}

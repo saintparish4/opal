@@ -219,16 +219,21 @@ algorithm. Modules reached only through `import()` are modelled as linking
 one `import()` target at a time, in file order. test262's
 `instn-star-iee-multi-cycle-same-name` is such a program; Node fails it.
 
-Third, a namespace over a cycle of `export *`. V8 builds a namespace from
-the export tables of the modules it star-exports, and keeps in each table
-what it found (FetchStarExports in `source-text-module.cc`). Inside a cycle
-it reads a table that is still partial, so a name the spec finds ambiguous
-can land in one module's table, and the next namespace built from it has
-the name. Which namespace gets it depends on which V8 built first, an order
-set by imports and by when each `import()` runs. Without a cycle, or
-without an ambiguous name, V8's namespaces are the spec's. So a namespace
-the bundle builds that has an ambiguous name and reaches a cycle of
-`export *` is refused ([`E-LINK`](#refusals)).
+Third, a namespace's names. The spec takes every name ResolveExport
+resolves, so a name one `export *` module finds ambiguous is ambiguous for
+every module above it. V8 builds a namespace from export tables instead
+(FetchStarExports in `source-text-module.cc`): a module's table is its own
+exports, plus each name its `export *` modules' tables provide with one
+binding, and an ambiguous name is left out of the table. So a module above
+that also gets the name from another branch has it in its namespace, where
+the spec leaves it out. Importing the name by itself is still a
+`SyntaxError` in V8, as in the spec. The bundle builds namespaces V8's way.
+Where the `export *` declarations form a cycle, V8 reads tables that are
+still partial and keeps what it read, so the names depend on which
+namespace it built first, an order set by imports and by when each
+`import()` runs. A namespace over such a cycle is built only when the two
+algorithms agree and no name is ambiguous, and is refused otherwise
+([`E-LINK`](#refusals)).
 
 ### 5. `this`, `arguments`, and strictness
 
