@@ -322,6 +322,9 @@ def bench(args, parser):
                     for name, path in args.engine},
         "opal_binary": {"path": str(opal), "sha256": hashlib.sha256(opal.read_bytes()).hexdigest()},
         "floor": linkage,
+        # Other work on the machine moves every command's time; interleaving
+        # spreads it across them, and this says how much there was.
+        "loadavg_start": os.getloadavg(),
         "rounds": args.rounds,
         "runs_per_round": {k: {"warmup": w, "runs": r} for k, (w, r) in RUNS.items()},
         "commands": {name: {tool: " ".join(map(str, cmd)).replace(str(work), "<work>")
@@ -360,6 +363,7 @@ def bench(args, parser):
     traces["--version"] = startup_trace([opal, "--version"], work, env)
     sizes = {tool: executable_size(cmd) for cmds in plan.values() for tool, cmd in cmds.items()}
 
+    meta["loadavg_end"] = os.getloadavg()
     results_dir = Path(args.results)
     results_dir.mkdir(parents=True, exist_ok=True)
     out = results_dir / f"runtimes-{datetime.now():%Y%m%d-%H%M%S}.json"
