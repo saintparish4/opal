@@ -8,10 +8,7 @@
 //     the toHaveResolved family (reading mock.settledResults, which the
 //     Vitest dialect's mocks record; see mock.cjs), toBeTypeOf, toBeOneOf,
 //     toSatisfy and toBeNullable;
-//   - the aliases Jest 30 removed and Vitest keeps: toBeCalled,
-//     toBeCalledTimes, toBeCalledWith, lastCalledWith, nthCalledWith,
-//     toReturn, toReturnTimes, toReturnWith, lastReturnedWith,
-//     nthReturnedWith and toThrowError;
+//   - the aliases Jest 30 removed and Vitest keeps (removed-aliases.cjs);
 //   - the snapshot matchers for what's thrown, which snapshot the thrown
 //     value itself where Jest snapshots its message (getError in
 //     @vitest/expect);
@@ -19,22 +16,8 @@
 'use strict';
 
 const util = require('util');
-const {getMatchers} = require('./jest-expect-jestMatchersObject.cjs');
-const {createMatcher: createThrowMatcher} = require('./jest-expect-toThrowMatchers.cjs');
+const {removedAliases} = require('./removed-aliases.cjs');
 const snapshot = require('./jest-snapshot.cjs');
-
-const ALIASES = {
-  lastCalledWith: 'toHaveBeenLastCalledWith',
-  lastReturnedWith: 'toHaveLastReturnedWith',
-  nthCalledWith: 'toHaveBeenNthCalledWith',
-  nthReturnedWith: 'toHaveNthReturnedWith',
-  toBeCalled: 'toHaveBeenCalled',
-  toBeCalledTimes: 'toHaveBeenCalledTimes',
-  toBeCalledWith: 'toHaveBeenCalledWith',
-  toReturn: 'toHaveReturned',
-  toReturnTimes: 'toHaveReturnedTimes',
-  toReturnWith: 'toHaveReturnedWith',
-};
 
 const ordinal = n => {
   const tens = n % 100;
@@ -43,16 +26,6 @@ const ordinal = n => {
 };
 
 function installVitestExpect(expect, {currentTest}) {
-  const builtIn = getMatchers();
-  const aliases = Object.fromEntries(
-    Object.entries(ALIASES).map(([alias, target]) => {
-      const matcher = builtIn[target];
-      return [alias, function (...args) {
-        return matcher.apply(this, args);
-      }];
-    }),
-  );
-
   function spyOf(context, received, matcherName) {
     if (!(received && received._isMockFunction === true && received.mock)) {
       throw new Error(
@@ -102,7 +75,7 @@ function installVitestExpect(expect, {currentTest}) {
   }
 
   expect.extend({
-    ...aliases,
+    ...removedAliases(),
     toBeNullable(received) {
       return result(this, 'toBeNullable', received == null, null, () => `Received: ${this.utils.printReceived(received)}`, '');
     },
@@ -195,9 +168,6 @@ function installVitestExpect(expect, {currentTest}) {
       return result(this, 'toHaveNthResolvedWith', pass, expected, () =>
         `${ordinal(nth)} call\nExpected: ${this.isNot ? 'not ' : ''}${this.utils.printExpected(expected)}\n${printResults(this, entry ? [entry] : [])}`,
       'n, expected');
-    },
-    toThrowError(received, expected) {
-      return createThrowMatcher('toThrowError', Boolean(this.promise)).call(this, received, expected);
     },
     toThrowErrorMatchingSnapshot(received, hint, fromPromise) {
       return snapshot.toMatchSnapshot.call(this, thrownBy(received, fromPromise), ...(hint === undefined ? [] : [hint]));

@@ -97,7 +97,13 @@ async function importVitestConfig(file) {
         if (specifier === 'vitest/config' || specifier === 'vite' || specifier === 'vitest/node') {
           return {shortCircuit: true, url: STUB_URL};
         }
-        return next(specifier, context);
+        const resolved = next(specifier, context);
+        // Vite bundles a config, so it imports JSON without `with {type:
+        // 'json'}`; Node wants the attribute, so the hook supplies it.
+        if (resolved.url.endsWith('.json') && !context.importAttributes?.type) {
+          return {...resolved, importAttributes: {...context.importAttributes, type: 'json'}};
+        }
+        return resolved;
       },
       load(url, context, next) {
         if (url === STUB_URL) return {format: 'module', shortCircuit: true, source: STUB_SOURCE};
@@ -226,7 +232,22 @@ async function loadConfig({rootDir: start, configPath}) {
   }
   config.snapshotFormat = {escapeString: false, printBasicPrototype: false, ...config.snapshotFormat};
   config.dialect = 'jest';
+  config.jestMajor = installedJestMajor(rootDir);
   return config;
+}
+
+// The major version of the Jest the project has installed, or null. opal's
+// semantics are Jest 30's; a project on Jest 29 also gets the matchers Jest
+// 30 removed (framework.cjs).
+function installedJestMajor(rootDir) {
+  for (const name of ['jest', 'jest-cli', '@jest/core', 'expect']) {
+    try {
+      const manifest = JSON.parse(fs.readFileSync(require.resolve(`${name}/package.json`, {paths: [rootDir]}), 'utf8'));
+      const major = Number.parseInt(manifest.version, 10);
+      if (Number.isFinite(major)) return major;
+    } catch {}
+  }
+  return null;
 }
 
 // A path is relative to rootDir; a bare name is a package.

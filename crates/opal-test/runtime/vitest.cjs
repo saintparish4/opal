@@ -72,7 +72,60 @@ function noopChain() {
   return chain;
 }
 
-function createVitest({circus, expect, createJestObject, moduleMocker, requireChai}) {
+// Vitest's expect is chai's, with Jest's matchers on it. opal's is Jest's,
+// with what Vitest's adds in shape:
+//   - a second argument, a message the failure starts with (`expect(value,
+//     message)`), where Jest's throws "Expect takes at most one argument";
+//   - chai's own assertions (`.to.equal`, `.greaterThanOrEqual`) for any
+//     name Jest's expectation doesn't have, `.not` included, from the
+//     project's chai.
+// Jest's matchers and expect's own properties are as they are.
+function vitestExpect(expect, requireChai) {
+  const withMessage = (error, message) => {
+    if (error && typeof error.message === 'string') error.message = `${message}: ${error.message}`;
+    return error;
+  };
+  const call = (matcher, message) =>
+    function (...args) {
+      try {
+        const outcome = matcher.apply(this, args);
+        return outcome && typeof outcome.then === 'function'
+          ? outcome.then(undefined, error => {
+              throw withMessage(error, message);
+            })
+          : outcome;
+      } catch (error) {
+        throw withMessage(error, message);
+      }
+    };
+  // `chai` gives the chai assertion that stands in for this one, or null for
+  // resolves and rejects, which Vitest builds itself.
+  const extend = (expectation, chai, message) =>
+    new Proxy(expectation, {
+      get(target, key) {
+        if (key in target) {
+          const value = target[key];
+          if (typeof value === 'function') return message === undefined ? value : call(value, message);
+          if (value && typeof value === 'object') {
+            return extend(value, key === 'not' ? () => chai().not : null, message);
+          }
+          return value;
+        }
+        if (typeof key === 'symbol' || key === 'then' || !chai) return target[key];
+        return chai()[key];
+      },
+    });
+  return new Proxy(expect, {
+    apply(target, thisArg, [actual, message]) {
+      let assertion;
+      const chai = () => (assertion ??= requireChai().expect(actual, message));
+      return extend(target.call(thisArg, actual), chai, message);
+    },
+  });
+}
+
+function createVitest({circus, expect: jestExpect, createJestObject, moduleMocker, requireChai, testPath}) {
+  const expect = vitestExpect(jestExpect, () => requireChai(testPath));
   const {globals, state} = circus;
 
   // --- a test's context and what runs after it ---------------------------

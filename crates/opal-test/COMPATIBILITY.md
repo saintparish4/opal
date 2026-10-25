@@ -73,6 +73,12 @@ Each entry names the side opal takes. "Jest's" means opal keeps Jest's behavior,
 - **Fixtures. Not supported.** `test.extend` and `test.scoped` throw. So do `bench` and the fake timers (`vi.useFakeTimers` and the rest), as `jest.useFakeTimers` does in Jest's dialect. `aroundEach` and `aroundAll` aren't provided.
 - **The test context.** `context.task` has only `name`. `context.signal` never aborts. `context.annotate` isn't provided. `onTestFinished` and `onTestFailed` callbacks don't get Vitest's own timeout.
 - **Unhandled errors. Jest's.** An error thrown or rejected outside a test's own promise chain is charged to whatever was running when it was raised, by Jest's rules (SEMANTICS.md). Vitest collects such errors and fails the run.
+- **Realms. Jest's.** Each file runs in its own `vm` context, Jest's isolation. So Node's own objects come from the host realm, and are not `instanceof` the context's built-ins:
+  - a `DOMException` and the errors that extend it;
+  - an error a built-in module throws;
+  - what `structuredClone` returns.
+
+  Vitest isolates a file in its own worker instead, and runs it in that worker's realm. es-toolkit's `TimeoutError` and `AbortError` extend `DOMException`, so the two tests that check they are instances of `Error` fail.
 
 ### expect
 
@@ -96,7 +102,7 @@ Two more differences, outside what the generator makes:
 Beyond verdicts:
 
 - **Failure messages.** They are Jest's, for every matcher, Vitest's additions included. Vitest's are chai's (`expected 1 to be 2 // Object.is equality`).
-- **chai's own assertion API.** `expect(x).to.equal(y)`, `.to.be.true`, `.to.have.been.called` and the rest aren't available on `expect`. `assert`, `chai` and `should` from `vitest` are chai's own.
+- **chai's assertions and `expect`'s message. Vitest's.** Vitest's `expect` is a chai assertion with Jest's matchers on it. opal's is Jest's, so for a name Jest's expectation doesn't have it falls through to the project's own chai: `.to.equal`, `.greaterThanOrEqual`, `.not.to.be.ok` and the rest. `expect(value, message)` puts the message at the start of the failure, where Jest's `expect` would throw "Expect takes at most one argument". `assert`, `chai` and `should` from `vitest` are chai's own too.
 - **`expect.poll`.** It retries until the matcher passes or the time is up (default: every 50 ms for 1 s, as in Vitest). On timeout it throws the matcher's last error, not Vitest's own timeout error. `expect.soft` records a failure on the running test and carries on, as Vitest's does.
 - **Not provided:** `expect.schemaMatching`, `expect.assert`, and the `Snapshots` export for custom snapshot matchers.
 
@@ -125,6 +131,7 @@ opal's mocks are jest-mock's, with `settledResults` and spy names added. Where @
 There is no Vite in opal test. A Vitest file's imports are resolved by Node's rules, transformed by opal's own transform (`src/transform.rs`) into CommonJS with Babel's interop, and loaded into the test's context.
 
 - **Vite plugins. Not run.** A transform that Vite plugins provide doesn't happen: `.vue`, `.svelte`, `.astro`, CSS modules, `?raw`, `?url` and other query imports, virtual modules, `define` replacements and `.env` files. `resolve.alias` is read, as `moduleNameMapper`; `resolve.conditions`, `resolve.tsconfigPaths` (tsconfig's `paths`) and `test.alias` aren't.
+- **A function's own text.** `Function.prototype.toString` gives the source as opal's transform printed it. Under Vitest, it is esbuild's output with Vite's module runner's edits on top, which, for one, put a `;` after an `if` block. A test that reads a function's source can tell the two apart (es-toolkit's `serializeFunction` test does). SEMANTICS.md has the same for tsc.
 - **ES modules run as CommonJS.** Imports are hoisted `require`s with live bindings, and `import()` becomes a `require` behind a promise. Only a test or setup file may await at its top level; a module it imports may not.
 - **`vi.mock` factories.**
   - A factory's object is the module's namespace, as in Vitest, and `importOriginal` is provided.
@@ -143,7 +150,7 @@ There is no Vite in opal test. A Vitest file's imports are resolved by Node's ru
 
   Everything else is ignored. In particular:
   - `projects` and `workspace`;
-  - `environment`: tests run in Node, whatever it says. jsdom and happy-dom are outside opal test's scope, so a DOM test fails rather than passing;
+  - `environment`, and a file's own `@vitest-environment` comment: tests run in Node, whatever they say. jsdom and happy-dom are outside opal test's scope, so a DOM test fails rather than passing;
   - `globalSetup`, `pool`, `isolate`, `sequence`, `retry`, `hookTimeout` and `bail`;
   - `env`, `unstubEnvs` and `unstubGlobals`;
   - `typecheck`, `includeSource` (in-source tests, `import.meta.vitest`), `coverage` and `reporters`.

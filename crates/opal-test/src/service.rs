@@ -13,7 +13,13 @@
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, OnceLock};
+
+/// Numbers each staging file this process writes. Workers ask for the same
+/// file at once on different threads, so a staging name has to be unique
+/// within the process, not just across processes.
+static STAGING: AtomicU64 = AtomicU64::new(0);
 
 use serde_json::{Value, json};
 
@@ -80,7 +86,13 @@ impl TransformService {
             .disk
             .as_ref()
             .map(|dir| dir.join(format!("{}.json", key.to_hex())));
-        if let Some(cached) = file.as_ref().and_then(|f| std::fs::read(f).ok()) {
+        // A whole reply is one JSON object; anything else (a file another tool
+        // left half written) is done again rather than served.
+        if let Some(cached) = file
+            .as_ref()
+            .and_then(|f| std::fs::read(f).ok())
+            .filter(|bytes| bytes.first() == Some(&b'{') && bytes.last() == Some(&b'}'))
+        {
             let cached = Arc::new(cached);
             self.memory
                 .lock()
@@ -108,7 +120,11 @@ impl TransformService {
             Err(failure) => return error(failure),
         };
         if let Some(file) = file {
-            let staging = file.with_extension(format!("tmp{}", std::process::id()));
+            let staging = file.with_extension(format!(
+                "tmp{}-{}",
+                std::process::id(),
+                STAGING.fetch_add(1, Ordering::Relaxed)
+            ));
             if std::fs::write(&staging, reply.as_slice()).is_ok() {
                 let _ = std::fs::rename(&staging, &file);
             }

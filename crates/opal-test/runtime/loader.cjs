@@ -65,6 +65,21 @@ function compile(filename, code, isAsync = false) {
 
 const awaitsAtTopLevel = error => error instanceof SyntaxError && /await is only valid/.test(error.message);
 
+// A require anchored in `dir`, for Node's resolution of a bare name from
+// there: `exports` with the require conditions, node_modules up the tree,
+// and a package importing itself by its own name through its `exports`,
+// which jest-resolve allows too and `require.resolve(name, {paths})` misses
+// (it resolves self-references from its caller, opal's runtime).
+const requiresByDir = new Map();
+function requireIn(dir) {
+  let anchored = requiresByDir.get(dir);
+  if (!anchored) {
+    anchored = Module.createRequire(path.join(dir, 'noop.js'));
+    requiresByDir.set(dir, anchored);
+  }
+  return anchored;
+}
+
 const stripBOM = text => (text.charCodeAt(0) === 0xfeff ? text.slice(1) : text);
 const isFile = file => {
   try {
@@ -289,7 +304,7 @@ class Loader {
   // extensions Jest adds on top of Node's.
   resolvePackage(dir, request) {
     try {
-      return require.resolve(request, {paths: [dir]});
+      return requireIn(dir).resolve(request);
     } catch {}
     for (let current = dir; ; current = path.dirname(current)) {
       const base = path.join(current, 'node_modules', request);

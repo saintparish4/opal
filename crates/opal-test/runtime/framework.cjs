@@ -206,6 +206,11 @@ async function initialize({config, globalConfig, testPath, parentProcess, loader
     await circus.dispatch({name: 'teardown'});
   }
 
+  // A project on Jest 29 has the matchers Jest 30 removed, as built-ins.
+  if (dialect === 'jest' && config.jestMajor != null && config.jestMajor < 30) {
+    const {setMatchers} = require('./jest-expect-jestMatchersObject.cjs');
+    setMatchers(require('./removed-aliases.cjs').removedAliases(), true, expect);
+  }
   // Vitest's layer is loaded only for a file in its dialect.
   if (dialect === 'vitest') {
     require('./vitest-expect.cjs').installVitestExpect(expect, {currentTest: () => circus.state.currentlyRunningTest});
@@ -227,7 +232,14 @@ async function initialize({config, globalConfig, testPath, parentProcess, loader
   }
   let vitestModules = null;
   const vitestFor = from => {
-    vitestModules ??= require('./vitest.cjs').createVitest({circus, createJestObject, expect, moduleMocker, requireChai});
+    vitestModules ??= require('./vitest.cjs').createVitest({
+      circus,
+      createJestObject,
+      expect,
+      moduleMocker,
+      requireChai,
+      testPath,
+    });
     return vitestModules(from);
   };
   // What `globals` injects, as property descriptors: Jest's globals, or with

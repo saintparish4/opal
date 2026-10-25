@@ -135,6 +135,7 @@ From `runAndTransformResultsToJestFormat` in `jestAdapterInit.ts`, `TestSchedule
 - **What the port changes.** It strips the types with Node's own stripper and rewrites ES modules to CommonJS the way Babel does. Nothing else in the code changes, and `port.mjs --check` verifies that the committed files still match.
 - **What it maps out.** pretty-format becomes opal's own port (`runtime/format.cjs`). Three functions of `jest-util` and `jest-message-util` come from `runtime/support.cjs`. chalk is chalk 4.1.2 itself, with ansi-styles, color-convert and supports-color, copied from the oracle's install by [`port/port-chalk.mjs`](./port/port-chalk.mjs).
 - **Where it runs.** `expect` is evaluated inside each test file's context, as Jest loads it, so `instanceof` checks and assertion counts see the test's own realm.
+- **A project on Jest 29.** It also gets the matchers Jest 30 removed, which its tests may use: `toThrowError`, and the spy aliases from `toBeCalled` to `nthReturnedWith`. opal reads the installed Jest's major version from the project's `node_modules` (`config.cjs`). A spy alias is the matcher it stands for, so its failure message names that matcher, where Jest 29's named the alias.
 
 Messages are colored when Jest's would be. jest-worker gives each worker `FORCE_COLOR=1` when supports-color says the terminal running Jest supports color, or when `--color` is given, and no `FORCE_COLOR` otherwise. opal's pool makes the same decision (`src/colors.rs`). So a message snapshotted under `--color` carries chalk's codes byte for byte, as it does in Jest; `compat/test-expect.cjs --color` checks that. Stack traces in messages leave out opal's runtime frames the way Jest leaves out its own.
 
@@ -158,6 +159,8 @@ Inline snapshots are the exception. Jest finds the matcher call at the snapshot'
 - **At the end of each file.** Every spy is restored. A spy on a built-in module, which later files in the same worker share, would otherwise outlive its file.
 
 ## Module mocking
+
+Resolution is Node's, as jest-resolve's default resolver is: `moduleNameMapper` first, then relative paths with `moduleFileExtensions`, then a bare name through `exports` and `node_modules` up the tree. A package can import itself by its own name through its `exports`, as Node and jest-resolve both allow. es-toolkit's tests import `es-toolkit/compat` from inside es-toolkit.
 
 From jest-runtime's `MockState.ts`, `CjsLoader.ts`, `Resolution.ts` and `index.ts`, and from jest-resolve's `getModuleID` and `getMockModule`:
 
@@ -188,6 +191,7 @@ Where Jest runs babel-jest, opal runs its own transform (`src/transform.rs`), in
 - **Hoisting.** `jest.mock`, `unmock`, `enableAutomock`, `disableAutomock` and `deepUnmock` at the top of a file move above everything, as babel-plugin-jest-hoist moves them, and so do `vi.mock`, `vi.unmock` and `vi.hoisted`.
 - **The wrapper's names.** An ES module's own top-level `require`, `module`, `exports`, `__filename` or `__dirname`, as in `const __dirname = dirname(fileURLToPath(import.meta.url))`, is renamed (`_require`, `_dirname`) wherever it is used, as Babel renames it, so it doesn't collide with the CommonJS wrapper's parameters.
 - **`import.meta`** is one object per module, from the loader, with the module's `url`, `filename`, `dirname` and `resolve`.
+- **Where opal's output differs from tsc's or Babel's: a function's own text.** `Function.prototype.toString` gives a transformed function's source as the transform printed it. tsc (ts-jest) keeps a one-line body on one line and prints an empty one as `{ }`. Babel and oxc print `{}` and reformat. Of 24 kinds of function compiled both ways, 11 print the same under tsc and opal. Only a test that reads a function's source sees this. The common case is `it.each` with `%s` of a function, whose name, and any snapshot keyed by that name, then differs. jest-extended has three such tests (`compat/test-repos.py`).
 - **Stack traces.** Every source map token is carried through these edits. Each test's context gets an `Error.prepareStackTrace` that maps frames back to the lines the user wrote, as Jest installs source-map-support. Inline snapshots find their call through those frames.
 
 ## Related tests and watch mode
@@ -244,6 +248,7 @@ Where it is one of semantics (hook order, equality, mock functions, module loadi
 | `compat/test-snapshot-format.cjs`, seeds 1 and 2, 20,058 values each (the expect generator's, plus mocks, spies, errors with causes, functions, classes, awkward strings, typed arrays and URLs) | every value printed into a snapshot byte for byte as Jest's installed build prints it |
 | the same with a bug planted, `-0` printed as `0` | caught: 252 of 4,057 values differ |
 | `compat/test-runners.py --opal`, the 23 Vitest-dialect fixtures | Vitest's verdicts and writes on 20; the other 3 differ only as their `opal` pins say (COMPATIBILITY.md) |
+| `compat/test-repos.py`: luxon (Jest 29, babel-jest), jest-extended (Jest 30, ts-jest, 357 snapshots with color codes) and es-toolkit (Vitest 4.1, 24 inline snapshots), each run by its own runner and by opal test | luxon 1,222 of 1,222 tests agree; jest-extended 898 of 901 and es-toolkit 5,179 of 5,184, the rest declared differences (a function's printed source, Jest's realm isolation, happy-dom files); `opal test -u` writes every committed snapshot back byte for byte, but for the three keys named by a function's source |
 | the Nest 12 scaffold's own suites (`compat/frameworks/nest`, Vitest, decorators with metadata, ES-module-only `@nestjs/*`), unit and e2e | 1 of 1 and 1 of 1 passing, as under `vitest run` |
 
 ## Not yet

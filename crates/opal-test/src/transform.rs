@@ -391,7 +391,19 @@ fn to_commonjs(code: &str) -> Result<Rewritten, String> {
     let mut header: Vec<String> = Vec::new();
     let mut void_exports: Vec<String> = Vec::new();
     let mut hoisted: Vec<(usize, usize)> = Vec::new();
-    let mut taken: Vec<String> = Vec::new();
+    // Names the rewrite introduces (`_m`, `_before`) avoid every name the
+    // file declares or reads, as Babel's generateUid does: a test with its
+    // own `_before` would otherwise shadow the module `./before` became.
+    let mut taken: Vec<String> = scoping
+        .symbol_names()
+        .map(str::to_string)
+        .chain(
+            scoping
+                .root_unresolved_references()
+                .keys()
+                .map(|name| name.to_string()),
+        )
+        .collect();
     let mut uses_default = false;
     let mut uses_export_names = false;
     let mut uses_wildcard = false;
@@ -1183,6 +1195,19 @@ mod tests {
         assert!(code.contains("const _dirname = \"/x\";"), "{code}");
         assert!(code.contains("= _require(\"./p.json\")"), "{code}");
         assert!(code.contains("{ __dirname: _dirname }"), "{code}");
+    }
+
+    #[test]
+    fn test_module_variables_avoid_the_file_s_own_names() {
+        let code = run(
+            "a.test.mjs",
+            "import {before} from './before';\nfunction t() { function _before() {} return before(_before); }\n",
+        );
+        assert!(
+            code.contains("var _before2 = require(\"./before\");"),
+            "{code}"
+        );
+        assert!(code.contains("(0, _before2.before)(_before)"), "{code}");
     }
 
     #[test]
