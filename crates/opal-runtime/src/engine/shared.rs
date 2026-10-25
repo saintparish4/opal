@@ -65,6 +65,9 @@ macro_rules! for_each_op {
             buffer_btoa,
             buffer_atob,
             strip_types,
+            resolve,
+            take_resolution_warnings,
+            package_type,
         }
     };
 }

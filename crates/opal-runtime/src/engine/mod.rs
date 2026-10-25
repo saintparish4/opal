@@ -20,6 +20,7 @@ include!("shared.rs");
 
 mod fatal;
 mod ops;
+mod resolution;
 mod typescript;
 
 use std::path::Path;
@@ -59,6 +60,12 @@ macro_rules! type_references {
     };
 }
 for_each_type_check!(type_references);
+
+// The ops build.rs stands in for: the runtime's own.
+use resolution::{
+    package_type as package_type_op, resolve as resolve_op,
+    take_warnings as take_resolution_warnings_op,
+};
 
 /// ops::strip_types, which build.rs stands in for.
 fn strip_types_op(

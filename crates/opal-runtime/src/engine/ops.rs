@@ -11,7 +11,10 @@
 
 use std::io;
 
-use super::{BUILTIN_PARAMS, builtin_source, compile_builtin_source, leave, strip_types_op};
+use super::{
+    BUILTIN_PARAMS, builtin_source, compile_builtin_source, leave, package_type_op, resolve_op,
+    strip_types_op, take_resolution_warnings_op,
+};
 
 // Explicit, so build.rs (which includes this file by path) and the crate
 // find the same file.
@@ -341,6 +344,26 @@ pub fn compile_builtin<'s>(
 /// snapshot never strips anything.
 pub fn strip_types(scope: &mut v8::PinScope, args: Args, rv: Ret) {
     strip_types_op(scope, args, rv)
+}
+
+/// `resolve(specifier, parent, mode)`: where `require` (mode 0) or `import`
+/// (mode 1) of `specifier` from the module at `parent` leads, by Node's
+/// rules (opal_core::graph::node_resolution): a path, or an array saying
+/// why not. The runtime's own function, like stripTypes.
+pub fn resolve(scope: &mut v8::PinScope, args: Args, rv: Ret) {
+    resolve_op(scope, args, rv)
+}
+
+/// `takeResolutionWarnings()`: the warnings resolution emitted since the
+/// last call, as `[message, type, code]` arrays.
+pub fn take_resolution_warnings(scope: &mut v8::PinScope, args: Args, rv: Ret) {
+    take_resolution_warnings_op(scope, args, rv)
+}
+
+/// `packageType(path)`: the `type` of the package scope `path` is in
+/// ("module", "commonjs", or "none"), which decides how a .js file runs.
+pub fn package_type(scope: &mut v8::PinScope, args: Args, rv: Ret) {
+    package_type_op(scope, args, rv)
 }
 
 /// `readFile(path)`: a file's contents as a string, decoded as UTF-8 with

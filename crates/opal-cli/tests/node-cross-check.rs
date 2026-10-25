@@ -80,13 +80,24 @@ fn buffer() {
     check("buffer.js");
 }
 
-/// Every file in the corpus has a test above, so a new one can't be added
-/// and never run.
+/// require() across a project with packages: tests/node-diff/modules/.
+#[test]
+#[ignore = "needs node on PATH"]
+fn modules() {
+    check("modules/main.js");
+}
+
+/// Every file in the corpus (and every directory's main.js) has a test
+/// above, so a new one can't be added and never run.
 #[test]
 fn every_corpus_file_is_checked() {
     let source = include_str!("node-cross-check.rs");
     for entry in std::fs::read_dir(corpus()).unwrap() {
-        let name = entry.unwrap().file_name().to_string_lossy().into_owned();
+        let entry = entry.unwrap();
+        let mut name = entry.file_name().to_string_lossy().into_owned();
+        if entry.path().is_dir() {
+            name.push_str("/main.js");
+        }
         assert!(
             source.contains(&format!("check(\"{name}\")")),
             "tests/node-diff/{name} has no test in {}",

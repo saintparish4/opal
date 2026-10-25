@@ -66,21 +66,30 @@ fn leave(code: i32) -> ! {
     std::process::exit(code)
 }
 
-/// Making the snapshot strips no TypeScript, so the build has no stripper;
-/// the runtime's is engine::typescript.
-fn strip_types_op(
-    scope: &mut v8::PinScope,
-    _: v8::FunctionCallbackArguments,
-    _: v8::ReturnValue<v8::Value>,
-) {
-    let message = v8::String::new(
-        scope,
-        "stripTypes is not available while the snapshot is made",
-    )
-    .unwrap();
-    let error = v8::Exception::error(scope, message);
-    scope.throw_exception(error);
+/// Making the snapshot strips no TypeScript and resolves no modules, so the
+/// build has neither; the runtime's are in src/engine/.
+macro_rules! unavailable_at_build_time {
+    ($($name:ident),*) => {
+        $(
+            fn $name(
+                scope: &mut v8::PinScope,
+                _: v8::FunctionCallbackArguments,
+                _: v8::ReturnValue<v8::Value>,
+            ) {
+                let text = concat!(stringify!($name), " is not available while the snapshot is made");
+                let message = v8::String::new(scope, text).unwrap();
+                let error = v8::Exception::error(scope, message);
+                scope.throw_exception(error);
+            }
+        )*
+    };
 }
+unavailable_at_build_time!(
+    strip_types_op,
+    resolve_op,
+    take_resolution_warnings_op,
+    package_type_op
+);
 
 macro_rules! op_table {
     ($($name:ident),* $(,)?) => {

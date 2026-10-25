@@ -1,29 +1,45 @@
-// CommonJS, as Node's lib/internal/modules/cjs/loader.js runs it: each file is
-// compiled as the body of
+// CommonJS, as Node's lib/internal/modules/cjs/loader.js runs it. Each file
+// is compiled as the body of
 //   function (exports, require, module, __filename, __dirname)
 // (with V8's CompileFunction, so line 1 column 1 of the file is line 1
 // column 1 in stack traces), and called with `this` set to module.exports,
-// which is why a top-level frame reads `Object.<anonymous>`.
+// which is why a top-level frame reads `Object.<anonymous>`. What a
+// specifier names is decided by Node's rules in Rust
+// (opal_core::graph::node_resolution, through the resolve op), and every
+// failure becomes the error Node throws for it.
 //
 // A TypeScript file (.ts, .cts) has its types stripped first, as Node does
 // by default since v23.6: replaced by whitespace, so lines and columns are
 // the source's. Node refuses to strip files under node_modules, and so does
-// this. ES modules aren't run yet: a .mjs or .mts file, or a .js or .ts file
-// that turns out to use import or export (which Node would then run as an
-// ES module), is refused rather than run as something it isn't.
+// this. ES modules aren't run yet: a .mjs or .mts file, a .js file in a
+// package of type "module", or a .js or .ts file that turns out to use
+// import or export (which Node would then run as an ES module), is refused
+// rather than run as something it isn't.
 (function (internals, ops, primordials) {
   "use strict";
 
   const {
+    ArrayPrototypeIncludes,
+    ArrayPrototypeJoin,
+    ArrayPrototypePush,
+    ArrayPrototypeSplice,
     ObjectDefineProperty,
+    ReflectApply,
     RegExpPrototypeExec,
+    SafeMap,
+    StringPrototypeCharCodeAt,
+    StringPrototypeEndsWith,
     StringPrototypeIncludes,
+    StringPrototypeIndexOf,
+    StringPrototypeLastIndexOf,
+    StringPrototypeSlice,
+    StringPrototypeStartsWith,
   } = primordials;
   const requireBuiltin = internals.requireBuiltin;
   const errors = () => requireBuiltin("internal/errors").codes;
 
   // Built-in modules, by the name require() takes, with or without `node:`.
-  const builtins = new Map();
+  const builtins = new SafeMap();
   function defineBuiltin(name, load) {
     let cached;
     builtins.set(name, () => (cached === undefined ? (cached = load()) : cached));
@@ -54,88 +70,67 @@
     };
   });
 
-  function builtinFor(id) {
-    const name = id.startsWith("node:") ? id.slice(5) : id;
-    return builtins.get(name);
+  // Node's other built-ins, which require() must not look for on disk.
+  const unimplemented = [
+    "assert", "assert/strict", "async_hooks", "child_process", "cluster", "constants", "crypto", "dgram",
+    "diagnostics_channel", "dns", "dns/promises", "domain", "fs", "fs/promises", "http", "http2", "https",
+    "inspector", "inspector/promises", "net", "os", "perf_hooks", "punycode", "querystring", "readline",
+    "readline/promises", "repl", "stream", "stream/consumers", "stream/promises", "stream/web",
+    "string_decoder", "sys", "timers/promises", "tls", "trace_events", "tty", "url", "v8", "vm", "wasi",
+    "worker_threads", "zlib",
+  ];
+  const schemeOnly = ["sea", "sqlite", "test", "test/reporters"];
+
+  // What a request names as a built-in: a function giving its exports, or
+  // undefined when it isn't one. Throws for one Opal doesn't have yet, and
+  // for an unknown `node:` name, as Node does.
+  function loadBuiltin(request) {
+    const scheme = StringPrototypeStartsWith(request, "node:");
+    const name = scheme ? StringPrototypeSlice(request, 5) : request;
+    const builtin = builtins.get(name);
+    if (builtin !== undefined) return builtin;
+    if (ArrayPrototypeIncludes(unimplemented, name) || (scheme && ArrayPrototypeIncludes(schemeOnly, name))) {
+      const error = new Error(`Opal does not implement the built-in module node:${name} yet`);
+      error.code = "ERR_OPAL_UNIMPLEMENTED_BUILTIN";
+      throw error;
+    }
+    if (scheme) throw new (errors().ERR_UNKNOWN_BUILTIN_MODULE)(request);
+    return undefined;
+  }
+
+  function isBuiltin(request) {
+    const scheme = StringPrototypeStartsWith(request, "node:");
+    const name = scheme ? StringPrototypeSlice(request, 5) : request;
+    return (
+      builtins.has(name) ||
+      ArrayPrototypeIncludes(unimplemented, name) ||
+      (scheme && ArrayPrototypeIncludes(schemeOnly, name))
+    );
   }
 
   function dirname(path) {
-    const index = path.lastIndexOf("/");
+    const index = StringPrototypeLastIndexOf(path, "/");
     if (index === -1) return ".";
     if (index === 0) return "/";
-    return path.slice(0, index);
+    return StringPrototypeSlice(path, 0, index);
   }
-
-  function Module(id = "", parent) {
-    this.id = id;
-    this.path = dirname(id);
-    this.exports = {};
-    this.filename = null;
-    this.loaded = false;
-    this.children = [];
-    this.paths = [];
-    if (parent) parent.children.push(this);
-  }
-  Module._cache = { __proto__: null };
-  Module.wrapper = [
-    "(function (exports, require, module, __filename, __dirname) { ",
-    "\n});",
-  ];
-
-  function moduleNotFound(request, parent) {
-    const requireStack = [];
-    for (let cursor = parent; cursor; cursor = cursor.parent) {
-      if (cursor.filename) requireStack.push(cursor.filename);
-    }
-    let message = `Cannot find module '${request}'`;
-    if (requireStack.length > 0) {
-      message += `\nRequire stack:\n- ${requireStack.join("\n- ")}`;
-    }
-    const error = new Error(message);
-    error.code = "MODULE_NOT_FOUND";
-    error.requireStack = requireStack;
-    return error;
-  }
-
-  function makeRequire(module) {
-    const require = function require(id) {
-      if (typeof id !== "string") {
-        throw new (errors().ERR_INVALID_ARG_TYPE)("id", "string", id);
-      }
-      if (id === "") {
-        throw new (errors().ERR_INVALID_ARG_VALUE)("id", id, "must be a non-empty string");
-      }
-      const builtin = builtinFor(id);
-      if (builtin !== undefined) return builtin();
-      throw moduleNotFound(id, module);
-    };
-    require.main = mainModule;
-    require.cache = Module._cache;
-    require.resolve = function resolve(request) {
-      if (builtinFor(request) !== undefined) return request;
-      throw moduleNotFound(request, module);
-    };
-    return require;
-  }
-
-  let mainModule;
 
   // file:// URLs for paths, as url.pathToFileURL makes them for the
   // characters a path holds in practice: the WHATWG path percent-encode set,
   // `%`, and everything outside ASCII, as UTF-8.
   function pathToFileURL(path) {
     let out = "file://";
-    for (const byte of new TextEncoderLite().encode(path)) {
+    for (const byte of utf8(path)) {
       const c = String.fromCharCode(byte);
-      out += byte < 0x21 || byte > 0x7e || ' "#%<>?`{}'.includes(c)
-        ? `%${byte.toString(16).toUpperCase().padStart(2, "0")}`
-        : c;
+      out +=
+        byte < 0x21 || byte > 0x7e || StringPrototypeIncludes(' "#%<>?`{}', c)
+          ? `%${byte.toString(16).toUpperCase().padStart(2, "0")}`
+          : c;
     }
     return out;
   }
-  // UTF-8 bytes of a string, without loading node:util's TextEncoder.
-  function TextEncoderLite() {}
-  TextEncoderLite.prototype.encode = function encode(text) {
+  // UTF-8 bytes of a string, without loading TextEncoder.
+  function utf8(text) {
     const bytes = [];
     for (const char of text) {
       const code = char.codePointAt(0);
@@ -145,6 +140,224 @@
       else bytes.push(0xf0 | (code >> 18), 0x80 | ((code >> 12) & 63), 0x80 | ((code >> 6) & 63), 0x80 | (code & 63));
     }
     return bytes;
+  }
+
+  // Module._nodeModulePaths, from lib/internal/modules/cjs/loader.js.
+  function nodeModulePaths(from) {
+    from = requireBuiltin("path").resolve(from);
+    if (from === "/") return ["/node_modules"];
+    const paths = [];
+    const nm = "node_modules";
+    for (let i = from.length - 1, p = 0, last = from.length; i >= 0; --i) {
+      const code = StringPrototypeCharCodeAt(from, i);
+      if (code === 47) {
+        if (p !== nm.length) ArrayPrototypePush(paths, `${StringPrototypeSlice(from, 0, last)}/node_modules`);
+        last = i;
+        p = 0;
+      } else if (p !== -1) {
+        if (StringPrototypeCharCodeAt(nm, nm.length - 1 - p) === code) ++p;
+        else p = -1;
+      }
+    }
+    ArrayPrototypePush(paths, "/node_modules");
+    return paths;
+  }
+
+  const kFirstParent = Symbol("kFirstParent");
+
+  function Module(id = "", parent) {
+    this.id = id;
+    this.path = dirname(id);
+    this.exports = {};
+    this[kFirstParent] = parent;
+    if (parent) ArrayPrototypePush(parent.children, this);
+    this.filename = null;
+    this.loaded = false;
+    this.children = [];
+  }
+  ObjectDefineProperty(Module.prototype, "parent", {
+    __proto__: null,
+    get() {
+      return this[kFirstParent];
+    },
+    set(value) {
+      this[kFirstParent] = value;
+    },
+    configurable: true,
+  });
+  Module._cache = { __proto__: null };
+  Module._pathCache = { __proto__: null };
+  Module._extensions = { __proto__: null };
+  Module.wrapper = ["(function (exports, require, module, __filename, __dirname) { ", "\n});"];
+  Module.wrap = (script) => `${Module.wrapper[0]}${script}${Module.wrapper[1]}`;
+  Module._nodeModulePaths = nodeModulePaths;
+  Module.isBuiltin = isBuiltin;
+
+  function emitResolutionWarnings() {
+    for (const [message, type, code] of ops.take_resolution_warnings()) {
+      internals.process.emitWarning(message, type, code);
+    }
+  }
+
+  // The error Node throws for a resolution that failed.
+  function resolutionError(failure, request, parent) {
+    switch (failure[0]) {
+      case "not-found": {
+        const requireStack = [];
+        for (let cursor = parent; cursor; cursor = cursor[kFirstParent]) {
+          ArrayPrototypePush(requireStack, cursor.filename || cursor.id);
+        }
+        let message = `Cannot find module '${request}'`;
+        if (requireStack.length > 0) {
+          message += `\nRequire stack:\n- ${ArrayPrototypeJoin(requireStack, "\n- ")}`;
+        }
+        const error = new Error(message);
+        error.code = "MODULE_NOT_FOUND";
+        error.requireStack = requireStack;
+        return error;
+      }
+      case "bad-main": {
+        const error = new Error(
+          `Cannot find module '${failure[1]}'. Please verify that the package.json has a valid "main" entry`,
+        );
+        error.code = "MODULE_NOT_FOUND";
+        error.path = failure[2];
+        error.requestPath = request;
+        return error;
+      }
+      case "esm-not-found": {
+        const error = new Error(`Cannot find module '${failure[1]}'`);
+        error.code = "MODULE_NOT_FOUND";
+        if (failure[2] !== null) error.path = failure[2];
+        return error;
+      }
+      default: {
+        const [, code, hint, ...args] = failure;
+        const values = args.map((a) => (a === "true" ? true : a === "false" ? false : a === null ? undefined : a));
+        const error = new (errors()[code])(...values);
+        if (hint !== null) {
+          const stack = error.stack;
+          const end = StringPrototypeIndexOf(stack, "\n");
+          error.stack = `${StringPrototypeSlice(stack, 0, end)}\n${hint}${StringPrototypeSlice(stack, end)}`;
+          error.message += `\n${hint}`;
+        }
+        return error;
+      }
+    }
+  }
+
+  Module._resolveFilename = function _resolveFilename(request, parent, isMain, options) {
+    if (isBuiltin(request)) return request;
+    if (options !== undefined && options !== null && typeof options === "object" && options.paths !== undefined) {
+      const error = new Error("require.resolve's `paths` option is not supported by Opal yet");
+      error.code = "ERR_OPAL_UNSUPPORTED";
+      throw error;
+    }
+    const resolved = ops.resolve(request, parent?.filename ?? null, 0, !!isMain);
+    emitResolutionWarnings();
+    if (typeof resolved === "string") return resolved;
+    throw resolutionError(resolved, request, parent);
+  };
+
+  let mainModule;
+
+  Module._load = function _load(request, parent, isMain) {
+    const builtin = loadBuiltin(request);
+    if (builtin !== undefined) return builtin();
+    const filename = Module._resolveFilename(request, parent, isMain);
+    const cached = Module._cache[filename];
+    if (cached !== undefined) {
+      if (parent && !ArrayPrototypeIncludes(parent.children, cached)) ArrayPrototypePush(parent.children, cached);
+      // A module required while it is still loading (a cycle) gives what
+      // it has exported so far, as in Node.
+      return cached.exports;
+    }
+    const module = new Module(filename, parent);
+    if (isMain) {
+      internals.process.mainModule = module;
+      mainModule = module;
+      module.id = ".";
+    }
+    Module._cache[filename] = module;
+    let threw = true;
+    try {
+      module.load(filename);
+      threw = false;
+    } finally {
+      if (threw) {
+        delete Module._cache[filename];
+        if (parent) {
+          const index = parent.children.indexOf(module);
+          if (index !== -1) ArrayPrototypeSplice(parent.children, index, 1);
+        }
+      }
+    }
+    return module.exports;
+  };
+
+  Module.prototype.load = function load(filename) {
+    this.filename = filename;
+    this.paths = nodeModulePaths(dirname(filename));
+    const extension = StringPrototypeEndsWith(filename, ".json")
+      ? ".json"
+      : StringPrototypeEndsWith(filename, ".node")
+        ? ".node"
+        : ".js";
+    Module._extensions[extension](this, filename);
+    this.loaded = true;
+  };
+
+  Module.prototype.require = function require(id) {
+    if (typeof id !== "string") {
+      throw new (errors().ERR_INVALID_ARG_TYPE)("id", "string", id);
+    }
+    if (id === "") {
+      throw new (errors().ERR_INVALID_ARG_VALUE)("id", id, "must be a non-empty string");
+    }
+    return Module._load(id, this, false);
+  };
+
+  function makeRequire(module) {
+    const require = function require(path) {
+      return module.require(path);
+    };
+    require.resolve = function resolve(request, options) {
+      if (typeof request !== "string") {
+        throw new (errors().ERR_INVALID_ARG_TYPE)("request", "string", request);
+      }
+      return Module._resolveFilename(request, module, false, options);
+    };
+    require.resolve.paths = function paths(request) {
+      if (typeof request !== "string") {
+        throw new (errors().ERR_INVALID_ARG_TYPE)("request", "string", request);
+      }
+      if (isBuiltin(request)) return null;
+      const relative = request[0] === "." && (request.length === 1 || request[1] === "." || request[1] === "/");
+      if (relative) return [module.filename ? dirname(module.filename) : "."];
+      return module.paths ? [...module.paths] : [];
+    };
+    require.main = mainModule;
+    require.extensions = Module._extensions;
+    require.cache = Module._cache;
+    return require;
+  }
+
+  Module.createRequire = function createRequire(filename) {
+    if (typeof filename === "string" && StringPrototypeStartsWith(filename, "file://")) {
+      filename = decodeURIComponent(StringPrototypeSlice(filename, 7));
+    }
+    if (typeof filename !== "string" || filename[0] !== "/") {
+      throw new (errors().ERR_INVALID_ARG_VALUE)(
+        "filename",
+        filename,
+        "must be a file URL object, file URL string, or absolute path string",
+      );
+    }
+    const proxy = StringPrototypeEndsWith(filename, "/") ? `${filename}noop.js` : filename;
+    const module = new Module(proxy, null);
+    module.filename = proxy;
+    module.paths = nodeModulePaths(dirname(proxy));
+    return makeRequire(module);
   };
 
   function unsupportedModule(filename) {
@@ -183,47 +396,58 @@
     "await is only valid in async functions and the top level bodies of modules",
   ];
 
+  Module._extensions[".js"] = function loadJs(module, filename) {
+    if (RegExpPrototypeExec(/\.m[jt]s$/, filename) !== null) throw unsupportedModule(filename);
+    if (StringPrototypeEndsWith(filename, ".js") && ops.package_type(filename) === "module") {
+      throw unsupportedModule(filename);
+    }
+    module._compile(sourceOf(filename), filename);
+  };
+
+  Module._extensions[".json"] = function loadJson(module, filename) {
+    let content = ops.read_file(filename);
+    if (StringPrototypeCharCodeAt(content, 0) === 0xfeff) content = StringPrototypeSlice(content, 1);
+    try {
+      module.exports = JSON.parse(content);
+    } catch (error) {
+      error.message = `${filename}: ${error.message}`;
+      throw error;
+    }
+  };
+
+  Module._extensions[".node"] = function loadAddon(module, filename) {
+    const error = new Error(`${filename}: Opal cannot load Node-API addons yet`);
+    error.code = "ERR_DLOPEN_FAILED";
+    throw error;
+  };
+
   Module.prototype._compile = function _compile(content, filename) {
     // A shebang line is not JavaScript; V8 accepts one only at the start of
     // a script, and this is a function body.
-    if (content.startsWith("#!")) {
-      const end = content.indexOf("\n");
-      content = end === -1 ? "" : `//${content.slice(2, end)}${content.slice(end)}`;
+    if (StringPrototypeStartsWith(content, "#!")) {
+      const end = StringPrototypeIndexOf(content, "\n");
+      content = end === -1 ? "" : `//${StringPrototypeSlice(content, 2, end)}${StringPrototypeSlice(content, end)}`;
     }
     let compiled;
     try {
-      compiled = ops.compile_function(content, filename, [
-        "exports",
-        "require",
-        "module",
-        "__filename",
-        "__dirname",
-      ]);
+      compiled = ops.compile_function(content, filename, ["exports", "require", "module", "__filename", "__dirname"]);
     } catch (error) {
-      if (error instanceof SyntaxError && esmSyntax.includes(error.message)) {
+      if (error instanceof SyntaxError && ArrayPrototypeIncludes(esmSyntax, error.message)) {
         throw unsupportedModule(filename);
       }
       throw error;
     }
     const require = makeRequire(this);
-    return compiled.call(this.exports, this.exports, require, this, filename, dirname(filename));
+    return ReflectApply(compiled, this.exports, [this.exports, require, this, filename, dirname(filename)]);
   };
 
   function runMain(filename) {
-    const module = new Module(".", null);
-    module.id = ".";
-    module.filename = filename;
-    module.path = dirname(filename);
-    mainModule = module;
-    Module._cache[filename] = module;
-    if (RegExpPrototypeExec(/\.m[jt]s$/, filename) !== null) throw unsupportedModule(filename);
-    module._compile(sourceOf(filename), filename);
-    module.loaded = true;
+    Module._load(filename, null, true);
   }
 
-  ObjectDefineProperty(Module, "Module", { value: Module });
+  ObjectDefineProperty(Module, "Module", { __proto__: null, value: Module });
   defineBuiltin("module", () => Module);
-  Module.builtinModules = [...builtins.keys()];
+  Module.builtinModules = [...builtins.keys(), ...unimplemented].sort();
 
-  internals.loader = { Module, runMain, builtinFor, pathToFileURL };
+  internals.loader = { Module, runMain, isBuiltin, pathToFileURL };
 })
