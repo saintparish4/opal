@@ -1,0 +1,3 @@
+stdout differs from line 2:
+  original: "one helper Thing arrow anon true"
+  bundle:   "one helper$2 Thing arrow$1 anon$1 true"

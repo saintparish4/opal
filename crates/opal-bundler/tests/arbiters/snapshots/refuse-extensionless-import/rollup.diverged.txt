@@ -1,0 +1,5 @@
+stdout differs from line 1:
+  original: "<end>"
+  bundle:   "dep"
+exit code: original Some(1), bundle Some(0)
+uncaught error: original Some(Uncaught { origin: "unhandledRejection", name: Some("Error"), message: Some("Cannot find module '/tmp/.tmpg1KZaL/program/dep' imported from /tmp/.tmpg1KZaL/program/main.mjs\nDid you mean to import \"./dep.js\"?") }), bundle None

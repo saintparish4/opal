@@ -1,0 +1,3 @@
+stdout differs from line 2:
+  original: "ReferenceError Cannot access 'late' before initialization"
+  bundle:   "a body"

@@ -364,7 +364,7 @@ pub fn tool(name: &str) -> PathBuf {
 /// Node as they are; with `"original": "tsc"`, what `tsc` emits from the
 /// fixture's tsconfig.json, which is the reference SEMANTICS.md rule 13
 /// names for TypeScript Node cannot strip, and for JSX.
-fn original_program(fixture: &Fixture, program: &Path) -> Result<PathBuf, String> {
+pub fn original_program(fixture: &Fixture, program: &Path) -> Result<PathBuf, String> {
     match fixture.config.get("original").and_then(|v| v.as_str()) {
         None => Ok(program.join(&fixture.entry)),
         Some("tsc") => {

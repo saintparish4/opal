@@ -1,0 +1,5 @@
+stderr differs from line 1:
+  original: "Warning: Detected unsettled top-level await"
+  bundle:   "<end>"
+exit code: original Some(13), bundle Some(1)
+uncaught error: original None, bundle Some(Uncaught { origin: "unhandledRejection", name: Some("ReferenceError"), message: Some("Cannot access 'fromEntry' before initialization") })

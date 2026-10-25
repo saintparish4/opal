@@ -1,0 +1,5 @@
+stdout differs from line 1:
+  original: "main start"
+  bundle:   "lazy-dep body runs"
+exit code: original Some(0), bundle Some(1)
+uncaught error: original None, bundle Some(Uncaught { origin: "unhandledRejection", name: Some("Error"), message: Some("lazy module failed") })

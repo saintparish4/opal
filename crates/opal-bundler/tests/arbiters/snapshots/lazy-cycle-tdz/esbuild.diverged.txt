@@ -1,0 +1,3 @@
+stdout differs from line 2:
+  original: "TDZ: ReferenceError Cannot access 'value' before initialization"
+  bundle:   "undefined"
