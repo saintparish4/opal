@@ -14,7 +14,7 @@ Opal against npm, pnpm, yarn, and bun, each installing the same `package.json`. 
 - [The internal install benchmark](#the-internal-install-benchmark)
   - [Scaling: package count and peak memory](#scaling-package-count-and-peak-memory)
 - [opal test](#opal-test)
-  - [Results: 2026-10-25, `e23f7eb`](#results-2026-10-25-e23f7eb)
+  - [Results: 2026-10-25, `32da493`](#results-2026-10-25-32da493)
 
 ## Method
 
@@ -531,50 +531,55 @@ python3 benchmarks/test-runners.py           # 1, 40 and 400 files
 python3 benchmarks/test-runners.py --quick   # one round, to check the commands
 ```
 
-### Results: 2026-10-25, `e23f7eb`
+### Results: 2026-10-25, `32da493`
 
-Laptop: AMD Ryzen 5 5625U (WSL limited to 8 of 12 threads), Linux 6.6 under WSL2. Node 24.19.0, Jest 30.5.2, Vitest 4.1.12, bun 1.4.2, hyperfine 1.20.0. Raw samples: [`results/test-runners-20261025-173046.json`](./results/test-runners-20261025-173046.json).
+Laptop: AMD Ryzen 5 5625U (WSL limited to 8 of 12 threads), Linux 6.6 under WSL2. Node 24.19.0, Jest 30.5.2, Vitest 4.1.12, bun 1.4.2, hyperfine 1.20.0. No other process was runnable when any block started. Raw samples: [`results/test-runners-20261025-174232.json`](./results/test-runners-20261025-174232.json).
 
 **1 file, 10 tests** (5 rounds of 6 runs each):
 
 | runner | isolation | min | median | × opal test |
 |---|---|---:|---:|---:|
-| opal test | vm context per file, warm Node workers | 78 ms | 82 ms | 1.00 |
-| jest 30.5.2 | vm context per file, worker processes | 557 ms | 575 ms | 7.05 |
-| vitest 4.1.12 | worker and module graph per file | 503 ms | 518 ms | 6.35 |
-| vitest 4.1.12 --no-isolate | modules shared within a worker | 509 ms | 524 ms | 6.43 |
-| bun test 1.4.2 | none: one global scope | 8 ms | 10 ms | 0.12 |
-| node --test 24.19 | process per file | 118 ms | 123 ms | 1.51 |
+| opal test | vm context per file, warm Node workers | 73 ms | 79 ms | 1.00 |
+| jest 30.5.2 | vm context per file, worker processes | 550 ms | 569 ms | 7.21 |
+| vitest 4.1.12 | worker and module graph per file | 508 ms | 521 ms | 6.59 |
+| vitest 4.1.12 --no-isolate | modules shared within a worker | 508 ms | 525 ms | 6.65 |
+| bun test 1.4.2 | none: one global scope | 8 ms | 9 ms | 0.11 |
+| node --test 24.19 | process per file | 119 ms | 124 ms | 1.57 |
 
 **40 files, 400 tests** (3 rounds of 4):
 
 | runner | isolation | min | median | × opal test |
 |---|---|---:|---:|---:|
-| opal test | vm context per file, warm Node workers | 232 ms | 242 ms | 1.00 |
-| jest 30.5.2 | vm context per file, worker processes | 996 ms | 1.02 s | 4.19 |
-| vitest 4.1.12 | worker and module graph per file | 1.94 s | 2.03 s | 8.37 |
-| vitest 4.1.12 --no-isolate | modules shared within a worker | 743 ms | 768 ms | 3.17 |
-| bun test 1.4.2 | none: one global scope | 19 ms | 20 ms | 0.08 |
-| node --test 24.19 | process per file | 691 ms | 709 ms | 2.92 |
+| opal test | vm context per file, warm Node workers | 219 ms | 225 ms | 1.00 |
+| jest 30.5.2 | vm context per file, worker processes | 1.00 s | 1.03 s | 4.59 |
+| vitest 4.1.12 | worker and module graph per file | 1.97 s | 2.02 s | 8.98 |
+| vitest 4.1.12 --no-isolate | modules shared within a worker | 761 ms | 771 ms | 3.42 |
+| bun test 1.4.2 | none: one global scope | 19 ms | 20 ms | 0.09 |
+| node --test 24.19 | process per file | 712 ms | 739 ms | 3.29 |
 
 **400 files, 4,000 tests** (3 rounds of 2):
 
 | runner | isolation | min | median | × opal test |
 |---|---|---:|---:|---:|
-| opal test | vm context per file, warm Node workers | 1.09 s | 1.14 s | 1.00 |
-| jest 30.5.2 | vm context per file, worker processes | 3.19 s | 3.20 s | 2.80 |
-| vitest 4.1.12 | worker and module graph per file | 15.88 s | 16.34 s | 14.29 |
-| vitest 4.1.12 --no-isolate | modules shared within a worker | 1.96 s | 2.02 s | 1.77 |
-| bun test 1.4.2 | none: one global scope | 104 ms | 110 ms | 0.10 |
-| node --test 24.19 | process per file | 6.45 s | 6.56 s | 5.74 |
+| opal test | vm context per file, warm Node workers | 965 ms | 1.00 s | 1.00 |
+| jest 30.5.2 | vm context per file, worker processes | 3.17 s | 3.20 s | 3.18 |
+| vitest 4.1.12 | worker and module graph per file | 16.42 s | 16.63 s | 16.57 |
+| vitest 4.1.12 --no-isolate | modules shared within a worker | 1.99 s | 2.02 s | 2.02 |
+| bun test 1.4.2 | none: one global scope | 102 ms | 105 ms | 0.10 |
+| node --test 24.19 | process per file | 6.57 s | 6.69 s | 6.67 |
 
 What these show:
 
-- **Isolation sets the floor.** bun test, which isolates nothing, stays 8 to 12 times faster than opal test at every size. Among the runners that give each file its own globals and modules, opal test is the fastest at every size.
-- **Against Jest, the gap narrows as files are added:** 7.0× at 1 file, 4.2× at 40, 2.8× at 400. Most of what opal saves is Jest's start: about 500 ms of Node workers, configuration and haste map before the first test runs. Per file, opal still spends about 18 ms of a worker's time: a fresh context, Jest's framework evaluated in it, the run, and the report. That is now what decides the larger sizes.
-- **Against Vitest, the gap widens with files:** 6.3× at 1 file, 14.3× at 400. Vitest isolates by giving each file its own worker and module graph, and that costs it about 40 ms a file here. With `--no-isolate` it is 1.8× opal's time at 400 files, and its files then share their modules.
+- **Isolation sets the floor.** bun test, which isolates nothing, stays about 10 times faster than opal test at every size. Among the runners that give each file its own globals and modules, opal test is the fastest at every size.
+- **Against Jest, the gap narrows as files are added:** 7.2× at 1 file, 4.6× at 40, 3.2× at 400. Most of what opal saves is Jest's start: about 500 ms of Node workers, configuration and haste map before the first test runs. Per file, opal still spends about 10 ms of a worker's time, and that is what decides the larger sizes:
+  - a fresh context;
+  - Jest's framework evaluated in it, chalk and `expect` included, as Jest evaluates them per file;
+  - the run;
+  - the report.
+- **Against Vitest, the gap widens with files:** 6.6× at 1 file, 16.6× at 400. Vitest isolates by giving each file its own worker and module graph, and that costs it about 40 ms a file here. With `--no-isolate` it takes 2.0× opal's time at 400 files, and its files then share their modules.
 - **node --test** starts a Node process per file, which on this machine costs about 30 ms before the file does anything.
-- **Contention.** Few other processes were runnable when blocks started (at most 4, median 0 at every size). The load average had risen to 9 by the end, from the runners' own worker pools.
+
+An earlier run the same day, at `e23f7eb`, before the per-file changes in `32da493`, measured opal test at 82 ms, 242 ms and 1.14 s ([raw](./results/test-runners-20261025-173046.json)).
 
 On the Nest 12 scaffold's suite, one test file loading 401 ES modules that opal transforms, `opal test` takes 690 ms and `vitest run` 877 ms (hyperfine, 5 runs each, same session, `e23f7eb`).
 
