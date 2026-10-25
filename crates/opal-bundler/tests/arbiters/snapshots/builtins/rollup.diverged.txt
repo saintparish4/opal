@@ -2,4 +2,4 @@ stdout differs from line 2:
   original: "// Rule 12: builtins stay Node's, named and default imports alike."
   bundle:   "<end>"
 exit code: original Some(0), bundle Some(1)
-uncaught error: original None, bundle Some(Uncaught { origin: "unhandledRejection", name: Some("Error"), message: Some("ENOENT: no such file or directory, open '/tmp/.tmp2nGHtV/program/.opal-out/main.mjs'") })
+uncaught error: original None, bundle Some(Uncaught { origin: "unhandledRejection", name: Some("Error"), message: Some("ENOENT: no such file or directory, open '<tmp>/program/.opal-out/main.mjs'") })

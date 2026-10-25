@@ -2,4 +2,4 @@ stdout differs from line 1:
   original: "<end>"
   bundle:   "{}"
 exit code: original Some(1), bundle Some(0)
-uncaught error: original Some(Uncaught { origin: "unhandledRejection", name: Some("TypeError"), message: Some("Module \"file:///tmp/.tmp31HBxp/program/data.json\" needs an import attribute of \"type: json\"") }), bundle None
+uncaught error: original Some(Uncaught { origin: "unhandledRejection", name: Some("TypeError"), message: Some("Module \"file://<tmp>/program/data.json\" needs an import attribute of \"type: json\"") }), bundle None

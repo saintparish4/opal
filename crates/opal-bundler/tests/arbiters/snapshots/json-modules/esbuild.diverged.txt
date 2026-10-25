@@ -2,4 +2,4 @@ stdout differs from line 3:
   original: "shared with require: true"
   bundle:   "<end>"
 exit code: original Some(0), bundle Some(1)
-uncaught error: original None, bundle Some(Uncaught { origin: "unhandledRejection", name: Some("Error"), message: Some("Cannot find module './data.json'\nRequire stack:\n- /tmp/.tmpkorx9C/program/.opal-out/esbuild.mjs") })
+uncaught error: original None, bundle Some(Uncaught { origin: "unhandledRejection", name: Some("Error"), message: Some("Cannot find module './data.json'\nRequire stack:\n- <tmp>/program/.opal-out/esbuild.mjs") })

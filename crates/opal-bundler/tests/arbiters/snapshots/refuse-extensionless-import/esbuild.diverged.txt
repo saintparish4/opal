@@ -2,4 +2,4 @@ stdout differs from line 1:
   original: "<end>"
   bundle:   "dep"
 exit code: original Some(1), bundle Some(0)
-uncaught error: original Some(Uncaught { origin: "unhandledRejection", name: Some("Error"), message: Some("Cannot find module '/tmp/.tmpCS2Y3n/program/dep' imported from /tmp/.tmpCS2Y3n/program/main.mjs\nDid you mean to import \"./dep.js\"?") }), bundle None
+uncaught error: original Some(Uncaught { origin: "unhandledRejection", name: Some("Error"), message: Some("Cannot find module '<tmp>/program/dep' imported from <tmp>/program/main.mjs\nDid you mean to import \"./dep.js\"?") }), bundle None

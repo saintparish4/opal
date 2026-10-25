@@ -206,11 +206,11 @@ fn judge(tool: Tool, fixture: &Fixture, node: &Node, snapshots: Option<&Path>) -
                 let dir = dir.join(&fixture.name);
                 std::fs::create_dir_all(&dir).unwrap();
                 std::fs::copy(&bundle, dir.join(format!("{}.mjs", tool.name()))).unwrap();
-                std::fs::write(
-                    dir.join(format!("{}.diverged.txt", tool.name())),
-                    divergence.to_string(),
-                )
-                .unwrap();
+                // The temporary directory's name changes every run.
+                let text = divergence
+                    .to_string()
+                    .replace(&temp.path().display().to_string(), "<tmp>");
+                std::fs::write(dir.join(format!("{}.diverged.txt", tool.name())), text).unwrap();
             }
             Verdict::Diverged(divergence.to_string())
         }
