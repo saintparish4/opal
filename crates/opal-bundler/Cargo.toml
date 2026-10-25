@@ -1,0 +1,10 @@
+[package]
+name = "opal-bundler"
+description = "The opal build command: bundles a module graph into one ES module that behaves like the unbundled program."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+opal-core.workspace = true
