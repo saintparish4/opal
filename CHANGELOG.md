@@ -11,6 +11,10 @@ Opal is pre-1.0, so a release can change behaviour you depend on. Anything that 
 - **`opal build`** bundles an entry file into one ES module with a source map, for Node (`--target node`, the default) or browsers (`--target browser`). The bundle behaves like the unbundled program under Node, by the contract in [crates/opal-bundler/SEMANTICS.md](./crates/opal-bundler/SEMANTICS.md), and anything the bundler cannot keep that way is refused with a code naming the module and line. `--why <module>` prints the import chain that pulls a module in.
 - `opal graph` resolves a `.jsx`/`.tsx` file's JSX runtime import when asked to (the bundler asks), and can resolve JavaScript modules exactly as Node does, without the extensions and indexes TypeScript adds.
 
+### Fixed
+
+- `opal graph` no longer aborts with a stack overflow on a deeply nested module. It resolves on a 256 MiB stack, as `opal build` does, where it ran on the main thread's 8 MiB and overflowed at about 20,000 chained `?:`, a program Node runs. A module whose brackets nest more than 4,000 deep is not parsed, so its imports are not followed, and `--json` lists it under `diagnostics`.
+
 ## [0.4.1] (2026-10-15)
 
 A faster `opal add` over old metadata, release notes taken from this changelog, and new checks that what Opal installs builds and runs. No `opal.lock` format change.

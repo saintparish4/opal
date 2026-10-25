@@ -286,7 +286,31 @@ fn run(cli: Cli) -> Result<ExitCode, Failure> {
     }
 }
 
+/// Runs a command that resolves a module graph on a thread with the
+/// bundler's stack. Resolving parses every module, and the parser recurses
+/// once per level of nesting: 20,000 chained `?:`, which Node runs, overflow
+/// the main thread's 8 MiB and abort the process. The error crosses threads
+/// as its message, which is all that is printed of it.
+fn on_parse_stack(
+    name: &str,
+    command: impl FnOnce() -> Result<ExitCode, Failure> + Send + 'static,
+) -> Result<ExitCode, Failure> {
+    let thread = std::thread::Builder::new()
+        .name(name.to_string())
+        .stack_size(opal_bundler::STACK_SIZE)
+        .spawn(move || command().map_err(|error| error.to_string()))
+        .map_err(|error| format!("could not start the {name} thread: {error}"))?;
+    match thread.join() {
+        Ok(result) => result.map_err(Failure::from),
+        Err(panic) => std::panic::resume_unwind(panic),
+    }
+}
+
 fn graph(args: GraphArgs) -> Result<ExitCode, Failure> {
+    on_parse_stack("opal-graph", move || graph_here(args))
+}
+
+fn graph_here(args: GraphArgs) -> Result<ExitCode, Failure> {
     let entry = absolute(&args.entry)?;
     let root = match &args.root {
         Some(root) => absolute(root)?,
