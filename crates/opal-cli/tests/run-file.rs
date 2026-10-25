@@ -268,17 +268,16 @@ fn a_closed_stdout_is_not_an_error() {
 }
 
 #[test]
-fn an_es_module_is_refused_rather_than_run_as_commonjs() {
+fn an_es_module_runs_as_one() {
     let dir = tempfile::tempdir().unwrap();
-    std::fs::write(dir.path().join("main.mjs"), "console.log(1)\n").unwrap();
+    std::fs::write(
+        dir.path().join("main.mjs"),
+        "import { sep } from 'node:path';\nconsole.log(sep, typeof require, import.meta.main);\n",
+    )
+    .unwrap();
     let out = run_in(dir.path(), "main.mjs", &[]);
-    assert_eq!(out.stdout, "");
-    assert!(
-        out.stderr.contains("ES modules are not supported"),
-        "{}",
-        out.stderr
-    );
-    assert_ne!(out.code, Some(0));
+    assert_eq!(out.stdout, "/ undefined true\n", "{}", out.stderr);
+    assert_eq!(out.code, Some(0));
 }
 
 #[test]
@@ -399,14 +398,15 @@ fn typescript_under_node_modules_is_not_stripped() {
 }
 
 #[test]
-fn an_es_module_in_a_js_or_ts_file_is_refused_too() {
+fn a_typeless_js_or_ts_file_with_module_syntax_runs_as_an_es_module() {
     for name in ["main.ts", "main.js", "main.mts"] {
-        let (_dir, out) = run_files(&[(name, "import x from 'y';\nconsole.log(x)\n")], name);
-        assert!(
-            out.stderr.contains("ES modules are not supported"),
-            "{name}: {}",
-            out.stderr
+        let (_dir, out) = run_files(
+            &[(
+                name,
+                "import { join } from 'node:path';\nconsole.log(join('a', 'b'))\n",
+            )],
+            name,
         );
-        assert_eq!(out.stdout, "");
+        assert_eq!(out.stdout, "a/b\n", "{name}: {}", out.stderr);
     }
 }

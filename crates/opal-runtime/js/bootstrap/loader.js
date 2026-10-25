@@ -11,10 +11,9 @@
 // A TypeScript file (.ts, .cts) has its types stripped first, as Node does
 // by default since v23.6: replaced by whitespace, so lines and columns are
 // the source's. Node refuses to strip files under node_modules, and so does
-// this. ES modules aren't run yet: a .mjs or .mts file, a .js file in a
-// package of type "module", or a .js or .ts file that turns out to use
-// import or export (which Node would then run as an ES module), is refused
-// rather than run as something it isn't.
+// this. A file that is an ES module (.mjs, .mts, "type": "module", or a
+// typeless .js or .ts that only parses as one) is run by esm.js, also when
+// it is required.
 (function (internals, ops, primordials) {
   "use strict";
 
@@ -360,12 +359,6 @@
     return makeRequire(module);
   };
 
-  function unsupportedModule(filename) {
-    const error = new Error(`${filename}: ES modules are not supported by \`opal run\` yet`);
-    error.code = "ERR_OPAL_ESM_UNSUPPORTED";
-    return error;
-  }
-
   // The source a file runs as: TypeScript stripped of its types.
   function sourceOf(filename) {
     const content = ops.read_file(filename);
@@ -387,21 +380,13 @@
     throw error;
   }
 
-  // V8's messages for syntax only an ES module may use, on which Node
-  // (node_contextify.cc) retries a file as one.
-  const esmSyntax = [
-    "Cannot use import statement outside a module",
-    "Unexpected token 'export'",
-    "Cannot use 'import.meta' outside a module",
-    "await is only valid in async functions and the top level bodies of modules",
-  ];
-
   Module._extensions[".js"] = function loadJs(module, filename) {
-    if (RegExpPrototypeExec(/\.m[jt]s$/, filename) !== null) throw unsupportedModule(filename);
-    if (StringPrototypeEndsWith(filename, ".js") && ops.package_type(filename) === "module") {
-      throw unsupportedModule(filename);
+    const { format, source } = internals.esm.formatOf(filename);
+    if (format === "module") {
+      internals.esm.requireModule(module, filename, module[kFirstParent]);
+      return;
     }
-    module._compile(sourceOf(filename), filename);
+    module._compile(source ?? sourceOf(filename), filename);
   };
 
   Module._extensions[".json"] = function loadJson(module, filename) {
@@ -428,20 +413,23 @@
       const end = StringPrototypeIndexOf(content, "\n");
       content = end === -1 ? "" : `//${StringPrototypeSlice(content, 2, end)}${StringPrototypeSlice(content, end)}`;
     }
-    let compiled;
-    try {
-      compiled = ops.compile_function(content, filename, ["exports", "require", "module", "__filename", "__dirname"]);
-    } catch (error) {
-      if (error instanceof SyntaxError && ArrayPrototypeIncludes(esmSyntax, error.message)) {
-        throw unsupportedModule(filename);
-      }
-      throw error;
-    }
+    const compiled = ops.compile_function(content, filename, [
+      "exports",
+      "require",
+      "module",
+      "__filename",
+      "__dirname",
+    ]);
     const require = makeRequire(this);
     return ReflectApply(compiled, this.exports, [this.exports, require, this, filename, dirname(filename)]);
   };
 
   function runMain(filename) {
+    if (internals.esm.formatOf(filename).format === "module") {
+      internals.mainURL = pathToFileURL(filename);
+      internals.esm.runMain(filename);
+      return;
+    }
     Module._load(filename, null, true);
   }
 
@@ -449,5 +437,14 @@
   defineBuiltin("module", () => Module);
   Module.builtinModules = [...builtins.keys(), ...unimplemented].sort();
 
-  internals.loader = { Module, runMain, isBuiltin, pathToFileURL };
+  internals.loader = {
+    Module,
+    runMain,
+    isBuiltin,
+    loadBuiltin,
+    pathToFileURL,
+    sourceOf,
+    resolutionError,
+    emitResolutionWarnings,
+  };
 })

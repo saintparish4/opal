@@ -12,8 +12,8 @@
 use std::io;
 
 use super::{
-    BUILTIN_PARAMS, builtin_source, compile_builtin_source, leave, package_type_op, resolve_op,
-    strip_types_op, take_resolution_warnings_op,
+    BUILTIN_PARAMS, builtin_source, compile_builtin_source, error_arrow_op, esm, leave,
+    package_type_op, resolve_op, strip_types_op, take_resolution_warnings_op,
 };
 
 // Explicit, so build.rs (which includes this file by path) and the crate
@@ -342,7 +342,11 @@ pub fn compile_builtin<'s>(
 /// by whitespace, or `[code, message, line, snippet]` for TypeScript that
 /// can't be stripped. The runtime's own function, not build.rs's: making the
 /// snapshot never strips anything.
-pub fn strip_types(scope: &mut v8::PinScope, args: Args, rv: Ret) {
+pub fn strip_types<'s>(
+    scope: &mut v8::PinScope<'s, '_>,
+    args: v8::FunctionCallbackArguments<'s>,
+    rv: v8::ReturnValue<'s, v8::Value>,
+) {
     strip_types_op(scope, args, rv)
 }
 
@@ -350,20 +354,69 @@ pub fn strip_types(scope: &mut v8::PinScope, args: Args, rv: Ret) {
 /// (mode 1) of `specifier` from the module at `parent` leads, by Node's
 /// rules (opal_core::graph::node_resolution): a path, or an array saying
 /// why not. The runtime's own function, like stripTypes.
-pub fn resolve(scope: &mut v8::PinScope, args: Args, rv: Ret) {
+pub fn resolve<'s>(
+    scope: &mut v8::PinScope<'s, '_>,
+    args: v8::FunctionCallbackArguments<'s>,
+    rv: v8::ReturnValue<'s, v8::Value>,
+) {
     resolve_op(scope, args, rv)
 }
 
 /// `takeResolutionWarnings()`: the warnings resolution emitted since the
 /// last call, as `[message, type, code]` arrays.
-pub fn take_resolution_warnings(scope: &mut v8::PinScope, args: Args, rv: Ret) {
+pub fn take_resolution_warnings<'s>(
+    scope: &mut v8::PinScope<'s, '_>,
+    args: v8::FunctionCallbackArguments<'s>,
+    rv: v8::ReturnValue<'s, v8::Value>,
+) {
     take_resolution_warnings_op(scope, args, rv)
 }
 
-/// `packageType(path)`: the `type` of the package scope `path` is in
-/// ("module", "commonjs", or "none"), which decides how a .js file runs.
-pub fn package_type(scope: &mut v8::PinScope, args: Args, rv: Ret) {
+/// `packageType(path)`: `[type, packageJsonPath]` for the package scope
+/// `path` is in, type "module", "commonjs" or "none", which decides how a
+/// .js file runs.
+pub fn package_type<'s>(
+    scope: &mut v8::PinScope<'s, '_>,
+    args: v8::FunctionCallbackArguments<'s>,
+    rv: v8::ReturnValue<'s, v8::Value>,
+) {
     package_type_op(scope, args, rv)
+}
+
+// The ES module ops, the runtime's own (engine/esm.rs); build.rs stands in.
+macro_rules! esm_ops {
+    ($($name:ident => $target:ident),* $(,)?) => {
+        $(
+            pub fn $name<'s>(
+                scope: &mut v8::PinScope<'s, '_>,
+                args: v8::FunctionCallbackArguments<'s>,
+                rv: v8::ReturnValue<'s, v8::Value>,
+            ) {
+                esm::$target(scope, args, rv)
+            }
+        )*
+    };
+}
+esm_ops!(
+    esm_compile => compile,
+    esm_synthetic => synthetic,
+    esm_set_export => set_export,
+    esm_link => link,
+    esm_instantiate => instantiate,
+    esm_evaluate => evaluate,
+    esm_namespace => namespace,
+    esm_status => status,
+);
+
+/// `errorArrow(error)`: the `file:line`, source line and carets V8 has for
+/// where `error` was thrown, as the fatal report prints them; for an error
+/// whose stack should carry them (Node's decorateErrorStack).
+pub fn error_arrow<'s>(
+    scope: &mut v8::PinScope<'s, '_>,
+    args: v8::FunctionCallbackArguments<'s>,
+    rv: v8::ReturnValue<'s, v8::Value>,
+) {
+    error_arrow_op(scope, args, rv)
 }
 
 /// `readFile(path)`: a file's contents as a string, decoded as UTF-8 with

@@ -12,6 +12,7 @@
 //   beforeExit()         emit 'beforeExit'; true if a listener scheduled work
 //   exit()               emit 'exit'; returns the exit code
 //   uncaught(error)      true if an 'uncaughtException' listener took it
+//   initializeImportMeta, importDynamic   V8's import.meta and import() hooks
 //   hasArrow(error)      false for an error whose stack shows its own source
 //   prepareStackTrace    V8's hook for formatting error.stack
 //   inspectFatal(error)  what Node prints for an error that ends the process
@@ -134,6 +135,14 @@
       if (listeners("uncaughtException") === 0) return false;
       process.emit("uncaughtException", error, "uncaughtException");
       return true;
+    },
+
+    initializeImportMeta(meta, url) {
+      internals.esm.initializeImportMeta(meta, url);
+    },
+
+    importDynamic(specifier, referrer, type) {
+      return internals.esm.importDynamic(specifier, referrer, type);
     },
 
     hasArrow(error) {

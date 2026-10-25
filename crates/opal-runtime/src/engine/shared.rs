@@ -68,6 +68,15 @@ macro_rules! for_each_op {
             resolve,
             take_resolution_warnings,
             package_type,
+            esm_compile,
+            esm_synthetic,
+            esm_set_export,
+            esm_link,
+            esm_instantiate,
+            esm_evaluate,
+            esm_namespace,
+            esm_status,
+            error_arrow,
         }
     };
 }

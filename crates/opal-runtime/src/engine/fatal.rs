@@ -38,7 +38,7 @@ pub(super) fn report(
 
 /// `file:line`, the source line, and carets under the part that threw, with
 /// tabs in the source line kept so the carets line up.
-fn arrow(scope: &mut v8::PinScope, message: v8::Local<v8::Message>) -> Option<String> {
+pub(super) fn arrow(scope: &mut v8::PinScope, message: v8::Local<v8::Message>) -> Option<String> {
     let resource = message.get_script_resource_name(scope)?;
     if resource.is_undefined() {
         return None;

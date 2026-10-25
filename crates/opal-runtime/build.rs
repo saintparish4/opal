@@ -36,7 +36,9 @@ mod ops;
 
 /// The bootstrap's files, in the order they run. Each is a function
 /// expression called with `(internals, ops, primordials)`.
-const BOOTSTRAP: &[&str] = &["realm", "process", "console", "timers", "loader", "main"];
+const BOOTSTRAP: &[&str] = &[
+    "realm", "process", "console", "timers", "loader", "esm", "main",
+];
 
 /// Built-in modules loaded while the snapshot is made, so they cost
 /// deserialization on every start instead of compilation on first use.
@@ -71,10 +73,10 @@ fn leave(code: i32) -> ! {
 macro_rules! unavailable_at_build_time {
     ($($name:ident),*) => {
         $(
-            fn $name(
-                scope: &mut v8::PinScope,
-                _: v8::FunctionCallbackArguments,
-                _: v8::ReturnValue<v8::Value>,
+            pub fn $name<'s>(
+                scope: &mut v8::PinScope<'s, '_>,
+                _: v8::FunctionCallbackArguments<'s>,
+                _: v8::ReturnValue<'s, v8::Value>,
             ) {
                 let text = concat!(stringify!($name), " is not available while the snapshot is made");
                 let message = v8::String::new(scope, text).unwrap();
@@ -88,8 +90,25 @@ unavailable_at_build_time!(
     strip_types_op,
     resolve_op,
     take_resolution_warnings_op,
-    package_type_op
+    package_type_op,
+    error_arrow_op
 );
+
+/// The ES module ops' runtime side (src/engine/esm.rs), which making the
+/// snapshot never calls.
+mod esm {
+    #![allow(dead_code)]
+    unavailable_at_build_time!(
+        compile,
+        synthetic,
+        set_export,
+        link,
+        instantiate,
+        evaluate,
+        namespace,
+        status
+    );
+}
 
 macro_rules! op_table {
     ($($name:ident),* $(,)?) => {

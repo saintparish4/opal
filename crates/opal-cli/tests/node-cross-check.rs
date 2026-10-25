@@ -80,6 +80,13 @@ fn buffer() {
     check("buffer.js");
 }
 
+/// import across a project: tests/node-diff/esm/.
+#[test]
+#[ignore = "needs node on PATH"]
+fn esm() {
+    check("esm/main.mjs");
+}
+
 /// require() across a project with packages: tests/node-diff/modules/.
 #[test]
 #[ignore = "needs node on PATH"]
@@ -96,7 +103,12 @@ fn every_corpus_file_is_checked() {
         let entry = entry.unwrap();
         let mut name = entry.file_name().to_string_lossy().into_owned();
         if entry.path().is_dir() {
-            name.push_str("/main.js");
+            let main = if entry.path().join("main.mjs").exists() {
+                "/main.mjs"
+            } else {
+                "/main.js"
+            };
+            name.push_str(main);
         }
         assert!(
             source.contains(&format!("check(\"{name}\")")),

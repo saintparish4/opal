@@ -18,6 +18,7 @@
 // Before the modules: macro_rules! are visible only after their definition.
 include!("shared.rs");
 
+mod esm;
 mod fatal;
 mod ops;
 mod resolution;
@@ -66,6 +67,18 @@ use resolution::{
     package_type as package_type_op, resolve as resolve_op,
     take_warnings as take_resolution_warnings_op,
 };
+
+/// ops::error_arrow, which build.rs stands in for.
+fn error_arrow_op(
+    scope: &mut v8::PinScope,
+    args: v8::FunctionCallbackArguments,
+    mut rv: v8::ReturnValue<v8::Value>,
+) {
+    let message = v8::Exception::create_message(scope, args.get(0));
+    if let Some(arrow) = fatal::arrow(scope, message) {
+        rv.set(v8::String::new(scope, &arrow).unwrap().into());
+    }
+}
 
 /// ops::strip_types, which build.rs stands in for.
 fn strip_types_op(
@@ -189,6 +202,19 @@ pub fn run_main(entry: &Path, args: &[String]) -> ! {
     let prepare = PrepareStackTrace(v8::Global::new(scope, prepare));
     scope.set_slot(prepare);
     scope.set_prepare_stack_trace_callback(prepare_stack_trace);
+    let hook = |scope: &mut v8::PinScope, name: &str| {
+        let key = v8::String::new(scope, name).unwrap();
+        let value = main.get(scope, key.into()).unwrap();
+        let function = v8::Local::<v8::Function>::try_from(value).expect("an ES module hook");
+        v8::Global::new(scope, function)
+    };
+    let hooks = esm::Hooks {
+        import_meta: hook(scope, "initializeImportMeta"),
+        import_dynamic: hook(scope, "importDynamic"),
+    };
+    scope.set_slot(hooks);
+    scope.set_host_initialize_import_meta_object_callback(esm::import_meta);
+    scope.set_host_import_module_dynamically_callback(esm::import_dynamic);
     trace::checkpoint("isolate from snapshot");
 
     let exec_path = std::env::current_exe()

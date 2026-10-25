@@ -131,19 +131,24 @@ pub fn take_warnings(
     rv.set(v8::Array::new_with_elements(scope, &items).into());
 }
 
-/// `packageType(path)`.
+/// `packageType(path)`: `[type, package.json path or null]` for the
+/// package scope `path` is in.
 pub fn package_type(
     scope: &mut v8::PinScope,
     args: v8::FunctionCallbackArguments,
     mut rv: v8::ReturnValue<v8::Value>,
 ) {
     let path = PathBuf::from(args.get(0).to_rust_string_lossy(scope));
-    let kind = match resolver(scope).package_scope(&path) {
-        Ok(Some(scope)) => scope
-            .module_type
-            .clone()
-            .unwrap_or_else(|| "none".to_string()),
-        _ => "none".to_string(),
+    let (kind, package_json) = match resolver(scope).package_scope(&path) {
+        Ok(Some(scope)) => (
+            scope
+                .module_type
+                .clone()
+                .unwrap_or_else(|| "none".to_string()),
+            Some(path_text(&scope.path)),
+        ),
+        _ => ("none".to_string(), None),
     };
-    rv.set(text(scope, &kind));
+    let items = [text(scope, &kind), optional(scope, package_json.as_deref())];
+    rv.set(v8::Array::new_with_elements(scope, &items).into());
 }
