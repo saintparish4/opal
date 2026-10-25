@@ -113,6 +113,11 @@ pub struct EsmInfo {
     pub top_level_await: Option<Span>,
     /// Each top-level statement, for tree shaking.
     pub statements: Vec<crate::shake::TopStatement>,
+    /// For each scope a top-level binding is referenced from, the names
+    /// bound in it and its enclosing scopes below the module's own: a
+    /// reference printed as one of these would resolve to that binding
+    /// instead (what the renamer checks for capture).
+    pub scope_names: HashMap<ScopeId, HashSet<String>>,
 }
 
 /// Facts about any module.
@@ -233,6 +238,25 @@ pub fn analyze(source: &Source, parsed: &Parsed<'_>) -> Result<Info, Diagnostic>
         info.esm.uses = walker.uses;
         info.esm.top_level_await = walker.top_level_await;
         info.esm.statements = crate::shake::statements(&parsed.program, scoping);
+        let mut scope_names: HashMap<ScopeId, HashSet<String>> = HashMap::new();
+        for uses in info.esm.uses.values() {
+            for scope in &uses.scopes {
+                if scope_names.contains_key(scope) {
+                    continue;
+                }
+                let mut names = HashSet::new();
+                for current in scoping.scope_ancestors(*scope) {
+                    if current == root {
+                        break;
+                    }
+                    for (name, _) in scoping.get_bindings(current).iter() {
+                        names.insert(name.to_string());
+                    }
+                }
+                scope_names.insert(*scope, names);
+            }
+        }
+        info.esm.scope_names = scope_names;
         let mut top_level: Vec<TopLevel> = scoping
             .get_bindings(root)
             .iter()

@@ -75,18 +75,105 @@ impl Out {
     }
 }
 
-pub fn emit(
-    units: &mut [Unit<'_>],
+/// What printing any one module needs to know about the others, computed
+/// once, before printing starts.
+pub struct Shared {
+    /// A lazy module's bindings keep their written names, inside its
+    /// closure.
+    lazy_names: HashMap<(usize, SymbolId), String>,
+    /// Bindings other modules read out of each lazy module.
+    exposed: HashMap<usize, BTreeSet<String>>,
+}
+
+impl Shared {
+    pub fn prepare(linked: &Linked, infos: &[&Info]) -> Self {
+        let mut lazy_names: HashMap<(usize, SymbolId), String> = HashMap::new();
+        for module in &linked.lazy {
+            for binding in &infos[*module].esm.top_level {
+                lazy_names.insert((*module, binding.symbol), binding.name.clone());
+            }
+        }
+        let mut shared = Self {
+            lazy_names,
+            exposed: HashMap::new(),
+        };
+        let mut exposed: HashMap<usize, BTreeSet<String>> = HashMap::new();
+        let all = linked.imports.iter().flatten().chain(
+            linked
+                .namespaces
+                .values()
+                .flatten()
+                .map(|(_, binding)| binding),
+        );
+        for binding in all {
+            if let Reference::Member(_, property) = shared.reference(linked, binding) {
+                let module = match binding {
+                    Binding::Local { module, .. } | Binding::Default { module } => *module,
+                    _ => continue,
+                };
+                exposed.entry(module).or_default().insert(property);
+            }
+        }
+        shared.exposed = exposed;
+        shared
+    }
+
+    fn reference(&self, linked: &Linked, binding: &Binding) -> Reference {
+        let lazy_name = |module: usize, symbol: SymbolId| -> String {
+            self.lazy_names
+                .get(&(module, symbol))
+                .cloned()
+                .unwrap_or_default()
+        };
+        linked.reference(binding, &lazy_name)
+    }
+}
+
+/// What assembling the bundle reads of each module, after printing.
+pub struct Meta<'a> {
+    pub source: &'a Source,
+    pub info: &'a Info,
+    /// URL of the original file relative to the out-dir, percent-encoded.
+    pub rel: String,
+}
+
+/// Rewrites and prints one module, if the bundle has a piece of it.
+pub fn print(
+    module: usize,
+    unit: &mut Unit<'_>,
     linked: &Linked,
     options: &BuildOptions,
     defines: &Defines,
+    shared: &Shared,
+) -> Result<Option<(Piece, Uses)>, Diagnostic> {
+    if !matches!(linked.roles[module], Role::Eager | Role::Lazy | Role::Cjs) {
+        return Ok(None);
+    }
+    let reference = |binding: &Binding| shared.reference(linked, binding);
+    let mut uses = Uses::default();
+    let piece = print_module(
+        module, unit, linked, options, defines, &reference, &mut uses,
+    )?;
+    Ok(Some((piece, uses)))
+}
+
+/// Puts the printed pieces in order, around the runtime, with one source
+/// map for all of them.
+#[allow(clippy::too_many_arguments)]
+pub fn assemble(
+    mut pieces: HashMap<usize, Piece>,
+    uses: Uses,
+    metas: &[Meta<'_>],
+    linked: &Linked,
+    options: &BuildOptions,
+    shared: &Shared,
     root_rel: &str,
     file_name: &str,
 ) -> Result<Bundle, Diagnostic> {
     let p = linked.prefix.as_str();
     let node = options.target == Runtime::Node;
-
-    // What the runtime has to include.
+    let reference = |binding: &Binding| shared.reference(linked, binding);
+    let exposed = &shared.exposed;
     let uses_create_require = linked
         .imports
         .iter()
@@ -97,70 +184,18 @@ pub fn emit(
         .iter()
         .any(|role| matches!(role, Role::Cjs | Role::Json))
         || uses_create_require;
-    // A lazy module's bindings keep their written names, inside its closure.
-    let mut lazy_names: HashMap<(usize, SymbolId), String> = HashMap::new();
-    for module in &linked.lazy {
-        for binding in &units[*module].info.esm.top_level {
-            lazy_names.insert((*module, binding.symbol), binding.name.clone());
-        }
-    }
-    let lazy_symbols = |module: usize, symbol: SymbolId| -> String {
-        lazy_names
-            .get(&(module, symbol))
-            .cloned()
-            .unwrap_or_default()
-    };
-    let reference = |binding: &Binding| linked.reference(binding, &lazy_symbols);
-
-    // Bindings other modules read out of each lazy module.
-    let mut exposed: HashMap<usize, BTreeSet<String>> = HashMap::new();
-    let expose = |binding: &Binding, exposed: &mut HashMap<usize, BTreeSet<String>>| {
-        if let Reference::Member(_, property) = reference(binding) {
-            let module = match binding {
-                Binding::Local { module, .. } | Binding::Default { module } => *module,
-                _ => return,
-            };
-            exposed.entry(module).or_default().insert(property);
-        }
-    };
-    for bindings in &linked.imports {
-        for binding in bindings {
-            expose(binding, &mut exposed);
-        }
-    }
-    for exports in linked.namespaces.values() {
-        for (_, binding) in exports {
-            expose(binding, &mut exposed);
-        }
-    }
-
-    // Rewrite and print each module.
-    let mut pieces: HashMap<usize, Piece> = HashMap::new();
     let mut fixups: Vec<String> = Vec::new();
     let mut paths: BTreeSet<usize> = BTreeSet::new();
-    let mut uses = Uses::default();
-    #[allow(clippy::needless_range_loop)]
-    for module in 0..units.len() {
-        let role = linked.roles[module];
-        if !matches!(role, Role::Eager | Role::Lazy | Role::Cjs) {
-            continue;
-        }
-        let piece = print_module(
-            module,
-            &mut units[module],
-            linked,
-            options,
-            defines,
-            &reference,
-            &mut uses,
-        )?;
-        if role == Role::Eager {
+    let mut modules: Vec<&usize> = pieces.keys().collect();
+    modules.sort();
+    for module in modules {
+        let piece = &pieces[module];
+        if linked.roles[*module] == Role::Eager {
             fixups.extend(piece.fixups.iter().cloned());
         }
         if piece.needs_paths {
-            paths.insert(module);
+            paths.insert(*module);
         }
-        pieces.insert(module, piece);
     }
 
     let mut out = Out {
@@ -168,11 +203,11 @@ pub fn emit(
         lines: 0,
         maps: Vec::new(),
     };
-    let entry_unit = &units[linked.entry];
-    if let Some(parsed) = &entry_unit.parsed
-        && let Some(hashbang) = &parsed.program.hashbang
+    if let Some(hashbang) = pieces
+        .get(&linked.entry)
+        .and_then(|piece| piece.hashbang.clone())
     {
-        out.push(&format!("#!{}", hashbang.value));
+        out.push(&format!("#!{hashbang}"));
     }
 
     // Node's own modules, which the runtime needs.
@@ -264,7 +299,7 @@ pub fn emit(
             text.push_str(runtime::NAMESPACE);
         }
     }
-    if units[linked.entry].info.format == Format::Cjs {
+    if metas[linked.entry].info.format == Format::Cjs {
         text.push_str(runtime::CJS_MAIN);
     }
     out.push(&runtime::with_prefix(&text, p));
@@ -276,7 +311,7 @@ pub fn emit(
 
     // Paths of the modules that read their own location.
     for module in &paths {
-        let rel = json_string(&units[*module].rel);
+        let rel = json_string(&metas[*module].rel);
         if node {
             out.push(&format!(
                 "const {p}file{module} = {p}abs({rel}), {p}url{module} = {p}pathToFileURL({p}file{module}).href, {p}dir{module} = {p}dirname({p}file{module});"
@@ -293,7 +328,7 @@ pub fn emit(
         if *role != Role::Asset {
             continue;
         }
-        let source = units[module].source;
+        let source = metas[module].source;
         let bytes = std::fs::read(&source.absolute).map_err(|error| {
             Diagnostic::new(Code::Io, &source.path, format!("cannot read: {error}"))
         })?;
@@ -363,7 +398,7 @@ pub fn emit(
 
     // CommonJS and JSON records.
     for (module, role) in linked.roles.iter().enumerate() {
-        let unit = &units[module];
+        let unit = &metas[module];
         let rel = json_string(&unit.rel);
         let key = json_string(&unit.source.path);
         match role {
@@ -431,7 +466,7 @@ pub fn emit(
             }
             out.push(&format!(
                 "{p}byURL[{p}fileURL({})] = {thunk};",
-                json_string(&units[module].rel)
+                json_string(&metas[module].rel)
             ));
         }
     }
@@ -465,7 +500,7 @@ pub fn emit(
             out.push(fixup);
         }
         out.push("yield;");
-        out.push(&dependency_steps(*module, linked, units, p));
+        out.push(&dependency_steps(*module, linked, metas, p));
         out.push_mapped(&piece.code, piece.map);
         out.push("}");
         // Link (InnerModuleLinking, §16.2.1.6.1.2): this module and every
@@ -527,7 +562,7 @@ pub fn emit(
         out.push(&format!("export {{ {} }};", specifiers.join(", ")));
     }
 
-    let map = combine_maps(&out.maps, units, linked, file_name);
+    let map = combine_maps(&out.maps, metas, linked, file_name);
     out.text
         .push_str(&format!("//# sourceMappingURL={file_name}.map\n"));
     Ok(Bundle {
@@ -615,7 +650,7 @@ fn json_step(module: usize, linked: &Linked, p: &str) -> String {
 
 /// What a lazy module does before its body: its requested modules, in
 /// order (§16.2.1.6.1.3.1 step 11).
-fn dependency_steps(module: usize, linked: &Linked, units: &[Unit<'_>], p: &str) -> String {
+fn dependency_steps(module: usize, linked: &Linked, metas: &[Meta<'_>], p: &str) -> String {
     let mut text = String::new();
     let mut seen = HashSet::new();
     for target in &linked.targets[module] {
@@ -635,25 +670,35 @@ fn dependency_steps(module: usize, linked: &Linked, units: &[Unit<'_>], p: &str)
             Role::Json => {
                 let _ = writeln!(text, "{}", json_step(*t, linked, p));
             }
-            Role::Asset if units[*t].source.path.ends_with(".css") => {
+            Role::Asset if metas[*t].source.path.ends_with(".css") => {
                 let _ = writeln!(text, "{p}css({p}asset{t});");
             }
             _ => {}
         }
     }
-    let _ = units;
     text
 }
 
-#[derive(Default)]
-struct Uses {
+#[derive(Default, Clone, Copy)]
+pub struct Uses {
     import: bool,
     import_any: bool,
     set_name: bool,
     const_assign: bool,
 }
 
-struct Piece {
+impl Uses {
+    pub fn merge(&mut self, other: Uses) {
+        self.import |= other.import;
+        self.import_any |= other.import_any;
+        self.set_name |= other.set_name;
+        self.const_assign |= other.const_assign;
+    }
+}
+
+pub struct Piece {
+    /// The entry's `#!` line, without `#!`.
+    hashbang: Option<String>,
     code: String,
     map: Option<SourceMap<'static>>,
     /// Statements that give renamed functions their names back, run before
@@ -756,6 +801,11 @@ fn print_module(
         }
     }
 
+    let hashbang = parsed
+        .program
+        .hashbang
+        .as_ref()
+        .map(|h| h.value.to_string());
     parsed.program.directives.clear();
     parsed.program.hashbang = None;
     let sloppy = role == Role::Cjs && (!info.strict || info.direct_eval);
@@ -787,6 +837,7 @@ fn print_module(
         })
     };
     Ok(Piece {
+        hashbang,
         code,
         map,
         fixups,
@@ -803,7 +854,7 @@ fn shift_map(map: SourceMap<'static>, lines: u32) -> SourceMap<'static> {
 
 fn combine_maps(
     maps: &[(SourceMap<'static>, u32)],
-    units: &[Unit<'_>],
+    metas: &[Meta<'_>],
     linked: &Linked,
     file_name: &str,
 ) -> String {
@@ -813,7 +864,7 @@ fn combine_maps(
         oxc_sourcemap::ConcatSourceMapBuilder::from_sourcemaps(&refs).into_sourcemap();
     combined.set_file(file_name);
     // Every source's text, so the map stands on its own.
-    let by_rel: HashMap<&str, &str> = units
+    let by_rel: HashMap<&str, &str> = metas
         .iter()
         .zip(&linked.roles)
         .filter(|(_, role)| matches!(role, Role::Eager | Role::Lazy | Role::Cjs))

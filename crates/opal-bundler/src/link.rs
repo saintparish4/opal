@@ -18,7 +18,7 @@
 
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 
-use oxc_semantic::{Scoping, SymbolId};
+use oxc_semantic::SymbolId;
 use oxc_syntax::scope::ScopeId;
 
 use opal_core::graph::{DependencyKind, DependencyTarget, ModuleGraph, ModuleId};
@@ -228,8 +228,7 @@ impl Linked {
 /// What linking reads of each module.
 pub struct LinkModule<'s> {
     pub info: &'s Info,
-    pub scoping: &'s Scoping,
-    pub lines: &'s LineIndex,
+    /// The module's source text, for locating a diagnostic.
     pub text: &'s str,
     /// The graph module this came from; `None` for a virtual module.
     pub graph_id: Option<ModuleId>,
@@ -283,6 +282,7 @@ pub fn link(
         external_index: HashMap::new(),
         cjs_names: HashMap::new(),
         runtime_imports: false,
+        resolved: HashMap::new(),
     };
     linker.resolve_requests(entry)?;
     let order = linker.evaluation_order(entry);
@@ -444,6 +444,8 @@ struct Linker<'l, 's> {
     cjs_names: HashMap<usize, Vec<String>>,
     /// Some import() is resolved when it runs.
     runtime_imports: bool,
+    /// ResolveExport answers for an empty resolve set.
+    resolved: HashMap<(usize, String), Resolution>,
 }
 
 impl Linker<'_, '_> {
@@ -463,7 +465,7 @@ impl Linker<'_, '_> {
         if span == oxc_span::Span::default() {
             diagnostic
         } else {
-            diagnostic.at(m.lines.locate(m.text, span.start))
+            diagnostic.at(LineIndex::new(m.text).locate(m.text, span.start))
         }
     }
 
@@ -966,7 +968,28 @@ impl Linker<'_, '_> {
         names
     }
 
+    /// ResolveExport. A call with an empty resolve set always has the
+    /// same answer, so those are remembered: a namespace over many
+    /// `export *` asks the same question once per name per star.
     fn resolve_export(
+        &mut self,
+        module: usize,
+        name: &str,
+        resolve_set: &mut Vec<(usize, String)>,
+    ) -> Resolution {
+        if !resolve_set.is_empty() {
+            return self.resolve_export_uncached(module, name, resolve_set);
+        }
+        let key = (module, name.to_string());
+        if let Some(found) = self.resolved.get(&key) {
+            return found.clone();
+        }
+        let found = self.resolve_export_uncached(module, name, resolve_set);
+        self.resolved.insert(key, found.clone());
+        found
+    }
+
+    fn resolve_export_uncached(
         &mut self,
         module: usize,
         name: &str,
@@ -1013,7 +1036,8 @@ impl Linker<'_, '_> {
             return Resolution::NotFound;
         }
         resolve_set.push((module, name.to_string()));
-        let exports = self.info(module).esm.exports.clone();
+        let modules = self.modules;
+        let exports = &modules[module].info.esm.exports;
         if let Some(export) = exports.iter().find(|e| e.name == name) {
             return match &export.target {
                 ExportTarget::Local(symbol) => self.resolve_local(module, *symbol, resolve_set),
@@ -1045,8 +1069,9 @@ impl Linker<'_, '_> {
             return Resolution::NotFound;
         }
         let mut star_resolution: Option<(Binding, Option<usize>)> = None;
-        let stars = self.info(module).esm.stars.clone();
-        for (request, _) in stars {
+        let modules = self.modules;
+        let stars = &modules[module].info.esm.stars;
+        for &(request, _) in stars {
             match self.targets[module][request].clone() {
                 Target::Module(target) => match self.resolve_export(target, name, resolve_set) {
                     Resolution::Ambiguous => return Resolution::Ambiguous,
@@ -1175,7 +1200,8 @@ impl Linker<'_, '_> {
             if !matches!(self.roles[module], Role::Eager | Role::Lazy) {
                 continue;
             }
-            let exports = self.info(module).esm.exports.clone();
+            let modules = self.modules;
+            let exports = &modules[module].info.esm.exports;
             for export in exports {
                 if let ExportTarget::Indirect {
                     request,
@@ -1215,8 +1241,9 @@ impl Linker<'_, '_> {
                 names.push(export.name.clone());
             }
         }
-        let stars = self.info(module).esm.stars.clone();
-        for (request, span) in stars {
+        let modules = self.modules;
+        let stars = &modules[module].info.esm.stars;
+        for &(request, span) in stars {
             match self.targets[module][request].clone() {
                 Target::Module(target) => {
                     for name in self.exported_names(target, star_set)? {
@@ -1514,29 +1541,23 @@ fn captured(
     scope: ScopeId,
     name: &str,
 ) -> bool {
-    let scoping = modules[module].scoping;
-    let root = scoping.root_scope_id();
-    for current in scoping.scope_ancestors(scope) {
-        if current == root {
-            if roles[module] == Role::Lazy
-                && let Some(symbol) = scoping.get_binding(root, name.into())
-            {
-                // A lazy module's own top-level bindings live in its
-                // closure, but its import bindings are not declared there.
-                return !modules[module]
-                    .info
-                    .esm
-                    .imports
-                    .iter()
-                    .any(|i| i.local == symbol);
-            }
-            return false;
-        }
-        if scoping.get_binding(current, name.into()).is_some() {
-            return true;
-        }
+    let info = modules[module].info;
+    if info
+        .esm
+        .scope_names
+        .get(&scope)
+        .is_some_and(|names| names.contains(name))
+    {
+        return true;
     }
-    false
+    // A lazy module's own top-level bindings live in its closure, but its
+    // import bindings are not declared there.
+    roles[module] == Role::Lazy
+        && info
+            .esm
+            .top_level
+            .iter()
+            .any(|binding| binding.name == name && binding.kind != BindingKind::Import)
 }
 
 /// A binding as V8 identifies it while linking: by the cell it resolves
@@ -1683,7 +1704,7 @@ impl Linker<'_, '_> {
     ) -> Result<Option<Cell>, V8Error> {
         if self.info(module).format != Format::Esm {
             // A synthetic module's exports are all cells from the start.
-            return match self.resolve_export(module, name, &mut Vec::new()) {
+            return match self.resolve_export_uncached(module, name, &mut Vec::new()) {
                 Resolution::Found(binding, cell) => Ok(Some(Cell::Bundled(binding, cell))),
                 _ if must_resolve => Err(V8Error::Other),
                 _ => Ok(None),

@@ -35,6 +35,7 @@ pub mod oracle;
 
 use std::collections::HashMap;
 use std::path::Path;
+use std::sync::{OnceLock, mpsc};
 use std::time::{Duration, Instant};
 
 use oxc_allocator::Allocator;
@@ -107,104 +108,263 @@ pub fn build(
         });
     }
 
-    let allocators: Vec<Allocator> = sources.iter().map(|_| Allocator::default()).collect();
-    let mut parsed: Vec<Option<Parsed<'_>>> = Vec::with_capacity(sources.len());
-    let mut infos: Vec<Info> = Vec::with_capacity(sources.len());
-    let mut lexed: Vec<Option<(Vec<String>, Vec<String>)>> = Vec::with_capacity(sources.len());
-    for (source, allocator) in sources.iter().zip(&allocators) {
-        if matches!(source.format, Format::Json | Format::Opaque) {
-            parsed.push(None);
-            infos.push(Info::opaque(source));
-            lexed.push(None);
-            continue;
-        }
-        let settings = load::settings_for(&mut tsconfigs, source, &options.jsx_import_source)?;
-        let module = load::parse(allocator, source, &settings)?;
-        let info = analyze::analyze(source, &module)?;
-        lexed.push(match source.format {
-            Format::Cjs => Some(cjs_lexer::exports(&source.text)),
-            _ => None,
-        });
-        infos.push(info);
-        parsed.push(Some(module));
-    }
-    let parse_time = started.elapsed();
-
-    let started = Instant::now();
-    let empty_scoping = oxc_semantic::Scoping::default();
-    let empty_lines = diagnostic::LineIndex::new("");
-    let link_modules: Vec<LinkModule<'_>> = (0..sources.len())
-        .map(|index| LinkModule {
-            info: &infos[index],
-            scoping: parsed[index]
-                .as_ref()
-                .map_or(&empty_scoping, |p| &p.scoping),
-            lines: parsed[index].as_ref().map_or(&empty_lines, |p| &p.lines),
-            text: parsed[index].as_ref().map_or("", |p| p.text),
-            graph_id: (index < graph.len()).then(|| module_id(graph, index)),
-            cjs_lexed: lexed[index].clone(),
-            side_effect_free: sources[index].format == Format::Esm
-                && index < graph.len()
-                && packages.side_effect_free(&sources[index].absolute),
+    // Per module, before any thread starts: compiler settings, the
+    // package's sideEffects word, and where the file is from the out-dir.
+    // A settings error is the module's to report, in module order with the
+    // parse errors, as a sequential build would.
+    let settings: Vec<Option<Result<tsconfig::TsSettings, Diagnostic>>> = sources
+        .iter()
+        .map(|source| {
+            (!matches!(source.format, Format::Json | Format::Opaque))
+                .then(|| load::settings_for(&mut tsconfigs, source, &options.jsx_import_source))
         })
         .collect();
-    let entry = graph.entry().index();
-    if matches!(infos[entry].format, Format::Json | Format::Opaque) {
-        return Err(Diagnostic::new(
-            Code::Unsupported,
-            &infos[entry].path,
-            "the entry is not JavaScript",
-        ));
-    }
-    let linked = link::link(graph, &link_modules, entry, &virtual_ids, options)?;
-    drop(link_modules);
-    for (index, role) in linked.roles.iter().enumerate() {
-        if *role == Role::Json
-            && serde_json::from_str::<serde_json::Value>(&sources[index].text).is_err()
-        {
-            let imported = linked.order.contains(&link::Step::Json(index));
-            if imported {
-                return Err(Diagnostic::new(
-                    Code::Parse,
-                    &sources[index].path,
-                    "not valid JSON, and an ES module imports it, so Node fails to link the program",
-                ));
-            }
-        }
-    }
-    if options.target == Target::Browser {
-        check_browser_fields(&linked, &sources)?;
-    }
-    let link_time = started.elapsed();
-
-    let started = Instant::now();
+    let side_effect_free: Vec<bool> = sources
+        .iter()
+        .enumerate()
+        .map(|(index, source)| {
+            source.format == Format::Esm
+                && index < graph.len()
+                && packages.side_effect_free(&source.absolute)
+        })
+        .collect();
     let outdir_parts = components(outdir);
     let root_rel = relative_url(&outdir_parts, &components(&root), true);
+    let rels: Vec<String> = sources
+        .iter()
+        .map(|source| relative_url(&outdir_parts, &components(&source.absolute), false))
+        .collect();
+    let defines = Defines::new(options.defines.clone());
+    let entry = graph.entry().index();
     let file_name = format!(
         "{}.mjs",
         Path::new(&sources[entry].path)
             .file_stem()
             .map_or_else(|| "bundle".to_string(), |s| s.to_string_lossy().to_string())
     );
-    let mut units: Vec<emit::Unit<'_>> = Vec::with_capacity(sources.len());
-    for ((source, info), (parsed, allocator)) in sources
+
+    // Parse and print run on every core. A module's AST lives in an arena
+    // its thread owns, so each thread parses its share, hands linking the
+    // facts it found, waits, and then prints the same share; only the
+    // facts and the printed text cross threads.
+    let threads = std::thread::available_parallelism()
+        .map_or(4, |n| n.get())
+        .min(sources.len())
+        .max(1);
+    let mut by_size: Vec<usize> = (0..sources.len()).collect();
+    by_size.sort_by_key(|index| std::cmp::Reverse(sources[*index].text.len()));
+    let mut shares: Vec<Vec<usize>> = vec![Vec::new(); threads];
+    for (position, index) in by_size.into_iter().enumerate() {
+        shares[position % threads].push(index);
+    }
+
+    let infos_cell: OnceLock<Vec<Info>> = OnceLock::new();
+    let linked_cell: OnceLock<link::Linked> = OnceLock::new();
+    let shared_cell: OnceLock<emit::Shared> = OnceLock::new();
+    let mut parse_time = Duration::ZERO;
+    let mut link_time = Duration::ZERO;
+    let mut print_started = Instant::now();
+    type Facts = (Info, Option<(Vec<String>, Vec<String>)>);
+    let printed: Result<(HashMap<usize, emit::Piece>, emit::Uses), Diagnostic> = std::thread::scope(
+        |scope| {
+            let (facts_tx, facts_rx) = mpsc::channel::<(usize, Result<Facts, Diagnostic>)>();
+            let (piece_tx, piece_rx) =
+                mpsc::channel::<(usize, Result<Option<(emit::Piece, emit::Uses)>, Diagnostic>)>();
+            let mut go = Vec::with_capacity(threads);
+            for share in shares {
+                let (go_tx, go_rx) = mpsc::channel::<bool>();
+                go.push(go_tx);
+                let facts_tx = facts_tx.clone();
+                let piece_tx = piece_tx.clone();
+                let (sources, settings, rels, defines) = (&sources, &settings, &rels, &defines);
+                let (infos_cell, linked_cell, shared_cell) =
+                    (&infos_cell, &linked_cell, &shared_cell);
+                scope.spawn(move || {
+                    let allocators: Vec<Allocator> =
+                        share.iter().map(|_| Allocator::default()).collect();
+                    let mut parsed: Vec<Option<Parsed<'_>>> = Vec::with_capacity(share.len());
+                    for (slot, &index) in share.iter().enumerate() {
+                        let source = &sources[index];
+                        let result = match &settings[index] {
+                            None => Ok((Info::opaque(source), None, None)),
+                            Some(Err(diagnostic)) => Err(diagnostic.clone()),
+                            Some(Ok(settings)) => load::parse(&allocators[slot], source, settings)
+                                .and_then(|module| {
+                                    let info = analyze::analyze(source, &module)?;
+                                    let lexed = (source.format == Format::Cjs)
+                                        .then(|| cjs_lexer::exports(&source.text));
+                                    Ok((info, lexed, Some(module)))
+                                }),
+                        };
+                        match result {
+                            Ok((info, lexed, module)) => {
+                                parsed.push(module);
+                                let _ = facts_tx.send((index, Ok((info, lexed))));
+                            }
+                            Err(diagnostic) => {
+                                parsed.push(None);
+                                let _ = facts_tx.send((index, Err(diagnostic)));
+                            }
+                        }
+                    }
+                    drop(facts_tx);
+                    if !go_rx.recv().unwrap_or(false) {
+                        return;
+                    }
+                    let (Some(infos), Some(linked), Some(shared)) =
+                        (infos_cell.get(), linked_cell.get(), shared_cell.get())
+                    else {
+                        return;
+                    };
+                    for (slot, &index) in share.iter().enumerate() {
+                        let Some(module) = parsed[slot].take() else {
+                            continue;
+                        };
+                        let mut unit = emit::Unit {
+                            source: &sources[index],
+                            info: &infos[index],
+                            parsed: Some(module),
+                            allocator: &allocators[slot],
+                            rel: rels[index].clone(),
+                        };
+                        let _ = piece_tx.send((
+                            index,
+                            emit::print(index, &mut unit, linked, options, defines, shared),
+                        ));
+                    }
+                });
+            }
+            drop(facts_tx);
+            drop(piece_tx);
+            let stop = |go: &[mpsc::Sender<bool>]| {
+                for sender in go {
+                    let _ = sender.send(false);
+                }
+            };
+
+            // Facts from every module, and the first error by module order, so
+            // a failing build fails the same way however the threads ran.
+            let mut infos: Vec<Option<Info>> = (0..sources.len()).map(|_| None).collect();
+            let mut lexed: Vec<Option<(Vec<String>, Vec<String>)>> = vec![None; sources.len()];
+            let mut first_error: Option<(usize, Diagnostic)> = None;
+            for (index, result) in facts_rx {
+                match result {
+                    Ok((info, found)) => {
+                        infos[index] = Some(info);
+                        lexed[index] = found;
+                    }
+                    Err(diagnostic) => {
+                        if first_error.as_ref().is_none_or(|(at, _)| index < *at) {
+                            first_error = Some((index, diagnostic));
+                        }
+                    }
+                }
+            }
+            if let Some((_, diagnostic)) = first_error {
+                stop(&go);
+                return Err(diagnostic);
+            }
+            let infos: Vec<Info> = infos
+                .into_iter()
+                .map(|info| info.expect("every module reported"))
+                .collect();
+            parse_time = started.elapsed();
+
+            let linking = Instant::now();
+            if matches!(infos[entry].format, Format::Json | Format::Opaque) {
+                stop(&go);
+                return Err(Diagnostic::new(
+                    Code::Unsupported,
+                    &infos[entry].path,
+                    "the entry is not JavaScript",
+                ));
+            }
+            let link_modules: Vec<LinkModule<'_>> = (0..sources.len())
+                .map(|index| LinkModule {
+                    info: &infos[index],
+                    text: &sources[index].text,
+                    graph_id: (index < graph.len()).then(|| module_id(graph, index)),
+                    cjs_lexed: lexed[index].clone(),
+                    side_effect_free: side_effect_free[index],
+                })
+                .collect();
+            let linked = match link::link(graph, &link_modules, entry, &virtual_ids, options) {
+                Ok(linked) => linked,
+                Err(diagnostic) => {
+                    stop(&go);
+                    return Err(diagnostic);
+                }
+            };
+            drop(link_modules);
+            for (index, role) in linked.roles.iter().enumerate() {
+                if *role == Role::Json
+                    && linked.order.contains(&link::Step::Json(index))
+                    && serde_json::from_str::<serde_json::Value>(&sources[index].text).is_err()
+                {
+                    stop(&go);
+                    return Err(Diagnostic::new(
+                        Code::Parse,
+                        &sources[index].path,
+                        "not valid JSON, and an ES module imports it, so Node fails to link the program",
+                    ));
+                }
+            }
+            if options.target == Target::Browser
+                && let Err(diagnostic) = check_browser_fields(&linked, &sources)
+            {
+                stop(&go);
+                return Err(diagnostic);
+            }
+            let info_refs: Vec<&Info> = infos.iter().collect();
+            let shared = emit::Shared::prepare(&linked, &info_refs);
+            drop(info_refs);
+            let _ = infos_cell.set(infos);
+            let _ = linked_cell.set(linked);
+            let _ = shared_cell.set(shared);
+            link_time = linking.elapsed();
+            print_started = Instant::now();
+            for sender in &go {
+                let _ = sender.send(true);
+            }
+
+            let mut pieces = HashMap::new();
+            let mut uses = emit::Uses::default();
+            let mut first_error: Option<(usize, Diagnostic)> = None;
+            for (index, result) in piece_rx {
+                match result {
+                    Ok(Some((piece, used))) => {
+                        uses.merge(used);
+                        pieces.insert(index, piece);
+                    }
+                    Ok(None) => {}
+                    Err(diagnostic) => {
+                        if first_error.as_ref().is_none_or(|(at, _)| index < *at) {
+                            first_error = Some((index, diagnostic));
+                        }
+                    }
+                }
+            }
+            match first_error {
+                Some((_, diagnostic)) => Err(diagnostic),
+                None => Ok((pieces, uses)),
+            }
+        },
+    );
+    let (pieces, uses) = printed?;
+    let infos = infos_cell.into_inner().expect("linking ran");
+    let linked = linked_cell.into_inner().expect("linking ran");
+    let shared = shared_cell.into_inner().expect("linking ran");
+
+    let metas: Vec<emit::Meta<'_>> = sources
         .iter()
         .zip(&infos)
-        .zip(parsed.into_iter().zip(&allocators))
-    {
-        units.push(emit::Unit {
-            rel: relative_url(&outdir_parts, &components(&source.absolute), false),
-            source,
-            info,
-            parsed,
-            allocator,
-        });
-    }
-    let defines = Defines::new(options.defines.clone());
-    let bundle = emit::emit(
-        &mut units, &linked, options, &defines, &root_rel, &file_name,
+        .zip(rels)
+        .map(|((source, info), rel)| emit::Meta { source, info, rel })
+        .collect();
+    let bundle = emit::assemble(
+        pieces, uses, &metas, &linked, options, &shared, &root_rel, &file_name,
     )?;
-    let print_time = started.elapsed();
+    let print_time = print_started.elapsed();
     let modules = linked
         .roles
         .iter()
