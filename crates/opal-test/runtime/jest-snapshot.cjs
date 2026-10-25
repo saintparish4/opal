@@ -11,7 +11,7 @@ Object.defineProperty(exports, "toMatchInlineSnapshot", {enumerable: true, get: 
 Object.defineProperty(exports, "toThrowErrorMatchingSnapshot", {enumerable: true, get: () => toThrowErrorMatchingSnapshot});
 Object.defineProperty(exports, "toThrowErrorMatchingInlineSnapshot", {enumerable: true, get: () => toThrowErrorMatchingInlineSnapshot});
 const _m0 = require("fs");
-const _m1 = require("./jest-snapfile.cjs");
+const _m1 = require("./snapfile-dialect.cjs");
 const _m2 = require("./jest-matcher-utils.cjs");
 const _m3 = require("./support.cjs");
 const _m4 = require("./jest-snapshot-SnapshotResolver.cjs");

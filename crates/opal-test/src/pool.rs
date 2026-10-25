@@ -16,6 +16,7 @@ use std::io::{self, BufRead, BufReader, Write};
 use std::net::{TcpListener, TcpStream};
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
+use std::sync::Arc;
 use std::sync::mpsc::{self, Receiver, RecvTimeoutError, Sender};
 use std::thread;
 use std::time::{Duration, Instant};
@@ -23,6 +24,7 @@ use std::time::{Duration, Instant};
 use serde_json::{Value, json};
 
 use crate::TestError;
+use crate::service::TransformService;
 
 /// How long a worker has to start Node and connect.
 const CONNECT_TIMEOUT: Duration = Duration::from_secs(60);
@@ -60,14 +62,18 @@ pub struct FileOutcome {
 }
 
 impl Pool {
-    pub fn start(node: &Path, worker_script: &Path) -> Result<Pool, TestError> {
+    pub fn start(
+        node: &Path,
+        worker_script: &Path,
+        transforms: Arc<TransformService>,
+    ) -> Result<Pool, TestError> {
         let listener = TcpListener::bind("127.0.0.1:0").map_err(TestError::Channel)?;
         let port = listener.local_addr().map_err(TestError::Channel)?.port();
         let token = format!("{:016x}{:016x}", std::process::id(), random_u64());
         let (sender, events) = mpsc::channel();
         let accept_sender = sender.clone();
         let accept_token = token.clone();
-        thread::spawn(move || accept_loop(listener, &accept_token, &accept_sender));
+        thread::spawn(move || accept_loop(listener, &accept_token, &accept_sender, &transforms));
         Ok(Pool {
             node: node.to_path_buf(),
             worker_script: worker_script.to_path_buf(),
@@ -311,11 +317,17 @@ fn crashed(path: &Path, status: &str, elapsed: Duration) -> Value {
     })
 }
 
-fn accept_loop(listener: TcpListener, token: &str, events: &Sender<Event>) {
+fn accept_loop(
+    listener: TcpListener,
+    token: &str,
+    events: &Sender<Event>,
+    transforms: &Arc<TransformService>,
+) {
     for stream in listener.incoming() {
         let Ok(stream) = stream else { continue };
         let events = events.clone();
         let token = token.to_string();
+        let transforms = Arc::clone(transforms);
         thread::spawn(move || {
             let _ = stream.set_nodelay(true);
             let Ok(reader_stream) = stream.try_clone() else {
@@ -335,6 +347,10 @@ fn accept_loop(listener: TcpListener, token: &str, events: &Sender<Event>) {
             let Some(id) = hello["worker"].as_u64().map(|id| id as usize) else {
                 return;
             };
+            if hello["role"] == "transform" {
+                serve_transforms(reader, stream, &transforms);
+                return;
+            }
             if events.send(Event::Connected(id, stream)).is_err() {
                 return;
             }
@@ -355,6 +371,31 @@ fn accept_loop(listener: TcpListener, token: &str, events: &Sender<Event>) {
             }
             let _ = events.send(Event::Closed(id));
         });
+    }
+}
+
+/// A worker's transform connection: one request per line, one reply each.
+fn serve_transforms(
+    mut reader: BufReader<TcpStream>,
+    mut stream: TcpStream,
+    service: &TransformService,
+) {
+    let mut line = String::new();
+    loop {
+        line.clear();
+        match reader.read_line(&mut line) {
+            Ok(0) | Err(_) => return,
+            Ok(_) => {}
+        }
+        let reply = match serde_json::from_str::<Value>(&line) {
+            Ok(request) => service.answer(&request),
+            Err(error) => json!({ "error": format!("unreadable transform request: {error}") }),
+        };
+        let mut bytes = serde_json::to_vec(&reply).expect("serializable");
+        bytes.push(b'\n');
+        if stream.write_all(&bytes).is_err() {
+            return;
+        }
     }
 }
 

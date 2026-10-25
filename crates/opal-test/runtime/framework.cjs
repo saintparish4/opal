@@ -12,6 +12,8 @@ const {createExpect} = require('./expect.cjs');
 const {ModuleMocker} = require('./mock.cjs');
 const {format: prettyFormat} = require('./format.cjs');
 const snapshot = require('./jest-snapshot.cjs');
+const snapfile = require('./snapfile-dialect.cjs');
+const {createVitest} = require('./vitest.cjs');
 
 const ROOT = 'ROOT_DESCRIBE_BLOCK';
 const TEST_TIMEOUT_SYMBOL = Symbol.for('TEST_TIMEOUT_SYMBOL');
@@ -21,8 +23,11 @@ const WAIT_BEFORE_RETRY = Symbol.for('WAIT_BEFORE_RETRY');
 const LOG_ERRORS_BEFORE_RETRY = Symbol.for('LOG_ERRORS_BEFORE_RETRY');
 
 async function initialize({config, globalConfig, testPath, parentProcess, loader}) {
+  const dialect = config.dialect || 'jest';
+  const separator = dialect === 'vitest' ? ' > ' : ' ';
+  snapfile.setDialect(dialect);
   const expect = createExpect({testPath});
-  const circus = createCircus({expect, parentProcess});
+  const circus = createCircus({expect, parentProcess, testNameSeparator: separator});
 
   // jestAdapterInit's snapshot setup: serializers from the config, tested
   // before the built-in ones (so added last first), then the file's state.
@@ -189,7 +194,7 @@ async function initialize({config, globalConfig, testPath, parentProcess, loader
       numPendingTests,
       numTodoTests,
       skipped: false,
-      snapshot: snapshotData(assertionResults, snapshotState),
+      snapshot: snapshotData(assertionResults, snapshotState, separator),
       testExecError,
       testResults: assertionResults,
     };
@@ -202,11 +207,21 @@ async function initialize({config, globalConfig, testPath, parentProcess, loader
     await circus.dispatch({name: 'teardown'});
   }
 
+  const vitestFor = createVitest({circus, createJestObject, expect, moduleMocker});
+  // What `globals` injects: Jest's globals, or with Vitest's `globals: true`
+  // what Vitest puts on the global object.
+  const globals =
+    dialect === 'vitest'
+      ? (({assert, chai, bench, vitest, ...rest}) => rest)(vitestFor(testPath))
+      : {...circus.globals, expect};
+
   return {
     createJestObject,
-    globals: {...circus.globals, expect},
+    globals,
+    jestGlobals: {...circus.globals, expect},
     run,
     teardown,
+    vitestFor,
   };
 }
 
@@ -219,10 +234,10 @@ function unsupported(name) {
 // jestAdapter.ts's _addSnapshotData: a skipped or failed test's snapshots
 // aren't obsolete, nor are those of a `failing` test that passed (it threw);
 // whatever else went unchecked is obsolete, and removed with -u.
-function snapshotData(assertionResults, snapshotState) {
-  for (const {fullName, status, failing} of assertionResults) {
+function snapshotData(assertionResults, snapshotState, separator) {
+  for (const {ancestorTitles, title, status, failing} of assertionResults) {
     if (status === 'pending' || status === 'failed' || (failing && status === 'passed')) {
-      snapshotState.markSnapshotsAsCheckedForTest(fullName);
+      snapshotState.markSnapshotsAsCheckedForTest([...ancestorTitles, title].join(separator));
     }
   }
   const uncheckedCount = snapshotState.getUncheckedCount();

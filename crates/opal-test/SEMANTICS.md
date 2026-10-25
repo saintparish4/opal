@@ -17,6 +17,8 @@ opal test promises Jest 30.5.2's behavior for files written against Jest's globa
 - [Snapshots](#snapshots)
 - [Mock functions](#mock-functions)
 - [Module mocking](#module-mocking)
+- [Transforms](#transforms)
+- [Vitest's dialect](#vitests-dialect)
 - [Checked so far](#checked-so-far)
 - [Not yet](#not-yet)
 
@@ -168,7 +170,34 @@ From jest-runtime's `MockState.ts`, `CjsLoader.ts`, `Resolution.ts` and `index.t
 - **Generating an automock loads the real module in scratch registries,** so nothing it requires stays loaded.
 - **`require('@jest/globals')`** gives the globals with the requiring module's `jest`.
 
-`jest.mock` calls aren't hoisted yet: a file that requires a module above the `jest.mock` for it gets the real module. Jest hoists them with babel-plugin-jest-hoist. That arrives with the transform that TypeScript needs too.
+## Transforms
+
+Where Jest runs babel-jest, opal runs its own transform (`src/transform.rs`), in Rust with oxc. A worker asks for it in the middle of a `require` over a second connection: a worker thread does the I/O while the main thread waits on `Atomics.wait`. The result is cached in memory and on disk, keyed by the source, its extension, its options and the opal binary's own hash.
+
+- **What gets transformed.** A file outside `transformIgnorePatterns` (default: `/node_modules/`) when it is TypeScript or JSX, or when its text has `import`, `export` or a hoisted `jest` call. An ES module inside `node_modules`, `.mjs` or `.js` under `"type": "module"`, gets transformed regardless. Jest fails on those unless told to transform them; opal loads them, into the test's context like everything else. A config with `transform: {}` turns transforms off, as it does in Jest.
+- **TypeScript.** oxc's transformer strips types, compiles enums and parameter properties, and lowers legacy decorators with `design:` metadata. The options come from the nearest `tsconfig.json`, `extends` included: `experimentalDecorators`, `emitDecoratorMetadata`, `useDefineForClassFields` (defaulting from `target` as tsc does), `jsx` and `jsxImportSource`. Node's strip-only mode can't run the Nest scaffold's sources; this can.
+- **ES modules to CommonJS.** These follow @babel/plugin-transform-modules-commonjs, because Jest's users depend on its interop:
+  - imports become `require`s hoisted to the top;
+  - an imported binding is read through its module object at every use, with `(0, _m.f)()` for calls;
+  - Babel's `_interopRequireDefault` and `_interopRequireWildcard` handle default and namespace imports;
+  - an export is a writable property of `exports`, so `jest.spyOn(module, 'f')` can replace it, and every assignment to an exported binding updates it;
+  - re-exports are getters placed right after their `require`, and a name the module exports itself wins over `export *`.
+- **Hoisting.** `jest.mock`, `unmock`, `enableAutomock`, `disableAutomock` and `deepUnmock` at the top of a file move above everything, as babel-plugin-jest-hoist moves them, and so do `vi.mock`, `vi.unmock` and `vi.hoisted`.
+- **`import.meta`** becomes the module's `url`, `filename`, `dirname` and `resolve`.
+- **Stack traces.** Every source map token is carried through these edits. Each test's context gets an `Error.prepareStackTrace` that maps frames back to the lines the user wrote, as Jest installs source-map-support. Inline snapshots find their call through those frames.
+
+## Vitest's dialect
+
+A project is in Vitest's dialect when its folder has no Jest config but a `vitest.config.*` (or `vite.config.*`), or lists vitest as a dependency. The config is evaluated by Node with `vitest/config` and `vite` stubbed through `module.registerHooks`, which costs about 40 ms instead of the half second loading Vite takes. `include` and `exclude`, `globals`, `setupFiles`, `testTimeout`, the mock-reset flags and `resolve.alias` are read.
+
+Vitest is an alias layer over the Jest semantics above (`runtime/vitest.cjs`):
+
+- **Its API.** The `vitest` module and `vi` map onto the same framework.
+- **Test functions.** Tests and hooks get Vitest's context object instead of `done`, and a hook may return a cleanup.
+- **Snapshots.** Snapshot files use Vitest's header and ` > ` keys.
+- **Imports.** `./a.js` resolves to `./a.ts` as Vite resolves it.
+
+Where Vitest's behavior differs from Jest's, opal does what Jest does. [`COMPATIBILITY.md`](./COMPATIBILITY.md) lists each place.
 
 ## Checked so far
 
@@ -181,10 +210,10 @@ From jest-runtime's `MockState.ts`, `CjsLoader.ts`, `Resolution.ts` and `index.t
 | `compat/test-mock.cjs`, seeds 1 and 2, 3,000 programs of 30 operations each, against Jest's installed `jest-mock` build | 180,000 operations: the full recorded state of every mock identical after each one |
 | the same with a bug planted, each call's `this` recorded as `undefined` | caught: 484 of 500 programs differ |
 | `compat/test-runners.py --opal`, all 88 Jest-dialect fixtures | identical to Jest in verdicts and in every file written, the known differences included; all 34 planted failures fail |
+| the Nest 12 scaffold's own suite (`compat/frameworks/nest`, Vitest, decorators with metadata, ES-module-only `@nestjs/*`) | 1 of 1 passing, as under `vitest run` |
 
 ## Not yet
 
-- **Hoisting `jest.mock` above the requires it governs.**
 - **Fake timers.** `jest.useFakeTimers` and friends throw rather than pass.
 - **Running the project's prettier on inline snapshots.**
 - **TypeScript and ESM test files.**

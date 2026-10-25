@@ -19,6 +19,9 @@ pub mod glob;
 mod pool;
 mod report;
 mod runtime;
+mod service;
+pub mod transform;
+mod tsconfig;
 
 use std::io::Write;
 use std::path::PathBuf;
@@ -111,7 +114,8 @@ fn default_workers() -> usize {
 
 pub fn run(options: &RunOptions, out: &mut dyn Write) -> Result<Outcome, TestError> {
     let runtime_dir = runtime::unpack(&options.cache_dir).map_err(TestError::Runtime)?;
-    let mut pool = pool::Pool::start(&options.node, &runtime_dir.join("worker.cjs"))?;
+    let transforms = std::sync::Arc::new(service::TransformService::new(&options.cache_dir));
+    let mut pool = pool::Pool::start(&options.node, &runtime_dir.join("worker.cjs"), transforms)?;
     pool.spawn()?;
     let result = run_with(&mut pool, options, out);
     pool.shutdown();

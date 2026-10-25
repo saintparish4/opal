@@ -35,7 +35,11 @@ const TEST_TIMEOUT_SYMBOL = Symbol.for('TEST_TIMEOUT_SYMBOL');
 // them can't stop a timeout from firing.
 const {setTimeout, clearTimeout} = globalThis;
 
-function createCircus({expect, parentProcess}) {
+const DYNAMIC_SKIP = Symbol.for('opal.dynamicSkip');
+
+// `testNameSeparator` joins describe and test titles into the name expect
+// keys snapshots by: ' ' in Jest's dialect, ' > ' in Vitest's.
+function createCircus({expect, parentProcess, testNameSeparator = ' '}) {
   // --- state ---------------------------------------------------------------
 
   const makeDescribe = (name, parent, mode) => {
@@ -301,7 +305,10 @@ function createCircus({expect, parentProcess}) {
     if (!expect) return;
     switch (event.name) {
       case 'test_start':
-        expect.setState({currentTestName: getTestID(event.test), testFailing: event.test.failing});
+        expect.setState({
+          currentTestName: getTestNamesPath(event.test).slice(1).join(testNameSeparator),
+          testFailing: event.test.failing,
+        });
         break;
       case 'test_done': {
         event.test.numPassingAsserts = expect.getState().numPassingAsserts;
@@ -751,7 +758,11 @@ function createCircus({expect, parentProcess}) {
         await dispatch({name: 'test_fn_success', test});
       }
     } catch (error) {
-      if (test.failing) await dispatch({name: 'test_fn_success', test});
+      // Vitest's context.skip(): the test reports as skipped (vitest.cjs).
+      if (error && error[DYNAMIC_SKIP]) {
+        test.dynamicSkip = true;
+        await dispatch({name: 'test_fn_success', test});
+      } else if (test.failing) await dispatch({name: 'test_fn_success', test});
       else await dispatch({error, name: 'test_fn_failure', test});
     }
   }
@@ -795,7 +806,7 @@ function createCircus({expect, parentProcess}) {
           numPassingAsserts: child.numPassingAsserts,
           retryReasons: child.retryReasons.map(getError).map(error => flattenErrorStack(error)),
           startedAt: child.startedAt,
-          status: child.status,
+          status: child.dynamicSkip && child.errors.length === 0 ? 'skip' : child.status,
           testPath: getTestNamesPath(child),
         });
       }

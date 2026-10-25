@@ -191,7 +191,7 @@ class Loader {
     const dir = path.dirname(from);
     if (request.startsWith('./') || request.startsWith('../') || request === '.' || request === '..' || path.isAbsolute(request)) {
       const target = path.resolve(dir, request);
-      const found = this.tryFile(target) || this.tryDirectory(target);
+      const found = this.tryFile(target) || this.tryDirectory(target) || this.tryTypeScriptSibling(target);
       if (found) return found;
     } else {
       const found = this.resolvePackage(dir, request);
@@ -229,6 +229,19 @@ class Loader {
     } finally {
       this.moduleNameMapper = saved;
     }
+  }
+
+  // Vite reads `./a.js` as `./a.ts` when only the TypeScript file exists,
+  // as TypeScript's NodeNext resolution writes imports; Jest doesn't.
+  tryTypeScriptSibling(target) {
+    if (this.config.dialect !== 'vitest') return null;
+    const swaps = {'.cjs': ['.cts'], '.js': ['.ts', '.tsx'], '.jsx': ['.tsx'], '.mjs': ['.mts']};
+    const extension = path.extname(target);
+    for (const replacement of swaps[extension] || []) {
+      const candidate = target.slice(0, -extension.length) + replacement;
+      if (isFile(candidate)) return candidate;
+    }
+    return null;
   }
 
   tryFile(target) {
@@ -424,6 +437,7 @@ class Loader {
   // What `require` in a test file or module does.
   requireModuleOrMock(from, name) {
     if (name === '@jest/globals') return this.jestGlobals(from);
+    if (name === 'vitest' && this.config.dialect === 'vitest') return this.vitestFor(from);
     const {shouldMock, moduleID} = this.shouldMock(from, name);
     if (shouldMock) return this.requireMockWithId(from, name, moduleID);
     return this.requireModule(from, name);

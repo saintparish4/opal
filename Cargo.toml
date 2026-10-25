@@ -19,6 +19,12 @@ oxc_ast = "0.152.0"
 oxc_ast_visit = "0.152.0"
 oxc_parser = "0.152.0"
 oxc_span = "0.152.0"
+# opal test's transform: TypeScript, decorators and JSX (oxc_transformer),
+# printed back with a source map (oxc_codegen), and the scopes the CommonJS
+# rewrite reads references from (oxc_semantic).
+oxc_codegen = { version = "0.152.0", features = ["sourcemap"] }
+oxc_semantic = "0.152.0"
+oxc_transformer = "0.152.0"
 serde = { version = "1.0", features = ["derive"] }
 # `raw_value` keeps a packument's version bodies as unparsed slices: a
 # registry lists every version a package ever shipped, and an install reads the

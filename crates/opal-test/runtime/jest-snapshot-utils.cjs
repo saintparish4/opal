@@ -16,7 +16,7 @@ Object.defineProperty(exports, "processInlineSnapshotsWithBabel", {enumerable: t
 Object.defineProperty(exports, "processPrettierAst", {enumerable: true, get: () => processPrettierAst});
 Object.defineProperty(exports, "groupSnapshotsByFile", {enumerable: true, get: () => groupSnapshotsByFile});
 const _m0 = require("fs");
-const _m1 = require("./jest-snapfile.cjs");
+const _m1 = require("./snapfile-dialect.cjs");
 const _m2 = require("./format.cjs");
 const _m3 = require("./jest-snapshot-plugins.cjs");
 

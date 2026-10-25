@@ -69,8 +69,13 @@ const EXTERNAL = {
 
 // Node's own modules, required from the host as they are.
 const HOST = new Set(['graceful-fs', 'node:path', 'node:fs', 'path', 'fs']);
-// A sibling replaced by a hand-written module.
-const REPLACED = {'jest-snapshot/./InlineSnapshots': 'inline-snapshots'};
+// A sibling replaced by a hand-written module, or a package that one
+// package reaches through a wrapper: jest-snapshot writes snapshot files
+// through snapfile-dialect.cjs, which knows Vitest's header and keys.
+const REPLACED = {
+  'jest-snapshot/./InlineSnapshots': 'inline-snapshots',
+  'jest-snapshot/@jest/snapshot-utils': 'snapfile-dialect',
+};
 
 const moduleName = (prefix, file) => (file === 'index' ? prefix : `${prefix}-${file}`);
 

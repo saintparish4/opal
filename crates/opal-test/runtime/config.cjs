@@ -1,4 +1,4 @@
-// Finding and normalizing a Jest config, after jest-config's
+// Finding and normalizing a project's test config, after jest-config's
 // resolveConfigPath.ts, readConfigFileAndSetRootDir.ts and normalize.ts.
 //
 // From the starting folder upward, the first folder holding a
@@ -7,6 +7,14 @@
 // rootDir. A config can export an object or a function returning one, sync
 // or async. What comes back has every default filled in, `<rootDir>`
 // replaced and every path absolute, so nothing downstream guesses.
+//
+// A project is in Vitest's dialect when that folder has no Jest config but a
+// vitest.config.* (or a vite.config.* with a `test` key), or lists vitest
+// as a dependency. Its config is read into the same shape: `include` and
+// `exclude` become testMatch globs, `globals` decides injectGlobals,
+// `setupFiles` run where Jest's setupFilesAfterEnv do, `resolve.alias`
+// becomes moduleNameMapper. `dialect: 'vitest'` tells the runtime to serve
+// the `vitest` module and read imports the way Vite does.
 'use strict';
 
 const fs = require('fs');
@@ -35,6 +43,10 @@ const DEFAULTS = {
 
 const DEFAULT_TEST_MATCH = ['**/__tests__/**/*.?([mc])[jt]s?(x)', '**/?(*.)+(spec|test).?([mc])[jt]s?(x)'];
 
+const VITEST_CONFIG_NAMES = ['vitest.config', 'vite.config'].flatMap(base =>
+  ['ts', 'mts', 'cts', 'js', 'mjs', 'cjs'].map(ext => `${base}.${ext}`),
+);
+
 function findConfig(start) {
   for (let dir = path.resolve(start); ; dir = path.dirname(dir)) {
     for (const name of CONFIG_NAMES) {
@@ -45,6 +57,104 @@ function findConfig(start) {
     if (fs.existsSync(manifest)) return manifest;
     if (path.dirname(dir) === dir) return null;
   }
+}
+
+function findVitestConfig(dir) {
+  for (const name of VITEST_CONFIG_NAMES) {
+    const candidate = path.join(dir, name);
+    if (fs.existsSync(candidate)) return candidate;
+  }
+  return null;
+}
+
+const usesVitest = manifest => {
+  const all = {...manifest.dependencies, ...manifest.devDependencies};
+  return 'vitest' in all && !('jest' in all);
+};
+
+// What a vitest config imports from vitest and vite, without loading either
+// (Vite alone takes half a second): the identity defineConfig and Vitest's
+// defaults. A config that needs more falls back to the real import.
+const STUB_URL = 'opal-stub:vitest-config';
+const STUB_SOURCE = `
+const identity = config => config;
+export const defineConfig = identity;
+export const defineProject = identity;
+export const defineWorkspace = identity;
+export const mergeConfig = (a, b) => ({...a, ...b, test: {...(a && a.test), ...(b && b.test)}});
+export const defaultInclude = ['**/*.{test,spec}.?(c|m)[jt]s?(x)'];
+export const defaultExclude = ['**/node_modules/**', '**/.git/**'];
+export const configDefaults = {include: defaultInclude, exclude: defaultExclude};
+export default {defineConfig};
+`;
+
+async function importVitestConfig(file) {
+  const Module = require('module');
+  let hooks = null;
+  if (typeof Module.registerHooks === 'function') {
+    hooks = Module.registerHooks({
+      resolve(specifier, context, next) {
+        if (specifier === 'vitest/config' || specifier === 'vite' || specifier === 'vitest/node') {
+          return {shortCircuit: true, url: STUB_URL};
+        }
+        return next(specifier, context);
+      },
+      load(url, context, next) {
+        if (url === STUB_URL) return {format: 'module', shortCircuit: true, source: STUB_SOURCE};
+        return next(url, context);
+      },
+    });
+  }
+  try {
+    return (await import(`${pathToFileURL(file).href}?opal=${Date.now()}`)).default;
+  } catch (error) {
+    if (!hooks) throw error;
+    hooks.deregister();
+    hooks = null;
+    return (await import(pathToFileURL(file).href)).default;
+  } finally {
+    hooks?.deregister();
+  }
+}
+
+const VITEST_DEFAULT_INCLUDE = ['**/*.{test,spec}.?(c|m)[jt]s?(x)'];
+const VITEST_DEFAULT_EXCLUDE = ['**/node_modules/**', '**/.git/**'];
+
+async function loadVitestConfig(dir, file) {
+  let loaded = file ? await importVitestConfig(file) : {};
+  if (typeof loaded === 'function') loaded = await loaded({command: 'serve', mode: 'test'});
+  loaded = loaded || {};
+  const test = loaded.test || {};
+  const rootDir = path.resolve(dir, test.root || loaded.root || '.');
+  const anchor = pattern => (pattern.startsWith('**/') || path.isAbsolute(pattern) ? pattern : path.join(rootDir, pattern));
+  const include = (test.include || VITEST_DEFAULT_INCLUDE).map(anchor);
+  const exclude = (test.exclude || VITEST_DEFAULT_EXCLUDE).map(anchor);
+  const aliases = loaded.resolve && loaded.resolve.alias;
+  const moduleNameMapper = {};
+  for (const entry of Array.isArray(aliases) ? aliases : Object.entries(aliases || {}).map(([find, replacement]) => ({find, replacement}))) {
+    const find = entry.find instanceof RegExp ? entry.find.source : `^${String(entry.find).replaceAll(/[.*+?^${}()|[\]\\]/g, '\\$&')}(/.*)?$`;
+    moduleNameMapper[find] = entry.find instanceof RegExp ? entry.replacement : `${entry.replacement}$1`;
+  }
+  const setupFiles = [test.setupFiles || []].flat().map(entry => resolveConfigPath(rootDir, entry));
+  return {
+    ...DEFAULTS,
+    clearMocks: Boolean(test.clearMocks),
+    configPath: file,
+    dialect: 'vitest',
+    injectGlobals: test.globals === true,
+    moduleNameMapper,
+    resetMocks: Boolean(test.mockReset),
+    restoreMocks: Boolean(test.restoreMocks),
+    rootDir,
+    roots: [rootDir],
+    setupFiles: [],
+    setupFilesAfterEnv: setupFiles,
+    snapshotFormat: {escapeString: false, printBasicPrototype: false},
+    testMatch: [...include, ...exclude.map(pattern => `!${pattern}`)],
+    testPathIgnorePatterns: [],
+    testRegex: [],
+    testTimeout: test.testTimeout || 5000,
+  };
 }
 
 async function readConfigFile(file) {
@@ -79,6 +189,17 @@ const PATH_LISTS = ['roots', 'setupFiles', 'setupFilesAfterEnv', 'snapshotSerial
 
 async function loadConfig({rootDir: start, configPath}) {
   let file = configPath ? path.resolve(start, configPath) : findConfig(start);
+  if (!configPath && file && path.basename(file) === 'package.json') {
+    const dir = path.dirname(file);
+    const manifest = JSON.parse(fs.readFileSync(file, 'utf8'));
+    if (!manifest.jest) {
+      const vitestConfig = findVitestConfig(dir);
+      if (vitestConfig || usesVitest(manifest)) return loadVitestConfig(dir, vitestConfig);
+    }
+  }
+  if (configPath && /(^|[\\/])vite(st)?\.config\.[cm]?[jt]s$/.test(file)) {
+    return loadVitestConfig(path.dirname(file), file);
+  }
   let raw = file ? await readConfigFile(file) : {};
   if (Array.isArray(raw.projects) && raw.projects.length > 0) {
     throw new Error('opal test does not support Jest `projects` yet.');
@@ -102,6 +223,7 @@ async function loadConfig({rootDir: start, configPath}) {
     }
   }
   config.snapshotFormat = {escapeString: false, printBasicPrototype: false, ...config.snapshotFormat};
+  config.dialect = 'jest';
   return config;
 }
 

@@ -7,7 +7,7 @@
 'use strict';
 Object.defineProperty(exports, 'default', {enumerable: true, get: () => SnapshotState});
 const _m0 = require("fs");
-const _m1 = require("./jest-snapfile.cjs");
+const _m1 = require("./snapfile-dialect.cjs");
 const _m2 = require("./support.cjs");
 const _m3 = require("./inline-snapshots.cjs");
 const _m4 = require("./jest-snapshot-utils.cjs");

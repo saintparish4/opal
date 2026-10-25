@@ -5,6 +5,7 @@
 
 const net = require('net');
 const {loadConfig} = require('./config.cjs');
+const {Bridge} = require('./bridge.cjs');
 const {runTestFile} = require('./runner.cjs');
 
 const port = Number(process.env.OPAL_TEST_PORT);
@@ -23,6 +24,8 @@ process.on('uncaughtException', error => {
 process.on('unhandledRejection', error => {
   process.stderr.write(`opal test: unhandled rejection outside any test file: ${error && error.stack ? error.stack : error}\n`);
 });
+
+const bridge = new Bridge({port, token, worker});
 
 const socket = net.connect(port, '127.0.0.1');
 socket.setNoDelay(true);
@@ -58,7 +61,7 @@ async function handle(message) {
     case 'run': {
       let result;
       try {
-        result = await runTestFile(message.path, message.context);
+        result = await runTestFile(message.path, message.context, bridge);
       } catch (error) {
         const stack = error && error.stack ? error.stack : String(error);
         result = {

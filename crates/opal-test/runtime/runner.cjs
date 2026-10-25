@@ -11,11 +11,21 @@ const util = require('util');
 const vm = require('vm');
 const {createEnvironment} = require('./environment.cjs');
 const {Loader} = require('./loader.cjs');
+const sourcemaps = require('./sourcemaps.cjs');
 
 // Everything in this folder but the host side below runs inside each test
 // file's context, loaded on first require. Compiled once per worker, run in
 // each file's context.
-const HOST_FILES = new Set(['worker.cjs', 'config.cjs', 'environment.cjs', 'loader.cjs', 'runner.cjs']);
+const HOST_FILES = new Set([
+  'bridge-thread.cjs',
+  'bridge.cjs',
+  'config.cjs',
+  'environment.cjs',
+  'loader.cjs',
+  'runner.cjs',
+  'sourcemaps.cjs',
+  'worker.cjs',
+]);
 const frameworkScripts = new Map();
 
 function frameworkScript(name) {
@@ -131,7 +141,67 @@ function failure(testPath, error) {
   };
 }
 
-async function runTestFile(testPath, {config, globalConfig}) {
+// The transform babel-jest would apply, done by opal (src/transform.rs):
+// TypeScript, JSX, ES modules to CommonJS, jest.mock hoisting. A file outside
+// transformIgnorePatterns is sent when anything in it could need that; a
+// config that sets `transform: {}` turns it off, as it does in Jest.
+const NEEDS_TRANSFORM = /\b(?:import|export)\b|\bjest\s*\.\s*(?:mock|unmock|enableAutomock|disableAutomock|deepUnmock)\b/;
+const ALWAYS = new Set(['.ts', '.tsx', '.mts', '.cts', '.jsx']);
+
+// An ES module in node_modules is transformed whatever transformIgnorePatterns
+// says: CommonJS can't load it otherwise. Jest fails on it unless told to
+// transform it; opal loads it, into the test's context like everything else.
+const packageTypes = new Map();
+function isEsModule(filename) {
+  const extension = path.extname(filename);
+  if (extension === '.mjs') return true;
+  if (extension !== '.js') return false;
+  for (let dir = path.dirname(filename); ; dir = path.dirname(dir)) {
+    let type = packageTypes.get(dir);
+    if (type === undefined) {
+      try {
+        type = JSON.parse(fs.readFileSync(path.join(dir, 'package.json'), 'utf8')).type || 'commonjs';
+      } catch {
+        type = null;
+      }
+      packageTypes.set(dir, type);
+    }
+    if (type) return type === 'module';
+    if (path.dirname(dir) === dir) return false;
+  }
+}
+
+// OPAL_TEST_PROFILE=1 prints, per file, how much went to transforms.
+const profile = process.env.OPAL_TEST_PROFILE ? {transformNanos: 0n, transforms: 0} : null;
+
+function createTransform(config, bridge) {
+  if (!bridge || (config.transform && Object.keys(config.transform).length === 0)) return undefined;
+  const ignore = (config.transformIgnorePatterns || ['/node_modules/', '\\.pnp\\.[^\\/]+$']).map(
+    pattern => new RegExp(pattern),
+  );
+  return (filename, code) => {
+    if (ignore.some(regex => regex.test(filename))) {
+      if (!isEsModule(filename)) return code;
+    } else if (!ALWAYS.has(path.extname(filename)) && !NEEDS_TRANSFORM.test(code)) {
+      return code;
+    }
+    const started = profile ? process.hrtime.bigint() : 0n;
+    const reply = bridge.request({path: filename});
+    if (profile) {
+      profile.transforms += 1;
+      profile.transformNanos += process.hrtime.bigint() - started;
+    }
+    if (reply.error) {
+      const error = new SyntaxError(reply.error);
+      error.stack = `SyntaxError: ${reply.error}`;
+      throw error;
+    }
+    sourcemaps.register(filename, reply.mappings);
+    return reply.code;
+  };
+}
+
+async function runTestFile(testPath, {config, globalConfig}, bridge) {
   const start = Date.now();
   const consoleEntries = [];
   let result;
@@ -139,7 +209,9 @@ async function runTestFile(testPath, {config, globalConfig}) {
   try {
     const {context, global} = createEnvironment(config);
     global.console = createBufferedConsole(consoleEntries);
-    const loader = new Loader({config, context, global, mocks: config.manualMocks, testPath});
+    global.Error.prepareStackTrace = sourcemaps.prepareStackTrace;
+    const transform = createTransform(config, bridge);
+    const loader = new Loader({config, context, global, mocks: config.manualMocks, testPath, transform});
     framework = await loadFramework(context).initialize({
       config,
       globalConfig,
@@ -148,7 +220,8 @@ async function runTestFile(testPath, {config, globalConfig}) {
       testPath,
     });
     loader.createJestObject = from => framework.createJestObject(from);
-    loader.jestGlobals = from => ({...framework.globals, jest: framework.createJestObject(from)});
+    loader.jestGlobals = from => ({...framework.jestGlobals, jest: framework.createJestObject(from)});
+    loader.vitestFor = from => framework.vitestFor(from);
     for (const file of config.setupFiles) loader.requireModule(file);
     if (config.injectGlobals) Object.assign(global, framework.globals);
     for (const file of config.setupFilesAfterEnv) {
@@ -162,6 +235,13 @@ async function runTestFile(testPath, {config, globalConfig}) {
   }
   if (!result) result = await framework.run();
   const end = Date.now();
+  if (profile) {
+    process.stderr.write(
+      `opal test profile: ${path.basename(testPath)} ${end - start} ms, ${profile.transforms} transforms in ${Number(profile.transformNanos / 1000000n)} ms\n`,
+    );
+    profile.transforms = 0;
+    profile.transformNanos = 0n;
+  }
   result.testFilePath = testPath;
   result.console = consoleEntries.length > 0 ? consoleEntries : undefined;
   result.perfStats = {end, runtime: end - start, slow: false, start};
