@@ -1,0 +1,10 @@
+[package]
+name = "opal-runtime"
+description = "Running JavaScript and package.json scripts: the opal run and opal x commands."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+libc.workspace = true

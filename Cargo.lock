@@ -596,6 +596,7 @@ dependencies = [
  "indicatif",
  "opal-core",
  "opal-pm",
+ "opal-runtime",
  "serde_json",
  "sha2",
  "tar",
@@ -637,6 +638,13 @@ dependencies = [
  "tempfile",
  "thiserror",
  "ureq",
+]
+
+[[package]]
+name = "opal-runtime"
+version = "0.4.1"
+dependencies = [
+ "libc",
 ]
 
 [[package]]

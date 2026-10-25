@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = [ "crates/opal-core", "crates/opal-cli", "crates/opal-pm" ] # TODO: add more crates
+members = [ "crates/opal-core", "crates/opal-cli", "crates/opal-pm", "crates/opal-runtime" ] # TODO: add more crates
 
 [workspace.package]
 version = "0.4.1"
@@ -11,6 +11,7 @@ repository = "https://github.com/saintparish4/opal"
 [workspace.dependencies]
 opal-core = { path = "crates/opal-core" }
 opal-pm = { path = "crates/opal-pm" }
+opal-runtime = { path = "crates/opal-runtime" }
 
 blake3 = "1.8.6"
 oxc_allocator = "0.152.0"

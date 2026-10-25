@@ -4,6 +4,13 @@ What changed in each Opal release, newest first.
 
 Opal is pre-1.0, so a release can change behaviour you depend on. Anything that does is under **Breaking**, and every release says whether it changes the `opal.lock` format. Dates are when the release was published. The numbers are measurements made at the time on one machine, and they compare a release with the one before it. Opal against npm, pnpm, yarn, and bun is in [benchmarks/BENCHMARKS.md](./benchmarks/BENCHMARKS.md).
 
+## [Unreleased]
+
+### Added
+
+- **`OPAL_TRACE_STARTUP=1`** prints where an opal command's startup time went: one line per checkpoint on stderr, with the time since the first and since the one before. Set `OPAL_TRACE_SPAWN_NS` to the parent's `CLOCK_MONOTONIC` reading in nanoseconds just before it started opal, and the timeline starts there, so the time before `main` shows too.
+- [`benchmarks/compare-runtimes.py`](./benchmarks/compare-runtimes.py) measures startup and steady-state speed against node and bun, with an empty C program and `opal --version` in the same rounds as controls. A CI check fails a change that adds syscalls or page faults to an opal command's startup beyond its budget in `benchmarks/runtime-budget.json`.
+
 ## [0.4.1] (2026-10-15)
 
 A faster `opal add` over old metadata, release notes taken from this changelog, and new checks that what Opal installs builds and runs. No `opal.lock` format change.

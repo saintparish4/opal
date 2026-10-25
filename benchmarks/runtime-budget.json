@@ -1,0 +1,12 @@
+{
+  "note": "Syscalls and minor page faults per opal command, above the empty static C program's. compare-runtimes.py gate fails CI when a command goes over; --rebase rewrites the numbers from a measurement plus headroom.",
+  "commands": {
+    "--version": {
+      "args": [
+        "--version"
+      ],
+      "syscalls": 68,
+      "minor_faults": 155
+    }
+  }
+}

@@ -32,6 +32,7 @@ use opal_pm::projects::ProjectIndex;
 use opal_pm::registry::{Freshness, HttpTransport, NpmRegistry, RetryPolicy, RetryingTransport};
 use opal_pm::resolve::PackageId;
 use opal_pm::semver::Version;
+use opal_runtime::trace;
 use style::Paint;
 use upgrade::{Outcome, Releases};
 
@@ -233,13 +234,25 @@ const PACKUMENT_MAX_AGE: std::time::Duration = std::time::Duration::from_secs(30
 type Failure = Box<dyn std::error::Error>;
 
 fn main() -> ExitCode {
-    match run(Cli::parse()) {
+    trace::checkpoint("main");
+    // clap exits on its own for --help, --version, and a usage error, which
+    // would skip the trace: it gets the chance to print first.
+    let cli = Cli::try_parse().unwrap_or_else(|error| {
+        trace::checkpoint("exit");
+        trace::finish();
+        error.exit()
+    });
+    trace::checkpoint("arguments parsed");
+    let code = match run(cli) {
         Ok(code) => code,
         Err(error) => {
             eprintln!("{} {error}", Paint::for_stderr().red("opal:"));
             ExitCode::FAILURE
         }
-    }
+    };
+    trace::checkpoint("exit");
+    trace::finish();
+    code
 }
 
 fn run(cli: Cli) -> Result<ExitCode, Failure> {

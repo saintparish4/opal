@@ -9,6 +9,7 @@ repository.workspace = true
 [dependencies]
 opal-core.workspace = true
 opal-pm.workspace = true
+opal-runtime.workspace = true
 clap.workspace = true
 indicatif.workspace = true
 console.workspace = true

@@ -125,6 +125,32 @@ jobs:
       - name: Check
         run: cargo deny --locked check bans licenses sources
 
+  # Wall time on a shared runner is too noisy to fail a build on, so startup
+  # is gated on what doesn't move with load: syscalls and minor page faults
+  # of opal commands, each minus the same counts for an empty static C
+  # program run on the same runner. Budgets are in
+  # benchmarks/runtime-budget.json; a change that needs more rebases them and
+  # says why. Times are measured by `compare-runtimes.py bench`, not here.
+  startup-budget:
+    name: Startup budget (syscalls, page faults)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Install Rust toolchain
+        run: rustup show
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+      - name: Install strace
+        run: sudo apt-get update && sudo apt-get install -y strace
+      - name: Build
+        run: cargo build --release --locked -p opal-cli
+      - name: Gate
+        # An explicit `shell: bash` runs with pipefail, so tee can't hide the
+        # gate's exit code.
+        shell: bash
+        run: python3 benchmarks/compare-runtimes.py gate --opal target/release/opal | tee -a "$GITHUB_STEP_SUMMARY"
+
   # `testing_strategy.md` §7: record every run's numbers, never gate on them.
   # No noise threshold has been agreed, so nothing here can fail the build on a
   # measurement, and `continue-on-error` keeps a broken harness from blocking
