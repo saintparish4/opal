@@ -1,5 +1,6 @@
-//! `opal run` and `opal x`: the halves of running code that need no
-//! JavaScript engine. The npm semantics they follow are documented in
+//! `opal run` and `opal x`. `opal run <file>` runs a JavaScript file on the
+//! embedded engine (`opal_runtime::engine`); `opal run <script>` and `opal x`
+//! need no engine, and the npm semantics they follow are documented in
 //! `opal_runtime::scripts` and `opal_runtime::bins`.
 
 use std::io::IsTerminal;
@@ -12,7 +13,7 @@ use opal_pm::edit::AddRequest;
 use opal_pm::install::{self, Change, InstallOptions};
 use opal_runtime::bins;
 use opal_runtime::scripts::{self, Context, Package, ScriptError, Step};
-use opal_runtime::{signals, trace};
+use opal_runtime::{engine, signals, trace};
 
 use crate::style::Paint;
 use crate::{Failure, ProjectArgs, install_tools};
@@ -22,10 +23,13 @@ pub struct RunArgs {
     /// Succeed without doing anything when the script doesn't exist.
     #[arg(long)]
     if_present: bool,
-    /// The script to run, then its arguments, which are appended to its
-    /// command. With none, lists the project's scripts. Everything after the
-    /// script's name is the script's, flags included; a `--` right after it
-    /// is dropped, so `opal run test -- --watch` works as it does with npm.
+    /// The file or script to run, then its arguments. A file is a path that
+    /// exists and ends in .js or .cjs, or has a `/` in it; its arguments are
+    /// process.argv.slice(2). Anything else is a package.json script, whose
+    /// arguments are appended to its command; with none, lists the scripts.
+    /// Everything after the name is the file's or script's, flags included;
+    /// a `--` right after a script's name is dropped, so
+    /// `opal run test -- --watch` works as it does with npm.
     #[arg(
         trailing_var_arg = true,
         allow_hyphen_values = true,
@@ -55,6 +59,12 @@ pub struct XArgs {
 
 pub fn run_command(args: RunArgs) -> Result<ExitCode, Failure> {
     let cwd = std::env::current_dir()?;
+    if let Some(first) = args.command.first()
+        && let Some(file) = file_to_run(&cwd, first)?
+    {
+        trace::checkpoint("file found");
+        engine::run_main(&file, &args.command[1..])
+    }
     let project = scripts::find_project(&cwd).ok_or_else(|| ScriptError::NoProject(cwd.clone()))?;
     let package = Package::read(&project)?;
     let mut command = args.command.into_iter();
@@ -77,6 +87,26 @@ pub fn run_command(args: RunArgs) -> Result<ExitCode, Failure> {
     let announce = |step: &Step| eprintln!("{}", paint.dim(format!("$ {}", step.command)));
     let outcome = scripts::run(&steps, &package, &context, &announce)?;
     signals::leave(outcome)
+}
+
+/// The file `opal run <name>` should run, if `name` names one. A name that
+/// looks like a file (a JavaScript extension, or a `/`) but isn't one is left
+/// to the scripts, which say there is no such script.
+fn file_to_run(cwd: &Path, name: &str) -> Result<Option<PathBuf>, Failure> {
+    let extension = Path::new(name).extension().and_then(|e| e.to_str());
+    let looks_like_file = name.contains('/') || matches!(extension, Some("js" | "cjs" | "mjs"));
+    let path = cwd.join(name);
+    if !looks_like_file || !path.is_file() {
+        return Ok(None);
+    }
+    // ES modules are not run yet. Running one as CommonJS would change what
+    // it means (strict mode, `this`, top-level await), so it is refused.
+    if extension == Some("mjs") {
+        return Err(format!("{name}: ES modules are not supported by `opal run` yet").into());
+    }
+    // Node runs the main module by its real path, so process.argv[1] and
+    // __filename name the file a symlink points at.
+    Ok(Some(std::fs::canonicalize(&path)?))
 }
 
 fn list(package: &Package) {

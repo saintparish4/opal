@@ -1,28 +1,36 @@
 {
-  "note": "Syscalls and minor page faults per opal command, above the empty static C program's. compare-runtimes.py gate fails CI when a command goes over; --rebase rewrites the numbers from a measurement plus headroom. Counts are for the whole process tree (strace -f), so a script's own shell is in them; the scripts here are `true` so that what moves is opal's part.",
+  "note": "Syscalls and minor page faults per opal command, above the empty static C program's. compare-runtimes.py gate fails CI when a command goes over; --rebase rewrites the numbers from a measurement plus headroom. Counts are for the whole process tree (strace -f), so a script's own shell is in them; the scripts here are `true` so that what moves is opal's part. `run hello.js` starts the JavaScript engine from its snapshot; its counts are what the runtime's startup costs above the floor.",
   "commands": {
     "--version": {
       "args": [
         "--version"
       ],
-      "syscalls": 68,
-      "minor_faults": 165
+      "syscalls": 74,
+      "minor_faults": 365
     },
     "run noop": {
       "args": [
         "run",
         "noop"
       ],
-      "syscalls": 154,
-      "minor_faults": 242
+      "syscalls": 158,
+      "minor_faults": 450
     },
     "run noop2 (pre-script, spawned)": {
       "args": [
         "run",
         "noop2"
       ],
-      "syscalls": 256,
-      "minor_faults": 327
+      "syscalls": 260,
+      "minor_faults": 534
+    },
+    "run hello.js": {
+      "args": [
+        "run",
+        "hello.js"
+      ],
+      "syscalls": 257,
+      "minor_faults": 1151
     }
   },
   "files": {
@@ -34,6 +42,7 @@
         "prenoop2": "true",
         "noop2": "true"
       }
-    }
+    },
+    "hello.js": "console.log(\"hello\")\n"
   }
 }

@@ -128,6 +128,27 @@ jobs:
           npm --version
           cargo test -p opal-cli --test npm-run-cross-check -- --ignored
 
+  # `opal run <file>` held to `node` on the same files: byte-for-byte stdout
+  # and the exit status, for the corpora in crates/opal-cli/tests/node-diff/
+  # (util.inspect's layout, Buffer's encodings). node is pinned to the
+  # release the runtime is measured against; the test refuses any other.
+  node-cross-check:
+    name: node cross-check (runtime)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Install Rust toolchain
+        run: rustup show
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+      - name: Install Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24.19.0"
+      - name: Cross-check
+        run: cargo test --release -p opal-cli --test node-cross-check -- --ignored
+
   # `deny.toml`: licenses a static MIT binary can carry, crates.io as the only
   # source, and the crates the design rules out. Advisories are left to
   # audit.yml, so the result depends on the tree alone and can gate a merge.

@@ -10,6 +10,13 @@ repository.workspace = true
 libc.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
+v8.workspace = true
+
+# build.rs runs the bootstrap on V8, with the same native functions
+# (src/engine/ops.rs, which uses libc), and embeds the snapshot it leaves.
+[build-dependencies]
+libc.workspace = true
+v8.workspace = true
 
 [dev-dependencies]
 tempfile.workspace = true

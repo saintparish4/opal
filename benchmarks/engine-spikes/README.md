@@ -81,7 +81,7 @@ The full steady-state tables, with every build and the CPU, fault, and syscall c
 
 ## The decision
 
-Not made in this commit. The measurements don't pick an engine on their own, because neither engine meets both targets:
+**V8 with a startup snapshot**, chosen by the project on 2026-10-25 from the trade below. The runtime is built on it in `crates/opal-runtime` (`build.rs` makes the snapshot, `src/engine/` runs it). The measurements didn't pick an engine on their own, because neither engine meets both targets:
 
 | | Startup ≤ 1.0× bun, ≤ 0.2× node | Run fast | Binary |
 |---|---|---|---|
@@ -90,7 +90,7 @@ Not made in this commit. The measurements don't pick an engine on their own, bec
 
 The recommendation is **V8 with a startup snapshot**. The gap to "run fast" under QuickJS is the engine's design (no JIT) and can't be closed from outside it. The gap to the startup target under V8 is 0.4–0.6 ms of page faults and system time in isolate creation, which is the kind of cost that can be attacked from outside the engine (untried candidates: fewer pages touched at startup, a smaller snapshot, the order of pages in the binary), and the snapshot keeps it nearly flat as the bootstrap grows. The cost is a binary six times bigger, and a build that downloads V8's prebuilt static library from GitHub, outside what `cargo deny` sees.
 
-That trade (binary size and the startup target against steady-state speed) is the project's to make, so step 3 waits on it.
+That trade (binary size and the startup target against steady-state speed) was the project's to make, and it took V8.
 
 ## What the engines' own sources add
 

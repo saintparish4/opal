@@ -55,3 +55,9 @@ console = { version = "0.16.4", default-features = false, features = ["std"] }
 # std has no advisory file locking; this is one extern function (flock), not
 # worth a wrapper crate like fs2/fd-lock for.
 libc = "0.2.189"
+# The JavaScript engine `opal run app.js` embeds, chosen by measurement in
+# benchmarks/engine-spikes/README.md: V8 with a startup snapshot. Its build
+# script downloads V8's prebuilt static library from denoland/rusty_v8's
+# GitHub releases (RUSTY_V8_ARCHIVE points it at a local copy instead), which
+# is outside what `cargo deny` checks.
+v8 = "152.2.0"

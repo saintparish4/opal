@@ -111,13 +111,16 @@ jobs:
           - asset: linux-x64
             os: ubuntu-22.04
             target: x86_64-unknown-linux-gnu
+          #
+          # Every target builds on a machine of its own architecture: the
+          # runtime's V8 startup snapshot is made by running V8 for the
+          # target during the build, so it can't be cross-compiled
+          # (crates/opal-runtime/build.rs refuses).
           - asset: linux-arm64
-            os: ubuntu-22.04
+            os: ubuntu-22.04-arm
             target: aarch64-unknown-linux-gnu
-            linker_package: gcc-aarch64-linux-gnu
-            linker: aarch64-linux-gnu-gcc
           - asset: macos-x64
-            os: macos-latest
+            os: macos-15-intel
             target: x86_64-apple-darwin
           - asset: macos-arm64
             os: macos-latest
@@ -134,18 +137,6 @@ jobs:
       - name: Install Rust toolchain
         run: rustup target add ${{ matrix.target }}
 
-      # The Linux runner is x86_64; aarch64-unknown-linux-gnu needs a cross
-      # linker. macos-latest is an Apple Silicon runner and can cross-link
-      # x86_64-apple-darwin directly via Xcode's toolchain, no extra package.
-      - name: Install cross linker
-        if: matrix.linker_package
-        run: sudo apt-get update && sudo apt-get install -y ${{ matrix.linker_package }}
-
-      - name: Configure cross linker
-        if: matrix.linker
-        run: |
-          echo "CARGO_TARGET_$(echo ${{ matrix.target }} | tr '[:lower:]-' '[:upper:]_')_LINKER=${{ matrix.linker }}" >> "$GITHUB_ENV"
-
       # No cargo cache, unlike CI: a release binary is compiled from source and
       # from the committed lockfile, never on top of an earlier run's target
       # directory. A clean build takes about a minute per target.
@@ -153,8 +144,7 @@ jobs:
         run: cargo build --release --locked -p opal-cli --target ${{ matrix.target }}
 
       # Nothing else notices when the requirement rises: the build passes and
-      # the binary runs on the runner. readelf, not objdump, because it reads
-      # the cross-compiled arm64 binary too.
+      # the binary runs on the runner.
       - name: Check the glibc requirement
         if: startsWith(matrix.asset, 'linux-')
         run: |
