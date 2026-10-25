@@ -1,0 +1,3 @@
+stdout differs from line 1:
+  original: "log,own |  1"
+  bundle:   "own |  undefined"
