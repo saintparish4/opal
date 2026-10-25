@@ -156,7 +156,12 @@ fn has_module_syntax(text: &str, language: Language) -> bool {
             ..ParseOptions::default()
         })
         .parse();
-    if as_script.diagnostics.is_empty() {
+    // oxc parses an import or export declaration in a script, and reports
+    // it only in semantic analysis; Node's CommonJS compile fails on it, and
+    // on import.meta, which is what makes it try ESM.
+    let module_syntax = as_script.module_record.has_module_syntax
+        || !as_script.module_record.import_metas.is_empty();
+    if as_script.diagnostics.is_empty() && !module_syntax {
         return false;
     }
     let allocator = Allocator::default();

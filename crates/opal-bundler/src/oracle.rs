@@ -168,7 +168,10 @@ impl Node {
         let _ = std::fs::remove_file(&report);
 
         let mut child = Command::new(&self.program)
+            // Warnings about how Node loads files, which the bundle replaces
+            // (SEMANTICS.md, "What is observed").
             .arg("--disable-warning=ExperimentalWarning")
+            .arg("--disable-warning=MODULE_TYPELESS_PACKAGE_JSON")
             .args(&self.flags)
             .arg("--require")
             .arg(&hook)

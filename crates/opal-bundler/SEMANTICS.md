@@ -94,6 +94,11 @@ These are not observed, and may differ:
 - Where Node's own warnings point: the file, line, and quoted source in
   "Warning: Detected unsettled top-level await at …". That the warning is
   printed is observed, and so is the exit code 13 that follows.
+- Node's warnings about how it loads files: `ExperimentalWarning` for type
+  stripping, and `MODULE_TYPELESS_PACKAGE_JSON`, which says a `.js` file
+  under a `package.json` with no `type` was parsed twice to detect ESM. They
+  describe Node's loader, which the bundle replaces, and they name absolute
+  paths.
 
 ## Rules
 

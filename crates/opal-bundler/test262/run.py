@@ -258,7 +258,7 @@ def run_node(file, meta, work, node):
     env.pop("NODE_OPTIONS", None)
     try:
         done = subprocess.run(
-            [node, "--disable-warning=ExperimentalWarning", "--require", str(work / "prelude" / "prelude.cjs"), str(file)],
+            [node, "--disable-warning=ExperimentalWarning", "--disable-warning=MODULE_TYPELESS_PACKAGE_JSON", "--require", str(work / "prelude" / "prelude.cjs"), str(file)],
             cwd=file.parent,
             env=env,
             capture_output=True,
