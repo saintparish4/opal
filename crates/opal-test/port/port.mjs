@@ -9,9 +9,9 @@
 // transform rewrites it: an imported binding becomes a property read on the
 // required module wherever it is referenced, so a cycle between two modules
 // (asymmetricMatchers and jestMatchersObject import each other) behaves as
-// it does under ES modules. Nothing else in the code is touched: what runs
-// is Jest's own logic, which is the point, and test/equals-property.cjs
-// holds the result to Jest's own build anyway.
+// it does under ES modules. Apart from the PATCHES below, nothing else in
+// the code is touched: what runs is Jest's own logic, which is the point,
+// and test/equals-property.cjs holds the result to Jest's own build anyway.
 //
 // Dependencies outside the list are mapped onto opal's runtime: chalk to a
 // shim with no colors, pretty-format to format.cjs, jest-util and
@@ -76,6 +76,33 @@ const REPLACED = {
   'jest-snapshot/./InlineSnapshots': 'inline-snapshots',
   'jest-snapshot/@jest/snapshot-utils': 'snapfile-dialect',
 };
+
+// The places where Vitest's snapshots differ from Jest's inside
+// jest-snapshot itself: there, the code asks snapfile-dialect.cjs (which
+// jest-snapshot imports as @jest/snapshot-utils) instead of deciding. In
+// Jest's dialect each answers exactly what the replaced code computed. Each
+// patch is a text replacement on the TypeScript source that must apply once.
+const PATCHES = {
+  'jest-snapshot/index': [
+    // A hint joins the test's name with ': ' in Jest, ' > ' in Vitest.
+    ["import {escapeBacktickString} from '@jest/snapshot-utils';", "import {escapeBacktickString, hintedTestName} from '@jest/snapshot-utils';"],
+    ['? `${currentTestName}: ${hint}`', '? hintedTestName(currentTestName, hint)'],
+  ],
+  'jest-snapshot/State': [
+    // Vitest compares a snapshot with the received value trimmed.
+    ['  testNameToKey,\n} from', '  snapshotsMatch,\n  testNameToKey,\n} from'],
+    ['const pass = expected === receivedSerialized;', 'const pass = snapshotsMatch(expected, receivedSerialized);'],
+  ],
+};
+
+function applyPatches(pkg, file, source) {
+  for (const [from, to] of PATCHES[`${pkg}/${file}`] || []) {
+    const found = source.split(from).length - 1;
+    if (found !== 1) throw new Error(`patch for ${pkg}/${file} matches ${found} times: ${from}`);
+    source = source.replace(from, () => to);
+  }
+  return source;
+}
 
 const moduleName = (prefix, file) => (file === 'index' ? prefix : `${prefix}-${file}`);
 
@@ -201,10 +228,13 @@ function convert(source, pkg, file) {
 }
 
 function header(pkg, file) {
+  const changed = PATCHES[`${pkg}/${file}`]
+    ? ['// CommonJS, and the PATCHES that port.mjs lists applied. Do not edit by', '// hand; edit the port.']
+    : ['// CommonJS, nothing else changed. Do not edit by hand; edit the port.'];
   return [
     `// Ported from jest/packages/${pkg}/src/${file}.ts at Jest ${TAG} by`,
     '// crates/opal-test/port/port.mjs: types stripped, ES modules rewritten to',
-    '// CommonJS, nothing else changed. Do not edit by hand; edit the port.',
+    ...changed,
     '//',
     '// Copyright (c) Meta Platforms, Inc. and affiliates. MIT license, in',
     '// compat/test-runners/LICENSES/jest.txt.',
@@ -224,7 +254,7 @@ function main() {
   for (const [pkg, [prefix, files]] of Object.entries(PACKAGES)) {
     for (const file of files) {
       const sourcePath = path.join(checkout, 'packages', pkg, 'src', `${file}.ts`);
-      const typescript = fs.readFileSync(sourcePath, 'utf8');
+      const typescript = applyPatches(pkg, file, fs.readFileSync(sourcePath, 'utf8'));
       // Parameter properties (asymmetricMatchers.ts) need transform mode;
       // everything else is plain stripping.
       const mode = /constructor\([^)]*\b(?:protected|private|public|readonly)\s/.test(typescript) ? 'transform' : 'strip';

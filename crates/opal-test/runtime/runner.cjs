@@ -201,7 +201,21 @@ function createTransform(config, bridge) {
   };
 }
 
-async function runTestFile(testPath, {config, globalConfig}, bridge) {
+// A test file that imports from vitest is in Vitest's dialect whatever the
+// project's config is: a Jest project couldn't run it otherwise.
+const IMPORTS_VITEST = /\bfrom\s*['"]vitest['"]|\brequire\(\s*['"]vitest['"]\s*\)|\bimport\s*['"]vitest['"]/;
+
+function dialectOf(testPath, config) {
+  if (config.dialect === 'vitest') return config;
+  try {
+    if (IMPORTS_VITEST.test(fs.readFileSync(testPath, 'utf8'))) return {...config, dialect: 'vitest'};
+  } catch {}
+  return config;
+}
+
+async function runTestFile(testPath, context, bridge) {
+  const globalConfig = context.globalConfig;
+  const config = dialectOf(testPath, context.config);
   const start = Date.now();
   const consoleEntries = [];
   let result;
@@ -223,7 +237,7 @@ async function runTestFile(testPath, {config, globalConfig}, bridge) {
     loader.jestGlobals = from => ({...framework.jestGlobals, jest: framework.createJestObject(from)});
     loader.vitestFor = from => framework.vitestFor(from);
     for (const file of config.setupFiles) loader.requireModule(file);
-    if (config.injectGlobals) Object.assign(global, framework.globals);
+    if (config.injectGlobals) Object.defineProperties(global, framework.globals);
     for (const file of config.setupFilesAfterEnv) {
       const exported = loader.requireModule(file);
       if (typeof exported === 'function') await exported();

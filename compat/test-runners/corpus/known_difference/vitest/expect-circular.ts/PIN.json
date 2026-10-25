@@ -1,0 +1,25 @@
+{
+  "opal": {
+    "why": "Jest's own equality overflows the stack on these values, and opal's expect is Jest's. For nested comparisons, iterableEquality swaps itself for a copy that carries the stack of values already seen, but it filters out only the original, not earlier copies. So the outermost copy, holding a stale stack, is tried first at every depth. An object reached again through a second Set or Map is never found on that stack, and the comparison recurses until the stack overflows. Jest 30.5.2's equals throws the same RangeError on these values; Vitest fixed its copy (vitest#5533).",
+    "verdicts": {
+      "expect-circular.test.ts": {
+        "(file)": [
+          "pass",
+          "fail"
+        ],
+        "circular equality › array, set": [
+          "pass",
+          "fail"
+        ],
+        "circular equality › object, set": [
+          "pass",
+          "fail"
+        ],
+        "circular equality › object, set, map": [
+          "pass",
+          "fail"
+        ]
+      }
+    }
+  }
+}

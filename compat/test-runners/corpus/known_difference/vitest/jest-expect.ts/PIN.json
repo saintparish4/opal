@@ -497,5 +497,504 @@
         ]
       }
     }
+  },
+  "opal": {
+    "why": "The file imports @vitest/expect and @vitest/utils, Vitest's own expect, and tests that implementation's behavior and messages. Loading @vitest/expect defines the global matcher registry, Symbol.for('$$jest-matchers-object'), which opal's expect (Jest's, which defines it the same way) already holds. So the file fails to load with 'Cannot redefine property', and none of its 122 tests run. Jest fails the same way on a file that imports @vitest/expect.",
+    "verdicts": {
+      "jest-expect.test.ts": {
+        "(file)": [
+          "pass",
+          "fail"
+        ],
+        ".toStrictEqual() › does not consider holes as undefined in sparse arrays": [
+          "pass",
+          null
+        ],
+        ".toStrictEqual() › does not ignore keys with undefined values": [
+          "pass",
+          null
+        ],
+        ".toStrictEqual() › does not ignore keys with undefined values deep inside an object": [
+          "pass",
+          null
+        ],
+        ".toStrictEqual() › does not ignore keys with undefined values inside an array": [
+          "pass",
+          null
+        ],
+        ".toStrictEqual() › does not pass for DataView": [
+          "pass",
+          null
+        ],
+        ".toStrictEqual() › does not pass for different types": [
+          "pass",
+          null
+        ],
+        ".toStrictEqual() › does not pass when ArrayBuffers are not equal": [
+          "pass",
+          null
+        ],
+        ".toStrictEqual() › does not pass when equally sparse arrays have different values": [
+          "pass",
+          null
+        ],
+        ".toStrictEqual() › does not pass when sparseness of arrays do not match": [
+          "pass",
+          null
+        ],
+        ".toStrictEqual() › does not simply compare constructor names": [
+          "pass",
+          null
+        ],
+        ".toStrictEqual() › passes for matching DataView": [
+          "pass",
+          null
+        ],
+        ".toStrictEqual() › passes for matching buffers": [
+          "pass",
+          null
+        ],
+        ".toStrictEqual() › passes for matching sparse arrays": [
+          "pass",
+          null
+        ],
+        ".toStrictEqual() › passes when comparing same type": [
+          "pass",
+          null
+        ],
+        "asymmetric matcher error": [
+          "pass",
+          null
+        ],
+        "async expect › chainable types": [
+          "pass",
+          null
+        ],
+        "async expect › failed to reject": [
+          "pass",
+          null
+        ],
+        "async expect › failed to resolve": [
+          "pass",
+          null
+        ],
+        "async expect › failed to throw": [
+          "pass",
+          null
+        ],
+        "async expect › handle thenable objects": [
+          "pass",
+          null
+        ],
+        "async expect › printing error message": [
+          "pass",
+          null
+        ],
+        "async expect › promise auto queuing › fails": [
+          "pass",
+          null
+        ],
+        "async expect › promise auto queuing › pass first": [
+          "pass",
+          null
+        ],
+        "async expect › promise auto queuing › pass second": [
+          "pass",
+          null
+        ],
+        "async expect › rejects": [
+          "pass",
+          null
+        ],
+        "async expect › reminds users to use deep equality checks if they are comparing objects": [
+          "pass",
+          null
+        ],
+        "async expect › resolves": [
+          "pass",
+          null
+        ],
+        "async expect › resolves throws chai": [
+          "pass",
+          null
+        ],
+        "async expect › resolves throws jest": [
+          "pass",
+          null
+        ],
+        "async expect › throws an error on .rejects when the argument (or function result) is not a promise": [
+          "pass",
+          null
+        ],
+        "async expect › throws an error on .resolves when the argument is not a promise": [
+          "pass",
+          null
+        ],
+        "compatible with jest": [
+          "pass",
+          null
+        ],
+        "correctly prints diff": [
+          "pass",
+          null
+        ],
+        "correctly prints diff for the cause": [
+          "pass",
+          null
+        ],
+        "correctly prints diff with asymmetric matchers": [
+          "pass",
+          null
+        ],
+        "diff": [
+          "pass",
+          null
+        ],
+        "error equality": [
+          "pass",
+          null
+        ],
+        "expected and actual reuse the stringification from the diff": [
+          "pass",
+          null
+        ],
+        "jest-expect › array": [
+          "pass",
+          null
+        ],
+        "jest-expect › assertions": [
+          "pass",
+          null
+        ],
+        "jest-expect › assertions when asynchronous code": [
+          "pass",
+          null
+        ],
+        "jest-expect › assertions when asynchronous code [2]": [
+          "pass",
+          null
+        ],
+        "jest-expect › assertions with different order": [
+          "pass",
+          null
+        ],
+        "jest-expect › asymmetric matchers (jest style)": [
+          "pass",
+          null
+        ],
+        "jest-expect › asymmetric matchers and equality testers": [
+          "pass",
+          null
+        ],
+        "jest-expect › asymmetric matchers negate": [
+          "pass",
+          null
+        ],
+        "jest-expect › basic": [
+          "pass",
+          null
+        ],
+        "jest-expect › expect.extend": [
+          "pass",
+          null
+        ],
+        "jest-expect › has assertions": [
+          "pass",
+          null
+        ],
+        "jest-expect › has assertions [2]": [
+          "pass",
+          null
+        ],
+        "jest-expect › has assertions with different order": [
+          "pass",
+          null
+        ],
+        "jest-expect › object": [
+          "pass",
+          null
+        ],
+        "jest-expect › the La Croix cans on my desk › are not semantically the same": [
+          "pass",
+          null
+        ],
+        "jest-expect › toBe with null/undefined values": [
+          "pass",
+          null
+        ],
+        "jest-expect › toThrow › async wasn't awaited": [
+          "pass",
+          null
+        ],
+        "jest-expect › toThrow › custom error class": [
+          "pass",
+          null
+        ],
+        "jest-expect › toThrow › error from different realm": [
+          "pass",
+          null
+        ],
+        "jest-expect › toThrow › error wasn't thrown": [
+          "pass",
+          null
+        ],
+        "jest-expect › toThrow › non Error instance": [
+          "pass",
+          null
+        ],
+        "proxy equality": [
+          "pass",
+          null
+        ],
+        "timeout": [
+          "pass",
+          null
+        ],
+        "toBeOneOf() › asymmetric matcher": [
+          "pass",
+          null
+        ],
+        "toBeOneOf() › error message": [
+          "pass",
+          null
+        ],
+        "toBeOneOf() › fail with missing negotiation": [
+          "pass",
+          null
+        ],
+        "toBeOneOf() › pass with assertion": [
+          "pass",
+          null
+        ],
+        "toBeOneOf() › pass with negotiation": [
+          "pass",
+          null
+        ],
+        "toBeTypeOf() › pass with negotiation": [
+          "pass",
+          null
+        ],
+        "toBeTypeOf() › pass with typeof  === object": [
+          "pass",
+          null
+        ],
+        "toBeTypeOf() › pass with typeof  === string": [
+          "pass",
+          null
+        ],
+        "toBeTypeOf() › pass with typeof () => {} === function": [
+          "pass",
+          null
+        ],
+        "toBeTypeOf() › pass with typeof 0 === number": [
+          "pass",
+          null
+        ],
+        "toBeTypeOf() › pass with typeof 1 === number": [
+          "pass",
+          null
+        ],
+        "toBeTypeOf() › pass with typeof 1n === bigint": [
+          "pass",
+          null
+        ],
+        "toBeTypeOf() › pass with typeof Infinity === number": [
+          "pass",
+          null
+        ],
+        "toBeTypeOf() › pass with typeof NaN === number": [
+          "pass",
+          null
+        ],
+        "toBeTypeOf() › pass with typeof Symbol(test) === symbol": [
+          "pass",
+          null
+        ],
+        "toBeTypeOf() › pass with typeof false === boolean": [
+          "pass",
+          null
+        ],
+        "toBeTypeOf() › pass with typeof function() {} === function": [
+          "pass",
+          null
+        ],
+        "toBeTypeOf() › pass with typeof null === object": [
+          "pass",
+          null
+        ],
+        "toBeTypeOf() › pass with typeof test === string": [
+          "pass",
+          null
+        ],
+        "toBeTypeOf() › pass with typeof true === boolean": [
+          "pass",
+          null
+        ],
+        "toBeTypeOf() › pass with typeof undefined === undefined": [
+          "pass",
+          null
+        ],
+        "toBeTypeOf() › pass with typeof {} === object": [
+          "pass",
+          null
+        ],
+        "toHaveBeenCalled › negated › fails if called": [
+          "pass",
+          null
+        ],
+        "toHaveBeenCalled › no argument": [
+          "pass",
+          null
+        ],
+        "toHaveBeenCalled › no strict equal check for each argument": [
+          "pass",
+          null
+        ],
+        "toHaveBeenCalled › undefined argument": [
+          "pass",
+          null
+        ],
+        "toHaveBeenCalledAfter › fails if expect mock is not called": [
+          "pass",
+          null
+        ],
+        "toHaveBeenCalledAfter › fails if result mock is not called": [
+          "pass",
+          null
+        ],
+        "toHaveBeenCalledAfter › not fails if result mock is not called with option `failIfNoFirstInvocation` set to false": [
+          "pass",
+          null
+        ],
+        "toHaveBeenCalledAfter › success if expect mock is called after result mock": [
+          "pass",
+          null
+        ],
+        "toHaveBeenCalledAfter › throws if expect is not a spy": [
+          "pass",
+          null
+        ],
+        "toHaveBeenCalledAfter › throws if expect mock is called before result mock": [
+          "pass",
+          null
+        ],
+        "toHaveBeenCalledAfter › throws if result is not a spy": [
+          "pass",
+          null
+        ],
+        "toHaveBeenCalledAfter › throws with correct mock name if failed": [
+          "pass",
+          null
+        ],
+        "toHaveBeenCalledBefore › fails if expect mock is not called": [
+          "pass",
+          null
+        ],
+        "toHaveBeenCalledBefore › fails if result mock is not called": [
+          "pass",
+          null
+        ],
+        "toHaveBeenCalledBefore › not fails if expect mock is not called with option `failIfNoFirstInvocation` set to false": [
+          "pass",
+          null
+        ],
+        "toHaveBeenCalledBefore › success if expect mock is called before result mock": [
+          "pass",
+          null
+        ],
+        "toHaveBeenCalledBefore › throws if expect is not a spy": [
+          "pass",
+          null
+        ],
+        "toHaveBeenCalledBefore › throws if expect mock is called after result mock": [
+          "pass",
+          null
+        ],
+        "toHaveBeenCalledBefore › throws if result is not a spy": [
+          "pass",
+          null
+        ],
+        "toHaveBeenCalledBefore › throws with correct mock name if failed": [
+          "pass",
+          null
+        ],
+        "toHaveBeenCalledExactlyOnceWith › fails if called with wrong args": [
+          "pass",
+          null
+        ],
+        "toHaveBeenCalledExactlyOnceWith › fails if not called or called too many times": [
+          "pass",
+          null
+        ],
+        "toHaveBeenCalledExactlyOnceWith › negated › fails if called": [
+          "pass",
+          null
+        ],
+        "toHaveBeenCalledExactlyOnceWith › negated › passes if called multiple times with args": [
+          "pass",
+          null
+        ],
+        "toHaveBeenCalledExactlyOnceWith › negated › passes if called with a different argument": [
+          "pass",
+          null
+        ],
+        "toHaveBeenCalledExactlyOnceWith › negated › passes if not called": [
+          "pass",
+          null
+        ],
+        "toHaveBeenCalledExactlyOnceWith › passes if called exactly once with args": [
+          "pass",
+          null
+        ],
+        "toHaveBeenCalledWith › negated › fails if called": [
+          "pass",
+          null
+        ],
+        "toHaveBeenNthCalledWith error": [
+          "pass",
+          null
+        ],
+        "toHaveProperty error diff": [
+          "pass",
+          null
+        ],
+        "toMatch/toContain diff": [
+          "pass",
+          null
+        ],
+        "toMatchObject": [
+          "pass",
+          null
+        ],
+        "toMatchObject error diff": [
+          "pass",
+          null
+        ],
+        "toSatisfy() › asymmetric matcher": [
+          "pass",
+          null
+        ],
+        "toSatisfy() › calls the function": [
+          "pass",
+          null
+        ],
+        "toSatisfy() › error message": [
+          "pass",
+          null
+        ],
+        "toSatisfy() › fail with missing negotiation": [
+          "pass",
+          null
+        ],
+        "toSatisfy() › pass with 0": [
+          "pass",
+          null
+        ],
+        "toSatisfy() › pass with negotiation": [
+          "pass",
+          null
+        ]
+      }
+    }
   }
 }

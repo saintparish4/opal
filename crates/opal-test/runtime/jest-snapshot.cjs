@@ -1,6 +1,7 @@
 // Ported from jest/packages/jest-snapshot/src/index.ts at Jest v30.5.2 by
 // crates/opal-test/port/port.mjs: types stripped, ES modules rewritten to
-// CommonJS, nothing else changed. Do not edit by hand; edit the port.
+// CommonJS, and the PATCHES that port.mjs lists applied. Do not edit by
+// hand; edit the port.
 //
 // Copyright (c) Meta Platforms, Inc. and affiliates. MIT license, in
 // compat/test-runners/LICENSES/jest.txt.
@@ -320,7 +321,7 @@ const _toMatchSnapshot = (config                     ) => {
 
   const fullTestName =
     currentTestName && hint
-      ? `${currentTestName}: ${hint}`
+      ? _m1.hintedTestName(currentTestName, hint)
       : currentTestName || ''; // future BREAKING change: || hint
 
   if (typeof properties === 'object') {

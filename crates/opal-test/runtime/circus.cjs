@@ -207,7 +207,10 @@ function createCircus({expect, parentProcess, testNameSeparator = ' '}) {
           );
           break;
         }
-        const test = makeTest(fn, mode, concurrent, name, currentDescribeBlock, timeout, asyncError, failing);
+        // Only Vitest's describe.todo makes a todo block (vitest.cjs); what
+        // it holds is todo too.
+        const testMode = currentDescribeBlock.mode === 'todo' && mode !== 'only' ? 'todo' : mode;
+        const test = makeTest(fn, testMode, concurrent, name, currentDescribeBlock, timeout, asyncError, failing);
         if (currentDescribeBlock.mode !== 'skip' && test.mode === 'only') state.hasFocusedTests = true;
         currentDescribeBlock.children.push(test);
         currentDescribeBlock.tests.push(test);
@@ -621,8 +624,10 @@ function createCircus({expect, parentProcess, testNameSeparator = ' '}) {
     await dispatch({describeBlock, name: 'run_describe_start'});
     const {beforeAll, afterAll} = getAllHooksForDescribe(describeBlock);
     const isSkipped = describeBlock.mode === 'skip';
+    // A todo block runs no hooks either, but its tests report as todo.
+    const runsHooks = !isSkipped && describeBlock.mode !== 'todo';
 
-    if (!isSkipped) {
+    if (runsHooks) {
       for (const hook of beforeAll) await callCircusHook({describeBlock, hook});
     }
 
@@ -665,8 +670,9 @@ function createCircus({expect, parentProcess, testNameSeparator = ' '}) {
 
     for (const test of deferredRetryTests) await rerunTest(test);
 
-    if (!isSkipped) {
+    if (runsHooks) {
       for (const hook of afterAll) await callCircusHook({describeBlock, hook});
+      await runTeardowns(describeBlock, {describeBlock}, 'afterAll');
     }
     await dispatch({describeBlock, name: 'run_describe_finish'});
   }
@@ -727,8 +733,21 @@ function createCircus({expect, parentProcess, testNameSeparator = ' '}) {
     }
     await callCircusTest(test, testContext);
     for (const hook of afterEach) await callCircusHook({hook, test, testContext});
+    await runTeardowns(test, {test, testContext}, 'afterEach');
     // afterAll doesn't decide a test's status, so the test is done here.
     await dispatch({name: 'test_done', test});
+  }
+
+  // What a test or block gathers while it runs, to run after its afterEach
+  // or afterAll hooks: Vitest's hook cleanups and onTestFinished
+  // (vitest.cjs). Each runs, and fails, as one of those hooks would.
+  async function runTeardowns(owner, where, type) {
+    const teardowns = owner.teardowns;
+    owner.teardowns = undefined;
+    for (const fn of teardowns ?? []) {
+      const hook = {asyncError: new ErrorWithStack(undefined, runTeardowns), fn, parent: owner, seenDone: false, timeout: undefined, type};
+      await callCircusHook({...where, hook});
+    }
   }
 
   const callCircusHook = ({hook, test, describeBlock, testContext = {}}) =>
@@ -795,7 +814,7 @@ function createCircus({expect, parentProcess, testNameSeparator = ' '}) {
           stack.push([currentBlock, i + 1], [child, 0]);
           break;
         }
-        const errorsDetailed = child.errors.map(getError);
+        const errorsDetailed = child.dynamicSkip ? [] : child.errors.map(getError);
         testResults.push({
           duration: child.duration,
           errors: errorsDetailed.map(error => flattenErrorStack(error)),
@@ -806,7 +825,8 @@ function createCircus({expect, parentProcess, testNameSeparator = ' '}) {
           numPassingAsserts: child.numPassingAsserts,
           retryReasons: child.retryReasons.map(getError).map(error => flattenErrorStack(error)),
           startedAt: child.startedAt,
-          status: child.dynamicSkip && child.errors.length === 0 ? 'skip' : child.status,
+          // Vitest's context.skip() skips the test whatever fails after it.
+          status: child.dynamicSkip ? 'skip' : child.status,
           testPath: getTestNamesPath(child),
         });
       }
@@ -958,7 +978,11 @@ function createCircus({expect, parentProcess, testNameSeparator = ' '}) {
     xtest: test.skip,
   };
 
-  return {dispatch, getTestID, globals, run, state};
+  // A describe block in any mode, Vitest's 'todo' included, for vitest.cjs;
+  // Jest's own globals stay as Jest has them.
+  const describeWithMode = (blockName, blockFn, mode) => _dispatchDescribe(blockFn, blockName, describeWithMode, mode);
+
+  return {describeWithMode, dispatch, getTestID, globals, run, state};
 }
 
 // --- co ------------------------------------------------------------------------

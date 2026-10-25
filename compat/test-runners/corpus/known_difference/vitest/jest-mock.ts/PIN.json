@@ -121,5 +121,56 @@
         ]
       }
     }
+  },
+  "opal": {
+    "why": "opal's mocks are jest-mock's, and these tests check where @vitest/spy differs from it, as several of the tests' own comments say ('unlike jest'). (1) getMockImplementation: Vitest returns the implementation given to vi.fn(impl) and a pending mockImplementationOnce; jest-mock returns only what mockImplementation set ('implementation sync fn', 'returns temporary implementations'). (2) mockReset and mockRestore: Vitest goes back to vi.fn(impl)'s implementation or the spied original, while jest-mock leaves no implementation, so the call returns undefined ('.mockRestore() should restore initial implementation', 'docs example > mockReset', both 'mockReset should not restore original descriptor' tests). (3) Classes: Vitest calls a class implementation with new; jest-mock calls it as a function, which throws ('mock classes'), and doesn't throw on new for an arrow implementation ('spies on classes'). (4) Names: Vitest names a spy after its method, [MockFunction f] in the inline snapshot; jest-mock leaves it unnamed. (5) Disposal: jest-mock's Symbol.dispose restores without calling the mockRestore property, so a spy on mockRestore sees no call.",
+    "verdicts": {
+      "jest-mock.test.ts": {
+        "(file)": [
+          "pass",
+          "fail"
+        ],
+        "jest mock compat layer › .mockRestore() should restore initial implementation": [
+          "pass",
+          "fail"
+        ],
+        "jest mock compat layer › docs example › mockReset": [
+          "pass",
+          "fail"
+        ],
+        "jest mock compat layer › implementation sync fn": [
+          "pass",
+          "fail"
+        ],
+        "jest mock compat layer › is disposable › in environments supporting it › calls mockRestore when disposing": [
+          "pass",
+          "fail"
+        ],
+        "jest mock compat layer › keeps the descriptor the same as the original one when restoring": [
+          "pass",
+          "fail"
+        ],
+        "jest mock compat layer › mock classes": [
+          "pass",
+          "fail"
+        ],
+        "jest mock compat layer › returns temporary implementations from getMockImplementation()": [
+          "pass",
+          "fail"
+        ],
+        "jest mock compat layer › should spy on property getter, and mockReset should not restore original descriptor": [
+          "pass",
+          "fail"
+        ],
+        "jest mock compat layer › should spy on property setter (2), and mockReset should not restore original descriptor": [
+          "pass",
+          "fail"
+        ],
+        "jest mock compat layer › spies on classes": [
+          "pass",
+          "fail"
+        ]
+      }
+    }
   }
 }

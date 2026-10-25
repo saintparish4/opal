@@ -6,15 +6,56 @@
 // the nearest Jest behavior (test.concurrent runs in order) or throws saying
 // it isn't supported, rather than passing.
 //
-// Two things differ in shape, not just in name:
-//   - Vitest passes a test or hook a context object; Jest would read a
-//     function that declares a parameter as waiting for `done`. Every test
-//     and hook is wrapped so the context is passed and nothing waits.
-//   - A Vitest beforeEach or beforeAll may return a cleanup function, run
-//     after the test or the block.
+// Some things differ in shape, not just in name, and follow @vitest/runner:
+//   - Vitest passes a test and its beforeEach and afterEach hooks one
+//     context object; Jest would read a function that declares a parameter
+//     as waiting for `done`. Every test and hook is wrapped so the context
+//     is passed and nothing waits.
+//   - A beforeEach or beforeAll may return a cleanup function, and a test may
+//     register onTestFinished and onTestFailed callbacks. They run after the
+//     test's afterEach hooks (or the block's afterAll hooks), through
+//     circus's teardowns.
+//   - context.skip() skips the test whatever fails after it.
+//   - test() or describe() inside a running test throws, where Jest fails
+//     the running test.
+//   - Every variant chains (test.skip.each, describe.todo.each, ...), and a
+//     test or describe without a function is a todo.
 'use strict';
 
+const display = require('./vitest-display.cjs');
+
 const DYNAMIC_SKIP = Symbol.for('opal.dynamicSkip');
+
+// @vitest/runner's messages for a test or suite defined inside a running test.
+const NESTED_TEST =
+  'Calling the test function inside another test function is not allowed. Please put it inside "describe" or "suite" so it can be properly collected.';
+const NESTED_SUITE =
+  'Calling the suite function inside test function is not allowed. It can be only called at the top level or inside another suite function.';
+
+// What `globals: true` puts on the global object (globalApis in
+// vitest/src/constants.ts).
+const GLOBAL_APIS = [
+  'suite',
+  'test',
+  'describe',
+  'it',
+  'chai',
+  'expect',
+  'assert',
+  'expectTypeOf',
+  'assertType',
+  'vitest',
+  'vi',
+  'beforeAll',
+  'afterAll',
+  'beforeEach',
+  'afterEach',
+  'onTestFinished',
+  'onTestFailed',
+];
+
+const TEST_FLAGS = ['concurrent', 'fails', 'only', 'sequential', 'skip', 'todo'];
+const SUITE_FLAGS = ['concurrent', 'only', 'sequential', 'shuffle', 'skip', 'todo'];
 
 function unsupported(name) {
   return () => {
@@ -31,129 +72,169 @@ function noopChain() {
   return chain;
 }
 
-// What a test function receives in place of `done`.
-function createContext(name, expect) {
-  return {
-    expect,
-    onTestFailed: unsupported('onTestFailed'),
-    onTestFinished: unsupported('onTestFinished'),
-    signal: new AbortController().signal,
-    skip(condition = true, note) {
-      if (condition === false) return;
-      const signal = new Error(note || 'skipped');
-      signal[DYNAMIC_SKIP] = true;
-      throw signal;
-    },
-    task: {name},
-  };
-}
+function createVitest({circus, expect, createJestObject, moduleMocker, requireChai}) {
+  const {globals, state} = circus;
 
-function createVitest({circus, expect, createJestObject, moduleMocker}) {
-  const {globals} = circus;
+  // --- a test's context and what runs after it ---------------------------
 
-  const wrapTest = (name, fn) =>
-    fn === undefined
-      ? undefined
-      : function () {
-          return fn.call(this, createContext(name, expect));
-        };
-
-  // test(name, fn, timeout) or test(name, options, fn).
-  function normalize(name, second, third) {
-    if (second && typeof second === 'object') return {fn: third, options: second, timeout: second.timeout};
-    return {fn: second, options: typeof third === 'object' ? third || {} : {}, timeout: typeof third === 'number' ? third : undefined};
+  // One record per run of a test (a retry starts a new one): the context its
+  // hooks and body share, and what @vitest/runner's runTest runs after the
+  // afterEach hooks: the beforeEach cleanups, then onTestFinished, each most
+  // recent first, then onTestFailed if the test failed.
+  const runs = new WeakMap();
+  function runOf(test) {
+    let run = runs.get(test);
+    if (run && run.invocation === test.invocations) return run;
+    run = {cleanups: [], context: null, failed: [], finished: [], invocation: test.invocations, scheduled: false};
+    run.context = createContext(test, run);
+    runs.set(test, run);
+    return run;
   }
 
-  function makeTest(base) {
-    const test = (name, second, third) => {
-      const {fn, options, timeout} = normalize(name, second, third);
-      if (options.todo) return globals.test.todo(name);
-      let target = base;
-      if (options.skip) target = globals.test.skip;
-      else if (options.only) target = globals.test.only;
-      if (options.fails) target = target === globals.test.only ? globals.test.only.failing : globals.test.failing;
-      return target(name, wrapTest(name, fn), timeout);
+  function schedule(test, list, fn) {
+    const run = runOf(test);
+    if (!run.scheduled) {
+      run.scheduled = true;
+      const drain = (callbacks, withContext) => async () => {
+        for (const callback of callbacks.splice(0).reverse()) {
+          await (withContext ? callback(run.context) : callback());
+        }
+      };
+      (test.teardowns ??= []).push(drain(run.cleanups, false), drain(run.finished, true), async () => {
+        if (test.errors.length > 0 && !test.dynamicSkip) await drain(run.failed, true)();
+      });
+    }
+    run[list].push(fn);
+  }
+
+  // @vitest/runner's createTestHook: only while a test runs.
+  const testHook = (name, list) => fn => {
+    if (typeof fn !== 'function') throw new TypeError(`"${name}" callback value must be function, received "${typeof fn}"`);
+    const test = state.currentlyRunningTest;
+    if (!test) throw new Error(`Hook ${name}() can only be called inside a test`);
+    schedule(test, list, fn);
+  };
+
+  function createContext(test) {
+    return {
+      expect,
+      onTestFailed: fn => schedule(test, 'failed', fn),
+      onTestFinished: fn => schedule(test, 'finished', fn),
+      signal: new AbortController().signal,
+      skip(condition, note) {
+        if (condition === false) return;
+        test.dynamicSkip = true;
+        const signal = new Error(typeof condition === 'string' ? condition : note || 'skipped');
+        signal[DYNAMIC_SKIP] = true;
+        throw signal;
+      },
+      task: {name: test.name},
     };
-    test.skip = (name, second, third) => {
-      const {fn, timeout} = normalize(name, second, third);
-      return globals.test.skip(name, wrapTest(name, fn) || (() => {}), timeout);
+  }
+
+  const contextOfRunningTest = () => (state.currentlyRunningTest ? runOf(state.currentlyRunningTest).context : undefined);
+
+  const wrapTest = fn =>
+    function () {
+      return fn.call(this, contextOfRunningTest());
     };
-    test.only = (name, second, third) => {
-      const {fn, timeout} = normalize(name, second, third);
-      return globals.test.only(name, wrapTest(name, fn), timeout);
+
+  // --- test and describe ---------------------------------------------------
+
+  // @vitest/runner's chainable API: every modifier is a property that adds a
+  // flag, and every combination has each, for, skipIf and runIf. Arguments
+  // are read, and each and for format titles, with Vitest's own code
+  // (vitest-display.cjs).
+  function chainable(flagNames, define, flags = {}) {
+    const fn = (name, optionsOrFn, timeoutOrFn) => {
+      const {options, handler} = display.parseArguments(optionsOrFn, timeoutOrFn);
+      return define({...flags, ...options}, display.formatName(name), handler, options.timeout);
     };
-    test.todo = name => globals.test.todo(name);
-    test.fails = (name, second, third) => {
-      const {fn, timeout} = normalize(name, second, third);
-      return globals.test.failing(name, wrapTest(name, fn), timeout);
-    };
-    test.each = (...table) => {
-      const bound = globals.test.each(...table);
-      return (name, second, third) => {
-        const {fn, timeout} = normalize(name, second, third);
-        return bound(name, (...args) => fn(...args), timeout);
+    for (const flag of flagNames) {
+      Object.defineProperty(fn, flag, {get: () => chainable(flagNames, define, {...flags, [flag]: true})});
+    }
+    // A row's items are the arguments, unless some row isn't an array.
+    fn.each = (cases, ...args) => {
+      if (Array.isArray(cases) && args.length > 0) cases = display.formatTemplateString(cases, args);
+      return (name, optionsOrFn, timeoutOrFn) => {
+        const title = display.formatName(name);
+        const arrayOnly = cases.every(Array.isArray);
+        const {options, handler} = display.parseArguments(optionsOrFn, timeoutOrFn);
+        cases.forEach((row, index) => {
+          const items = Array.isArray(row) ? row : [row];
+          const call = handler && (arrayOnly ? () => handler(...items) : () => handler(row));
+          define({...flags, ...options}, display.formatTitle(title, items, index), call, options.timeout);
+        });
       };
     };
-    test.for = table => (name, second, third) => {
-      const {fn, timeout} = normalize(name, second, third);
-      return globals.test.each(table.map(row => [row]))(name, row => fn(row, createContext(name, expect)), timeout);
-    };
-    test.skipIf = condition => (condition ? test.skip : test);
-    test.runIf = condition => (condition ? test : test.skip);
-    // Run in declaration order, as everything in opal test does.
-    test.concurrent = test;
-    test.sequential = test;
-    test.extend = unsupported('test.extend');
-    test.scoped = unsupported('test.scoped');
-    return test;
-  }
-
-  function makeDescribe() {
-    const describe = (name, second, third) => {
-      const fn = typeof second === 'function' ? second : third;
-      const options = typeof second === 'object' && second ? second : {};
-      if (options.skip || options.todo) return globals.describe.skip(name, fn || (() => {}));
-      if (options.only) return globals.describe.only(name, fn);
-      return globals.describe(name, fn);
-    };
-    describe.skip = (name, fn) => globals.describe.skip(name, fn || (() => {}));
-    describe.only = (name, fn) => globals.describe.only(name, fn);
-    describe.todo = name => globals.describe.skip(name, () => {});
-    describe.each = (...table) => globals.describe.each(...table);
-    describe.for = table => (name, fn) => globals.describe.each(table.map(row => [row]))(name, row => fn(row));
-    describe.skipIf = condition => (condition ? describe.skip : describe);
-    describe.runIf = condition => (condition ? describe : describe.skip);
-    describe.concurrent = describe;
-    describe.sequential = describe;
-    describe.shuffle = describe;
-    return describe;
-  }
-
-  // A hook may return a cleanup, run after the test (beforeEach) or after
-  // the block (beforeAll), most recent first.
-  function makeHook(register, cleanupHook) {
-    return (fn, timeout) => {
-      const cleanups = [];
-      register(async function () {
-        const result = await fn.call(this, createContext('', expect));
-        if (typeof result === 'function') cleanups.push(result);
-      }, timeout);
-      if (cleanupHook) {
-        cleanupHook(async () => {
-          while (cleanups.length > 0) await cleanups.pop()();
+    // The row whole, then the test's context.
+    fn.for = (cases, ...args) => {
+      if (Array.isArray(cases) && args.length > 0) cases = display.formatTemplateString(cases, args);
+      return (name, optionsOrFn, timeoutOrFn) => {
+        const title = display.formatName(name);
+        const {options, handler} = display.parseArguments(optionsOrFn, timeoutOrFn);
+        cases.forEach((row, index) => {
+          const call = handler && (context => handler(row, context));
+          define({...flags, ...options}, display.formatTitle(title, display.toArray(row), index), call, options.timeout);
         });
-      }
+      };
+    };
+    fn.skipIf = condition => (condition ? fn.skip : fn);
+    fn.runIf = condition => (condition ? fn : fn.skip);
+    return fn;
+  }
+
+  // Vitest's modes: only, then skip, then todo; without a function, todo.
+  function defineTest(flags, name, fn, timeout) {
+    if (state.currentlyRunningTest) throw new Error(NESTED_TEST);
+    if (flags.only && fn) return (flags.fails ? globals.test.only.failing : globals.test.only)(name, wrapTest(fn), timeout);
+    if (flags.skip) return globals.test.skip(name, fn ? wrapTest(fn) : () => {}, timeout);
+    if (flags.todo || !fn) return globals.test.todo(name);
+    // Run in declaration order, as everything in opal test does.
+    return (flags.fails ? globals.test.failing : globals.test)(name, wrapTest(fn), timeout);
+  }
+
+  function defineSuite(flags, name, fn) {
+    if (state.currentlyRunningTest) throw new Error(NESTED_SUITE);
+    let mode;
+    if (flags.only) mode = 'only';
+    else if (flags.skip) mode = 'skip';
+    else if (flags.todo || !fn) mode = 'todo';
+    return circus.describeWithMode(name, fn || (() => {}), mode);
+  }
+
+  const test = chainable(TEST_FLAGS, defineTest);
+  test.extend = unsupported('test.extend');
+  test.scoped = unsupported('test.scoped');
+  const describe = chainable(SUITE_FLAGS, defineSuite);
+
+  // --- hooks ---------------------------------------------------------------
+
+  // beforeEach and afterEach get the test's context; beforeAll and afterAll
+  // the block. A beforeEach's cleanup runs after the test's afterEach hooks,
+  // a beforeAll's after the block's afterAll hooks, most recent first.
+  function makeHook(register, kind) {
+    return (fn, timeout) => {
+      const block = state.currentDescribeBlock;
+      register(async function () {
+        const test = state.currentlyRunningTest;
+        const argument = kind === 'each' && test ? runOf(test).context : {name: block.name, type: 'suite'};
+        const result = await fn.call(this, argument);
+        if (typeof result !== 'function') return;
+        if (kind === 'each' && test) schedule(test, 'cleanups', result);
+        else if (kind === 'all') (block.teardowns ??= []).unshift(result);
+      }, timeout);
     };
   }
 
-  const test = makeTest(globals.test);
-  const describe = makeDescribe();
   const hooks = {
     afterAll: makeHook(globals.afterAll),
-    afterEach: makeHook(globals.afterEach),
-    beforeAll: makeHook(globals.beforeAll, globals.afterAll),
-    beforeEach: makeHook(globals.beforeEach, globals.afterEach),
+    afterEach: makeHook(globals.afterEach, 'each'),
+    beforeAll: makeHook(globals.beforeAll, 'all'),
+    beforeEach: makeHook(globals.beforeEach, 'each'),
   };
+
+  // --- vi ------------------------------------------------------------------
 
   const stubbedGlobals = new Map();
   const stubbedEnv = new Map();
@@ -301,25 +382,39 @@ function createVitest({circus, expect, createJestObject, moduleMocker}) {
     const vi = createVi(from);
     module = {
       ...hooks,
-      assert: unsupported('chai assert'),
       assertType: () => {},
       bench: unsupported('bench'),
-      chai: unsupported('chai'),
       describe,
       expect,
       expectTypeOf: noopChain,
       it: test,
-      onTestFailed: unsupported('onTestFailed'),
-      onTestFinished: unsupported('onTestFinished'),
+      onTestFailed: testHook('onTestFailed', 'failed'),
+      onTestFinished: testHook('onTestFinished', 'finished'),
       suite: describe,
       test,
       vi,
       vitest: vi,
     };
+    // assert, chai and should are chai's own, loaded when first used.
+    for (const name of ['assert', 'chai', 'should']) {
+      Object.defineProperty(module, name, {
+        configurable: true,
+        enumerable: true,
+        get() {
+          const chai = requireChai(from);
+          return name === 'chai' ? chai : name === 'should' ? chai.should : chai.assert;
+        },
+      });
+    }
     Object.defineProperty(module, '__esModule', {value: true});
     modules.set(from, module);
     return module;
   };
 }
 
-module.exports = {DYNAMIC_SKIP, createVitest};
+// The globals of `globals: true`, as descriptors, so chai still loads only
+// when it's used.
+const globalsOf = module =>
+  Object.fromEntries(GLOBAL_APIS.map(name => [name, Object.getOwnPropertyDescriptor(module, name)]));
+
+module.exports = {DYNAMIC_SKIP, createVitest, globalsOf};

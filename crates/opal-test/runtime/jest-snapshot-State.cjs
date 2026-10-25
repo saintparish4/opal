@@ -1,6 +1,7 @@
 // Ported from jest/packages/jest-snapshot/src/State.ts at Jest v30.5.2 by
 // crates/opal-test/port/port.mjs: types stripped, ES modules rewritten to
-// CommonJS, nothing else changed. Do not edit by hand; edit the port.
+// CommonJS, and the PATCHES that port.mjs lists applied. Do not edit by
+// hand; edit the port.
 //
 // Copyright (c) Meta Platforms, Inc. and affiliates. MIT license, in
 // compat/test-runners/LICENSES/jest.txt.
@@ -379,7 +380,7 @@ class SnapshotState {
       _m4.serialize(received, undefined, this.snapshotFormat),
     );
     const expected = isInline ? inlineSnapshot : this._snapshotData[key];
-    const pass = expected === receivedSerialized;
+    const pass = _m1.snapshotsMatch(expected, receivedSerialized);
     const hasSnapshot = expected !== undefined;
     const snapshotIsPersisted = isInline || _m0.existsSync(this._snapshotPath);
 

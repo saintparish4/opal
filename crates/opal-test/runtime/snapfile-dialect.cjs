@@ -3,7 +3,9 @@
 // own (jest-snapfile.cjs); for Vitest's, the header, the keys and the lack of
 // a version check are Vitest's (packages/snapshot/src/port/utils.ts), so a
 // Vitest project's committed snapshots read back and are written as Vitest
-// writes them.
+// writes them. port.mjs also patches jest-snapshot to ask here how a hint
+// joins the test's name and whether a snapshot matches, the two places
+// Vitest's port/state.ts and client.ts differ inside jest-snapshot itself.
 'use strict';
 
 const fs = require('fs');
@@ -48,6 +50,9 @@ function vitestSaveSnapshotFile(snapshotData, snapshotPath) {
 
 module.exports = {
   ...jest,
+  hintedTestName: (testName, hint) => (dialect === 'vitest' ? `${testName} > ${hint}` : `${testName}: ${hint}`),
+  snapshotsMatch: (expected, received) =>
+    dialect === 'vitest' ? expected?.trim() === received.trim() : expected === received,
   getSnapshotData: (...args) => (dialect === 'vitest' ? vitestGetSnapshotData(...args) : jest.getSnapshotData(...args)),
   keyToTestName: key => (dialect === 'vitest' ? vitestKeyToTestName(key) : jest.keyToTestName(key)),
   saveSnapshotFile: (...args) => (dialect === 'vitest' ? vitestSaveSnapshotFile(...args) : jest.saveSnapshotFile(...args)),

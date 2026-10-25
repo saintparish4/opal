@@ -133,16 +133,24 @@ opal test has to satisfy these, in order of strictness:
 
 ## Results: 2026-10-25
 
-jest 30.5.2, vitest 4.1.12, bun 1.4.2 and node 24.19.0 on WSL2 (Linux 6.6.87.2), 8 threads, run twice per runner, with nothing different between the runs. The record is [`compat/results/test-runners-20261025-112955.json`](../results/test-runners-20261025-112955.json).
+jest 30.5.2, vitest 4.1.12, bun 1.4.2, node 24.19.0 and opal 0.4.1 on WSL2 (Linux 6.6.87.2), 8 threads. The record is [`compat/results/test-runners-20261025-160908.json`](../results/test-runners-20261025-160908.json).
 
 | runner | agrees | known_difference, as pinned | planted failures failed |
 |---|---|---|---|
 | jest | reference for 27 | reference for 61 | - |
-| vitest | 26 of 26, reference for 6 | 49 of 49, reference for 17 | 18 of 19 |
-| bun | 33 of 33 | 78 of 78 | 32 of 33 |
-| opal | not run | not run | not run |
+| vitest | 26 of 26, reference for 5 | 49 of 49, reference for 18 | 18 of 19 |
+| bun | 32 of 32 | 79 of 79 | 32 of 33 |
+| opal | 32 of 32 | 79 of 79 | 53 of 53 |
 
-Of the 111 fixtures, 33 agree everywhere. The other 78 hold 102 pinned runner differences: 38 for Vitest and 64 for Bun. The table counts fixtures, so a fixture pinned only for Bun still counts toward Vitest's 49.
+Of the 111 fixtures, 32 agree everywhere. The other 79 hold 105 pinned runner differences: 38 for Vitest, 64 for Bun and 3 for opal. The table counts fixtures, so a fixture pinned only for Bun still counts toward Vitest's 49.
+
+opal's three pins are all on Vitest fixtures, and each is a place where opal keeps Jest's behavior:
+
+- `expect-circular.ts`: Jest's equality overflows the stack on circular values reached through two Sets or Maps.
+- `jest-mock.ts`: jest-mock's semantics, not @vitest/spy's.
+- `jest-expect.ts`: importing Vitest's own expect.
+
+[`crates/opal-test/COMPATIBILITY.md`](../../crates/opal-test/COMPATIBILITY.md) lists them with the rest of the Vitest differences.
 
 ## Where the reference runners disagree
 
