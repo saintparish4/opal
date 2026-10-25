@@ -74,8 +74,16 @@ function saveCodeCache() {
   }
 }
 
-const isFrameworkFile = name =>
-  name.endsWith('.cjs') && !HOST_FILES.has(name) && fs.existsSync(path.join(__dirname, name));
+// Asked once per name per worker: every context requires the same files.
+const frameworkFiles = new Map();
+const isFrameworkFile = name => {
+  let known = frameworkFiles.get(name);
+  if (known === undefined) {
+    known = name.endsWith('.cjs') && !HOST_FILES.has(name) && fs.existsSync(path.join(__dirname, name));
+    frameworkFiles.set(name, known);
+  }
+  return known;
+};
 
 // A `require` for the runtime's in-context modules, one registry per context.
 function frameworkRequire(context) {

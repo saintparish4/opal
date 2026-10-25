@@ -30,7 +30,12 @@ const nodeGlobals = new Map(
     .map(name => [name, Object.prototype.propertyIsEnumerable.call(globalThis, name)]),
 );
 
+// The worker's own environment, read once: nothing changes it between files,
+// and reading process.env goes through Node's native accessor every time.
+let hostEnv = null;
+
 function createProcessEnv() {
+  hostEnv ??= {...process.env};
   const proto = Object.getPrototypeOf(process.env);
   const real = Object.create(proto);
   const isWin32 = process.platform === 'win32';
@@ -61,16 +66,26 @@ function createProcessEnv() {
       return true;
     },
   });
-  return Object.assign(proxy, process.env);
+  for (const [key, value] of Object.entries(hostEnv)) {
+    real[key] = value;
+    lookup[key.toLowerCase()] = value;
+  }
+  return proxy;
 }
 
 const PROCESS_SKIP = new Set(['env', 'mainModule', '_events', '_eventsCount', '_maxListeners']);
 
+// The host process's own properties, read once per worker, as each file's
+// copy starts from them.
+let processDescriptors = null;
+
 function createProcessObject() {
+  processDescriptors ??= Reflect.ownKeys(process)
+    .filter(key => !PROCESS_SKIP.has(key))
+    .map(key => [key, Object.getOwnPropertyDescriptor(process, key)]);
   const newProcess = Object.create(Object.getPrototypeOf(process));
-  for (const key of Reflect.ownKeys(process)) {
-    if (PROCESS_SKIP.has(key)) continue;
-    const descriptor = Object.getOwnPropertyDescriptor(process, key);
+  for (const [key, hostDescriptor] of processDescriptors) {
+    const descriptor = {...hostDescriptor};
     if ('value' in descriptor && descriptor.value && typeof descriptor.value === 'object' && !Array.isArray(descriptor.value)) {
       const value = descriptor.value;
       // Plain records (versions, release, config, features) are copied so a

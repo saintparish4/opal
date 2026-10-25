@@ -13,8 +13,6 @@ const {ModuleMocker, VitestModuleMocker} = require('./mock.cjs');
 const {format: prettyFormat} = require('./format.cjs');
 const snapshot = require('./jest-snapshot.cjs');
 const snapfile = require('./snapfile-dialect.cjs');
-const {createVitest, globalsOf} = require('./vitest.cjs');
-const {installVitestExpect} = require('./vitest-expect.cjs');
 
 const ROOT = 'ROOT_DESCRIBE_BLOCK';
 const TEST_TIMEOUT_SYMBOL = Symbol.for('TEST_TIMEOUT_SYMBOL');
@@ -208,7 +206,10 @@ async function initialize({config, globalConfig, testPath, parentProcess, loader
     await circus.dispatch({name: 'teardown'});
   }
 
-  if (dialect === 'vitest') installVitestExpect(expect, {currentTest: () => circus.state.currentlyRunningTest});
+  // Vitest's layer is loaded only for a file in its dialect.
+  if (dialect === 'vitest') {
+    require('./vitest-expect.cjs').installVitestExpect(expect, {currentTest: () => circus.state.currentlyRunningTest});
+  }
   // Vitest's assert is chai's: the chai the project's vitest depends on, or
   // else the project's own.
   function requireChai(from) {
@@ -224,12 +225,16 @@ async function initialize({config, globalConfig, testPath, parentProcess, loader
     }
     throw new Error("opal test: Vitest's assert, chai and should are chai's, and chai can't be found from this file.");
   }
-  const vitestFor = createVitest({circus, createJestObject, expect, moduleMocker, requireChai});
+  let vitestModules = null;
+  const vitestFor = from => {
+    vitestModules ??= require('./vitest.cjs').createVitest({circus, createJestObject, expect, moduleMocker, requireChai});
+    return vitestModules(from);
+  };
   // What `globals` injects, as property descriptors: Jest's globals, or with
   // Vitest's `globals: true` what Vitest puts on the global object.
   const globals =
     dialect === 'vitest'
-      ? globalsOf(vitestFor(testPath))
+      ? require('./vitest.cjs').globalsOf(vitestFor(testPath))
       : Object.getOwnPropertyDescriptors({...circus.globals, expect});
 
   return {
