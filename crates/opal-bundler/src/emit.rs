@@ -298,9 +298,6 @@ pub fn emit(
         }
         if *role == Role::Lazy {
             declared.push(format!("{p}b{module}"));
-            if linked.namespaces.contains_key(&module) {
-                declared.push(format!("{p}ns{module}"));
-            }
         }
     }
     if !declared.is_empty() {
@@ -344,8 +341,12 @@ pub fn emit(
     // Namespace objects of eager modules: getters into the bundle's scope,
     // created before any module runs, which is harmless since reading one
     // early throws as the binding does.
+    // A lazy module's namespace is made here too, not inside its closure:
+    // its getters read bindings of other modules by their bundle names,
+    // which the closure's own top-level bindings would capture. Its own
+    // bindings it reads through the bindings object its closure fills.
     for (module, exports) in &linked.namespaces {
-        if linked.roles[*module] != Role::Eager {
+        if !matches!(linked.roles[*module], Role::Eager | Role::Lazy) {
             continue;
         }
         out.push(&format!(
@@ -377,12 +378,6 @@ pub fn emit(
             "{p}b{module} = {{ __proto__: null, {} }};",
             getters.join(", ")
         ));
-        if let Some(exports) = linked.namespaces.get(module) {
-            out.push(&format!(
-                "{p}ns{module} = {};",
-                namespace_call(p, exports, &reference)
-            ));
-        }
         for fixup in &piece.fixups {
             out.push(fixup);
         }
