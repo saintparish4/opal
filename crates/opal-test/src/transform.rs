@@ -17,8 +17,9 @@
 //!    the require it governs runs. Vitest's `vi.mock`, `vi.unmock` and
 //!    `vi.hoisted` move the same way, as Vitest hoists them.
 //!
-//! `import.meta` becomes an object with the CommonJS module's `url`,
-//! `filename`, `dirname` and `resolve`.
+//! `import.meta` becomes the module's own `import.meta` object, which the
+//! runtime's loader makes: `url`, `filename`, `dirname` and `resolve`, and in
+//! Vitest's dialect `env`.
 //!
 //! Steps 2 and 3 edit the text of step 1's output rather than its tree; every
 //! source map token is carried through those edits, so the runtime can map a
@@ -202,7 +203,7 @@ const JEST_HOISTED: &[&str] = &[
 ];
 const VI_HOISTED: &[&str] = &["mock", "unmock", "hoisted"];
 
-const IMPORT_META: &str = "({ url: require(\"url\").pathToFileURL(__filename).href, filename: __filename, dirname: __dirname, resolve: function (s) { return require(\"url\").pathToFileURL(require.resolve(s)).href; } })";
+const IMPORT_META: &str = "require[Symbol.for(\"opal.importMeta\")]";
 
 // The only helpers oxc emits here, since nothing is downleveled: legacy
 // decorators, as tslib's __decorate, __param and __metadata. They read
@@ -755,6 +756,57 @@ fn to_commonjs(code: &str) -> Result<Rewritten, String> {
         }
     }
 
+    // A module's own top-level `exports`, `module`, `require`, `__filename`
+    // or `__dirname`, as in `const __dirname = dirname(fileURLToPath(
+    // import.meta.url))`, would collide with the CommonJS wrapper's
+    // parameters. Babel's CommonJS transform renames it, to `_require` and so
+    // on, and so does this, everywhere it is used. An imported or exported one
+    // keeps its name, since the rewrites above and below write it by name.
+    if is_module {
+        let names_in_use: Vec<&str> = scoping.symbol_names().collect();
+        for wrapper_name in ["exports", "module", "require", "__filename", "__dirname"] {
+            let Some(symbol) = scoping.get_root_binding(wrapper_name.into()) else {
+                continue;
+            };
+            if imported.iter().any(|(s, _)| *s == symbol)
+                || exported_locals.iter().any(|(s, _)| *s == symbol)
+            {
+                continue;
+            }
+            // Babel's generateUid: leading underscores dropped, then `_`, and
+            // a number from 2 on until the name is free.
+            let stem = wrapper_name.trim_start_matches('_');
+            let mut renamed = format!("_{stem}");
+            let mut n = 2;
+            while names_in_use.contains(&renamed.as_str()) || taken.contains(&renamed) {
+                renamed = format!("_{stem}{n}");
+                n += 1;
+            }
+            taken.push(renamed.clone());
+            let declared = scoping.symbol_span(symbol);
+            edits.push(Edit {
+                start: declared.start as usize,
+                end: declared.end as usize,
+                text: renamed.clone(),
+            });
+            for reference in scoping.get_resolved_references(symbol) {
+                let node = nodes.get_node(reference.node_id());
+                let span = node.kind().span();
+                let (start, end) = (span.start as usize, span.end as usize);
+                if removed.iter().any(|(s, e)| start >= *s && end <= *e) {
+                    continue;
+                }
+                let text = match nodes.parent_kind(node.id()) {
+                    AstKind::ObjectProperty(property) if property.shorthand => {
+                        format!("{wrapper_name}: {renamed}")
+                    }
+                    _ => renamed.clone(),
+                };
+                edits.push(Edit { start, end, text });
+            }
+        }
+    }
+
     // An assignment to an exported binding updates `exports` with it.
     for (symbol, _) in &exported_locals {
         let names: Vec<&String> = exported_locals
@@ -1116,6 +1168,18 @@ mod tests {
             code.contains("var _default = exports.default = a;"),
             "{code}"
         );
+    }
+
+    #[test]
+    fn test_a_module_s_own_require_and_dirname_are_renamed() {
+        let code = run(
+            "a.mjs",
+            "import {createRequire} from 'node:module';\nconst require = createRequire(import.meta.url);\nconst __dirname = '/x';\nexport const pkg = require('./p.json');\nexport const where = {__dirname};\n",
+        );
+        assert!(code.contains("const _require = (0, _node_module.createRequire)("), "{code}");
+        assert!(code.contains("const _dirname = \"/x\";"), "{code}");
+        assert!(code.contains("= _require(\"./p.json\")"), "{code}");
+        assert!(code.contains("{ __dirname: _dirname }"), "{code}");
     }
 
     #[test]

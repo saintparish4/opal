@@ -31,6 +31,7 @@ const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
 const Module = require('module');
+const {pathToFileURL} = require('url');
 
 const builtinModules = new Set(Module.builtinModules);
 const isBuiltin = request =>
@@ -43,19 +44,26 @@ const NODE_MODULES = `${path.sep}node_modules${path.sep}`;
 const CJS_OPTIONS = JSON.stringify({conditions: ['require', 'node', 'default', 'node', 'node-addons']});
 
 const scriptCache = new Map();
+const IMPORT_META = Symbol.for('opal.importMeta');
 
-function compile(filename, code) {
-  const key = `${filename}\0${code}`;
+// The module wrapper. A test or setup file in Vitest's dialect may await at
+// its top level, as the ES module it is there; its wrapper is then an async
+// function, and the plain one is padded to the same length so a column on
+// the first line means the same in both (sourcemaps.cjs).
+const wrap = (code, isAsync) =>
+  `({"Object.<anonymous>":${isAsync ? 'async ' : '      '}function(module,exports,require,__dirname,__filename,jest){${code}\n}});`;
+
+function compile(filename, code, isAsync = false) {
+  const key = `${filename}\0${isAsync}\0${code}`;
   let script = scriptCache.get(key);
   if (!script) {
-    script = new vm.Script(
-      `({"Object.<anonymous>":function(module,exports,require,__dirname,__filename,jest){${code}\n}});`,
-      {filename},
-    );
+    script = new vm.Script(wrap(code, isAsync), {filename});
     scriptCache.set(key, script);
   }
   return script;
 }
+
+const awaitsAtTopLevel = error => error instanceof SyntaxError && /await is only valid/.test(error.message);
 
 const stripBOM = text => (text.charCodeAt(0) === 0xfeff ? text.slice(1) : text);
 const isFile = file => {
@@ -452,7 +460,8 @@ class Loader {
     let modulePath;
     // A root manual mock named like the request stands in for it with no
     // jest.mock call ("some old tests rely on this", says Jest's source).
-    if (name && !isRequireActual) {
+    // Vitest uses one only when vi.mock asks for it.
+    if (name && !isRequireActual && this.config.dialect !== 'vitest') {
       const manualMock = this.getMockModule(from, name);
       if (
         manualMock &&
@@ -567,20 +576,80 @@ class Loader {
     let code = stripBOM(fs.readFileSync(filename, 'utf8'));
     if (this.transform) code = this.transform(filename, code);
     if (code.startsWith('#!')) code = `//${code.slice(2)}`;
-    const wrapper = compile(filename, code).runInContext(this.context)['Object.<anonymous>'];
+    let script;
+    let isAsync = false;
+    try {
+      script = compile(filename, code);
+    } catch (error) {
+      if (filename !== this.asyncEntry || !awaitsAtTopLevel(error)) throw error;
+      script = compile(filename, code, true);
+      isAsync = true;
+    }
+    const wrapper = script.runInContext(this.context)['Object.<anonymous>'];
     const require = this.createRequire(module);
     const saved = this.currentlyExecuting;
     this.currentlyExecuting = filename;
     try {
-      wrapper.call(module.exports, module, module.exports, require, path.dirname(filename), filename, this.createJestObject(filename));
+      const evaluation = wrapper.call(module.exports, module, module.exports, require, path.dirname(filename), filename, this.createJestObject(filename));
+      if (isAsync) module.evaluation = evaluation;
     } finally {
       this.currentlyExecuting = saved;
+    }
+  }
+
+  importMeta(filename, require) {
+    const meta = new this.global.Object();
+    meta.dirname = path.dirname(filename);
+    meta.filename = filename;
+    meta.resolve = request => pathToFileURL(require.resolve(request)).href;
+    meta.url = pathToFileURL(filename).href;
+    if (this.config.dialect === 'vitest') meta.env = this.importMetaEnv();
+    return meta;
+  }
+
+  // Vitest's import.meta.env: the test's process.env, with DEV, PROD and SSR
+  // read as booleans (createImportMetaEnvProxy in vitest's worker). Vitest
+  // puts Vite's values in process.env first, where they aren't set already.
+  importMetaEnv() {
+    if (this.metaEnv) return this.metaEnv;
+    const env = this.global.process.env;
+    for (const [name, value] of Object.entries({BASE_URL: '/', DEV: '1', MODE: 'test', PROD: '', SSR: '1'})) {
+      if (env[name] === undefined) env[name] = value;
+    }
+    const booleans = ['DEV', 'PROD', 'SSR'];
+    this.metaEnv = new Proxy(env, {
+      get: (_target, key) => {
+        if (typeof key !== 'string') return undefined;
+        return booleans.includes(key) ? Boolean(env[key]) : env[key];
+      },
+      set: (_target, key, value) => {
+        if (typeof key === 'string') env[key] = booleans.includes(key) ? (value ? '1' : '') : value;
+        return true;
+      },
+    });
+    return this.metaEnv;
+  }
+
+  // A test or setup file. In Vitest's dialect it may await at its top level,
+  // and is then done when `evaluation` settles. Otherwise nothing is awaited:
+  // a test defined in a promise callback the file started has to find the
+  // run begun, as in Jest.
+  requireEntry(filename) {
+    this.asyncEntry = this.config.dialect === 'vitest' ? filename : null;
+    try {
+      const exports = this.requireModule(filename);
+      return {evaluation: this.modules().get(filename)?.evaluation, exports};
+    } finally {
+      this.asyncEntry = null;
     }
   }
 
   createRequire(module) {
     const from = module.filename;
     const require = request => this.requireModuleOrMock(from, request);
+    // What `import.meta` becomes (transform.rs): one object per module.
+    let meta;
+    Object.defineProperty(require, IMPORT_META, {get: () => (meta ??= this.importMeta(from, require))});
     require.resolve = (request, options) => {
       if (request == null) {
         throw new Error('The first argument to require.resolve must be a string. Received null or undefined.');

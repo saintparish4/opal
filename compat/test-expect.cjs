@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // opal test's expect, held to Jest's own on random values.
 //
-//   node compat/test-expect.cjs [--runs N] [--seed N]
+//   node compat/test-expect.cjs [--runs N] [--seed N] [--against vitest]
 //
 // Jest's real `expect` (the build installed in compat/test-runners/runners)
 // runs in one fresh test context, opal's port in another, each context built
@@ -22,13 +22,24 @@
 // primitives, cycles, values from the host realm, and Jest's asymmetric
 // matchers inside them. Half the pairs are a value and a copy with one
 // change; the rest are a value and a plain copy, or two unrelated values.
+//
+// --against vitest holds opal to Vitest's expect instead, to measure the
+// distance rather than to close it: opal's expect is Jest's, in Vitest's
+// dialect too. Vitest's real expect (chai with @vitest/expect's plugins, put
+// together as Vitest's createExpect does) runs in this realm, since it
+// claims the same global as Jest's, and opal's in a test context. Both
+// build the generator's values from their own realm's built-ins. Only
+// verdicts are compared: Vitest's messages are chai's, so all of them
+// differ. The cases that differ are printed, for COMPATIBILITY.md.
 'use strict';
 
 process.env.FORCE_COLOR = '0';
 
 const fs = require('fs');
 const path = require('path');
+const util = require('util');
 const vm = require('vm');
+const {pathToFileURL} = require('url');
 const {builtinModules} = require('module');
 
 const RUNTIME = path.join(__dirname, '..', 'crates', 'opal-test', 'runtime');
@@ -190,11 +201,17 @@ const GENERATOR = String.raw`
 
   const MATCHERS = ['toEqual', 'toStrictEqual', 'toMatchObject', 'toContainEqual', 'toContain'];
 
-  return function runCase(seed) {
+  // The case's two values, from its seed alone.
+  function values(seed) {
     const rng = rngFor(seed);
     const a = make(rng, 0);
     const r = rng();
     const b = r < 0.5 ? mutate(rng, a) : r < 0.75 ? clone(a) : make(rng, 0);
+    return [a, b];
+  }
+
+  function runCase(seed) {
+    const [a, b] = values(seed);
     const outcome = {};
     for (const matcher of MATCHERS) {
       const received = matcher === 'toContainEqual' || matcher === 'toContain' ? [1, a] : a;
@@ -206,9 +223,51 @@ const GENERATOR = String.raw`
       }
     }
     return outcome;
-  };
+  }
+  runCase.values = values;
+  return runCase;
 })
 `;
+
+async function againstVitest(runs, seed) {
+  const vitest = await import(pathToFileURL(require.resolve('@vitest/expect', {paths: [RUNNERS]})).href);
+  const {chai} = vitest;
+  chai.use(vitest.JestExtend);
+  chai.use(vitest.JestChaiExpect);
+  chai.use(vitest.JestAsymmetricMatchers);
+  const vitestExpect = value => chai.expect(value);
+  Object.assign(vitestExpect, chai.expect);
+  const vitestCase = vm.runInThisContext(GENERATOR)(vitestExpect, {Buffer, Date, Error, Map, Object, Set});
+
+  const opalEnv = createEnvironment({testEnvironmentOptions: {}});
+  const opalExpect = frameworkRequire(opalEnv.context)('expect.cjs').createExpect();
+  const own = vm.runInContext('({Date, Error, Map, Object, Set})', opalEnv.context);
+  const opalCase = vm.runInContext(GENERATOR, opalEnv.context)(opalExpect, {...own, Buffer});
+
+  const differing = {};
+  let calls = 0;
+  let shown = 0;
+  for (let i = 0; i < runs; i++) {
+    const caseSeed = seed * 1_000_003 + i;
+    const expected = vitestCase(caseSeed);
+    const actual = opalCase(caseSeed);
+    for (const matcher of Object.keys(expected)) {
+      calls++;
+      const vitestPass = expected[matcher] === 'pass';
+      if (vitestPass === (actual[matcher] === 'pass')) continue;
+      differing[matcher] = (differing[matcher] || 0) + 1;
+      if (shown++ < 40) {
+        const [a, b] = vitestCase.values(caseSeed);
+        const show = value => util.inspect(value, {depth: 6, breakLength: Infinity});
+        console.log(`\n=== case ${caseSeed}, ${matcher}: vitest ${vitestPass ? 'passes' : 'fails'}, opal ${vitestPass ? 'fails' : 'passes'}`);
+        console.log(`received: ${show(a)}`);
+        console.log(`expected: ${show(b)}`);
+      }
+    }
+  }
+  const total = Object.values(differing).reduce((sum, n) => sum + n, 0);
+  console.log(`\n${runs} cases, ${calls} matcher calls: ${total} verdicts differ from Vitest's (seed ${seed}) ${JSON.stringify(differing)}`);
+}
 
 function main() {
   const args = process.argv.slice(2);
@@ -218,6 +277,14 @@ function main() {
   };
   const runs = option('--runs', 20000);
   const seed = option('--seed', 1);
+  if (args.includes('--against')) {
+    if (args[args.indexOf('--against') + 1] !== 'vitest') throw new Error('--against takes vitest');
+    againstVitest(runs, seed).catch(error => {
+      console.error(error);
+      process.exit(2);
+    });
+    return;
+  }
 
   const host = {Buffer, Date, Error, Map, Object, Set};
   const jestEnv = createEnvironment({testEnvironmentOptions: {}});
@@ -256,4 +323,6 @@ function main() {
   process.exit(verdictMismatches + messageMismatches > 0 ? 1 : 0);
 }
 
-main();
+if (require.main === module) main();
+
+module.exports = {GENERATOR, RUNNERS, loadInContext};

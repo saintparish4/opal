@@ -5,7 +5,8 @@
 'use strict';
 
 // What the loader puts before line 1 of every module (loader.cjs).
-const WRAPPER_PREFIX = '({"Object.<anonymous>":function(module,exports,require,__dirname,__filename,jest){';
+// loader.cjs's wrapper, async or not: both are this long.
+const WRAPPER_PREFIX = '({"Object.<anonymous>":      function(module,exports,require,__dirname,__filename,jest){';
 
 const registry = new Map();
 

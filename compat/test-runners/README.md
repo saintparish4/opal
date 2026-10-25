@@ -133,7 +133,7 @@ opal test has to satisfy these, in order of strictness:
 
 ## Results: 2026-10-25
 
-jest 30.5.2, vitest 4.1.12, bun 1.4.2, node 24.19.0 and opal 0.4.1 on WSL2 (Linux 6.6.87.2), 8 threads. The record is [`compat/results/test-runners-20261025-160908.json`](../results/test-runners-20261025-160908.json).
+jest 30.5.2, vitest 4.1.12, bun 1.4.2, node 24.19.0 and opal 0.4.1 on WSL2 (Linux 6.6.87.2), 8 threads. The record is [`compat/results/test-runners-20261025-162927.json`](../results/test-runners-20261025-162927.json).
 
 | runner | agrees | known_difference, as pinned | planted failures failed |
 |---|---|---|---|

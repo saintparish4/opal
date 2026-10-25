@@ -1,6 +1,6 @@
 {
   "meta": {
-    "date": "2026-10-25T16:07:39",
+    "date": "2026-10-25T16:27:43",
     "host": "Linux 6.6.87.2-microsoft-standard-WSL2, 8 threads",
     "versions": {
       "node": "24.19.0",
@@ -18,63 +18,63 @@
     "fixtures": 111,
     "opal_binary": {
       "path": "/home/saint/msgd/opal-test/target/release/opal",
-      "sha256": "81eb96abfe7a236045f3d7a8d4c9ae01a05e02627bab2c74fe6a8a0ac29d361a"
+      "sha256": "adb4faf233dbb913549b02120165affef67574a13097c079e2406ca2544b73a0"
     },
-    "seconds": 92.1,
+    "seconds": 107.8,
     "invocations": {
       "jest": [
         {
           "exit": 1,
-          "seconds": 11.62,
+          "seconds": 13.36,
           "log": "<scratch>/jest-0.log"
         }
       ],
       "vitest": [
         {
           "exit": 1,
-          "seconds": 4.27,
+          "seconds": 6.22,
           "log": "<scratch>/vitest-0.log"
         }
       ],
       "bun": [
         {
           "exit": 1,
-          "seconds": 0.52,
+          "seconds": 0.37,
           "log": "<scratch>/bun-0.log"
         }
       ],
       "opal": [
         {
           "exit": 1,
-          "seconds": 10.42,
+          "seconds": 10.37,
           "log": "<scratch>/opal-0.log"
         }
       ],
       "jest mutants": [
         {
           "exit": 1,
-          "seconds": 22.32,
+          "seconds": 22.4,
           "log": "<scratch>/jest-mutants.log"
         }
       ],
       "vitest mutants": [
         {
           "exit": 1,
-          "seconds": 16.63,
+          "seconds": 25.39,
           "log": "<scratch>/vitest-mutants.log"
         }
       ],
       "bun mutants": [
         {
           "exit": 1,
-          "seconds": 2.21,
+          "seconds": 3.21,
           "log": "<scratch>/bun-mutants.log"
         }
       ],
       "opal mutants": [
         {
           "exit": 1,
-          "seconds": 21.19,
+          "seconds": 22.45,
           "log": "<scratch>/opal-mutants.log"
         }
       ]

@@ -36,6 +36,8 @@ The order is jest-runner's `runTest.ts` and jest-circus's `jestAdapter.ts`:
 
 Anything thrown before the run starts fails the file as "Test suite failed to run", with no tests.
 
+Each worker has `JEST_WORKER_ID`, 1 up to the number of workers, as jest-worker numbers them; a worker that replaces a crashed one takes its number. `NODE_ENV` is `test` unless it was set, as jest-cli sets it.
+
 ## Isolation
 
 Every test file gets its own `vm` context (`runtime/environment.cjs`), built the way jest-environment-node builds one:
@@ -183,21 +185,25 @@ Where Jest runs babel-jest, opal runs its own transform (`src/transform.rs`), in
   - an export is a writable property of `exports`, so `jest.spyOn(module, 'f')` can replace it, and every assignment to an exported binding updates it;
   - re-exports are getters placed right after their `require`, and a name the module exports itself wins over `export *`.
 - **Hoisting.** `jest.mock`, `unmock`, `enableAutomock`, `disableAutomock` and `deepUnmock` at the top of a file move above everything, as babel-plugin-jest-hoist moves them, and so do `vi.mock`, `vi.unmock` and `vi.hoisted`.
-- **`import.meta`** becomes the module's `url`, `filename`, `dirname` and `resolve`.
+- **The wrapper's names.** An ES module's own top-level `require`, `module`, `exports`, `__filename` or `__dirname`, as in `const __dirname = dirname(fileURLToPath(import.meta.url))`, is renamed (`_require`, `_dirname`) wherever it is used, as Babel renames it, so it doesn't collide with the CommonJS wrapper's parameters.
+- **`import.meta`** is one object per module, from the loader, with the module's `url`, `filename`, `dirname` and `resolve`.
 - **Stack traces.** Every source map token is carried through these edits. Each test's context gets an `Error.prepareStackTrace` that maps frames back to the lines the user wrote, as Jest installs source-map-support. Inline snapshots find their call through those frames.
 
 ## Vitest's dialect
 
-A project is in Vitest's dialect when its folder has no Jest config but a `vitest.config.*` (or `vite.config.*`), or lists vitest as a dependency. The config is evaluated by Node with `vitest/config` and `vite` stubbed through `module.registerHooks`, which costs about 40 ms instead of the half second loading Vite takes. `include` and `exclude`, `globals`, `setupFiles`, `testTimeout`, the mock-reset flags and `resolve.alias` are read.
+A project is in Vitest's dialect when its folder has no Jest config but a `vitest.config.*` (or `vite.config.*`), or lists vitest as a dependency; a test file is when it imports from `vitest`, whatever its project. The config is evaluated by Node with `vitest/config` and `vite` stubbed through `module.registerHooks`, which costs about 40 ms instead of the half second loading Vite takes. `include` and `exclude`, `globals`, `setupFiles`, `testTimeout`, the mock-reset flags and `resolve.alias` are read.
 
-Vitest is an alias layer over the Jest semantics above (`runtime/vitest.cjs`):
+Vitest is an alias layer over the Jest semantics above (`runtime/vitest.cjs`, `runtime/vitest-expect.cjs`). Where a difference is one of API, naming or file format, opal takes Vitest's side. That covers:
 
-- **Its API.** The `vitest` module and `vi` map onto the same framework.
-- **Test functions.** Tests and hooks get Vitest's context object instead of `done`, and a hook may return a cleanup.
-- **Snapshots.** Snapshot files use Vitest's header and ` > ` keys.
-- **Imports.** `./a.js` resolves to `./a.ts` as Vite resolves it.
+- the `vitest` module and `vi`;
+- the test context and hook cleanups;
+- `each` titles, formatted by Vitest's own code;
+- snapshot keys, comparison, and thrown-value snapshots;
+- Vitest's extra matchers;
+- top-level `await` in a test file;
+- `import.meta.env`.
 
-Where Vitest's behavior differs from Jest's, opal does what Jest does. [`COMPATIBILITY.md`](./COMPATIBILITY.md) lists each place.
+Where it is one of semantics (hook order, equality, mock functions, module loading), opal does what Jest does. [`COMPATIBILITY.md`](./COMPATIBILITY.md) lists every difference, with what measures it.
 
 ## Checked so far
 
@@ -210,13 +216,14 @@ Where Vitest's behavior differs from Jest's, opal does what Jest does. [`COMPATI
 | `compat/test-mock.cjs`, seeds 1 and 2, 3,000 programs of 30 operations each, against Jest's installed `jest-mock` build | 180,000 operations: the full recorded state of every mock identical after each one |
 | the same with a bug planted, each call's `this` recorded as `undefined` | caught: 484 of 500 programs differ |
 | `compat/test-runners.py --opal`, all 88 Jest-dialect fixtures | identical to Jest in verdicts and in every file written, the known differences included; all 34 planted failures fail |
-| the Nest 12 scaffold's own suite (`compat/frameworks/nest`, Vitest, decorators with metadata, ES-module-only `@nestjs/*`) | 1 of 1 passing, as under `vitest run` |
+| `compat/test-snapshot-format.cjs`, seeds 1 and 2, 20,058 values each (the expect generator's, plus mocks, spies, errors with causes, functions, classes, awkward strings, typed arrays and URLs) | every value printed into a snapshot byte for byte as Jest's installed build prints it |
+| the same with a bug planted, `-0` printed as `0` | caught: 252 of 4,057 values differ |
+| `compat/test-runners.py --opal`, the 23 Vitest-dialect fixtures | Vitest's verdicts and writes on 20; the other 3 differ only as their `opal` pins say (COMPATIBILITY.md) |
+| the Nest 12 scaffold's own suites (`compat/frameworks/nest`, Vitest, decorators with metadata, ES-module-only `@nestjs/*`), unit and e2e | 1 of 1 and 1 of 1 passing, as under `vitest run` |
 
 ## Not yet
 
 - **Fake timers.** `jest.useFakeTimers` and friends throw rather than pass.
 - **Running the project's prettier on inline snapshots.**
-- **TypeScript and ESM test files.**
 - **Watch mode.**
-- **Vitest's dialect.**
-- **Fake timers, describe-level retries, `--randomize`, test locations in results, and custom test environments.**
+- **Describe-level retries, `--randomize`, test locations in results, and custom test environments.**

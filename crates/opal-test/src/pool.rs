@@ -37,6 +37,8 @@ enum Event {
 
 struct Slot {
     child: Child,
+    /// Its JEST_WORKER_ID.
+    number: usize,
     stream: Option<TcpStream>,
     /// The file it is running, and when it started.
     job: Option<(PathBuf, Instant)>,
@@ -89,11 +91,23 @@ impl Pool {
     pub fn spawn(&mut self) -> Result<usize, TestError> {
         let id = self.next_id;
         self.next_id += 1;
-        let child = Command::new(&self.node)
+        // The lowest number no live worker has, so a worker that replaces a
+        // crashed one takes its number, as jest-worker's restarted workers do.
+        let number = (1..)
+            .find(|n| !self.slots.values().any(|slot| slot.number == *n))
+            .expect("a free number");
+        let mut command = Command::new(&self.node);
+        command
             .arg(&self.worker_script)
             .env("OPAL_TEST_PORT", self.port.to_string())
             .env("OPAL_TEST_TOKEN", &self.token)
             .env("OPAL_TEST_WORKER", id.to_string())
+            .env("JEST_WORKER_ID", number.to_string());
+        // jest-cli's bin/jest.js: test, unless the environment says otherwise.
+        if std::env::var_os("NODE_ENV").is_none() {
+            command.env("NODE_ENV", "test");
+        }
+        let child = command
             .stdin(Stdio::null())
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
@@ -117,6 +131,7 @@ impl Pool {
             id,
             Slot {
                 child,
+                number,
                 stream: None,
                 job: None,
                 spawned: Instant::now(),

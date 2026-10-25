@@ -197,7 +197,9 @@ async function loadConfig({rootDir: start, configPath}) {
       if (vitestConfig || usesVitest(manifest)) return loadVitestConfig(dir, vitestConfig);
     }
   }
-  if (configPath && /(^|[\\/])vite(st)?\.config\.[cm]?[jt]s$/.test(file)) {
+  // vitest.config.ts, and the variants projects name for a second suite:
+  // vitest.config.e2e.ts, vitest.e2e.config.mts.
+  if (configPath && /^vite(st)?\..*\.[cm]?[jt]s$/.test(path.basename(file))) {
     return loadVitestConfig(path.dirname(file), file);
   }
   let raw = file ? await readConfigFile(file) : {};

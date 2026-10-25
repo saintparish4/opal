@@ -222,6 +222,14 @@ async function runTestFile(testPath, context, bridge) {
   let framework = null;
   try {
     const {context, global} = createEnvironment(config);
+    // Vitest's variables in place of jest-worker's (cli-api.ts and its pool
+    // workers set them).
+    if (config.dialect === 'vitest') {
+      const env = global.process.env;
+      const id = env.JEST_WORKER_ID;
+      Object.assign(env, {TEST: 'true', VITEST: 'true', VITEST_MODE: 'RUN', VITEST_POOL_ID: id, VITEST_WORKER_ID: id});
+      delete env.JEST_WORKER_ID;
+    }
     global.console = createBufferedConsole(consoleEntries);
     global.Error.prepareStackTrace = sourcemaps.prepareStackTrace;
     const transform = createTransform(config, bridge);
@@ -236,13 +244,18 @@ async function runTestFile(testPath, context, bridge) {
     loader.createJestObject = from => framework.createJestObject(from);
     loader.jestGlobals = from => ({...framework.jestGlobals, jest: framework.createJestObject(from)});
     loader.vitestFor = from => framework.vitestFor(from);
-    for (const file of config.setupFiles) loader.requireModule(file);
+    for (const file of config.setupFiles) {
+      const {evaluation} = loader.requireEntry(file);
+      if (evaluation) await evaluation;
+    }
     if (config.injectGlobals) Object.defineProperties(global, framework.globals);
     for (const file of config.setupFilesAfterEnv) {
-      const exported = loader.requireModule(file);
-      if (typeof exported === 'function') await exported();
+      const {evaluation, exports} = loader.requireEntry(file);
+      if (evaluation) await evaluation;
+      if (typeof exports === 'function') await exports();
     }
-    loader.requireModule(testPath);
+    const {evaluation} = loader.requireEntry(testPath);
+    if (evaluation) await evaluation;
   } catch (error) {
     if (framework) await framework.teardown();
     result = failure(testPath, error);

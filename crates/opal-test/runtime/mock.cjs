@@ -4,13 +4,47 @@
 const {types} = require('util');
 const {ModuleMocker} = require('./jest-mock.cjs');
 
-// Vitest's mocks also record mock.settledResults: for each call, what the
-// promise it returned settled to, or what it returned when that wasn't a
-// promise, as @vitest/spy's createMock records them. Jest's mocks have no
-// such field, so only the Vitest dialect's mocker records it. jest-mock
-// pushes a call's result before the call and fills it in after, so the
-// result's value is watched to learn what the call returned.
+// The Vitest dialect's mocks are jest-mock's with two of @vitest/spy's
+// additions, neither of which Jest's mocks have:
+//   - mock.settledResults: for each call, what the promise it returned
+//     settled to, or what it returned when that wasn't a promise. jest-mock
+//     pushes a call's result before the call and fills it in after, so the
+//     result's value is watched to learn what the call returned.
+//   - a spy's name: the spied function's own name, which a snapshot of the
+//     spy prints, and which mockReset keeps.
 class VitestModuleMocker extends ModuleMocker {
+  constructor(global) {
+    super(global);
+    this._spyNames = new WeakMap();
+  }
+
+  spyOn(object, methodKey, accessType) {
+    let original;
+    try {
+      if (accessType) {
+        for (let owner = object; owner && !original; owner = Object.getPrototypeOf(owner)) {
+          original = Object.getOwnPropertyDescriptor(owner, methodKey)?.[accessType];
+        }
+      } else {
+        original = object[methodKey];
+      }
+    } catch {}
+    const spy = super.spyOn(object, methodKey, accessType);
+    if (spy !== original && !this._spyNames.has(spy)) {
+      const name = (typeof original === 'function' && original.name) || 'Mock';
+      this._spyNames.set(spy, name);
+      this._ensureMockConfig(spy).mockName = name;
+    }
+    return spy;
+  }
+
+  _ensureMockConfig(f) {
+    const fresh = !this._mockConfigRegistry.has(f);
+    const config = super._ensureMockConfig(f);
+    if (fresh && this._spyNames.has(f)) config.mockName = this._spyNames.get(f);
+    return config;
+  }
+
   _defaultMockState() {
     const state = super._defaultMockState();
     const settledResults = [];
