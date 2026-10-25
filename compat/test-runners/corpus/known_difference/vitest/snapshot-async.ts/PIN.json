@@ -1,0 +1,17 @@
+{
+  "bun": {
+    "why": "toThrowErrorMatchingInlineSnapshot: Bun snapshots the message (\"foo\"), Vitest the error ([Error: foo]), so the committed Vitest snapshot doesn't match.",
+    "verdicts": {
+      "snapshot-async.test.ts": {
+        "(file)": [
+          "pass",
+          "fail"
+        ],
+        "rejected inline": [
+          "pass",
+          "fail"
+        ]
+      }
+    }
+  }
+}

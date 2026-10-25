@@ -1,0 +1,25 @@
+{
+  "bun": {
+    "why": "A test that both takes done and returns a value or Promise: Jest fails it; Bun accepts it and passes.",
+    "verdicts": {
+      "__tests__/promise-and-callback.test.js": {
+        "(file)": [
+          "fail",
+          "pass"
+        ],
+        "async test with callback": [
+          "fail",
+          "pass"
+        ],
+        "promise-returning test with callback": [
+          "fail",
+          "pass"
+        ],
+        "test done before return value": [
+          "fail",
+          "pass"
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "vitest": {
+    "why": "Vitest 4 has no done callback: a test or hook that takes `done` returns at once without waiting for it, and calling done() throws 'done() callback is deprecated, use promise instead'. The hooks here call done, so both tests fail where Jest passes them.",
+    "verdicts": {
+      "__tests__/index.test.js": {
+        "(file)": [
+          "pass",
+          "fail"
+        ],
+        "`done()` should work with hooks › bar": [
+          "pass",
+          "fail"
+        ],
+        "`done()` should work with hooks › foo": [
+          "pass",
+          "fail"
+        ]
+      }
+    }
+  }
+}

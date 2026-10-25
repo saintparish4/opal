@@ -1,0 +1,37 @@
+{
+  "bun": {
+    "why": "The file imports `assert` from 'vitest'; bun:test, which Bun maps vitest imports to, has no such export, so the file fails to load.",
+    "verdicts": {
+      "fn.test.ts": {
+        "(file)": [
+          "pass",
+          "fail"
+        ],
+        "mock › basic": [
+          "pass",
+          null
+        ],
+        "mock › rejects": [
+          "pass",
+          null
+        ],
+        "mock › resolved": [
+          "pass",
+          null
+        ],
+        "mock › returns": [
+          "pass",
+          null
+        ],
+        "mock › throws": [
+          "pass",
+          null
+        ],
+        "mock › toHaveBeenCalledWith": [
+          "pass",
+          null
+        ]
+      }
+    }
+  }
+}

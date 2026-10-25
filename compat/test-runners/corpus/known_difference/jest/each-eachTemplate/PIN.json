@@ -1,0 +1,68 @@
+{
+  "vitest": {
+    "why": "$path interpolation in .each titles: Vitest quotes strings ('value') and prints a path through null as undefined; Jest prints strings bare and a path through null as null.",
+    "verdicts": {
+      "__tests__/eachTemplate.test.js": {
+        "allows templating \"'value'\"": [
+          null,
+          "pass"
+        ],
+        "allows templating \"null\"": [
+          "pass",
+          null
+        ],
+        "allows templating \"null\" [2]": [
+          "pass",
+          null
+        ],
+        "allows templating \"undefined\" [3]": [
+          null,
+          "pass"
+        ],
+        "allows templating \"undefined\" [4]": [
+          null,
+          "pass"
+        ],
+        "allows templating \"value\"": [
+          "pass",
+          null
+        ]
+      }
+    }
+  },
+  "bun": {
+    "why": "$path interpolation through a null row throws in Bun while collecting ('null is not an object'), so the file fails before any test is reported.",
+    "verdicts": {
+      "__tests__/eachTemplate.test.js": {
+        "(file)": [
+          "pass",
+          "fail"
+        ],
+        "allows templating \"1\"": [
+          "pass",
+          null
+        ],
+        "allows templating \"null\"": [
+          "pass",
+          null
+        ],
+        "allows templating \"null\" [2]": [
+          "pass",
+          null
+        ],
+        "allows templating \"undefined\"": [
+          "pass",
+          null
+        ],
+        "allows templating \"undefined\" [2]": [
+          "pass",
+          null
+        ],
+        "allows templating \"value\"": [
+          "pass",
+          null
+        ]
+      }
+    }
+  }
+}

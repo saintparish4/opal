@@ -1,0 +1,29 @@
+{
+  "bun": {
+    "why": "The file imports `assert` from 'vitest'; bun:test, which Bun maps vitest imports to, has no such export, so the file fails to load.",
+    "verdicts": {
+      "hooks.test.js": {
+        "(file)": [
+          "pass",
+          "fail"
+        ],
+        "before and after hooks › afterAll not called": [
+          "pass",
+          null
+        ],
+        "before and after hooks › afterEach called": [
+          "skip",
+          null
+        ],
+        "before and after hooks › beforeAll works": [
+          "pass",
+          null
+        ],
+        "before and after hooks › beforeEach works": [
+          "pass",
+          null
+        ]
+      }
+    }
+  }
+}

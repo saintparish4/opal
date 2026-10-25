@@ -1,0 +1,48 @@
+{
+  "vitest": {
+    "why": "$count(*) in a title, for a key containing parentheses: Jest reads the whole key; Vitest reads $count, finds nothing, and prints undefined(*).",
+    "verdicts": {
+      "__tests__/specialCharacterKeys.test.js": {
+        "row 1": [
+          "pass",
+          null
+        ],
+        "row 2": [
+          "pass",
+          null
+        ],
+        "row undefined(*)": [
+          null,
+          "pass"
+        ],
+        "row undefined(*) [2]": [
+          null,
+          "pass"
+        ]
+      }
+    }
+  },
+  "bun": {
+    "why": "$count(*) in a title, for a key containing parentheses: Jest reads the whole key; Bun leaves the title as written.",
+    "verdicts": {
+      "__tests__/specialCharacterKeys.test.js": {
+        "row $count*)": [
+          null,
+          "pass"
+        ],
+        "row $count*) [2]": [
+          null,
+          "pass"
+        ],
+        "row 1": [
+          "pass",
+          null
+        ],
+        "row 2": [
+          "pass",
+          null
+        ]
+      }
+    }
+  }
+}

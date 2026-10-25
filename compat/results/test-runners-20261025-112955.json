@@ -1,0 +1,1993 @@
+{
+  "meta": {
+    "date": "2026-10-25T11:28:02",
+    "host": "Linux 6.6.87.2-microsoft-standard-WSL2, 8 threads",
+    "versions": {
+      "node": "24.19.0",
+      "bun": "1.4.2",
+      "jest": "30.5.2",
+      "vitest": "4.1.12"
+    },
+    "runners": [
+      "jest",
+      "vitest",
+      "bun"
+    ],
+    "fixtures": 111,
+    "seconds": 113.0,
+    "invocations": {
+      "jest": [
+        {
+          "exit": 1,
+          "seconds": 13.73,
+          "log": "<scratch>/jest-0.log"
+        },
+        {
+          "exit": 1,
+          "seconds": 13.36,
+          "log": "<scratch>/jest-1.log"
+        }
+      ],
+      "vitest": [
+        {
+          "exit": 1,
+          "seconds": 10.34,
+          "log": "<scratch>/vitest-0.log"
+        },
+        {
+          "exit": 1,
+          "seconds": 9.53,
+          "log": "<scratch>/vitest-1.log"
+        }
+      ],
+      "bun": [
+        {
+          "exit": 1,
+          "seconds": 0.63,
+          "log": "<scratch>/bun-0.log"
+        },
+        {
+          "exit": 1,
+          "seconds": 0.64,
+          "log": "<scratch>/bun-1.log"
+        }
+      ],
+      "jest mutants": [
+        {
+          "exit": 1,
+          "seconds": 24.43,
+          "log": "<scratch>/jest-mutants.log"
+        }
+      ],
+      "vitest mutants": [
+        {
+          "exit": 1,
+          "seconds": 31.43,
+          "log": "<scratch>/vitest-mutants.log"
+        }
+      ],
+      "bun mutants": [
+        {
+          "exit": 1,
+          "seconds": 3.0,
+          "log": "<scratch>/bun-mutants.log"
+        }
+      ]
+    }
+  },
+  "fixtures": {
+    "jest/bigint-failing": {
+      "class": "agrees",
+      "compared": [
+        "bun",
+        "vitest"
+      ],
+      "differs": [],
+      "problems": []
+    },
+    "jest/declaration-errors-describeThrow": {
+      "class": "agrees",
+      "compared": [
+        "bun",
+        "vitest"
+      ],
+      "differs": [],
+      "problems": []
+    },
+    "jest/empty-describe-with-hooks-hookInDescribeWithSkippedTest": {
+      "class": "agrees",
+      "compared": [
+        "bun",
+        "vitest"
+      ],
+      "differs": [],
+      "problems": []
+    },
+    "jest/empty-suite-error-emptySuite": {
+      "class": "agrees",
+      "compared": [
+        "bun",
+        "vitest"
+      ],
+      "differs": [],
+      "problems": []
+    },
+    "jest/failures-aggregateError": {
+      "class": "agrees",
+      "compared": [
+        "bun",
+        "vitest"
+      ],
+      "differs": [],
+      "problems": []
+    },
+    "jest/failures-assertionCount": {
+      "class": "agrees",
+      "compared": [
+        "bun",
+        "vitest"
+      ],
+      "differs": [],
+      "problems": []
+    },
+    "jest/failures-assertionError": {
+      "class": "agrees",
+      "compared": [
+        "bun",
+        "vitest"
+      ],
+      "differs": [],
+      "problems": []
+    },
+    "jest/failures-assertionErrorExpand": {
+      "class": "agrees",
+      "compared": [
+        "bun",
+        "vitest"
+      ],
+      "differs": [],
+      "problems": []
+    },
+    "jest/failures-duringTests": {
+      "class": "agrees",
+      "compared": [
+        "bun",
+        "vitest"
+      ],
+      "differs": [],
+      "problems": []
+    },
+    "jest/failures-throwNumber": {
+      "class": "agrees",
+      "compared": [
+        "bun",
+        "vitest"
+      ],
+      "differs": [],
+      "problems": []
+    },
+    "jest/failures-throwObject": {
+      "class": "agrees",
+      "compared": [
+        "bun",
+        "vitest"
+      ],
+      "differs": [],
+      "problems": []
+    },
+    "jest/failures-throwObjectWithStackProp": {
+      "class": "agrees",
+      "compared": [
+        "bun",
+        "vitest"
+      ],
+      "differs": [],
+      "problems": []
+    },
+    "jest/failures-throwString": {
+      "class": "agrees",
+      "compared": [
+        "bun",
+        "vitest"
+      ],
+      "differs": [],
+      "problems": []
+    },
+    "jest/jasmine-async-pendingInPromise": {
+      "class": "agrees",
+      "compared": [
+        "bun",
+        "vitest"
+      ],
+      "differs": [],
+      "problems": []
+    },
+    "jest/jasmine-async-promiseAfterAll": {
+      "class": "agrees",
+      "compared": [
+        "bun",
+        "vitest"
+      ],
+      "differs": [],
+      "problems": []
+    },
+    "jest/jasmine-async-promiseAfterEach": {
+      "class": "agrees",
+      "compared": [
+        "bun",
+        "vitest"
+      ],
+      "differs": [],
+      "problems": []
+    },
+    "jest/lifecycles-index": {
+      "class": "agrees",
+      "compared": [
+        "bun",
+        "vitest"
+      ],
+      "differs": [],
+      "problems": []
+    },
+    "jest/mock-functions-index": {
+      "class": "agrees",
+      "compared": [
+        "bun"
+      ],
+      "differs": [],
+      "problems": []
+    },
+    "jest/nested-test-definitions-nestedDescribeInTest": {
+      "class": "agrees",
+      "compared": [
+        "bun",
+        "vitest"
+      ],
+      "differs": [],
+      "problems": []
+    },
+    "jest/nested-test-definitions-nestedTestOutsideDescribe": {
+      "class": "agrees",
+      "compared": [
+        "bun",
+        "vitest"
+      ],
+      "differs": [],
+      "problems": []
+    },
+    "jest/nested-test-definitions-nestedTestWithinDescribe": {
+      "class": "agrees",
+      "compared": [
+        "bun",
+        "vitest"
+      ],
+      "differs": [],
+      "problems": []
+    },
+    "jest/snapshot-escape-snapshot": {
+      "class": "agrees",
+      "compared": [
+        "bun",
+        "vitest"
+      ],
+      "differs": [],
+      "problems": []
+    },
+    "jest/snapshot-escape-snapshotEscapeSubstitution": {
+      "class": "agrees",
+      "compared": [
+        "bun",
+        "vitest"
+      ],
+      "differs": [],
+      "problems": []
+    },
+    "jest/snapshot-secondSnapshot": {
+      "class": "agrees",
+      "compared": [
+        "bun",
+        "vitest"
+      ],
+      "differs": [],
+      "problems": []
+    },
+    "jest/test-todo-only-todo": {
+      "class": "agrees",
+      "compared": [
+        "bun",
+        "vitest"
+      ],
+      "differs": [],
+      "problems": []
+    },
+    "jest/test-todo-statuses": {
+      "class": "agrees",
+      "compared": [
+        "bun",
+        "vitest"
+      ],
+      "differs": [],
+      "problems": []
+    },
+    "jest/test-todo-verbose": {
+      "class": "agrees",
+      "compared": [
+        "bun",
+        "vitest"
+      ],
+      "differs": [],
+      "problems": []
+    },
+    "vitest/execution-order.ts": {
+      "class": "agrees",
+      "compared": [
+        "bun"
+      ],
+      "differs": [],
+      "problems": []
+    },
+    "vitest/expect-circular.ts": {
+      "class": "agrees",
+      "compared": [
+        "bun"
+      ],
+      "differs": [],
+      "problems": []
+    },
+    "vitest/isolate.ts": {
+      "class": "agrees",
+      "compared": [
+        "bun"
+      ],
+      "differs": [],
+      "problems": []
+    },
+    "vitest/jest-expect-no-url.ts": {
+      "class": "agrees",
+      "compared": [
+        "bun"
+      ],
+      "differs": [],
+      "problems": []
+    },
+    "vitest/snapshot-inline-(parentheses).ts": {
+      "class": "agrees",
+      "compared": [
+        "bun"
+      ],
+      "differs": [],
+      "problems": []
+    },
+    "vitest/strict.js": {
+      "class": "agrees",
+      "compared": [
+        "bun"
+      ],
+      "differs": [],
+      "problems": []
+    },
+    "jest/before-all-skipped-beforeAllFiltered": {
+      "class": "known_difference",
+      "compared": [
+        "bun",
+        "vitest"
+      ],
+      "differs": [
+        "bun",
+        "vitest"
+      ],
+      "problems": []
+    },
+    "jest/before-each-queue-beforeEachQueue": {
+      "class": "known_difference",
+      "compared": [
+        "bun",
+        "vitest"
+      ],
+      "differs": [
+        "vitest"
+      ],
+      "problems": []
+    },
+    "jest/bigint-each": {
+      "class": "known_difference",
+      "compared": [
+        "bun",
+        "vitest"
+      ],
+      "differs": [
+        "bun",
+        "vitest"
+      ],
+      "problems": []
+    },
+    "jest/call-done-twice-index": {
+      "class": "known_difference",
+      "compared": [
+        "bun",
+        "vitest"
+      ],
+      "differs": [
+        "bun",
+        "vitest"
+      ],
+      "problems": []
+    },
+    "jest/circus-declaration-errors-asyncDefinition": {
+      "class": "known_difference",
+      "compared": [
+        "bun",
+        "vitest"
+      ],
+      "differs": [
+        "bun",
+        "vitest"
+      ],
+      "problems": []
+    },
+    "jest/declaration-errors-describeReturnPromise": {
+      "class": "known_difference",
+      "compared": [
+        "bun",
+        "vitest"
+      ],
+      "differs": [
+        "bun",
+        "vitest"
+      ],
+      "problems": []
+    },
+    "jest/declaration-errors-describeReturnSomething": {
+      "class": "known_difference",
+      "compared": [
+        "bun",
+        "vitest"
+      ],
+      "differs": [
+        "bun",
+        "vitest"
+      ],
+      "problems": []
+    },
+    "jest/done-in-hooks-index": {
+      "class": "known_difference",
+      "compared": [
+        "bun",
+        "vitest"
+      ],
+      "differs": [
+        "vitest"
+      ],
+      "problems": []
+    },
+    "jest/each-describeOnly": {
+      "class": "known_difference",
+      "compared": [
+        "bun",
+        "vitest"
+      ],
+      "differs": [
+        "bun"
+      ],
+      "problems": []
+    },
+    "jest/each-eachException": {
+      "class": "known_difference",
+      "compared": [
+        "bun",
+        "vitest"
+      ],
+      "differs": [
+        "bun",
+        "vitest"
+      ],
+      "problems": []
+    },
+    "jest/each-eachOnly": {
+      "class": "known_difference",
+      "compared": [
+        "bun",
+        "vitest"
+      ],
+      "differs": [
+        "bun"
+      ],
+      "problems": []
+    },
+    "jest/each-eachSkip": {
+      "class": "known_difference",
+      "compared": [
+        "bun",
+        "vitest"
+      ],
+      "differs": [
+        "bun"
+      ],
+      "problems": []
+    },
+    "jest/each-eachTemplate": {
+      "class": "known_difference",
+      "compared": [
+        "bun",
+        "vitest"
+      ],
+      "differs": [
+        "bun",
+        "vitest"
+      ],
+      "problems": []
+    },
+    "jest/each-failure": {
+      "class": "known_difference",
+      "compared": [
+        "bun",
+        "vitest"
+      ],
+      "differs": [
+        "bun",
+        "vitest"
+      ],
+      "problems": []
+    },
+    "jest/each-pretty": {
+      "class": "known_difference",
+      "compared": [
+        "bun",
+        "vitest"
+      ],
+      "differs": [
+        "bun",
+        "vitest"
+      ],
+      "problems": []
+    },
+    "jest/each-specialCharacterKeys": {
+      "class": "known_difference",
+      "compared": [
+        "bun",
+        "vitest"
+      ],
+      "differs": [
+        "bun",
+        "vitest"
+      ],
+      "problems": []
+    },
+    "jest/each-success": {
+      "class": "known_difference",
+      "compared": [
+        "bun",
+        "vitest"
+      ],
+      "differs": [
+        "bun"
+      ],
+      "problems": []
+    },
+    "jest/empty-describe-with-hooks-hookInEmptyDescribe": {
+      "class": "known_difference",
+      "compared": [
+        "bun",
+        "vitest"
+      ],
+      "differs": [
+        "bun"
+      ],
+      "problems": []
+    },
+    "jest/empty-describe-with-hooks-hookInEmptyNestedDescribe": {
+      "class": "known_difference",
+      "compared": [
+        "bun",
+        "vitest"
+      ],
+      "differs": [
+        "bun"
+      ],
+      "problems": []
+    },
+    "jest/empty-describe-with-hooks-multipleHooksInEmptyDescribe": {
+      "class": "known_difference",
+      "compared": [
+        "bun",
+        "vitest"
+      ],
+      "differs": [
+        "bun"
+      ],
+      "problems": []
+    },
+    "jest/failures-asyncFailures": {
+      "class": "known_difference",
+      "compared": [
+        "bun",
+        "vitest"
+      ],
+      "differs": [
+        "vitest"
+      ],
+      "problems": []
+    },
+    "jest/failures-errorAfterTestComplete": {
+      "class": "known_difference",
+      "compared": [
+        "bun",
+        "vitest"
+      ],
+      "differs": [
+        "vitest"
+      ],
+      "problems": []
+    },
+    "jest/failures-snapshot": {
+      "class": "known_difference",
+      "compared": [
+        "bun",
+        "vitest"
+      ],
+      "differs": [
+        "vitest"
+      ],
+      "problems": []
+    },
+    "jest/failures-snapshotWithHint": {
+      "class": "known_difference",
+      "compared": [
+        "bun",
+        "vitest"
+      ],
+      "differs": [
+        "vitest"
+      ],
+      "problems": []
+    },
+    "jest/focused-tests-tests": {
+      "class": "known_difference",
+      "compared": [
+        "bun",
+        "vitest"
+      ],
+      "differs": [
+        "bun"
+      ],
+      "problems": []
+    },
+    "jest/generator-mock-generatorMock": {
+      "class": "known_difference",
+      "compared": [
+        "bun"
+      ],
+      "differs": [
+        "bun"
+      ],
+      "problems": []
+    },
+    "jest/jasmine-async-generator": {
+      "class": "known_difference",
+      "compared": [
+        "bun",
+        "vitest"
+      ],
+      "differs": [
+        "bun",
+        "vitest"
+      ],
+      "problems": []
+    },
+    "jest/jasmine-async-promiseBeforeAll": {
+      "class": "known_difference",
+      "compared": [
+        "bun",
+        "vitest"
+      ],
+      "differs": [
+        "bun",
+        "vitest"
+      ],
+      "problems": []
+    },
+    "jest/jasmine-async-promiseBeforeEach": {
+      "class": "known_difference",
+      "compared": [
+        "bun",
+        "vitest"
+      ],
+      "differs": [
+        "bun"
+      ],
+      "problems": []
+    },
+    "jest/jasmine-async-promiseFit": {
+      "class": "known_difference",
+      "compared": [
+        "bun",
+        "vitest"
+      ],
+      "differs": [
+        "bun",
+        "vitest"
+      ],
+      "problems": []
+    },
+    "jest/jasmine-async-promiseIt": {
+      "class": "known_difference",
+      "compared": [
+        "bun",
+        "vitest"
+      ],
+      "differs": [
+        "vitest"
+      ],
+      "problems": []
+    },
+    "jest/jasmine-async-promiseXit": {
+      "class": "known_difference",
+      "compared": [
+        "bun",
+        "vitest"
+      ],
+      "differs": [
+        "vitest"
+      ],
+      "problems": []
+    },
+    "jest/jasmine-async-returningValues": {
+      "class": "known_difference",
+      "compared": [
+        "bun",
+        "vitest"
+      ],
+      "differs": [
+        "bun",
+        "vitest"
+      ],
+      "problems": []
+    },
+    "jest/location-in-results-test": {
+      "class": "known_difference",
+      "compared": [
+        "bun",
+        "vitest"
+      ],
+      "differs": [
+        "bun",
+        "vitest"
+      ],
+      "problems": []
+    },
+    "jest/mock-json-index": {
+      "class": "known_difference",
+      "compared": [
+        "bun"
+      ],
+      "differs": [
+        "bun"
+      ],
+      "problems": []
+    },
+    "jest/mock-names-with-empty-mock-name-index": {
+      "class": "known_difference",
+      "compared": [
+        "bun"
+      ],
+      "differs": [
+        "bun"
+      ],
+      "problems": []
+    },
+    "jest/mock-names-with-empty-mock-name-not-called-index": {
+      "class": "known_difference",
+      "compared": [
+        "bun"
+      ],
+      "differs": [
+        "bun"
+      ],
+      "problems": []
+    },
+    "jest/mock-names-with-mock-name-call-times-fail-index": {
+      "class": "known_difference",
+      "compared": [
+        "bun"
+      ],
+      "differs": [
+        "bun"
+      ],
+      "problems": []
+    },
+    "jest/mock-names-with-mock-name-call-times-pass-index": {
+      "class": "known_difference",
+      "compared": [
+        "bun"
+      ],
+      "differs": [
+        "bun"
+      ],
+      "problems": []
+    },
+    "jest/mock-names-with-mock-name-index": {
+      "class": "known_difference",
+      "compared": [
+        "bun"
+      ],
+      "differs": [
+        "bun"
+      ],
+      "problems": []
+    },
+    "jest/mock-names-with-mock-name-not-called-fail-index": {
+      "class": "known_difference",
+      "compared": [
+        "bun"
+      ],
+      "differs": [
+        "bun"
+      ],
+      "problems": []
+    },
+    "jest/mock-names-with-mock-name-not-called-index": {
+      "class": "known_difference",
+      "compared": [
+        "bun"
+      ],
+      "differs": [
+        "bun"
+      ],
+      "problems": []
+    },
+    "jest/mock-names-with-mock-name-not-called-pass-index": {
+      "class": "known_difference",
+      "compared": [
+        "bun"
+      ],
+      "differs": [
+        "bun"
+      ],
+      "problems": []
+    },
+    "jest/mock-names-without-mock-name-index": {
+      "class": "known_difference",
+      "compared": [
+        "bun"
+      ],
+      "differs": [
+        "bun"
+      ],
+      "problems": []
+    },
+    "jest/mock-names-without-mock-name-not-called-index": {
+      "class": "known_difference",
+      "compared": [
+        "bun"
+      ],
+      "differs": [
+        "bun"
+      ],
+      "problems": []
+    },
+    "jest/nested-test-definitions-nestedHookInTest": {
+      "class": "known_difference",
+      "compared": [
+        "bun",
+        "vitest"
+      ],
+      "differs": [
+        "vitest"
+      ],
+      "problems": []
+    },
+    "jest/promise-and-callback-promise-and-callback": {
+      "class": "known_difference",
+      "compared": [
+        "bun",
+        "vitest"
+      ],
+      "differs": [
+        "bun"
+      ],
+      "problems": []
+    },
+    "jest/snapshot-crlf-crlf": {
+      "class": "known_difference",
+      "compared": [
+        "bun",
+        "vitest"
+      ],
+      "differs": [
+        "bun",
+        "vitest"
+      ],
+      "problems": []
+    },
+    "jest/snapshot-escape-snapshotEscapeRegex": {
+      "class": "known_difference",
+      "compared": [
+        "bun",
+        "vitest"
+      ],
+      "differs": [
+        "bun"
+      ],
+      "problems": []
+    },
+    "jest/snapshot-snapshot": {
+      "class": "known_difference",
+      "compared": [
+        "bun",
+        "vitest"
+      ],
+      "differs": [
+        "bun",
+        "vitest"
+      ],
+      "problems": []
+    },
+    "jest/snapshot-unknown-works": {
+      "class": "known_difference",
+      "compared": [
+        "bun",
+        "vitest"
+      ],
+      "differs": [
+        "vitest"
+      ],
+      "problems": []
+    },
+    "jest/test-failing-snapshot-all-pass-inlineSnapshot": {
+      "class": "known_difference",
+      "compared": [
+        "bun",
+        "vitest"
+      ],
+      "differs": [
+        "vitest"
+      ],
+      "problems": []
+    },
+    "jest/test-failing-snapshot-all-pass-snapshot": {
+      "class": "known_difference",
+      "compared": [
+        "bun",
+        "vitest"
+      ],
+      "differs": [
+        "vitest"
+      ],
+      "problems": []
+    },
+    "jest/test-failing-snapshot-inlineSnapshot": {
+      "class": "known_difference",
+      "compared": [
+        "bun",
+        "vitest"
+      ],
+      "differs": [
+        "vitest"
+      ],
+      "problems": []
+    },
+    "jest/test-failing-snapshot-snapshot": {
+      "class": "known_difference",
+      "compared": [
+        "bun",
+        "vitest"
+      ],
+      "differs": [
+        "vitest"
+      ],
+      "problems": []
+    },
+    "jest/test-failing-statuses": {
+      "class": "known_difference",
+      "compared": [
+        "bun",
+        "vitest"
+      ],
+      "differs": [
+        "bun",
+        "vitest"
+      ],
+      "problems": []
+    },
+    "jest/test-failing-worksWithOnlyMode": {
+      "class": "known_difference",
+      "compared": [
+        "bun",
+        "vitest"
+      ],
+      "differs": [
+        "bun",
+        "vitest"
+      ],
+      "problems": []
+    },
+    "jest/test-failing-worksWithSkipMode": {
+      "class": "known_difference",
+      "compared": [
+        "bun",
+        "vitest"
+      ],
+      "differs": [
+        "bun",
+        "vitest"
+      ],
+      "problems": []
+    },
+    "jest/test-todo-todoMultipleArgs": {
+      "class": "known_difference",
+      "compared": [
+        "bun",
+        "vitest"
+      ],
+      "differs": [
+        "bun",
+        "vitest"
+      ],
+      "problems": []
+    },
+    "jest/test-todo-todoNoArgs": {
+      "class": "known_difference",
+      "compared": [
+        "bun",
+        "vitest"
+      ],
+      "differs": [
+        "bun",
+        "vitest"
+      ],
+      "problems": []
+    },
+    "jest/test-todo-todoNonString": {
+      "class": "known_difference",
+      "compared": [
+        "bun",
+        "vitest"
+      ],
+      "differs": [
+        "bun",
+        "vitest"
+      ],
+      "problems": []
+    },
+    "vitest/each.ts": {
+      "class": "known_difference",
+      "compared": [
+        "bun"
+      ],
+      "differs": [
+        "bun"
+      ],
+      "problems": []
+    },
+    "vitest/fn.ts": {
+      "class": "known_difference",
+      "compared": [
+        "bun"
+      ],
+      "differs": [
+        "bun"
+      ],
+      "problems": []
+    },
+    "vitest/hooks.js": {
+      "class": "known_difference",
+      "compared": [
+        "bun"
+      ],
+      "differs": [
+        "bun"
+      ],
+      "problems": []
+    },
+    "vitest/hooks.ts": {
+      "class": "known_difference",
+      "compared": [
+        "bun"
+      ],
+      "differs": [
+        "bun"
+      ],
+      "problems": []
+    },
+    "vitest/jest-expect.ts": {
+      "class": "known_difference",
+      "compared": [
+        "bun"
+      ],
+      "differs": [
+        "bun"
+      ],
+      "problems": []
+    },
+    "vitest/jest-matcher-utils.ts": {
+      "class": "known_difference",
+      "compared": [
+        "bun"
+      ],
+      "differs": [
+        "bun"
+      ],
+      "problems": []
+    },
+    "vitest/jest-mock.ts": {
+      "class": "known_difference",
+      "compared": [
+        "bun"
+      ],
+      "differs": [
+        "bun"
+      ],
+      "problems": []
+    },
+    "vitest/nested-only.ts": {
+      "class": "known_difference",
+      "compared": [
+        "bun"
+      ],
+      "differs": [
+        "bun"
+      ],
+      "problems": []
+    },
+    "vitest/nested-suite.ts": {
+      "class": "known_difference",
+      "compared": [
+        "bun"
+      ],
+      "differs": [
+        "bun"
+      ],
+      "problems": []
+    },
+    "vitest/nested-test.ts": {
+      "class": "known_difference",
+      "compared": [
+        "bun"
+      ],
+      "differs": [
+        "bun"
+      ],
+      "problems": []
+    },
+    "vitest/only.ts": {
+      "class": "known_difference",
+      "compared": [
+        "bun"
+      ],
+      "differs": [
+        "bun"
+      ],
+      "problems": []
+    },
+    "vitest/pattern.ts": {
+      "class": "known_difference",
+      "compared": [
+        "bun"
+      ],
+      "differs": [
+        "bun"
+      ],
+      "problems": []
+    },
+    "vitest/skip.ts": {
+      "class": "known_difference",
+      "compared": [
+        "bun"
+      ],
+      "differs": [
+        "bun"
+      ],
+      "problems": []
+    },
+    "vitest/snapshot-async.ts": {
+      "class": "known_difference",
+      "compared": [
+        "bun"
+      ],
+      "differs": [
+        "bun"
+      ],
+      "problems": []
+    },
+    "vitest/snapshot-custom-serializer.ts": {
+      "class": "known_difference",
+      "compared": [
+        "bun"
+      ],
+      "differs": [
+        "bun"
+      ],
+      "problems": []
+    },
+    "vitest/snapshot-inline.ts": {
+      "class": "known_difference",
+      "compared": [
+        "bun"
+      ],
+      "differs": [
+        "bun"
+      ],
+      "problems": []
+    },
+    "vitest/unhandled-skip.ts": {
+      "class": "known_difference",
+      "compared": [
+        "bun"
+      ],
+      "differs": [
+        "bun"
+      ],
+      "problems": []
+    }
+  },
+  "mutants": {
+    "planted": [
+      {
+        "fixture": "jest/jasmine-async-promiseAfterAll",
+        "test": "__tests__/promiseAfterAll.test.js",
+        "key": "promise afterAll › runs afterAll after all tests",
+        "line": 25,
+        "column": 23,
+        "matcher": "toBeUndefined",
+        "op": "insert .not",
+        "verdicts": {
+          "jest": "fail",
+          "vitest": "fail",
+          "bun": "fail"
+        }
+      },
+      {
+        "fixture": "jest/jasmine-async-promiseAfterEach",
+        "test": "__tests__/promiseAfterEach.test.js",
+        "key": "promise afterEach › runs afterEach after each test",
+        "line": 25,
+        "column": 23,
+        "matcher": "toBeUndefined",
+        "op": "insert .not",
+        "verdicts": {
+          "jest": "fail",
+          "vitest": "fail",
+          "bun": "fail"
+        }
+      },
+      {
+        "fixture": "jest/lifecycles-index",
+        "test": "__tests__/index.test.js",
+        "key": "one",
+        "line": 11,
+        "column": 20,
+        "matcher": null,
+        "op": "throw at the end of the test",
+        "verdicts": {
+          "jest": "fail",
+          "vitest": "fail",
+          "bun": "fail"
+        }
+      },
+      {
+        "fixture": "jest/mock-functions-index",
+        "test": "__tests__/index.test.js",
+        "key": "instanceof promise",
+        "line": 18,
+        "column": 41,
+        "matcher": "toBe",
+        "op": "insert .not",
+        "verdicts": {
+          "jest": "fail",
+          "bun": "fail"
+        }
+      },
+      {
+        "fixture": "jest/snapshot-secondSnapshot",
+        "test": "__tests__/secondSnapshot.test.js",
+        "key": "snapshot › works with plain objects and the title has `escape` characters",
+        "line": 19,
+        "column": 3,
+        "matcher": null,
+        "op": "throw at the end of the test",
+        "verdicts": {
+          "jest": "fail",
+          "vitest": "fail",
+          "bun": "fail"
+        }
+      },
+      {
+        "fixture": "jest/test-todo-only-todo",
+        "test": "__tests__/only-todo.test.js",
+        "key": "with .only, should show 'passed', 'todo', 'todo' › passing test",
+        "line": 13,
+        "column": 31,
+        "matcher": null,
+        "op": "throw at the end of the test",
+        "verdicts": {
+          "jest": "fail",
+          "vitest": "fail",
+          "bun": "fail"
+        }
+      },
+      {
+        "fixture": "jest/test-todo-statuses",
+        "test": "__tests__/statuses.test.js",
+        "key": "passes",
+        "line": 9,
+        "column": 14,
+        "matcher": "toBe",
+        "op": "insert .not",
+        "verdicts": {
+          "jest": "fail",
+          "vitest": "fail",
+          "bun": "fail"
+        }
+      },
+      {
+        "fixture": "vitest/execution-order.ts",
+        "test": "execution-order.test.ts",
+        "key": "one",
+        "line": 20,
+        "column": 13,
+        "matcher": "toBe",
+        "op": "insert .not",
+        "verdicts": {
+          "vitest": "fail",
+          "bun": "fail"
+        }
+      },
+      {
+        "fixture": "vitest/expect-circular.ts",
+        "test": "expect-circular.test.ts",
+        "key": "circular equality › object, set, map",
+        "line": 15,
+        "column": 19,
+        "matcher": "toEqual",
+        "op": "insert .not",
+        "verdicts": {
+          "vitest": "fail",
+          "bun": "fail"
+        }
+      },
+      {
+        "fixture": "vitest/isolate.ts",
+        "test": "isolate.test.ts",
+        "key": "isolate",
+        "line": 6,
+        "column": 20,
+        "matcher": "toBe",
+        "op": "insert .not",
+        "verdicts": {
+          "vitest": "fail",
+          "bun": "fail"
+        }
+      },
+      {
+        "fixture": "vitest/jest-expect-no-url.ts",
+        "test": "jest-expect-no-url.test.ts",
+        "key": "jest-expect-no-url",
+        "line": 6,
+        "column": 19,
+        "matcher": "toEqual",
+        "op": "insert .not",
+        "verdicts": {
+          "vitest": "fail",
+          "bun": "fail"
+        }
+      },
+      {
+        "fixture": "vitest/snapshot-inline-(parentheses).ts",
+        "test": "snapshot-inline-(parentheses).test.ts",
+        "key": "object",
+        "line": 18,
+        "column": 1,
+        "matcher": null,
+        "op": "throw at the end of the test",
+        "verdicts": {
+          "vitest": "fail",
+          "bun": "fail"
+        }
+      },
+      {
+        "fixture": "vitest/strict.js",
+        "test": "strict.test.js",
+        "key": "vitest runs code in strict mode › throws as defined in spec",
+        "line": 8,
+        "column": 29,
+        "matcher": "toThrow",
+        "op": "insert .not",
+        "verdicts": {
+          "vitest": "fail",
+          "bun": "fail"
+        }
+      },
+      {
+        "fixture": "jest/before-all-skipped-beforeAllFiltered",
+        "test": "__tests__/beforeAllFiltered.test.js",
+        "key": "describe.skip should not run beforeAll",
+        "line": 35,
+        "column": 27,
+        "matcher": "toBe",
+        "op": "insert .not",
+        "verdicts": {
+          "jest": "fail"
+        }
+      },
+      {
+        "fixture": "jest/call-done-twice-index",
+        "test": "__tests__/index.test.js",
+        "key": "multiple `done()` inside afterAll › should fail",
+        "line": 63,
+        "column": 19,
+        "matcher": "toMatch",
+        "op": "insert .not",
+        "verdicts": {
+          "jest": "fail",
+          "vitest": "fail",
+          "bun": "fail"
+        }
+      },
+      {
+        "fixture": "jest/circus-declaration-errors-asyncDefinition",
+        "test": "__tests__/asyncDefinition.test.js",
+        "key": "describe › correct test def",
+        "line": 9,
+        "column": 35,
+        "matcher": null,
+        "op": "throw at the end of the test",
+        "verdicts": {
+          "jest": "fail",
+          "vitest": "fail",
+          "bun": "fail"
+        }
+      },
+      {
+        "fixture": "jest/done-in-hooks-index",
+        "test": "__tests__/index.test.js",
+        "key": "`done()` should work with hooks › foo",
+        "line": 11,
+        "column": 19,
+        "matcher": "toMatch",
+        "op": "insert .not",
+        "verdicts": {
+          "jest": "fail",
+          "bun": "fail"
+        }
+      },
+      {
+        "fixture": "jest/empty-describe-with-hooks-hookInEmptyDescribe",
+        "test": "__tests__/hookInEmptyDescribe.test.js",
+        "key": "another block with tests › this test prevents us from failing due to zero tests",
+        "line": 13,
+        "column": 71,
+        "matcher": null,
+        "op": "throw at the end of the test",
+        "verdicts": {
+          "jest": "fail",
+          "vitest": "fail",
+          "bun": "fail"
+        }
+      },
+      {
+        "fixture": "jest/empty-describe-with-hooks-hookInEmptyNestedDescribe",
+        "test": "__tests__/hookInEmptyNestedDescribe.test.js",
+        "key": "another block with tests › this test prevents us from failing due to zero tests",
+        "line": 14,
+        "column": 71,
+        "matcher": null,
+        "op": "throw at the end of the test",
+        "verdicts": {
+          "jest": "fail",
+          "vitest": "fail",
+          "bun": "fail"
+        }
+      },
+      {
+        "fixture": "jest/empty-describe-with-hooks-multipleHooksInEmptyDescribe",
+        "test": "__tests__/multipleHooksInEmptyDescribe.test.js",
+        "key": "another block with tests › this test prevents us from failing due to zero tests",
+        "line": 16,
+        "column": 71,
+        "matcher": null,
+        "op": "throw at the end of the test",
+        "verdicts": {
+          "jest": "fail",
+          "vitest": "fail",
+          "bun": "fail"
+        }
+      },
+      {
+        "fixture": "jest/failures-errorAfterTestComplete",
+        "test": "__tests__/errorAfterTestComplete.test.js",
+        "key": "a failing test",
+        "line": 13,
+        "column": 1,
+        "matcher": null,
+        "op": "throw at the end of the test",
+        "verdicts": {
+          "jest": "fail",
+          "bun": "fail"
+        }
+      },
+      {
+        "fixture": "jest/focused-tests-tests",
+        "test": "__tests__/tests.test.js",
+        "key": "describe only › it only",
+        "line": 20,
+        "column": 15,
+        "matcher": "toBe",
+        "op": "insert .not",
+        "verdicts": {
+          "jest": "fail",
+          "vitest": "fail",
+          "bun": "fail"
+        }
+      },
+      {
+        "fixture": "jest/generator-mock-generatorMock",
+        "test": "__tests__/generatorMock.test.js",
+        "key": "mock works with generator",
+        "line": 13,
+        "column": 35,
+        "matcher": "toBeDefined",
+        "op": "insert .not",
+        "verdicts": {
+          "jest": "fail"
+        }
+      },
+      {
+        "fixture": "jest/jasmine-async-generator",
+        "test": "__tests__/generator.test.js",
+        "key": "generators › in spec",
+        "line": 23,
+        "column": 18,
+        "matcher": "toBe",
+        "op": "insert .not",
+        "verdicts": {
+          "jest": "fail",
+          "vitest": "pass",
+          "bun": "pass"
+        }
+      },
+      {
+        "fixture": "jest/jasmine-async-promiseBeforeAll",
+        "test": "__tests__/promiseBeforeAll.test.js",
+        "key": "promise beforeAll › runs tests after beforeAll asynchronously completes",
+        "line": 25,
+        "column": 18,
+        "matcher": "toBe",
+        "op": "insert .not",
+        "verdicts": {
+          "jest": "fail",
+          "vitest": "fail",
+          "bun": "fail"
+        }
+      },
+      {
+        "fixture": "jest/jasmine-async-promiseBeforeEach",
+        "test": "__tests__/promiseBeforeEach.test.js",
+        "key": "promise beforeEach › runs tests after beforeEach asynchronously completes",
+        "line": 21,
+        "column": 23,
+        "matcher": "toBe",
+        "op": "insert .not",
+        "verdicts": {
+          "jest": "fail",
+          "vitest": "fail",
+          "bun": "fail"
+        }
+      },
+      {
+        "fixture": "jest/jasmine-async-promiseIt",
+        "test": "__tests__/promiseIt.test.js",
+        "key": "promise it › passes a sync test",
+        "line": 17,
+        "column": 15,
+        "matcher": "toBe",
+        "op": "insert .not",
+        "verdicts": {
+          "jest": "fail",
+          "vitest": "fail",
+          "bun": "fail"
+        }
+      },
+      {
+        "fixture": "jest/location-in-results-test",
+        "test": "__tests__/test.test.js",
+        "key": "fit no ancestors",
+        "line": 20,
+        "column": 16,
+        "matcher": "toBeTruthy",
+        "op": "insert .not",
+        "verdicts": {
+          "jest": "fail"
+        }
+      },
+      {
+        "fixture": "jest/mock-json-index",
+        "test": "__tests__/index.test.js",
+        "key": "extractData › should read the data",
+        "line": 16,
+        "column": 27,
+        "matcher": "toEqual",
+        "op": "insert .not",
+        "verdicts": {
+          "jest": "fail"
+        }
+      },
+      {
+        "fixture": "jest/mock-names-with-empty-mock-name-index",
+        "test": "__tests__/index.test.js",
+        "key": "first test",
+        "line": 17,
+        "column": 18,
+        "matcher": "toHaveBeenCalledTimes",
+        "op": "insert .not",
+        "verdicts": {
+          "jest": "fail"
+        }
+      },
+      {
+        "fixture": "jest/mock-names-with-mock-name-call-times-pass-index",
+        "test": "__tests__/index.test.js",
+        "key": "first test",
+        "line": 20,
+        "column": 18,
+        "matcher": "toHaveBeenCalledTimes",
+        "op": "insert .not",
+        "verdicts": {
+          "jest": "fail"
+        }
+      },
+      {
+        "fixture": "jest/mock-names-with-mock-name-index",
+        "test": "__tests__/index.test.js",
+        "key": "first test",
+        "line": 16,
+        "column": 18,
+        "matcher": "toHaveBeenCalledTimes",
+        "op": "insert .not",
+        "verdicts": {
+          "jest": "fail"
+        }
+      },
+      {
+        "fixture": "jest/mock-names-with-mock-name-not-called-pass-index",
+        "test": "__tests__/index.test.js",
+        "key": "first test",
+        "line": 16,
+        "column": 22,
+        "matcher": "toHaveBeenCalled",
+        "op": "remove .not",
+        "verdicts": {
+          "jest": "fail"
+        }
+      },
+      {
+        "fixture": "jest/mock-names-without-mock-name-index",
+        "test": "__tests__/index.test.js",
+        "key": "first test",
+        "line": 16,
+        "column": 18,
+        "matcher": "toHaveBeenCalledTimes",
+        "op": "insert .not",
+        "verdicts": {
+          "jest": "fail"
+        }
+      },
+      {
+        "fixture": "jest/snapshot-crlf-crlf",
+        "test": "__tests__/crlf.test.js",
+        "key": "CR\r",
+        "line": 9,
+        "column": 1,
+        "matcher": null,
+        "op": "throw at the end of the test",
+        "verdicts": {
+          "jest": "fail",
+          "vitest": "fail",
+          "bun": "fail"
+        }
+      },
+      {
+        "fixture": "jest/snapshot-escape-snapshotEscapeRegex",
+        "test": "__tests__/snapshotEscapeRegex.test.js",
+        "key": "escape regex nested in object",
+        "line": 16,
+        "column": 1,
+        "matcher": null,
+        "op": "throw at the end of the test",
+        "verdicts": {
+          "jest": "fail",
+          "vitest": "fail",
+          "bun": "fail"
+        }
+      },
+      {
+        "fixture": "jest/snapshot-snapshot",
+        "test": "__tests__/snapshot.test.js",
+        "key": "snapshot › cannot be used with .not",
+        "line": 32,
+        "column": 52,
+        "matcher": "toThrow",
+        "op": "insert .not",
+        "verdicts": {
+          "jest": "fail",
+          "bun": "fail"
+        }
+      },
+      {
+        "fixture": "jest/snapshot-unknown-works",
+        "test": "__tests__/works.test.js",
+        "key": "snapshot › some snapshots exists and are fine",
+        "line": 13,
+        "column": 3,
+        "matcher": null,
+        "op": "throw at the end of the test",
+        "verdicts": {
+          "jest": "fail",
+          "vitest": "fail",
+          "bun": "fail"
+        }
+      },
+      {
+        "fixture": "jest/test-failing-statuses",
+        "test": "__tests__/statuses.test.js",
+        "key": "passes",
+        "line": 9,
+        "column": 14,
+        "matcher": "toBe",
+        "op": "insert .not",
+        "verdicts": {
+          "jest": "fail"
+        }
+      },
+      {
+        "fixture": "jest/test-failing-worksWithSkipMode",
+        "test": "__tests__/worksWithSkipMode.test.js",
+        "key": "block with only, should pass › failing fails = passes",
+        "line": 30,
+        "column": 16,
+        "matcher": "toBe",
+        "op": "insert .not",
+        "verdicts": {
+          "jest": "fail"
+        }
+      },
+      {
+        "fixture": "vitest/fn.ts",
+        "test": "fn.test.ts",
+        "key": "mock › basic",
+        "line": 13,
+        "column": 16,
+        "matcher": "toHaveBeenCalledTimes",
+        "op": "insert .not",
+        "verdicts": {
+          "vitest": "fail"
+        }
+      },
+      {
+        "fixture": "vitest/hooks.js",
+        "test": "hooks.test.js",
+        "key": "before and after hooks › beforeEach works",
+        "line": 41,
+        "column": 3,
+        "matcher": null,
+        "op": "throw at the end of the test",
+        "verdicts": {
+          "vitest": "fail"
+        }
+      },
+      {
+        "fixture": "vitest/hooks.ts",
+        "test": "hooks.test.ts",
+        "key": "level1 › two",
+        "line": 19,
+        "column": 19,
+        "matcher": "toBe",
+        "op": "insert .not",
+        "verdicts": {
+          "vitest": "fail"
+        }
+      },
+      {
+        "fixture": "vitest/jest-expect.ts",
+        "test": "jest-expect.test.ts",
+        "key": "jest-expect › basic",
+        "line": 94,
+        "column": 8,
+        "matcher": "toThrow",
+        "op": "insert .not",
+        "verdicts": {
+          "vitest": "fail"
+        }
+      },
+      {
+        "fixture": "vitest/jest-matcher-utils.ts",
+        "test": "jest-matcher-utils.test.ts",
+        "key": "jest-matcher-utils › diff",
+        "line": 17,
+        "column": 19,
+        "matcher": "toBeJestEqual",
+        "op": "insert .not",
+        "verdicts": {
+          "vitest": "fail"
+        }
+      },
+      {
+        "fixture": "vitest/jest-mock.ts",
+        "test": "jest-mock.test.ts",
+        "key": "jest mock compat layer › collects contexts",
+        "line": 65,
+        "column": 31,
+        "matcher": "toHaveLength",
+        "op": "insert .not",
+        "verdicts": {
+          "vitest": "fail"
+        }
+      },
+      {
+        "fixture": "vitest/nested-only.ts",
+        "test": "nested-only.test.ts",
+        "key": "nested only behavior › describe.only with nested test.only › should be the only test that runs",
+        "line": 6,
+        "column": 20,
+        "matcher": "toBe",
+        "op": "insert .not",
+        "verdicts": {
+          "vitest": "fail",
+          "bun": "fail"
+        }
+      },
+      {
+        "fixture": "vitest/nested-suite.ts",
+        "test": "nested-suite.test.ts",
+        "key": "visited before",
+        "line": 6,
+        "column": 19,
+        "matcher": "toBe",
+        "op": "insert .not",
+        "verdicts": {
+          "vitest": "fail",
+          "bun": "fail"
+        }
+      },
+      {
+        "fixture": "vitest/nested-test.ts",
+        "test": "nested-test.test.ts",
+        "key": "nested test should throw error",
+        "line": 15,
+        "column": 1,
+        "matcher": null,
+        "op": "throw at the end of the test",
+        "verdicts": {
+          "vitest": "fail"
+        }
+      },
+      {
+        "fixture": "vitest/only.ts",
+        "test": "only.test.ts",
+        "key": "visited before",
+        "line": 6,
+        "column": 29,
+        "matcher": "toBe",
+        "op": "insert .not",
+        "verdicts": {
+          "vitest": "fail",
+          "bun": "fail"
+        }
+      },
+      {
+        "fixture": "vitest/pattern.ts",
+        "test": "pattern.test.ts",
+        "key": "pattern",
+        "line": 30,
+        "column": 1,
+        "matcher": null,
+        "op": "throw at the end of the test",
+        "verdicts": {
+          "vitest": "fail"
+        }
+      },
+      {
+        "fixture": "vitest/snapshot-async.ts",
+        "test": "snapshot-async.test.ts",
+        "key": "resolved inline",
+        "line": 12,
+        "column": 1,
+        "matcher": null,
+        "op": "throw at the end of the test",
+        "verdicts": {
+          "vitest": "fail",
+          "bun": "fail"
+        }
+      },
+      {
+        "fixture": "vitest/snapshot-custom-serializer.ts",
+        "test": "snapshot-custom-serializer.test.ts",
+        "key": "basic",
+        "line": 45,
+        "column": 1,
+        "matcher": null,
+        "op": "throw at the end of the test",
+        "verdicts": {
+          "vitest": "fail"
+        }
+      },
+      {
+        "fixture": "vitest/snapshot-inline.ts",
+        "test": "snapshot-inline.test.ts",
+        "key": "throwing expect should be a function",
+        "line": 127,
+        "column": 6,
+        "matcher": "toThrow",
+        "op": "insert .not",
+        "verdicts": {
+          "vitest": "fail"
+        }
+      },
+      {
+        "fixture": "vitest/unhandled-skip.ts",
+        "test": "unhandled-skip.test.ts",
+        "key": "throws unhandled but not reported",
+        "line": 12,
+        "column": 1,
+        "matcher": null,
+        "op": "throw at the end of the test",
+        "verdicts": {
+          "vitest": "fail"
+        }
+      }
+    ],
+    "unplanted": [
+      "jest/bigint-failing",
+      "jest/declaration-errors-describeThrow",
+      "jest/failures-aggregateError",
+      "jest/failures-assertionError",
+      "jest/failures-assertionErrorExpand",
+      "jest/failures-duringTests",
+      "jest/nested-test-definitions-nestedDescribeInTest",
+      "jest/nested-test-definitions-nestedTestOutsideDescribe",
+      "jest/nested-test-definitions-nestedTestWithinDescribe",
+      "jest/before-each-queue-beforeEachQueue",
+      "jest/declaration-errors-describeReturnPromise",
+      "jest/declaration-errors-describeReturnSomething",
+      "jest/each-describeOnly",
+      "jest/each-eachSkip",
+      "jest/each-failure",
+      "jest/each-specialCharacterKeys",
+      "jest/each-success",
+      "jest/failures-asyncFailures",
+      "jest/failures-snapshot",
+      "jest/failures-snapshotWithHint",
+      "jest/jasmine-async-promiseFit",
+      "jest/mock-names-with-empty-mock-name-not-called-index",
+      "jest/mock-names-with-mock-name-call-times-fail-index",
+      "jest/mock-names-with-mock-name-not-called-fail-index",
+      "jest/mock-names-with-mock-name-not-called-index",
+      "jest/mock-names-without-mock-name-not-called-index",
+      "jest/nested-test-definitions-nestedHookInTest",
+      "jest/promise-and-callback-promise-and-callback",
+      "jest/test-failing-snapshot-all-pass-inlineSnapshot",
+      "jest/test-failing-snapshot-all-pass-snapshot",
+      "jest/test-failing-snapshot-inlineSnapshot",
+      "jest/test-failing-snapshot-snapshot",
+      "jest/test-failing-worksWithOnlyMode",
+      "vitest/each.ts",
+      "vitest/skip.ts"
+    ],
+    "by_runner": {
+      "jest": {
+        "planted": 0,
+        "caught": 0,
+        "missed": 0
+      },
+      "vitest": {
+        "planted": 19,
+        "caught": 18,
+        "missed": 1
+      },
+      "bun": {
+        "planted": 33,
+        "caught": 32,
+        "missed": 1
+      }
+    }
+  }
+}

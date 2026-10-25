@@ -1,0 +1,40 @@
+{
+  "vitest": {
+    "why": "A failing beforeAll: Jest fails every test in its describe; Vitest skips them. (Two of the three hooks here fail through done, which Vitest rejects outright.)",
+    "verdicts": {
+      "__tests__/promiseBeforeAll.test.js": {
+        "promise beforeAll › done - with error called back › fails": [
+          "fail",
+          "skip"
+        ],
+        "promise beforeAll › done - with error thrown › fails": [
+          "fail",
+          "skip"
+        ],
+        "promise beforeAll › with failing async › fails": [
+          "fail",
+          "skip"
+        ]
+      }
+    }
+  },
+  "bun": {
+    "why": "A failing beforeAll in Bun: done(error) isn't treated as a failure, so that test passes; a beforeAll that throws or times out leaves its describe's tests out of the report, where Jest fails them.",
+    "verdicts": {
+      "__tests__/promiseBeforeAll.test.js": {
+        "promise beforeAll › done - with error called back › fails": [
+          "fail",
+          "pass"
+        ],
+        "promise beforeAll › done - with error thrown › fails": [
+          "fail",
+          null
+        ],
+        "promise beforeAll › with failing async › fails": [
+          "fail",
+          null
+        ]
+      }
+    }
+  }
+}

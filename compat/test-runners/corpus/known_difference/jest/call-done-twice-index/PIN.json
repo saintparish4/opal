@@ -1,0 +1,48 @@
+{
+  "vitest": {
+    "why": "Vitest 4 has no done callback: a test or hook that takes `done` returns at once without waiting for it, and calling done() throws 'done() callback is deprecated, use promise instead'. So the test calling done twice inside a promise passes, and the beforeAll calling done throws, which skips its describe's test where Jest fails it.",
+    "verdicts": {
+      "__tests__/index.test.js": {
+        "`done()` called more than once › should fail inside a promise": [
+          "fail",
+          "pass"
+        ],
+        "multiple `done()` inside beforeAll › should fail": [
+          "fail",
+          "skip"
+        ]
+      }
+    }
+  },
+  "bun": {
+    "why": "Bun doesn't check that done is called at most once: every test or hook calling it twice passes, where Jest fails with 'Expected done to be called once'.",
+    "verdicts": {
+      "__tests__/index.test.js": {
+        "(file)": [
+          "fail",
+          "pass"
+        ],
+        "`done()` called more than once › should fail": [
+          "fail",
+          "pass"
+        ],
+        "`done()` called more than once › should fail inside a promise": [
+          "fail",
+          "pass"
+        ],
+        "multiple `done()` inside afterEach › should fail": [
+          "fail",
+          "pass"
+        ],
+        "multiple `done()` inside beforeAll › should fail": [
+          "fail",
+          "pass"
+        ],
+        "multiple `done()` inside beforeEach › should fail": [
+          "fail",
+          "pass"
+        ]
+      }
+    }
+  }
+}

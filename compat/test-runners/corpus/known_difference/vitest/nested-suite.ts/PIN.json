@@ -1,0 +1,20 @@
+{
+  "bun": {
+    "why": "describe inside a running test: the test asserts Vitest's error ('Calling the suite function inside test function is not allowed') and Bun's differs. Bun also misses the committed Vitest-format snapshot key and writes a Jest-format one into Vitest's file.",
+    "verdicts": {
+      "nested-suite.test.ts": {
+        "(file)": [
+          "pass",
+          "fail"
+        ],
+        "suite inside test should throw": [
+          "pass",
+          "fail"
+        ]
+      }
+    },
+    "written": {
+      "__snapshots__/nested-suite.test.ts.snap": "vitest: not written, bun: written\n--- vitest/__snapshots__/nested-suite.test.ts.snap\n+++ bun/__snapshots__/nested-suite.test.ts.snap\n@@ -0,0 +1,5 @@\n+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html\n+\n+exports[`a > b > c > d > e > very deep > msg 1`] = `\"hi\"`;\n+\n+exports[`a b c d e very deep: msg 1`] = `\"hi\"`;"
+    }
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "vitest": {
+    "why": "A snapshot hint: Jest names the entry 'test: hint 1', Vitest 'test > hint 1'. Vitest doesn't find Jest's committed entry, writes its own, and the test passes where Jest fails it on the mismatch.",
+    "verdicts": {
+      "__tests__/snapshotWithHint.test.js": {
+        "(file)": [
+          "fail",
+          "pass"
+        ],
+        "failing snapshot with hint": [
+          "fail",
+          "pass"
+        ]
+      }
+    },
+    "written": {
+      "__tests__/__snapshots__/snapshotWithHint.test.js.snap": "jest: not written, vitest: written\n--- jest/__tests__/__snapshots__/snapshotWithHint.test.js.snap\n+++ vitest/__tests__/__snapshots__/snapshotWithHint.test.js.snap\n@@ -0,0 +1,5 @@\n+// Snapshot v1\n+\n+exports[`failing snapshot with hint descriptive hint 1`] = `\"foo\"`;\n+\n+exports[`failing snapshot with hint: descriptive hint 1`] = `\"bar\"`;"
+    }
+  }
+}

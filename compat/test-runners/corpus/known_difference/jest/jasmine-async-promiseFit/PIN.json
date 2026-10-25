@@ -1,0 +1,40 @@
+{
+  "vitest": {
+    "why": "Vitest has no `fit` or `xit`, Jest's jasmine-style aliases, so the file fails to load.",
+    "verdicts": {
+      "__tests__/promiseFit.test.js": {
+        "promise fit › fails but will be skipped": [
+          "skip",
+          null
+        ],
+        "promise fit › will run": [
+          "pass",
+          null
+        ],
+        "promise fit › will run and fail": [
+          "fail",
+          null
+        ]
+      }
+    }
+  },
+  "bun": {
+    "why": "Bun has no `fit` or `xit`, Jest's jasmine-style aliases, so the file fails to load.",
+    "verdicts": {
+      "__tests__/promiseFit.test.js": {
+        "promise fit › fails but will be skipped": [
+          "skip",
+          null
+        ],
+        "promise fit › will run": [
+          "pass",
+          null
+        ],
+        "promise fit › will run and fail": [
+          "fail",
+          null
+        ]
+      }
+    }
+  }
+}

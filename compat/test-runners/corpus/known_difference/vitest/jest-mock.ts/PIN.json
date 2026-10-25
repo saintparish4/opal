@@ -1,0 +1,125 @@
+{
+  "bun": {
+    "why": "Bun's vi.fn and vi.spyOn cover part of jest-mock: no mock.settledResults, no vi.isMockFunction, no spying on getters or setters, no mocking a class or constructor in place, different mock.contexts and mock.instances, and mockReset and mockRestore that don't put the original implementation back.",
+    "verdicts": {
+      "jest-mock.test.ts": {
+        "(file)": [
+          "pass",
+          "fail"
+        ],
+        "jest mock compat layer › .mockRestore() should restore initial implementation": [
+          "pass",
+          "fail"
+        ],
+        "jest mock compat layer › clearing instances": [
+          "pass",
+          "fail"
+        ],
+        "jest mock compat layer › collects contexts": [
+          "pass",
+          "fail"
+        ],
+        "jest mock compat layer › docs example › mockReset": [
+          "pass",
+          "fail"
+        ],
+        "jest mock compat layer › implementation async fn": [
+          "pass",
+          "fail"
+        ],
+        "jest mock compat layer › implementation sync fn": [
+          "pass",
+          "fail"
+        ],
+        "jest mock compat layer › is disposable › in environments not supporting it › does not have dispose property": [
+          "skip",
+          null
+        ],
+        "jest mock compat layer › is disposable › in environments supporting it › allows disposal when using mockImplementation": [
+          "pass",
+          null
+        ],
+        "jest mock compat layer › is disposable › in environments supporting it › calls mockRestore when disposing": [
+          "pass",
+          null
+        ],
+        "jest mock compat layer › is disposable › in environments supporting it › has dispose property": [
+          "pass",
+          null
+        ],
+        "jest mock compat layer › keeps the descriptor the same as the original one when restoring": [
+          "pass",
+          "fail"
+        ],
+        "jest mock compat layer › mock classes": [
+          "pass",
+          "fail"
+        ],
+        "jest mock compat layer › mockRejectedValue": [
+          "pass",
+          "fail"
+        ],
+        "jest mock compat layer › mockResolvedValue": [
+          "pass",
+          "fail"
+        ],
+        "jest mock compat layer › mocks constructors": [
+          "pass",
+          "fail"
+        ],
+        "jest mock compat layer › mocks inherited methods": [
+          "pass",
+          "fail"
+        ],
+        "jest mock compat layer › mocks inherited overridden methods": [
+          "pass",
+          "fail"
+        ],
+        "jest mock compat layer › restoreAllMocks in stack order": [
+          "pass",
+          "fail"
+        ],
+        "jest mock compat layer › should spy on function returned from property getter": [
+          "pass",
+          "fail"
+        ],
+        "jest mock compat layer › should spy on property getter, and mockReset should not restore original descriptor": [
+          "pass",
+          "fail"
+        ],
+        "jest mock compat layer › should spy on property getter, and mockRestore should restore original descriptor": [
+          "pass",
+          "fail"
+        ],
+        "jest mock compat layer › should spy on property setter (1)": [
+          "pass",
+          "fail"
+        ],
+        "jest mock compat layer › should spy on property setter (2), and mockReset should not restore original descriptor": [
+          "pass",
+          "fail"
+        ],
+        "jest mock compat layer › should spy on property setter (2), and mockRestore should restore original descriptor": [
+          "pass",
+          "fail"
+        ],
+        "jest mock compat layer › spies on classes": [
+          "pass",
+          "fail"
+        ],
+        "jest mock compat layer › spyOn multiple times": [
+          "pass",
+          "fail"
+        ],
+        "jest mock compat layer › spyOn on the getter multiple times": [
+          "pass",
+          "fail"
+        ],
+        "jest mock compat layer › tracks spied class contexts and instances": [
+          "pass",
+          "fail"
+        ]
+      }
+    }
+  }
+}

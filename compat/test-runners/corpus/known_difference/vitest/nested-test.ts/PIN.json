@@ -1,0 +1,25 @@
+{
+  "bun": {
+    "why": "test inside a running test: the tests assert Vitest's error ('Calling the test function inside another test function is not allowed') and Bun's differs.",
+    "verdicts": {
+      "nested-test.test.ts": {
+        "(file)": [
+          "pass",
+          "fail"
+        ],
+        "nested test should throw error": [
+          "pass",
+          "fail"
+        ],
+        "parallel tests › parallel test 1 with nested test": [
+          "pass",
+          "fail"
+        ],
+        "parallel tests › parallel test 4 with nested test": [
+          "pass",
+          "fail"
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,73 @@
+{
+  "bun": {
+    "why": "The file imports `suite` from 'vitest'; bun:test, which Bun maps vitest imports to, has no such export, so the file fails to load.",
+    "verdicts": {
+      "hooks.test.ts": {
+        "(file)": [
+          "pass",
+          "fail"
+        ],
+        "hooks are called for dynamically skipped tests › order is correct": [
+          "pass",
+          null
+        ],
+        "hooks are called for dynamically skipped tests › tests › skipped": [
+          "skip",
+          null
+        ],
+        "hooks cleanup order › one": [
+          "pass",
+          null
+        ],
+        "hooks cleanup › do nothing when given a non-function value as cleanupCallback › one": [
+          "pass",
+          null
+        ],
+        "hooks cleanup › end": [
+          "pass",
+          null
+        ],
+        "hooks cleanup › end [2]": [
+          "pass",
+          null
+        ],
+        "hooks cleanup › run › one": [
+          "pass",
+          null
+        ],
+        "hooks cleanup › run › two": [
+          "pass",
+          null
+        ],
+        "level1 › level 2 with nested beforeAll › one": [
+          "pass",
+          null
+        ],
+        "level1 › level 2 › five": [
+          "pass",
+          null
+        ],
+        "level1 › level 2 › level 3 › seven": [
+          "pass",
+          null
+        ],
+        "level1 › three": [
+          "pass",
+          null
+        ],
+        "level1 › two": [
+          "pass",
+          null
+        ],
+        "level1 › two [2]": [
+          "pass",
+          null
+        ],
+        "one": [
+          "pass",
+          null
+        ]
+      }
+    }
+  }
+}

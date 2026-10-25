@@ -1,0 +1,13 @@
+{
+  "bun": {
+    "why": "A describe that holds hooks and no tests: Jest fails the file ('beforeEach() may not be used in a describe block containing no tests'); Bun accepts it.",
+    "verdicts": {
+      "__tests__/hookInEmptyDescribe.test.js": {
+        "(file)": [
+          "fail",
+          "pass"
+        ]
+      }
+    }
+  }
+}

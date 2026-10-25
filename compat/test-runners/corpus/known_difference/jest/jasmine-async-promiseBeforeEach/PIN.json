@@ -1,0 +1,13 @@
+{
+  "bun": {
+    "why": "Bun ignores the error passed to done(error) in a beforeEach: the test passes, where Jest fails it.",
+    "verdicts": {
+      "__tests__/promiseBeforeEach.test.js": {
+        "promise beforeEach › done - with error called back › fails": [
+          "fail",
+          "pass"
+        ]
+      }
+    }
+  }
+}

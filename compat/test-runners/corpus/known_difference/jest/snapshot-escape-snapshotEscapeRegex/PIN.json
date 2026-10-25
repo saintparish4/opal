@@ -1,0 +1,8 @@
+{
+  "bun": {
+    "why": "A RegExp in a snapshot: Jest writes it with pretty-format's escapeRegex, which escapes backslashes and metacharacters again; Bun writes the pattern's source as is.",
+    "written": {
+      "__tests__/__snapshots__/snapshotEscapeRegex.test.js.snap": "jest: written, bun: written\n--- jest/__tests__/__snapshots__/snapshotEscapeRegex.test.js.snap\n+++ bun/__tests__/__snapshots__/snapshotEscapeRegex.test.js.snap\n@@ -2,3 +2,3 @@\n \n-exports[`escape regex 1`] = `/\\\\\\\\dd \\\\\\\\s\\\\+ \\\\\\\\w \\\\\\\\\\\\\\\\\\\\\\\\\\\\[ \\\\\\\\\\\\. blahzz\\\\.\\\\* \\\\[x-z\\\\]\\\\+/`;\n+exports[`escape regex 1`] = `/\\\\dd \\\\s+ \\\\w \\\\\\\\\\\\[ \\\\. blahzz.* [x-z]+/`;\n \n@@ -6,3 +6,3 @@\n {\n-  \"regex\": /\\\\\\\\dd \\\\\\\\s\\\\+ \\\\\\\\w \\\\\\\\\\\\\\\\\\\\\\\\\\\\[ \\\\\\\\\\\\. blahzz\\\\.\\\\* \\\\[x-z\\\\]\\\\+/,\n+  \"regex\": /\\\\dd \\\\s+ \\\\w \\\\\\\\\\\\[ \\\\. blahzz.* [x-z]+/,\n }"
+    }
+  }
+}

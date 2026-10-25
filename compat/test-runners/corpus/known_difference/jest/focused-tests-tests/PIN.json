@@ -1,0 +1,17 @@
+{
+  "bun": {
+    "why": "When a file uses .only, Bun leaves every test it doesn't run out of its report, where Jest reports them as skipped.",
+    "verdicts": {
+      "__tests__/tests.test.js": {
+        "describe only › it": [
+          "skip",
+          null
+        ],
+        "describe › it": [
+          "skip",
+          null
+        ]
+      }
+    }
+  }
+}

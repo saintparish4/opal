@@ -1,0 +1,25 @@
+{
+  "bun": {
+    "why": "When a file uses .only, Bun leaves every test it doesn't run out of its report, where Vitest reports them as skipped.",
+    "verdicts": {
+      "only.test.ts": {
+        "a0 › s0": [
+          "skip",
+          null
+        ],
+        "a1 › b1 › s1": [
+          "skip",
+          null
+        ],
+        "a4 › sb4 › s4": [
+          "skip",
+          null
+        ],
+        "s2": [
+          "skip",
+          null
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "vitest": {
+    "why": "%j in an .each title with BigInt rows: Jest formats it; Vitest throws 'Do not know how to serialize a BigInt' while collecting, so the file fails with no tests.",
+    "verdicts": {
+      "__tests__/each.test.js": {
+        "(file)": [
+          "pass",
+          "fail"
+        ],
+        "adds \"1n\" and \"2n\" to \"3n\"": [
+          "pass",
+          null
+        ],
+        "adds bigints": [
+          "pass",
+          null
+        ]
+      }
+    }
+  },
+  "bun": {
+    "why": "%j in an .each title with BigInt rows: Bun throws 'JSON.stringify cannot serialize BigInt' while collecting, so the file fails before any test is reported.",
+    "verdicts": {
+      "__tests__/each.test.js": {
+        "(file)": [
+          "pass",
+          "fail"
+        ],
+        "adds \"1n\" and \"2n\" to \"3n\"": [
+          "pass",
+          null
+        ],
+        "adds bigints": [
+          "pass",
+          null
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "vitest": {
+    "why": "Tests declared after a Promise tick: Jest fails the file ('Cannot add a test after tests have started running'); Vitest still collects and runs them.",
+    "verdicts": {
+      "__tests__/asyncDefinition.test.js": {
+        "(file)": [
+          "fail",
+          "pass"
+        ],
+        "async definition outside describe": [
+          null,
+          "pass"
+        ],
+        "describe › async definition inside describe": [
+          null,
+          "pass"
+        ]
+      }
+    }
+  },
+  "bun": {
+    "why": "Tests declared after a Promise tick: Jest fails the file ('Cannot add a test after tests have started running'); Bun still collects and runs them.",
+    "verdicts": {
+      "__tests__/asyncDefinition.test.js": {
+        "(file)": [
+          "fail",
+          "pass"
+        ],
+        "async definition outside describe": [
+          null,
+          "pass"
+        ],
+        "describe › async definition inside describe": [
+          null,
+          "pass"
+        ]
+      }
+    }
+  }
+}

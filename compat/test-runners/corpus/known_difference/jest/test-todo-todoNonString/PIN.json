@@ -1,0 +1,28 @@
+{
+  "vitest": {
+    "why": "test.todo(fn): Jest fails the file; Vitest records a todo named '<anonymous>'.",
+    "verdicts": {
+      "__tests__/todoNonString.test.js": {
+        "(file)": [
+          "fail",
+          "pass"
+        ],
+        "<anonymous>": [
+          null,
+          "todo"
+        ]
+      }
+    }
+  },
+  "bun": {
+    "why": "test.todo(fn): Jest fails the file; Bun accepts it and reports nothing.",
+    "verdicts": {
+      "__tests__/todoNonString.test.js": {
+        "(file)": [
+          "fail",
+          "pass"
+        ]
+      }
+    }
+  }
+}

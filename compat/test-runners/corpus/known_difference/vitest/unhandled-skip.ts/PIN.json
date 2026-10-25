@@ -1,0 +1,17 @@
+{
+  "bun": {
+    "why": "An unhandled rejection the file handles itself with process.on('unhandledRejection'): Vitest leaves it to that handler; Bun fails the running test with it.",
+    "verdicts": {
+      "unhandled-skip.test.ts": {
+        "(file)": [
+          "pass",
+          "fail"
+        ],
+        "throws unhandled but not reported": [
+          "pass",
+          "fail"
+        ]
+      }
+    }
+  }
+}

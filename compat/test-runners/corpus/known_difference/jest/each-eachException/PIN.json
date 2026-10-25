@@ -1,0 +1,64 @@
+{
+  "vitest": {
+    "why": "A template table whose cells don't fill its headings: Jest fails each such test ('Not enough arguments supplied for given headings'); Vitest drops the incomplete row, runs the complete ones, and the file passes.",
+    "verdicts": {
+      "__tests__/eachException.test.js": {
+        "(file)": [
+          "fail",
+          "pass"
+        ],
+        "throws exception when not enough arguments are supplied $left == $right": [
+          "fail",
+          null
+        ],
+        "throws exception when one argument too few are supplied $left == $right": [
+          "fail",
+          null
+        ],
+        "throws exception when one argument too few are supplied true == true": [
+          null,
+          "pass"
+        ]
+      }
+    }
+  },
+  "bun": {
+    "why": "Bun misreads tagged-template .each tables: it runs more rows than written, with undefined values, so an assertion comparing two cells compares undefined with undefined and passes. Both malformed tables pass, where Jest fails them for not enough arguments.",
+    "verdicts": {
+      "__tests__/eachException.test.js": {
+        "(file)": [
+          "fail",
+          "pass"
+        ],
+        "throws exception when not enough arguments are supplied $left == $right": [
+          "fail",
+          "pass"
+        ],
+        "throws exception when not enough arguments are supplied $left == $right [2]": [
+          null,
+          "pass"
+        ],
+        "throws exception when not enough arguments are supplied $left == $right [3]": [
+          null,
+          "pass"
+        ],
+        "throws exception when one argument too few are supplied $left == $right": [
+          "fail",
+          "pass"
+        ],
+        "throws exception when one argument too few are supplied $left == $right [2]": [
+          null,
+          "pass"
+        ],
+        "throws exception when one argument too few are supplied $left == $right [3]": [
+          null,
+          "pass"
+        ],
+        "throws exception when one argument too few are supplied $left == $right [4]": [
+          null,
+          "pass"
+        ]
+      }
+    }
+  }
+}

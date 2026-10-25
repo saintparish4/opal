@@ -1,0 +1,17 @@
+{
+  "bun": {
+    "why": "An inline snapshot of a string starting with a newline: Bun reads the committed snapshot with one more trailing line than Vitest does, so it doesn't match.",
+    "verdicts": {
+      "pattern.test.ts": {
+        "(file)": [
+          "pass",
+          "fail"
+        ],
+        "pattern": [
+          "pass",
+          "fail"
+        ]
+      }
+    }
+  }
+}

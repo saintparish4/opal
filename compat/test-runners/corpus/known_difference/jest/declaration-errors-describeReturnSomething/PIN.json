@@ -1,0 +1,32 @@
+{
+  "vitest": {
+    "why": "A describe callback that returns a value: Jest fails the file ('A \"describe\" callback must not return a value'); Vitest ignores it and runs the test inside.",
+    "verdicts": {
+      "__tests__/describeReturnSomething.test.js": {
+        "(file)": [
+          "fail",
+          "pass"
+        ],
+        "describe return errors › t": [
+          null,
+          "pass"
+        ]
+      }
+    }
+  },
+  "bun": {
+    "why": "A describe callback that returns a value: Jest fails the file ('A \"describe\" callback must not return a value'); Bun ignores it and runs the test inside.",
+    "verdicts": {
+      "__tests__/describeReturnSomething.test.js": {
+        "(file)": [
+          "fail",
+          "pass"
+        ],
+        "describe return errors › t": [
+          null,
+          "pass"
+        ]
+      }
+    }
+  }
+}

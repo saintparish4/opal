@@ -1,0 +1,13 @@
+{
+  "vitest": {
+    "why": "Vitest 4 has no done callback: a test or hook that takes `done` returns at once without waiting for it, and calling done() throws 'done() callback is deprecated, use promise instead'. So a test with a 5 ms timeout that calls done after 50 ms passes, where Jest fails it on the timeout.",
+    "verdicts": {
+      "__tests__/asyncFailures.test.js": {
+        "timeout": [
+          "fail",
+          "pass"
+        ]
+      }
+    }
+  }
+}

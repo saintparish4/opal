@@ -1,0 +1,33 @@
+{
+  "bun": {
+    "why": "Bun gives tests no context object, so ({ skip }) => skip() throws 'skip is not a function' and the tests Vitest skips at run time fail.",
+    "verdicts": {
+      "skip.test.ts": {
+        "(file)": [
+          "pass",
+          "fail"
+        ],
+        "correctly skips async tests with async after skip": [
+          "skip",
+          "fail"
+        ],
+        "correctly skips async tests with skip before async": [
+          "skip",
+          "fail"
+        ],
+        "correctly skips sync tests": [
+          "skip",
+          "fail"
+        ],
+        "correctly skips tests with async callback": [
+          "skip",
+          "fail"
+        ],
+        "correctly skips tests with callback": [
+          "skip",
+          "fail"
+        ]
+      }
+    }
+  }
+}
