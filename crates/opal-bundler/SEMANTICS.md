@@ -3,14 +3,16 @@
 This file says what `opal build` promises, and what it refuses. It was
 written before the bundler, and the bundler is held to it: every rule here
 has a test that runs both programs under Node and compares them, or a
-refusal with a code listed at the end.
+refusal with a code listed at the end. Rule 17's programs have no
+unbundled run to compare with, and are checked by what the build writes
+and by a page load in Chromium.
 
 - [What correct means](#what-correct-means)
 - [The reference](#the-reference)
 - [What is observed](#what-is-observed)
 - [Rules](#rules)
 - [Refusals](#refusals)
-- [Divergences no build can detect](#divergences-no-build-can-detect)
+- [Divergences the bundler does not refuse](#divergences-the-bundler-does-not-refuse)
 
 ## What correct means
 
@@ -85,7 +87,7 @@ These are not observed, and may differ:
 - `process.argv[1]`, which names the file Node was started with.
 - How `util.inspect` and `console.log` print a module namespace object,
   and `util.types.isModuleNamespaceObject`. See
-  [Divergences no build can detect](#divergences-no-build-can-detect).
+  [Divergences the bundler does not refuse](#divergences-the-bundler-does-not-refuse).
 - Timing, memory, and the count of microtask turns before a dynamic
   import settles ([rule 10](#10-dynamic-import)).
 - Text of an error message that names the importing file's path, such as
@@ -167,7 +169,7 @@ the error is the uncaught error of the program.
 - **TDZ messages** are the one place a name is not kept: V8 names the
   identifier the reading code wrote, and in the bundle a read through an
   import is a read of the exporting module's binding. See
-  [Divergences](#divergences-no-build-can-detect).
+  [Divergences](#divergences-the-bundler-does-not-refuse).
 
 ### 4. Module namespace objects
 
@@ -237,10 +239,13 @@ parameters `exports, require, module, __filename, __dirname`, called with
 - **`require.main`** is the entry's `module` object when the entry is a
   CommonJS module, and `undefined` when it is an ES module
   (`lib/internal/modules/helpers.js:197`).
-- **`module`** has `id` (`"."` for the entry, else the file name),
-  `filename`, `path`, `loaded`, `exports`, `children`, `paths`, and
-  `require`. `module.parent` is `undefined` when an ES module loaded it.
-  It is a plain object, not an instance of `node:module`'s `Module`.
+- **`module`** has the own properties Node's has, in Node's order: `id`
+  (`"."` for the entry, else the file name), `path`, `exports`,
+  `filename`, `loaded`, `children`, and `paths` (Node's
+  `Module._nodeModulePaths`). `require` and `parent` are on its prototype,
+  as in Node; `parent` is the module that first required it, and
+  `undefined` when an ES module loaded it. Its class is the bundle's own,
+  named `Module`, not `node:module`'s.
 - **`__filename` and `__dirname`** are the original file's path and
   directory, computed at run time from the bundle's own location, so they
   match the unbundled program wherever the checkout is.
@@ -305,8 +310,9 @@ fixed after it runs (`lib/internal/modules/esm/translators.js:203-275`,
   `import.meta.resolve`, and any use of `import.meta` other than reading one
   of these properties, is refused ([`E-IMPORT-META`](#refusals)).
 
-Under `--target browser`, only `import.meta.url` is kept, and the others
-are refused.
+Under `--target browser`, `import.meta.filename` and `.dirname` are
+refused, since a browser has no file paths, and `.main` is `undefined`, as
+a browser gives it.
 
 ### 10. Dynamic import
 
@@ -492,19 +498,21 @@ line.
 | `E-CJS-API` | `require.cache`, `require.extensions`, or `module.constructor` in a CommonJS module. | They expose Node's module system itself, which the bundle replaces. |
 | `E-BUILTIN` | A Node builtin under `--target browser`. | There is none in a browser. |
 | `E-BROWSER-FIELD` | Under `--target browser`, a package with a `browser` field in its `package.json`. | opal-core does not apply that field, so the bundle would contain different files than a browser bundler picks. |
-| `E-TS` | TypeScript that `tsc` would not emit under `isolatedModules`, or a decorator without `experimentalDecorators`. | Rule 13. |
+| `E-TS` | TypeScript that `tsc` would not emit for an ES module (`export =`, `import x = require()`), a decorator without `experimentalDecorators`, or `"jsx": "preserve"`. | Rule 13. |
 | `E-DEFINE` | An assignment to a `--define`d path. | Rule 14. |
-| `E-UNSUPPORTED` | An ES module's import of a file that is not JavaScript or JSON, without `--assets`; a stylesheet with `url()` or `@import`, or outside a browser. `require()` of one is Node's own. | Rule 17. |
+| `E-UNSUPPORTED` | An ES module's import of a file that is not JavaScript or JSON, without `--assets`, or a stylesheet with `url()` or `@import`, or outside a browser (rule 17; a `require()` of one is Node's own); an entry that is not JavaScript; source or defer phase imports; `arguments` at the top level of a lazily imported module (rule 10); a destructuring or `for-in`/`for-of` assignment to an import binding. | Out of scope for this version, or (the last) a form the rewriter does not turn into its `TypeError`. |
 
-Out of scope altogether, and refused by the command line rather than per
-module: code splitting, plugins, CSS and HTML entry points, minification,
-macros, bytecode, and CommonJS or IIFE output.
+Out of scope altogether, so the command line has no flag for them: code
+splitting, plugins, CSS and HTML entry points, minification, macros,
+bytecode, and CommonJS or IIFE output.
 
-## Divergences no build can detect
+## Divergences the bundler does not refuse
 
-These differ, and no static check can tell whether a program depends on
-them, so the bundler cannot refuse them. Each is off the list in
-[What is observed](#what-is-observed).
+These differ, and the bundler builds the program anyway: either no static
+check can tell whether a program depends on them, or, for TDZ messages,
+the check that could would refuse common programs to keep an error
+message. Each is off the list in [What is observed](#what-is-observed),
+or named here as the exception to it.
 
 - **Printing a namespace object.** Node's `util.inspect` recognizes a real
   namespace object through a V8 internal no JavaScript object can satisfy,
@@ -533,6 +541,9 @@ them, so the bundler cannot refuse them. Each is off the list in
   `import { createRequire } from 'node:module'` gets the bundle's
   `createRequire` (rule 6); `module.createRequire` through `import module
   from 'node:module'` is Node's own, which loads the original files.
+- **The class of a CommonJS `module` object.** It is the bundle's own
+  `Module` (rule 6), so `module instanceof require('node:module').Module`
+  is `false`; reading `module.constructor` is refused (`E-CJS-API`).
 - **Stack traces.** Frames name the bundle file, unless the module is a
   sloppy CommonJS module under `--target node` ([rule 6](#6-commonjs-modules)).
 - **A static import graph that throws, followed by a dynamic import of a

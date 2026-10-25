@@ -336,6 +336,13 @@ pub fn parse<'a>(
     }
     let mut scoping = semantic.semantic.into_scoping();
 
+    if source.format == Format::Esm && has_import_equals_require(&program) {
+        return Err(Diagnostic::new(
+            Code::Ts,
+            &source.path,
+            "`import x = require()` in an ES module: tsc refuses to emit it for ECMAScript modules",
+        ));
+    }
     if source.language.needs_compiling() {
         if source.language.is_typescript()
             && !settings.experimental_decorators
@@ -432,6 +439,13 @@ fn transform_options(source: &Source, settings: &TsSettings) -> TransformOptions
         options.jsx = JsxOptions::disable();
     }
     options
+}
+
+fn has_import_equals_require(program: &Program<'_>) -> bool {
+    program.body.iter().any(|statement| {
+        matches!(statement, oxc_ast::ast::Statement::TSImportEqualsDeclaration(declaration)
+            if matches!(declaration.module_reference, oxc_ast::ast::TSModuleReference::ExternalModuleReference(_)))
+    })
 }
 
 fn has_decorators(program: &Program<'_>) -> bool {

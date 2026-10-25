@@ -172,6 +172,9 @@ pub fn build(
             }
         }
     }
+    if options.target == Target::Browser {
+        check_browser_fields(&linked, &sources)?;
+    }
     let link_time = started.elapsed();
 
     let started = Instant::now();
@@ -225,6 +228,76 @@ pub fn build(
             write: Duration::ZERO,
         },
     })
+}
+
+/// `E-BROWSER-FIELD`: under `--target browser`, a package whose
+/// `package.json` `browser` field replaces a file the bundle holds. opal-core
+/// does not apply the field, so a browser bundler would have picked another
+/// file. A field that replaces only files the bundle does not hold changes
+/// nothing (react-dom's maps its server entry points).
+fn check_browser_fields(linked: &link::Linked, sources: &[Source]) -> Result<(), Diagnostic> {
+    let mut checked: HashMap<std::path::PathBuf, Option<serde_json::Value>> = HashMap::new();
+    for (index, role) in linked.roles.iter().enumerate() {
+        if matches!(role, Role::Excluded) || index >= linked.graph_modules {
+            continue;
+        }
+        let source = &sources[index];
+        let parts: Vec<&str> = source.path.split('/').collect();
+        let Some(at) = parts.iter().rposition(|part| *part == "node_modules") else {
+            continue;
+        };
+        let depth = if parts.get(at + 1).is_some_and(|p| p.starts_with('@')) {
+            3
+        } else {
+            2
+        };
+        if parts.len() <= at + depth {
+            continue;
+        }
+        let package: std::path::PathBuf = source
+            .absolute
+            .ancestors()
+            .nth(parts.len() - (at + depth))
+            .map(Path::to_path_buf)
+            .unwrap_or_default();
+        let browser = checked
+            .entry(package.clone())
+            .or_insert_with(|| {
+                std::fs::read_to_string(package.join("package.json"))
+                    .ok()
+                    .and_then(|text| serde_json::from_str::<serde_json::Value>(&text).ok())
+                    .and_then(|manifest| {
+                        let browser = manifest.get("browser")?.clone();
+                        Some(serde_json::json!({ "browser": browser, "main": manifest.get("main").cloned() }))
+                    })
+            })
+            .clone();
+        let Some(fields) = browser else {
+            continue;
+        };
+        let within = parts[at + depth..].join("/");
+        let normal = |text: &str| text.trim_start_matches("./").to_string();
+        let replaced = match &fields["browser"] {
+            serde_json::Value::String(_) => fields["main"]
+                .as_str()
+                .map(normal)
+                .is_some_and(|main| within == main || within == format!("{main}.js")),
+            serde_json::Value::Object(map) => map.iter().any(|(key, value)| {
+                let key = normal(key);
+                (within == key || within == format!("{key}.js"))
+                    && value.as_str().map(normal) != Some(within.clone())
+            }),
+            _ => false,
+        };
+        if replaced {
+            return Err(Diagnostic::new(
+                Code::BrowserField,
+                &source.path,
+                "this package's \"browser\" field replaces this file for browsers, and the module graph does not apply that field",
+            ));
+        }
+    }
+    Ok(())
 }
 
 /// Writes the bundle and its map into `outdir`, each through a temp file and

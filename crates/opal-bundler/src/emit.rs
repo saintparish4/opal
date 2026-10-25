@@ -1126,7 +1126,9 @@ impl<'a> VisitMut<'a> for Rewriter<'a, '_> {
                 ("filename", true) => Some(format!("{p}file{m}")),
                 ("dirname", true) => Some(format!("{p}dir{m}")),
                 ("main", _) if self.is_entry => None,
-                ("main", _) => Some("false".to_string()),
+                // A browser gives every module's import.meta no main.
+                ("main", false) => Some("undefined".to_string()),
+                ("main", true) => Some("false".to_string()),
                 _ => {
                     self.fail(
                         Code::ImportMeta,
@@ -1137,7 +1139,7 @@ impl<'a> VisitMut<'a> for Rewriter<'a, '_> {
                 }
             };
             if let Some(replacement) = replacement {
-                if replacement != "false" {
+                if replacement != "false" && replacement != "undefined" {
                     self.needs_paths = true;
                 }
                 *expression = self.template(&replacement, Vec::new(), span);
