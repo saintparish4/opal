@@ -19,11 +19,20 @@ const FORWARDED: [libc::c_int; 4] = [libc::SIGINT, libc::SIGQUIT, libc::SIGTERM,
 
 static CHILD: AtomicI32 = AtomicI32::new(0);
 
+// The si_code of a signal sent with kill(2) or sigqueue(3). libc has these
+// for Linux; on macOS they are <sys/signal.h>'s.
+#[cfg(target_os = "macos")]
+const SI_USER: libc::c_int = 0x10001;
+#[cfg(target_os = "macos")]
+const SI_QUEUE: libc::c_int = 0x10002;
+#[cfg(not(target_os = "macos"))]
+use libc::{SI_QUEUE, SI_USER};
+
 extern "C" fn forward(signal: libc::c_int, info: *mut libc::siginfo_t, _: *mut libc::c_void) {
     // SAFETY: the kernel passes a valid siginfo_t to an SA_SIGINFO handler.
     let code = unsafe { (*info).si_code };
     let child = CHILD.load(Ordering::Relaxed);
-    if child > 0 && (code == libc::SI_USER || code == libc::SI_QUEUE) {
+    if child > 0 && (code == SI_USER || code == SI_QUEUE) {
         // SAFETY: kill is async-signal-safe.
         unsafe { libc::kill(child, signal) };
     }
