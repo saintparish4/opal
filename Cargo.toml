@@ -15,18 +15,18 @@ opal-runtime = { path = "crates/opal-runtime" }
 opal-bundler = { path = "crates/opal-bundler" }
 
 blake3 = "1.8.6"
-oxc_allocator = "0.152.0"
-oxc_ast = "0.152.0"
-oxc_ast_visit = "0.152.0"
-oxc_parser = "0.152.0"
-oxc_span = "0.152.0"
+oxc_allocator = "0.155.0"
+oxc_ast = "0.155.0"
+oxc_ast_visit = "0.155.0"
+oxc_parser = "0.155.0"
+oxc_span = "0.155.0"
 # The bundler's compiler: scopes and symbols, TypeScript and JSX, printing,
 # and source maps. Same release as the parser above; oxc moves as one.
-oxc_codegen = "0.152.0"
-oxc_semantic = "0.152.0"
+oxc_codegen = "0.155.0"
+oxc_semantic = "0.155.0"
 oxc_sourcemap = "9.0.0"
-oxc_syntax = "0.152.0"
-oxc_transformer = "0.152.0"
+oxc_syntax = "0.155.0"
+oxc_transformer = "0.155.0"
 serde = { version = "1.0", features = ["derive"] }
 # `raw_value` keeps a packument's version bodies as unparsed slices: a
 # registry lists every version a package ever shipped, and an install reads the
