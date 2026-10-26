@@ -1,0 +1,755 @@
+{
+ "date": "2026-10-26T08:42:11",
+ "opal_sha256": "fe2c3bde895f3dd6bacd370a50d3e2f5984986fbbb944db9d6579586e3d349ed",
+ "node": "v24.19.0",
+ "repos": {
+  "ant-design": {
+   "commit": "33530b68fe0f5c6753232a8186704258fa4259f8",
+   "runner": "Jest 30.5.2, its own transformer, jsdom",
+   "reference": {},
+   "opal": {},
+   "agree": 0,
+   "total": 0,
+   "as_is": {
+    "exit": 2,
+    "report": false,
+    "cause": "command-line flag: --no-cache"
+   },
+   "units": 1,
+   "unit_errors": [],
+   "causes": {},
+   "examples": {},
+   "opal_passes_reference_fails": 0
+  },
+  "react-hook-form": {
+   "commit": "06bd82b45f67de433ee8f622f21dc445e25773e5",
+   "runner": "Jest 30, @swc/jest, jest-fixed-jsdom, projects",
+   "reference": {
+    "passed": 1749
+   },
+   "opal": {},
+   "agree": 0,
+   "total": 1749,
+   "as_is": {
+    "exit": 1,
+    "report": false,
+    "cause": "Jest projects"
+   },
+   "units": 2,
+   "unit_errors": [],
+   "causes": {
+    "test not run by opal": 1749
+   },
+   "examples": {
+    "test not run by opal": "src/__tests__/logic/validateField.test.tsx | validateField enforces a numeric zero maxLength for \"x\""
+   },
+   "opal_passes_reference_fails": 0
+  },
+  "swr": {
+   "commit": "8148ef012fd5b317d1e8ec2da4b2ca0673f63c0f",
+   "runner": "Jest 30, @swc/jest, jsdom",
+   "reference": {
+    "passed": 397,
+    "pending": 5
+   },
+   "opal": {
+    "failed": 385,
+    "pending": 5,
+    "passed": 12
+   },
+   "agree": 17,
+   "total": 402,
+   "as_is": {
+    "exit": 1,
+    "report": true
+   },
+   "units": 1,
+   "unit_errors": [],
+   "causes": {
+    "DOM environment": 356,
+    "fake timers": 12,
+    "other: Error: expect(jest.fn()).toHaveBeenCalledTimes(expected)": 8,
+    "other: Error: Property `window` does not exist in the provided object": 4,
+    "other: TypeError: Cannot set properties of undefined (setting 'Deno')": 3,
+    "other: Error: expect(received).toBe(expected) <path> Object.is equality": 2
+   },
+   "examples": {
+    "fake timers": "test/use-swr-refresh.test.tsx | useSWR - refresh should rerender automatically on interval",
+    "DOM environment": "test/use-swr-cache.test.tsx | useSWR - cache provider should be able to update the cache",
+    "other: Error: expect(jest.fn()).toHaveBeenCalledTimes(expected)": "test/use-swr-infinite-preload.test.tsx | useSWRInfinite - preload preload the fetcher function",
+    "other: Error: expect(received).toBe(expected) <path> Object.is equality": "test/use-swr-infinite-preload.test.tsx | useSWRInfinite - preload should pass serialize key to fetcher",
+    "other: TypeError: Cannot set properties of undefined (setting 'Deno')": "test/use-swr-server.test.tsx | useSWR - SSR preload on server should be a no-op on the server",
+    "other: Error: Property `window` does not exist in the provided object": "test/unit/web-preset.test.ts | Web Preset window should trigger listener when window has browser APIs"
+   },
+   "opal_passes_reference_fails": 0
+  },
+  "downshift": {
+   "commit": "1bb8b75e506fe807a5c5201a103d1bd128e5a5e2",
+   "runner": "Jest via kcd-scripts, babel-jest, jsdom",
+   "reference": {
+    "passed": 1110
+   },
+   "opal": {
+    "failed": 837,
+    "passed": 171
+   },
+   "agree": 171,
+   "total": 1110,
+   "as_is": {
+    "exit": 1,
+    "report": true
+   },
+   "units": 1,
+   "unit_errors": [],
+   "causes": {
+    "DOM environment": 486,
+    "other: TypeError: Cannot read properties of undefined (reading 'Symbol(Node prepared with document state workarounds)": 318,
+    "fake timers": 128,
+    "other: Outdated guide link: The snapshot guide link at the top of this snapshot is outdated. Please update all snapsh": 7
+   },
+   "examples": {
+    "DOM environment": "src/hooks/useMultipleSelection/__tests__/getSelectedItemProps.test.js | getSelectedItemProps throws error if no index or item has been passed",
+    "fake timers": "src/hooks/useMultipleSelection/__tests__/props.test.js | props if falsy then no prop types error is thrown",
+    "other: TypeError: Cannot read properties of undefined (reading 'Symbol(Node prepared with document state workarounds)": "src/hooks/useSelect/__tests__/getItemProps.test.js | getItemProps event handlers on mouse over it highlights the item",
+    "other: Outdated guide link: The snapshot guide link at the top of this snapshot is outdated. Please update all snapsh": "src/__tests__/set-a11y-status.js | sets the status"
+   },
+   "opal_passes_reference_fails": 0
+  },
+  "dom-testing-library": {
+   "commit": "6049cc0bc7cf2201625c476c95fa6299d0e2fa8b",
+   "runner": "Jest via kcd-scripts, projects (jsdom and node)",
+   "reference": {
+    "passed": 666
+   },
+   "opal": {
+    "failed": 558,
+    "passed": 72
+   },
+   "agree": 72,
+   "total": 666,
+   "as_is": {
+    "exit": 1,
+    "report": false,
+    "cause": "Jest projects"
+   },
+   "units": 2,
+   "unit_errors": [],
+   "causes": {
+    "DOM environment": 507,
+    "fake timers": 49,
+    "other: Outdated guide link: The snapshot guide link at the top of this snapshot is outdated. Please update all snapsh": 28,
+    "module not found: punycode/": 8,
+    "other: Error: expect(received).toThrow(expected)": 1,
+    "other: Error: Could not find default container": 1
+   },
+   "examples": {
+    "DOM environment": "src/__tests__/text-matchers.js | matches find case-sensitive full strings by default queryAllByTestId",
+    "other: Error: expect(received).toThrow(expected)": "src/__tests__/events.js | throws a useful error message when firing events on non-existent nodes",
+    "fake timers": "src/__tests__/wait-for.js | if you switch from fake timers to real timers during the wait period you get an error",
+    "other: Outdated guide link: The snapshot guide link at the top of this snapshot is outdated. Please update all snapsh": "src/__tests__/role-helpers.js | getRoles returns expected roles for various dom nodes",
+    "other: Error: Could not find default container": "src/__tests__/helpers.js | returns global document if exists",
+    "module not found: punycode/": "src/__node_tests__/index.js | works without a global dom"
+   },
+   "opal_passes_reference_fails": 0
+  },
+  "apollo-client": {
+   "commit": "0fc31b82e53008404178e8bb8b52bbfc0a315062",
+   "runner": "Jest 30, ts-jest, a jsdom environment of its own, projects",
+   "reference": {
+    "passed": 11563,
+    "pending": 515,
+    "failed": 7
+   },
+   "opal": {},
+   "agree": 0,
+   "total": 12085,
+   "as_is": {
+    "exit": 2,
+    "report": false,
+    "cause": "command-line flag: --reporters"
+   },
+   "units": 7,
+   "unit_errors": [],
+   "causes": {
+    "module not found: ../../testing/matchers/index.js": 11509,
+    "ES module syntax": 54
+   },
+   "examples": {
+    "module not found: ../../testing/matchers/index.js": "src/core/__tests__/client.watchQuery/deferGraphQL17Alpha9.test.ts | reports streaming after a failed alpha9 defer finishes with no-cache",
+    "ES module syntax": "codegen/custom-scalars/__tests__/plugin.test.ts | outputs empty objects when the schema has no custom scalars"
+   },
+   "opal_passes_reference_fails": 0
+  },
+  "mobx": {
+   "commit": "81bde398c579239a7a5ffb5d8efbf21a5ea9cf83",
+   "runner": "Jest 30, ts-jest js-with-ts, jsdom, projects",
+   "reference": {
+    "passed": 969,
+    "failed": 3,
+    "pending": 10
+   },
+   "opal": {
+    "passed": 49
+   },
+   "agree": 49,
+   "total": 982,
+   "as_is": {
+    "exit": 1,
+    "report": false,
+    "cause": "Jest projects"
+   },
+   "units": 6,
+   "unit_errors": [],
+   "causes": {
+    "other: ReferenceError: __DEV__ is not defined": 792,
+    "module not found: eslint-undefined": 128
+   },
+   "examples": {
+    "other: ReferenceError: __DEV__ is not defined": "packages/mobx/__tests__/base/make-observable.ts | makeObservable picks up annotations",
+    "module not found: eslint-undefined": "packages/eslint-plugin-mobx/__tests__/exhaustive-make-observable.js | exhaustive-make-observable valid \nclass C {     \n  @observable o = 5\n\n  constructor() {\n    makeObservable(this) \n  }      \n}\n"
+   },
+   "opal_passes_reference_fails": 0
+  },
+  "motion": {
+   "commit": "5881b1bb0f96e00d1e06bd33a121d01f50458d22",
+   "runner": "Jest 29, ts-jest, jsdom, a config per package",
+   "reference": {
+    "passed": 206,
+    "pending": 2,
+    "failed": 22
+   },
+   "opal": {},
+   "agree": 0,
+   "total": 230,
+   "as_is": {
+    "exit": 1,
+    "report": true
+   },
+   "units": 5,
+   "unit_errors": [],
+   "causes": {
+    "test not run by opal": 206
+   },
+   "examples": {
+    "test not run by opal": "packages/framer-motion/src/render/dom/scroll/utils/__tests__/offset-to-range.test.ts | offsetToViewTimelineRange maps Enter to entry-crossing"
+   },
+   "opal_passes_reference_fails": 0
+  },
+  "react-router": {
+   "commit": "bb7c1f021363e96745dd3cfc5d2431e9b80ffe61",
+   "runner": "Jest 30 in ESM mode, babel-jest, jsdom, projects",
+   "reference": {
+    "passed": 3037,
+    "pending": 15,
+    "failed": 1
+   },
+   "opal": {},
+   "agree": 0,
+   "total": 3053,
+   "as_is": {
+    "exit": 1,
+    "report": false,
+    "cause": "Jest projects"
+   },
+   "units": 10,
+   "unit_errors": [],
+   "causes": {
+    "ES module syntax": 3037
+   },
+   "examples": {
+    "ES module syntax": "packages/react-router/__tests__/server-runtime/server-test.ts | API-only build-time document requests with build-time environment=false and headers={} returns 404"
+   },
+   "opal_passes_reference_fails": 0
+  },
+  "next-with-jest": {
+   "commit": "cbf49db30a655ac17c92c2951885c4256db14b9e",
+   "runner": "Jest 29, next/jest (SWC), jsdom",
+   "reference": {
+    "passed": 6
+   },
+   "opal": {
+    "passed": 1,
+    "failed": 5
+   },
+   "agree": 1,
+   "total": 6,
+   "as_is": {
+    "exit": 1,
+    "report": true
+   },
+   "units": 1,
+   "unit_errors": [],
+   "causes": {
+    "DOM environment": 5
+   },
+   "examples": {
+    "DOM environment": "app/blog/[slug]/page.test.tsx | App Router: Works with dynamic route segments"
+   },
+   "opal_passes_reference_fails": 0
+  },
+  "jest-preset-angular": {
+   "commit": "307675d2c1ed49d50a6589c87165b84f92dfd25b",
+   "runner": "Jest 30, jest-preset-angular, jsdom, Angular 20",
+   "reference": {
+    "passed": 132
+   },
+   "opal": {},
+   "agree": 0,
+   "total": 132,
+   "as_is": {
+    "exit": 2,
+    "report": false,
+    "cause": "command-line flag: --no-cache"
+   },
+   "units": 1,
+   "unit_errors": [
+    {
+     "unit": {
+      "cwd": "examples/example-app-v20",
+      "args": [],
+      "env": {}
+     },
+     "cause": "other: opal: SyntaxError: The requested module '.<path>' does not provide an export named 'compilerOptions'"
+    }
+   ],
+   "causes": {
+    "unit didn't run: other: opal: SyntaxError: The requested module '.<path>' does not provide an export named 'compilerOptions'": 132
+   },
+   "examples": {
+    "unit didn't run: other: opal: SyntaxError: The requested module '.<path>' does not provide an export named 'compilerOptions'": "examples/example-app-v20/src/app/demo/async-helper.spec.ts | Angular async helper async should run normal test"
+   },
+   "opal_passes_reference_fails": 0
+  },
+  "nest-starter": {
+   "commit": "fa03e8d88569be672a420b54578fd852b26baa6d",
+   "runner": "Jest 29, ts-jest, Nest 11, supertest e2e",
+   "reference": {
+    "passed": 2
+   },
+   "opal": {
+    "passed": 2
+   },
+   "agree": 2,
+   "total": 2,
+   "as_is": {
+    "exit": 0,
+    "report": true
+   },
+   "units": 2,
+   "unit_errors": [],
+   "causes": {},
+   "examples": {},
+   "opal_passes_reference_fails": 0
+  },
+  "ghostfolio": {
+   "commit": "5ab32ffc1ef539e72ed88af19a20168223e8dcb8",
+   "runner": "Jest 30, Nest (ts-jest) and Angular (jest-preset-angular), nx",
+   "reference": {
+    "passed": 738
+   },
+   "opal": {
+    "passed": 49
+   },
+   "agree": 49,
+   "total": 738,
+   "as_is": {
+    "exit": 1,
+    "report": false,
+    "cause": "other: opal: ReferenceError: require is not defined in ES module scope, you can use import instead"
+   },
+   "units": 4,
+   "unit_errors": [],
+   "causes": {
+    "module not found: @ghostfolio/common/config": 195,
+    "module not found: @ghostfolio/api/errors/caller-facing.error": 92,
+    "module not found: @ghostfolio/api/app/portfolio/current-rate.service": 58,
+    "module not found: @ghostfolio/common/scopes": 46,
+    "module not found: @ghostfolio/api/app/account-balance/account-balance.service": 45,
+    "module not found: @ghostfolio/api/helper/data-source.helper": 45,
+    "module not found: @ghostfolio/api/helper/markdown-table.helper": 38,
+    "module not found: @ghostfolio/api/app/portfolio/calculator/portfolio-calculator-test-utils": 31,
+    "module not found: @ghostfolio/api/app/access/access.service": 24,
+    "module not found: @ghostfolio/common/enums": 18,
+    "module not found: @ghostfolio/api/decorators/requires-scope.decorator": 16,
+    "module not found: @ghostfolio/api/decorators/has-permission.decorator": 13,
+    "module not found: @ghostfolio/common/helper": 9,
+    "module not found: @ghostfolio/api/services/benchmark/benchmark.service": 8,
+    "module not found: @ghostfolio/api/decorators/allow-during-impersonation.decorator": 8,
+    "module not found: @ghostfolio/api/events/portfolio-changed.event": 7,
+    "module not found: @ghostfolio/api/services/prisma/prisma.service": 5,
+    "module not found: @ghostfolio/common/dtos": 5,
+    "module not found: @ghostfolio/api/services/market-data/market-data.service": 4,
+    "module not found: @ghostfolio/api/app/portfolio/errors/portfolio-snapshot-computation.error": 4,
+    "module not found: @ghostfolio/api/services/data-provider/data-provider.service": 4,
+    "module not found: @ghostfolio/api/services/import/errors/import-validation.error": 3,
+    "module not found: @ghostfolio/prisma/enums": 3,
+    "module not found: @ghostfolio/ui/services": 3,
+    "module not found: @ghostfolio/api/services/cryptocurrency/cryptocurrency.service": 2,
+    "module not found: @ghostfolio/api/guards/has-permission.guard": 2,
+    "module not found: @ghostfolio/api/services/fetch/fetch.service": 1
+   },
+   "examples": {
+    "module not found: @ghostfolio/common/config": "apps/api/src/helper/object.helper.spec.ts | query should get market price from stock API response",
+    "module not found: @ghostfolio/api/app/portfolio/calculator/portfolio-calculator-test-utils": "apps/api/src/app/activities/activities.service.spec.ts | ActivitiesService createActivity creates a custom asset profile with a UUID if no asset profile exists for a symbol with the prefix",
+    "module not found: @ghostfolio/api/app/portfolio/current-rate.service": "apps/api/src/app/portfolio/calculator/roai/portfolio-calculator-cash.spec.ts | PortfolioCalculator Cash Performance should calculate performance for cash assets in CHF default currency",
+    "module not found: @ghostfolio/api/app/access/access.service": "apps/api/src/services/impersonation/impersonation.service.spec.ts | Impersonation service Without an impersonation Resolves the own access of the authenticated user",
+    "module not found: @ghostfolio/api/app/account-balance/account-balance.service": "apps/api/src/app/portfolio/portfolio.service.spec.ts | PortfolioService getAccounts should not restrict the accounts and their activities without a filter",
+    "module not found: @ghostfolio/api/helper/markdown-table.helper": "apps/api/src/services/portfolio-table/portfolio-table.service.spec.ts | PortfolioTableService getAccountsTableColumnNames gives no column with a monetary value",
+    "module not found: @ghostfolio/api/errors/caller-facing.error": "apps/api/src/app/endpoints/mcp/mcp.service.spec.ts | McpService getAccounts Maps the parameters of the tool to the filters",
+    "module not found: @ghostfolio/api/helper/data-source.helper": "apps/api/src/app/endpoints/mcp/mcp.schemas.spec.ts | GET_ACCOUNTS_PARAMETERS Refuses an empty symbol of the holding",
+    "module not found: @ghostfolio/api/services/market-data/market-data.service": "apps/api/src/app/portfolio/current-rate.service.spec.ts | CurrentRateService getValues",
+    "module not found: @ghostfolio/api/decorators/requires-scope.decorator": "apps/api/src/app/endpoints/mcp/mcp.controller.spec.ts | GhostfolioMcpController Requires a scope of access for each tool",
+    "module not found: @ghostfolio/common/enums": "apps/api/src/services/data-provider/data-provider.service.spec.ts | DataProviderService getDataProvider gives the data provider of the data source without a mapping",
+    "module not found: @ghostfolio/api/events/portfolio-changed.event": "apps/api/src/app/endpoints/asset-profiles/asset-profiles.service.spec.ts | AssetProfilesService createSplit upserts the split and refreshes the asset profile data",
+    "module not found: @ghostfolio/common/helper": "apps/api/src/services/queues/data-gathering/data-gathering.processor.spec.ts | DataGatheringProcessor writes an all-real series without carried forward market prices",
+    "module not found: @ghostfolio/api/services/benchmark/benchmark.service": "apps/api/src/app/endpoints/benchmarks/benchmarks.service.spec.ts | BenchmarksService getMarketDataForUser calculates the change since the baseline date",
+    "module not found: @ghostfolio/api/decorators/has-permission.decorator": "apps/api/src/app/endpoints/ai/ai.controller.spec.ts | AiController getActivitiesFromFile Requires the permission and limits the requests of each user per week",
+    "module not found: @ghostfolio/api/services/prisma/prisma.service": "apps/api/src/services/asset-profile-split/asset-profile-split.service.spec.ts | AssetProfileSplitService deleteById scopes deletion by split and asset profile identifiers",
+    "module not found: @ghostfolio/api/decorators/allow-during-impersonation.decorator": "apps/api/src/guards/impersonation-write.guard.spec.ts | Impersonation write guard Allows a read request during an impersonation",
+    "module not found: @ghostfolio/api/app/portfolio/errors/portfolio-snapshot-computation.error": "apps/api/src/filters/mcp-tool-exception.filter.spec.ts | McpToolExceptionFilter Passes on the message of an error which is written for the caller",
+    "module not found: @ghostfolio/api/services/fetch/fetch.service": "apps/api/src/services/data-provider/manual/manual.service.spec.ts | ManualService getQuotes should use the latest market price of each symbol of the manual data source",
+    "module not found: @ghostfolio/api/services/import/errors/import-validation.error": "apps/api/src/app/endpoints/import/import.controller.spec.ts | ImportController import Gives the status 400 with the message of an error for the caller",
+    "module not found: @ghostfolio/api/services/data-provider/data-provider.service": "apps/api/src/services/queues/data-gathering/data-gathering.processor.time-zone.spec.ts | DataGatheringProcessor in a time zone behind UTC gathers up to the last complete UTC day and does not shift the dates",
+    "module not found: @ghostfolio/api/services/cryptocurrency/cryptocurrency.service": "apps/api/src/services/data-provider/data-enhancer/yahoo-finance/yahoo-finance.service.spec.ts | YahooFinanceDataEnhancerService convertFromYahooFinanceSymbol",
+    "module not found: @ghostfolio/common/dtos": "apps/api/src/services/import/import-data.dto.spec.ts | ImportDataDto accepts sample.json",
+    "module not found: @ghostfolio/common/scopes": "apps/api/src/guards/scope.guard.spec.ts | Scope guard Allows a route without required scopes",
+    "module not found: @ghostfolio/api/guards/has-permission.guard": "apps/api/src/decorators/requires-scope.decorator.spec.ts | Requires scope Sets the required scopes",
+    "module not found: @ghostfolio/prisma/enums": "libs/common/src/lib/calculation-helper.spec.ts | CalculationHelper interval from date range Get interval of a calendar year",
+    "module not found: @ghostfolio/ui/services": "libs/ui/src/lib/historical-market-data-editor/historical-market-data-editor.component.spec.ts | GfHistoricalMarketDataEditorComponent should create"
+   },
+   "opal_passes_reference_fails": 0
+  },
+  "apollo-server": {
+   "commit": "0c22029c2af47d3829e730e9820c01cef0557627",
+   "runner": "Jest 30, ts-jest with type checking, node, projects",
+   "reference": {
+    "passed": 570,
+    "pending": 24
+   },
+   "opal": {
+    "failed": 19,
+    "passed": 531,
+    "pending": 24
+   },
+   "agree": 555,
+   "total": 594,
+   "as_is": {
+    "exit": 2,
+    "report": false,
+    "cause": "command-line flag: --coverage"
+   },
+   "units": 2,
+   "unit_errors": [],
+   "causes": {
+    "fake timers": 19,
+    "other: Outdated guide link: The snapshot guide link at the top of this snapshot is outdated. Please update all snapsh": 19,
+    "other: Cannot find module @rollup<path> npm has a bug related to optional dependencies (https:<path>). Please try `np": 1
+   },
+   "examples": {
+    "fake timers": "packages/plugin-response-cache/src/__tests__/integration.test.ts | Response caching basic caching",
+    "other: Outdated guide link: The snapshot guide link at the top of this snapshot is outdated. Please update all snapsh": "packages/server/src/__tests__/plugin/usageReporting/stats.test.ts | Check query latency stats when adding a single trace",
+    "other: Cannot find module @rollup<path> npm has a bug related to optional dependencies (https:<path>). Please try `np": "packages/server/src/__tests__/rollupCommonJs.test.ts | @rollup/plugin-commonjs bundles into es6 without circular dependencies issues"
+   },
+   "opal_passes_reference_fails": 0
+  },
+  "graphql-yoga": {
+   "commit": "9e18c6a7e01d431253bff49353ac96d87167ce17",
+   "runner": "Jest 30, ts-jest and Babel, node, projects",
+   "reference": {
+    "passed": 1598,
+    "pending": 4
+   },
+   "opal": {
+    "passed": 36
+   },
+   "agree": 36,
+   "total": 1602,
+   "as_is": {
+    "exit": 2,
+    "report": false,
+    "cause": "command-line flag: --detectOpenHandles"
+   },
+   "units": 2,
+   "unit_errors": [],
+   "causes": {
+    "module not found: ./context-types.js": 1230,
+    "module not found: ../../src/validations/overlapping-fields-can-be-merged.js": 106,
+    "module not found: ./in-memory-cache.js": 38,
+    "test not run by opal": 36,
+    "module not found: ./create-pub-sub.js": 28,
+    "module not found: ../../src/validations/defer-stream-directive-on-root-field.js": 28,
+    "module not found: ./get-graphql-rate-limiter.js": 18,
+    "module not found: ../../src/validations/defer-stream-directive-label.js": 16,
+    "module not found: ./accept.js": 14,
+    "module not found: ./instrumentation.js": 12,
+    "module not found: ../../src/validations/stream-directive-on-list-field.js": 12,
+    "module not found: ./plugin.js": 8,
+    "module not found: ../src/in-memory-cache.js": 4,
+    "module not found: ../src/in-memory-store.js": 4,
+    "module not found: ./multipart.js": 2,
+    "module not found: ./sse.js": 2,
+    "module not found: ./utils.js": 2,
+    "module not found: ./map.js": 2
+   },
+   "examples": {
+    "module not found: ./context-types.js": "packages/envelop/plugins/response-cache/test/response-cache.spec.ts | useResponseCache deprecated ttlForType still work until removed",
+    "module not found: ../../src/validations/overlapping-fields-can-be-merged.js": "packages/plugins/defer-stream/__tests__/validations/overlapping-fields-can-be-merged.spec.ts | Validate: Overlapping fields can be merged unique fields",
+    "module not found: ./in-memory-cache.js": "packages/envelop/plugins/response-cache-redis/test/response-redis-cache.spec.ts | useResponseCache with Redis cache should create a default entity id with a number id",
+    "module not found: ./plugin.js": "packages/envelop/plugins/generic-auth/tests/auth-directives.spec.ts | Auth Directives @requiresScopes returns partial data without an HTTP status override when a field scope is missing",
+    "test not run by opal": "packages/envelop/core/test/plugin-with-state.spec.ts | pluginWithState should work with an empty plugin",
+    "module not found: ./create-pub-sub.js": "packages/subscription/src/createPubSub.spec.ts | createPubSub create",
+    "module not found: ./get-graphql-rate-limiter.js": "packages/envelop/plugins/rate-limiter/tests/get-graphql-rate-limiter.spec.ts | getFieldIdentity with no identity args",
+    "module not found: ../../src/validations/defer-stream-directive-on-root-field.js": "packages/plugins/defer-stream/__tests__/validations/defer-stream-directive-on-root-field.spec.ts | Validate: Defer/Stream directive on root field Defer fragment spread on root query field",
+    "module not found: ./accept.js": "packages/graphql-yoga/src/plugins/result-processor/accept.spec.ts | incremental Accept negotiation keeps registered spec parameters and drops the rest",
+    "module not found: ../../src/validations/defer-stream-directive-label.js": "packages/plugins/defer-stream/__tests__/validations/defer-stream-directive-label.spec.ts | Validate: Defer/Stream directive on root field Defer fragments with no label",
+    "module not found: ./instrumentation.js": "packages/envelop/instrumentation/test/instrumentation.spec.ts | instrumentation chain should execute instrument in the same order than the array",
+    "module not found: ../src/in-memory-cache.js": "packages/envelop/plugins/response-cache/test/in-memory-cache.spec.ts | createInMemoryCache does not leak an empty entity Set after invalidating the last response referencing it (#4561)",
+    "module not found: ../../src/validations/stream-directive-on-list-field.js": "packages/plugins/defer-stream/__tests__/validations/stream-directive-on-list-field.spec.ts | Validate: Stream directive on list field Stream on list field",
+    "module not found: ../src/in-memory-store.js": "packages/envelop/plugins/rate-limiter/tests/in-memory-store.spec.ts | InMemoryStore sets correct timestamps",
+    "module not found: ./multipart.js": "packages/graphql-yoga/src/plugins/result-processor/multipart.spec.ts | processMultipartResult does not throw when cancel is invoked before the iterator has been assigned",
+    "module not found: ./sse.js": "packages/graphql-yoga/src/plugins/result-processor/sse.spec.ts | getSSEProcessor does not throw when cancel is invoked before the iterator has been assigned",
+    "module not found: ./utils.js": "packages/graphql-yoga/__tests__/getparser-json.spec.ts | parseGETRequest",
+    "module not found: ./map.js": "packages/subscription/src/operator/map.spec.ts | map maps source stream"
+   },
+   "opal_passes_reference_fails": 0
+  },
+  "express-rate-limit": {
+   "commit": "28331a79a51b8cc9270c4255e2b850d1043667ee",
+   "runner": "Jest 30, ts-jest's ESM preset, collectCoverage",
+   "reference": {
+    "passed": 246
+   },
+   "opal": {},
+   "agree": 0,
+   "total": 246,
+   "as_is": {
+    "exit": 1,
+    "report": true
+   },
+   "units": 1,
+   "unit_errors": [],
+   "causes": {
+    "ES module syntax": 138,
+    "module not found: ../../source/types": 104,
+    "module not found: ../../source/console-logger": 4
+   },
+   "examples": {
+    "module not found: ../../source/console-logger": "test/library/logger-test.ts | ConsoleLogger error forwards the call to the console",
+    "ES module syntax": "test/library/types-test.ts | types tests should not have Request renamed to Request$1 in the types",
+    "module not found: ../../source/types": "test/library/validation-test.ts | validations tests ip should allow a valid IPv4"
+   },
+   "opal_passes_reference_fails": 0
+  },
+  "tanstack-query": {
+   "commit": "2b5b6417fae536dfb68d1ef749342c9363481822",
+   "runner": "Vitest 5, jsdom, type tests",
+   "reference": {
+    "passed": 2217
+   },
+   "opal": {
+    "failed": 517,
+    "passed": 108
+   },
+   "agree": 108,
+   "total": 2217,
+   "as_is": {
+    "exit": 1,
+    "report": true
+   },
+   "units": 2,
+   "unit_errors": [],
+   "causes": {
+    "test not run by opal": 1165,
+    "other: Error: opal test: fake timers is not supported.": 516,
+    "module not found: punycode/": 427,
+    "other: Error: expect(received).toBe(expected) <path> Object.is equality": 1
+   },
+   "examples": {
+    "other: Error: opal test: fake timers is not supported.": "packages/query-core/src/__tests__/focusManager.test.tsx | focusManager should call previous remove handler when replacing an event listener",
+    "other: Error: expect(received).toBe(expected) <path> Object.is equality": "packages/query-core/src/__tests__/removable.test.tsx | Removable updateGcTime should default to 5 minutes when no gcTime is provided on the client",
+    "test not run by opal": "packages/query-core/src/__tests__/OmitKeyof.test-d.ts | src/__tests__/OmitKeyof.test-d.ts OmitKeyof should omit a string key and reject one the object does not have",
+    "module not found: punycode/": "packages/react-query/src/__tests__/HydrationBoundary.test.tsx | React hydration should hydrate queries to the cache on context"
+   },
+   "opal_passes_reference_fails": 0
+  },
+  "jotai": {
+   "commit": "e5971ba44866d070564a0a30187f6976fee0e350",
+   "runner": "Vitest 5, jsdom",
+   "reference": {
+    "passed": 408
+   },
+   "opal": {
+    "failed": 308,
+    "passed": 68
+   },
+   "agree": 68,
+   "total": 410,
+   "as_is": {
+    "exit": 1,
+    "report": true
+   },
+   "units": 1,
+   "unit_errors": [],
+   "causes": {
+    "other: Error: opal test: fake timers is not supported.": 263,
+    "DOM environment": 68,
+    "other: Returning a Promise from \"describe\" is not supported. Tests must be defined synchronously.": 7,
+    "test not run by opal": 2
+   },
+   "examples": {
+    "other: Error: opal test: fake timers is not supported.": "tests/react/abortable.test.tsx | abortable atom test can abort with signal.aborted",
+    "other: Returning a Promise from \"describe\" is not supported. Tests must be defined synchronously.": "tests/react/async2.test.tsx | suspend suspend for Promise.resolve",
+    "DOM environment": "tests/react/items.test.tsx | remove an item, then add another",
+    "test not run by opal": "tests/react/onmount.test.tsx | useAtomValue observes synchronous onMount updates in both subscribers (#3371)"
+   },
+   "opal_passes_reference_fails": 0
+  },
+  "ahooks": {
+   "commit": "43003f3bd5e6921173cfa2a791ed9d34e5221935",
+   "runner": "Vitest 4, jsdom, a config per package",
+   "reference": {
+    "passed": 412
+   },
+   "opal": {},
+   "agree": 0,
+   "total": 412,
+   "as_is": {
+    "exit": 1,
+    "report": false,
+    "cause": "other: opal: ReferenceError: __dirname is not defined in ES module scope"
+   },
+   "units": 2,
+   "unit_errors": [
+    {
+     "unit": {
+      "cwd": "packages/hooks",
+      "args": [],
+      "env": {}
+     },
+     "cause": "other: opal: ReferenceError: __dirname is not defined in ES module scope"
+    },
+    {
+     "unit": {
+      "cwd": "packages/use-url-state",
+      "args": [],
+      "env": {}
+     },
+     "cause": "other: opal: ReferenceError: __dirname is not defined in ES module scope"
+    }
+   ],
+   "causes": {
+    "unit didn't run: other: opal: ReferenceError: __dirname is not defined in ES module scope": 412
+   },
+   "examples": {
+    "unit didn't run: other: opal: ReferenceError: __dirname is not defined in ES module scope": "packages/hooks/src/__tests__/refTypes.spec.ts | ref return type declarations useLatest should expose a non-nullable mutable ref"
+   },
+   "opal_passes_reference_fails": 0
+  },
+  "xstate": {
+   "commit": "060cd63378b46b32e7559d569ed3ad112ee60084",
+   "runner": "Vitest 3, jsdom and happy-dom, projects",
+   "reference": {
+    "passed": 2430,
+    "pending": 16,
+    "todo": 1
+   },
+   "opal": {
+    "passed": 1619,
+    "failed": 192,
+    "pending": 12
+   },
+   "agree": 1631,
+   "total": 2447,
+   "as_is": {
+    "exit": 1,
+    "report": true
+   },
+   "units": 14,
+   "unit_errors": [
+    {
+     "unit": {
+      "cwd": "packages/xstate-solid",
+      "args": [],
+      "env": {}
+     },
+     "cause": "other: opal: file:<path>:N"
+    },
+    {
+     "unit": {
+      "cwd": "packages/xstate-store",
+      "args": [],
+      "env": {}
+     },
+     "cause": "other: opal: file:<path>:N"
+    },
+    {
+     "unit": {
+      "cwd": "packages/xstate-store-preact",
+      "args": [],
+      "env": {}
+     },
+     "cause": "other: opal: file:<path>:N"
+    },
+    {
+     "unit": {
+      "cwd": "packages/xstate-store-solid",
+      "args": [],
+      "env": {}
+     },
+     "cause": "other: opal: file:<path>:N"
+    },
+    {
+     "unit": {
+      "cwd": "packages/xstate-store-vue",
+      "args": [],
+      "env": {}
+     },
+     "cause": "other: opal: file:<path>:N"
+    },
+    {
+     "unit": {
+      "cwd": "packages/xstate-svelte",
+      "args": [],
+      "env": {}
+     },
+     "cause": "other: opal: file:<path>:N"
+    },
+    {
+     "unit": {
+      "cwd": "packages/xstate-vue",
+      "args": [],
+      "env": {}
+     },
+     "cause": "other: opal: file:<path>:N"
+    }
+   ],
+   "causes": {
+    "unit didn't run: other: opal: file:<path>:N": 473,
+    "DOM environment": 177,
+    "other: The worker running this file exited unexpectedly (signal: N (SIGABRT) (core dumped)).": 134,
+    "other: Error: opal test: fake timers is not supported.": 12,
+    "other: TypeError: Cannot read properties of undefined (reading 'each')": 6,
+    "other: Error: expect(received).toMatchInlineSnapshot(snapshot)": 4,
+    "other: Error: snapshot function didn't throw": 1,
+    "other: ReferenceError: dispatchEvent is not defined": 1,
+    "other: Error: expect(Mock).toHaveBeenCalledWith(...expected)": 1,
+    "other: Error: expect(Mock).toHaveBeenCalledTimes(expected)": 1,
+    "other: Error: expect(received).toThrow()": 1
+   },
+   "examples": {
+    "unit didn't run: other: opal: file:<path>:N": "packages/xstate-store/test/vue.test.ts | works with `useSelector(\u2026)` (@xstate/vue)",
+    "other: TypeError: Cannot read properties of undefined (reading 'each')": "packages/xstate-store-angular/src/index.test.ts | @xstate/store-angular injectStore should select state using a selector",
+    "DOM environment": "packages/xstate-store-react/src/index.test.tsx | @xstate/store-react useSelector should work with a selector",
+    "other: Error: opal test: fake timers is not supported.": "packages/xstate-react/test/useActor.test.tsx | useActor (non-strict) should be able to use a delay provided outside of React",
+    "other: The worker running this file exited unexpectedly (signal: N (SIGABRT) (core dumped)).": "packages/core/test/actions.test.ts | entry/exit actions State.actions should return the entry actions of an initial state",
+    "other: Error: snapshot function didn't throw": "packages/core/test/actorLogic.test.ts | machine logic should not persist a spawned actor with inline src",
+    "other: ReferenceError: dispatchEvent is not defined": "packages/core/test/errors.test.ts | error handling actor continues to work normally after emit callback errors",
+    "other: Error: expect(received).toMatchInlineSnapshot(snapshot)": "packages/core/test/eventDescriptors.test.ts | event descriptors should not match infix wildcards",
+    "other: Error: expect(Mock).toHaveBeenCalledWith(...expected)": "packages/core/test/history.test.ts | revive history states should ignore unresolved ids as-is and log a warning",
+    "other: Error: expect(Mock).toHaveBeenCalledTimes(expected)": "packages/core/test/interpreter.test.ts | interpreter .stop() should not throw when sending an unserializable event to a stopped actor",
+    "other: Error: expect(received).toThrow()": "packages/core/test/interpreter.test.ts | should throw if an event is received"
+   },
+   "opal_passes_reference_fails": 0
+  }
+ }
+}
