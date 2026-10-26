@@ -493,3 +493,31 @@ fn test_node_exact_resolves_a_javascript_importer_as_node_does() {
         vec![("./no-extension".to_string(), resolved("no-extension.js"))]
     );
 }
+
+#[test]
+fn test_a_directory_specifier_and_a_package_subpath_resolve_as_written() {
+    let project = Project::new();
+    project
+        .write("main.ts", "import './src/a.ts';\nimport 'pkg/sub';\n")
+        .write("src/a.ts", "import '.';\nimport './';\n")
+        .write("src.ts", "export const sibling = 1;\n")
+        .write("src/index.ts", "export const index = 1;\n")
+        .write("node_modules/pkg/index.js", "module.exports = 1;\n")
+        .write("node_modules/pkg/sub.js", "module.exports = 2;\n");
+
+    let resolution = graph_of(&project, "main.ts");
+    // `.` and `./` name the directory, never a sibling file.
+    assert_eq!(
+        specifiers(&resolution, "src/a.ts"),
+        vec![
+            (".".to_string(), "src/index.ts".to_string()),
+            ("./".to_string(), "src/index.ts".to_string()),
+        ]
+    );
+    // A subpath of a package with no package.json is that file, not the
+    // package's index.
+    assert_eq!(
+        specifiers(&resolution, "main.ts")[1],
+        ("pkg/sub".to_string(), "node_modules/pkg/sub.js".to_string())
+    );
+}

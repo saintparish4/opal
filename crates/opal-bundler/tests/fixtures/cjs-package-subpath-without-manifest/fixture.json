@@ -1,0 +1,4 @@
+{
+  "entry": "main.cjs",
+  "why": "In a package with no `package.json`, `require(\"pkg/sub\")` is the file `pkg/sub.js`, not the package's index."
+}

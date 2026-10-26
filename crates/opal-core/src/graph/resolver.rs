@@ -188,10 +188,17 @@ impl ResolverOptions {
 /// `files` are paths that were read, with the content that was read. `missing`
 /// are paths probed and found absent — probed *before* the candidate that won,
 /// so the set is exactly the negative facts the result relies on.
+/// `directories` and `missing_directories` are directories whose existence a
+/// resolution turned on: Node's ES module resolver stops at the first
+/// `node_modules/<name>` directory, whatever is in it.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ResolveTrace {
     pub files: BTreeMap<NormalizedPath, ContentHash>,
     pub missing: BTreeSet<NormalizedPath>,
+    #[serde(default)]
+    pub directories: BTreeSet<NormalizedPath>,
+    #[serde(default)]
+    pub missing_directories: BTreeSet<NormalizedPath>,
 }
 
 pub struct Resolution {
@@ -220,6 +227,8 @@ struct Resolver<'a> {
     builder: ModuleGraphBuilder,
     files: BTreeMap<NormalizedPath, ContentHash>,
     missing: BTreeSet<NormalizedPath>,
+    directories: BTreeSet<NormalizedPath>,
+    missing_directories: BTreeSet<NormalizedPath>,
     /// Directory -> parsed package.json. `Rc` because resolution reads a
     /// manifest while holding `&mut self`; single-threaded for now, and future
     /// parallelism would move this to `Arc` plus a shared cache.
@@ -240,6 +249,8 @@ impl<'a> Resolver<'a> {
             options,
             files: BTreeMap::new(),
             missing: BTreeSet::new(),
+            directories: BTreeSet::new(),
+            missing_directories: BTreeSet::new(),
             manifests: HashMap::new(),
             sources: HashMap::new(),
             kinds: HashMap::new(),
@@ -309,6 +320,8 @@ impl<'a> Resolver<'a> {
                     .map(|(path, hash)| (relative(path), hash))
                     .collect(),
                 missing: self.missing.into_iter().map(relative).collect(),
+                directories: self.directories.into_iter().map(relative).collect(),
+                missing_directories: self.missing_directories.into_iter().map(relative).collect(),
             },
             graph: self.builder.finish(),
         })
@@ -418,7 +431,7 @@ impl<'a> Resolver<'a> {
             || specifier == "..";
         if is_relative || specifier.starts_with('/') {
             let base = from.join(specifier);
-            return match self.resolve_path(&base) {
+            return match self.resolve_written(&base, specifier) {
                 Some(path) => Target::Path(path),
                 None => {
                     Target::Unresolved("no file, extension, or directory index matched".to_string())
@@ -474,15 +487,32 @@ impl<'a> Resolver<'a> {
         let manifest = self.manifest(package_dir);
 
         let Some(manifest) = manifest else {
-            // No package.json: only a directory-with-index counts as a package,
-            // which keeps a stray empty directory from shadowing a real
-            // package further up.
-            let resolved = self.resolve_directory(package_dir)?;
-            return Some(Target::Path(resolved));
+            return self.resolve_package_without_manifest(package_dir, subpath);
         };
 
         if let Some(exports) = manifest.get("exports") {
             return Some(self.resolve_exports(package_dir, exports, subpath, kind));
+        }
+
+        if subpath == "." && self.probing != Probing::Permissive {
+            // `tryPackage` for `require()` and `legacyMainResolve` for
+            // `import`: `main` as a file, with an extension, or as a
+            // directory's index, then the package's own index. Neither reads
+            // a package.json inside `main`.
+            return match self.resolve_directory_as_node(package_dir) {
+                Some(resolved) => Some(Target::Path(resolved)),
+                // `require()` moves on to the next `node_modules` from a
+                // package with no `main` and no index, and throws for a
+                // `main` that names nothing.
+                None if self.probing == Probing::NodeCjs
+                    && manifest.get("main").and_then(Value::as_str).is_none() =>
+                {
+                    None
+                }
+                None => Some(Target::Unresolved(
+                    "package has no main and no index file".to_string(),
+                )),
+            };
         }
 
         if subpath == "." {
@@ -499,10 +529,68 @@ impl<'a> Resolver<'a> {
         }
 
         let candidate = package_dir.join(subpath.trim_start_matches("./"));
-        Some(match self.resolve_path(&candidate) {
-            Some(resolved) => Target::Path(resolved),
-            None => Target::Unresolved(format!("{subpath} is not a file in the package")),
-        })
+        match self.resolve_written(&candidate, subpath) {
+            Some(resolved) => Some(Target::Path(resolved)),
+            // `require()` tries the subpath under each `node_modules` in turn.
+            None if self.probing == Probing::NodeCjs => None,
+            None => Some(Target::Unresolved(format!(
+                "{subpath} is not a file in the package"
+            ))),
+        }
+    }
+
+    /// A `node_modules/<name>` directory with no package.json.
+    fn resolve_package_without_manifest(
+        &mut self,
+        package_dir: &NormalizedPath,
+        subpath: &str,
+    ) -> Option<Target> {
+        if self.probing == Probing::NodeEsm {
+            // Node's ES module resolver stops at the first such directory,
+            // whatever is in it, and resolves there or fails.
+            if !self.directory_exists(package_dir) {
+                return None;
+            }
+            let resolved = if subpath == "." {
+                self.resolve_directory_as_node(package_dir)
+            } else {
+                let candidate = package_dir.join(subpath.trim_start_matches("./"));
+                self.resolve_written(&candidate, subpath)
+            };
+            return Some(match resolved {
+                Some(resolved) => Target::Path(resolved),
+                None => Target::Unresolved(format!(
+                    "{subpath} is not a file in a package directory with no package.json"
+                )),
+            });
+        }
+        // `require()`, and the permissive resolver, move past a directory
+        // that has nothing for the specifier, which also keeps a stray empty
+        // directory from shadowing a real package further up.
+        let resolved = if subpath == "." {
+            self.resolve_directory(package_dir)
+        } else {
+            let candidate = package_dir.join(subpath.trim_start_matches("./"));
+            self.resolve_written(&candidate, subpath)
+        }?;
+        Some(Target::Path(resolved))
+    }
+
+    /// `candidate` as the specifier wrote it: a path ending in `/`, or `.` or
+    /// `..`, names a directory only (`Module._findPath`), and the ES module
+    /// resolver imports no directory (ERR_UNSUPPORTED_DIR_IMPORT).
+    fn resolve_written(
+        &mut self,
+        candidate: &NormalizedPath,
+        written: &str,
+    ) -> Option<NormalizedPath> {
+        if !names_a_directory(written) {
+            return self.resolve_path(candidate);
+        }
+        match self.probing {
+            Probing::NodeEsm => None,
+            _ => self.resolve_directory(candidate),
+        }
     }
 
     /// Node's `exports` resolution, minus the parts we do not need.
@@ -820,6 +908,27 @@ impl<'a> Resolver<'a> {
             false
         }
     }
+
+    /// Whether `path` is a directory, recorded in the trace either way.
+    fn directory_exists(&mut self, path: &NormalizedPath) -> bool {
+        if path.as_path().is_dir() {
+            self.directories.insert(path.clone());
+            true
+        } else {
+            self.missing_directories.insert(path.clone());
+            false
+        }
+    }
+}
+
+/// Whether a specifier names a directory only: it ends in `/`, or its last
+/// segment is `.` or `..`.
+fn names_a_directory(specifier: &str) -> bool {
+    specifier.ends_with('/')
+        || specifier
+            .rsplit('/')
+            .next()
+            .is_some_and(|last| last == "." || last == "..")
 }
 
 fn is_builtin(specifier: &str) -> bool {
@@ -1040,14 +1149,14 @@ impl<'a> Visit<'a> for ImportCollector {
 }
 
 /// How deep `(`, `[`, and `{` may nest in a file the resolver parses. The
-/// parser recurses once per bracket, and a file nested deeper would
-/// overflow the stack and abort the process; V8 itself rejects about 5,000
-/// nested parentheses.
+/// parser recurses once per bracket, and a file nested deeper could
+/// overflow the caller's stack and abort the process; V8 itself rejects
+/// about 5,000 nested parentheses.
 pub const MAX_BRACKET_NESTING: usize = 4_000;
 
 /// Whether `(`, `[`, and `{` nest deeper than `limit` in `source`. Brackets
-/// inside strings, comments, and regular expressions count too, so this can
-/// only overstate the depth.
+/// inside strings, comments, and regular expressions count too, opening and
+/// closing, so the count can be off either way for a file that has them.
 pub fn nests_deeper_than(source: &str, limit: usize) -> bool {
     let mut depth = 0usize;
     for byte in source.bytes() {

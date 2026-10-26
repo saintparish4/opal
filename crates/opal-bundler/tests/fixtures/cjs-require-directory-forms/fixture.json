@@ -1,0 +1,4 @@
+{
+  "entry": "main.cjs",
+  "why": "`require()` of a path ending in `/`, or of `.` or `..`, names a directory only, so Node's `Module._findPath` loads `foo/index.js` and `lib/index.js` and never the sibling `foo.js` or `lib.js`."
+}

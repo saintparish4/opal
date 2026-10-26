@@ -1,0 +1,4 @@
+{
+  "entry": "sub/main.cjs",
+  "why": "`require()` tries each `node_modules` directory in turn and moves past a `pkg` directory with no `package.json` and no index, to the real `pkg` further up."
+}
