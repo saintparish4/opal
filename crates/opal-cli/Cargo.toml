@@ -10,6 +10,7 @@ repository.workspace = true
 opal-core.workspace = true
 opal-pm.workspace = true
 opal-runtime.workspace = true
+opal-bundler.workspace = true
 # `opal x` names each package's install folder by a hash of its spec.
 blake3.workspace = true
 clap.workspace = true

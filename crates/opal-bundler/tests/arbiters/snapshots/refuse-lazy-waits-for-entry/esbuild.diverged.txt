@@ -1,0 +1,7 @@
+stdout differs from line 1:
+  original: "<end>"
+  bundle:   "lazy sees undefined"
+stderr differs from line 1:
+  original: "Warning: Detected unsettled top-level await"
+  bundle:   "<end>"
+exit code: original Some(13), bundle Some(0)

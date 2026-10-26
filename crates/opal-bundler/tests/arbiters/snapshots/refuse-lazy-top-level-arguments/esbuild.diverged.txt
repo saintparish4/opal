@@ -1,0 +1,3 @@
+stdout differs from line 1:
+  original: "undefined"
+  bundle:   "object"

@@ -1,0 +1,5 @@
+stdout differs from line 1:
+  original: "<end>"
+  bundle:   "1"
+exit code: original Some(1), bundle Some(0)
+uncaught error: original Some(Uncaught { origin: "unhandledRejection", name: Some("SyntaxError"), message: Some("Named export 'hidden' not found. The requested module './lib.cjs' is a CommonJS module, which may not support all module.exports as named exports.\nCommonJS modules can always be imported via the default export, for example using:\n\nimport pkg from './lib.cjs';\nconst { hidden } = pkg;\n") }), bundle None

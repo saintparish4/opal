@@ -22,11 +22,18 @@ Opal is pre-1.0, so a release can change behaviour you depend on. Anything that 
 
 - **`OPAL_TRACE_STARTUP=1`** prints where an opal command's startup time went: one line per checkpoint on stderr, with the time since the first and since the one before. Set `OPAL_TRACE_SPAWN_NS` to the parent's `CLOCK_MONOTONIC` reading in nanoseconds just before it started opal, and the timeline starts there, so the time before `main` shows too.
 - [`benchmarks/compare-runtimes.py`](./benchmarks/compare-runtimes.py) measures startup and steady-state speed against node and bun, with an empty C program and `opal --version` in the same rounds as controls. A CI check fails a change that adds syscalls or page faults to an opal command's startup beyond its budget in `benchmarks/runtime-budget.json`.
+- **`opal build`** bundles an entry file into one ES module with a source map, for Node (`--target node`, the default) or browsers (`--target browser`). The bundle behaves like the unbundled program under Node, by the contract in [crates/opal-bundler/SEMANTICS.md](./crates/opal-bundler/SEMANTICS.md), and anything the bundler cannot keep that way is refused with a code naming the module and line. `--why <module>` prints the import chain that pulls a module in. It parses and prints modules on every core: on esbuild's three.js benchmark (r108 copied ten times, 3,701 files), a rebuild with the module graph cached takes 654 ms (esbuild 708 ms, bun 418 ms), median of 10 rounds on one 8-thread machine; see [benchmarks/BENCHMARKS.md](./benchmarks/BENCHMARKS.md#bundling-esbuilds-threejs-benchmark).
+- `opal graph` resolves a `.jsx`/`.tsx` file's JSX runtime import when asked to (the bundler asks), and can resolve JavaScript modules exactly as Node does, without the extensions and indexes TypeScript adds.
 
 ### Changed
 
 - **The binary is about ten times larger**, 71 MB instead of 7.4 MB, almost all of it V8. On Linux every opal command, not only `opal run`, starts about 1.5 ms later (`opal --version`: 2.6 ms before, 4.1 ms after, on one machine), most of it the loader relocating V8's data at startup.
 - **Release binaries for linux-arm64 and macos-x64 are built on machines of their own architecture**, not cross-compiled, because the build runs V8 for the target to make the startup snapshot.
+
+### Fixed
+
+- `opal graph` no longer aborts with a stack overflow on a deeply nested module. It resolves on a 256 MiB stack, as `opal build` does, where it ran on the main thread's 8 MiB and overflowed at about 20,000 chained `?:`, a program Node runs. A module whose brackets nest more than 4,000 deep is not parsed, so its imports are not followed, and `--json` lists it under `diagnostics`.
+- `opal graph` resolves `pkg/sub`, in a package with no `package.json`, to the subpath; it gave the package's index. A relative specifier ending in `/`, or `.` or `..`, now resolves to a directory only, as in Node and TypeScript; `import "."` could pick a sibling `src.ts` over `src/index.ts`. Graphs cached by earlier versions are resolved again once.
 
 ## [0.4.1] (2026-10-15)
 

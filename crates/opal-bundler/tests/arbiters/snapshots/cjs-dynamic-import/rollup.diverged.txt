@@ -1,0 +1,3 @@
+stdout differs from line 4:
+  original: "cjs: [ 'default', 'module.exports', 'y' ] cjs y"
+  bundle:   "cjs: [ 'default', 'y' ] cjs y"

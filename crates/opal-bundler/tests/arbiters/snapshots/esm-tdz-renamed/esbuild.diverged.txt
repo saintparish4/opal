@@ -1,0 +1,3 @@
+stdout differs from line 1:
+  original: "ReferenceError Cannot access 'fromMain' before initialization"
+  bundle:   "a's main's"

@@ -1,0 +1,1 @@
+{ "entry": "main.mts", "expect": { "refused": "E-TS" } }

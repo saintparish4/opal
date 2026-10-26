@@ -1,0 +1,4 @@
+{
+  "why": "A TDZ error read through an import names, in Node, the importing module's alias; the bundle reads the one binding both modules share, which has one name.",
+  "expect": { "known-divergence": { "section": "Divergences the bundler does not refuse: TDZ messages", "lines": "Cannot access" } }
+}

@@ -1,0 +1,1 @@
+{ "target": "browser", "node_flags": ["--conditions=browser"], "why": "A browser field that maps only files the bundle does not hold changes nothing, as react-dom's does." }

@@ -1,0 +1,4 @@
+{
+  "expect": { "refused": "E-LINK" },
+  "why": "In a package with no `package.json`, an `import` subpath must name the file exactly: `pkg/sub.js` resolves and `pkg/sub` fails with ERR_MODULE_NOT_FOUND, where it once resolved to the package's index."
+}

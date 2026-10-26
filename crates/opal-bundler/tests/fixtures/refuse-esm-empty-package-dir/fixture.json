@@ -1,0 +1,5 @@
+{
+  "entry": "sub/main.mjs",
+  "expect": { "refused": "E-LINK" },
+  "why": "Node's ES module resolver stops at the first `node_modules/pkg` directory it finds, so a stray one with no `package.json` and no index fails the import with ERR_MODULE_NOT_FOUND, though a real `pkg` sits further up."
+}

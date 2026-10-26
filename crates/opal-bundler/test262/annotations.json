@@ -1,0 +1,3 @@
+{
+  "test/language/module-code/namespace/internals/super-access-to-tdz-binding.js": "V8 does not read a namespace receiver's descriptor in OrdinarySet; SEMANTICS.md, Divergences the bundler does not refuse: a namespace object as the receiver of an ordinary [[Set]]."
+}

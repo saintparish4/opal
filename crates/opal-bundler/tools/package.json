@@ -1,0 +1,16 @@
+{
+  "name": "opal-bundler-tools",
+  "private": true,
+  "description": "Pinned tools the bundler's tests check it against: tsc as the TypeScript oracle, esbuild, rollup, and rolldown as arbiters and benchmark peers, trace-mapping for the source map round trip, and Playwright for the compatibility matrix's page load.",
+  "devDependencies": {
+    "@jridgewell/trace-mapping": "0.3.31",
+    "@rollup/plugin-commonjs": "29.0.3",
+    "@rollup/plugin-json": "6.1.0",
+    "@rollup/plugin-node-resolve": "16.0.3",
+    "esbuild": "0.28.2",
+    "playwright": "1.64.0",
+    "rolldown": "1.2.13",
+    "rollup": "4.64.3",
+    "typescript": "6.0.3"
+  }
+}

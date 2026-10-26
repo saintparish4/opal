@@ -1,0 +1,1 @@
+uncaught error: original Some(Uncaught { origin: "unhandledRejection", name: Some("SyntaxError"), message: Some("TypeScript import equals declaration is not supported in strip-only mode") }), bundle Some(Uncaught { origin: "unhandledRejection", name: Some("Error"), message: Some("Dynamic require of \"node:fs\" is not supported") })

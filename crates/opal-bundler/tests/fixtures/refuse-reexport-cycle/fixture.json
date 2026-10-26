@@ -1,0 +1,4 @@
+{
+  "why": "Two re-exports that lead back to the module that star-exports them: V8 meets the second circular request from an indirect export and throws \"Detected cycle while resolving name\" (test262's instn-star-iee-multi-cycle-same-name, which Node fails).",
+  "expect": { "refused": "E-LINK" }
+}

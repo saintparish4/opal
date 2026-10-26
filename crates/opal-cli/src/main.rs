@@ -1,13 +1,16 @@
 //! The `opal` binary.
 //!
-//! Implements: resolving a module graph, installing dependencies, adding and
-//! removing them, running package.json scripts and package executables,
-//! inspecting the shared cache, and upgrading itself. `build` and `test` are
-//! not here, because a command that exists and does nothing is worse than one
-//! that does not exist. The same goes for `update`
+//! Implements: resolving a module graph, bundling it, installing
+//! dependencies, adding and removing them, running package.json scripts,
+//! JavaScript and TypeScript files and package executables, inspecting the
+//! shared cache, and upgrading itself. `test` is not here, because a command
+//! that exists and does nothing is worse than one that does not exist. The
+//! same goes for `update`
 //! and the analysis commands — they arrive with the phase that implements
 //! them.
 
+#[path = "commands/build.rs"]
+mod build;
 mod progress;
 mod run;
 mod style;
@@ -62,6 +65,8 @@ struct Cli {
 enum Command {
     /// Resolve a module graph from an entry file.
     Graph(GraphArgs),
+    /// Bundle an entry into one ES module that behaves like the unbundled program.
+    Build(build::BuildArgs),
     /// Install the dependencies in package.json, or add the packages named.
     Install(InstallArgs),
     /// Add dependencies to package.json and install them.
@@ -270,6 +275,7 @@ fn run(cli: Cli) -> Result<ExitCode, Failure> {
     };
     match command {
         Command::Graph(args) => graph(args),
+        Command::Build(args) => build::build(args),
         Command::Install(args) => {
             let change = adding(&args.packages, &args.save)?;
             install_command("install", args.project, args.frozen_lockfile, change)
@@ -302,7 +308,31 @@ fn run(cli: Cli) -> Result<ExitCode, Failure> {
     }
 }
 
+/// Runs a command that resolves a module graph on a thread with the
+/// bundler's stack. Resolving parses every module, and the parser recurses
+/// once per level of nesting: 20,000 chained `?:`, which Node runs, overflow
+/// the main thread's 8 MiB and abort the process. The error crosses threads
+/// as its message, which is all that is printed of it.
+fn on_parse_stack(
+    name: &str,
+    command: impl FnOnce() -> Result<ExitCode, Failure> + Send + 'static,
+) -> Result<ExitCode, Failure> {
+    let thread = std::thread::Builder::new()
+        .name(name.to_string())
+        .stack_size(opal_bundler::STACK_SIZE)
+        .spawn(move || command().map_err(|error| error.to_string()))
+        .map_err(|error| format!("could not start the {name} thread: {error}"))?;
+    match thread.join() {
+        Ok(result) => result.map_err(Failure::from),
+        Err(panic) => std::panic::resume_unwind(panic),
+    }
+}
+
 fn graph(args: GraphArgs) -> Result<ExitCode, Failure> {
+    on_parse_stack("opal-graph", move || graph_here(args))
+}
+
+fn graph_here(args: GraphArgs) -> Result<ExitCode, Failure> {
     let entry = absolute(&args.entry)?;
     let root = match &args.root {
         Some(root) => absolute(root)?,

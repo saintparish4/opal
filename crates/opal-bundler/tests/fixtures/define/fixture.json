@@ -1,0 +1,5 @@
+{
+  "why": "Rule 14 checks against the original run with NODE_ENV=production, which the harness sets for both runs. A local binding named process is not replaced.",
+  "define": { "process.env.NODE_ENV": "\"production\"" },
+  "env": { "NODE_ENV": "production" }
+}

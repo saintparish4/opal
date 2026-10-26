@@ -28,7 +28,7 @@ opal cache verify                # re-hash the shared store and check it for cor
 opal cache gc                    # delete store files no project uses anymore
 ```
 
-> **Status**: Beta. The package manager works today — `opal install` resolves against the real npm registry and produces a `node_modules` tree Node runs against, validated on real projects (a Next.js scaffold at 365 packages, express, webpack, and a curated compatibility suite), and it is under active development, so expect rough edges and breaking releases. `opal run` runs package.json scripts and `opal x` runs package commands, both checked against npm's; running a JavaScript or TypeScript file directly (`opal run app.js`), the bundler (`opal build`), and the test runner (`opal test`) are **not implemented**.
+> **Status**: Beta. The package manager works today — `opal install` resolves against the real npm registry and produces a `node_modules` tree Node runs against, validated on real projects (a Next.js scaffold at 365 packages, express, webpack, and a curated compatibility suite), and it is under active development, so expect rough edges and breaking releases. `opal run` runs package.json scripts and `opal x` runs package commands, both checked against npm's. The bundler (`opal build`) is new and deliberately narrow: see [Bundling](#bundling). Running a JavaScript or TypeScript file (`opal run app.js`) is new too, and covers part of Node's API so far: see [Running files](#running-files). The test runner (`opal test`) is **not implemented**; its directory under `crates/` holds placeholder files only.
 
 ## Install
 
@@ -78,7 +78,7 @@ There's no canary channel; every release is a tagged [GitHub Release](https://gi
 
 ## Usage
 
-Opal has eight commands today: `opal install`, `opal add`, `opal remove`, `opal run`, `opal x`, `opal graph`, `opal cache`, and `opal upgrade`. Run `opal <command> --help` to see their flags.
+Opal has nine commands today: `opal install`, `opal add`, `opal remove`, `opal run`, `opal x`, `opal build`, `opal graph`, `opal cache`, and `opal upgrade`. Run `opal <command> --help` to see their flags.
 
 Commit `opal.lock`. In CI, run `opal install --frozen-lockfile`, which installs exactly what `opal.lock` records and fails instead of changing it.
 
@@ -118,6 +118,29 @@ opal x cowsay@1.6.0 hello        # installed once into the cache, then run
 `opal x` installs a package the first time it's asked for and reuses that install after, so a range or tag (`cowsay`, `cowsay@latest`) is resolved once, not on every run.
 
 `update`, `why`, `outdated`, `audit`, and `publish` aren't implemented yet, so the binary doesn't have them. A command that exists and does nothing is worse than one that doesn't exist.
+
+### Bundling
+
+`opal build` bundles an entry file and everything it imports into one ES module, with a source map, from the same module graph `opal graph` prints.
+
+```bash
+opal build src/main.ts                     # writes dist/main.mjs and dist/main.mjs.map
+opal build src/main.ts --target browser    # resolves with the browser condition
+opal build src/main.ts --external react    # keeps a package out of the bundle
+opal build src/main.ts --define process.env.NODE_ENV='"production"'
+opal build src/main.ts --why node_modules/ms/index.js   # the import chain that pulls a module in
+opal build src/main.tsx --target browser --assets      # images and stylesheets, as Vite imports them
+```
+
+It aims to be small and exact rather than complete. A bundle has to be indistinguishable from the unbundled program when Node runs it: same output, same exit code, same uncaught error, same evaluation order, same `.name` on every function and class, same CommonJS and JSON semantics. The contract is [crates/opal-bundler/SEMANTICS.md](./crates/opal-bundler/SEMANTICS.md), with every rule's ECMA-262 clause or Node source line. Where the bundler cannot keep a rule, it refuses with a code (`E-TLA`, `E-LINK`, …) that names the module and line, instead of writing a bundle that might behave differently.
+
+What it does: ES modules and CommonJS in any mix, cycles, live bindings, dynamic `import()`, TypeScript and JSX compiled as `tsc` compiles them, JSON, `import.meta`, Node builtins, externals, `--define`, and tree shaking of declarations that provably do nothing.
+
+What it refuses, on purpose: top-level `await` outside the entry module, `require()` of an ES module, direct `eval` in an ES module, non-JavaScript imports unless `--assets` is given, and output formats other than ES modules. Code splitting, plugins, minification, CSS processing, and HTML entry points are out of scope.
+
+How it is checked: every test fixture runs unbundled and bundled under Node and the two runs are compared; generated module graphs are fuzzed the same way, 157,547 programs in the last two-hour run with none diverging ([fuzzing](./fuzz/README.md#the-bundler)); test262's module tests run through it ([results](./crates/opal-bundler/test262/RESULTS.md)); esbuild and rollup are held to the same Node runs of the same fixtures ([results](./crates/opal-bundler/tests/arbiters/RESULTS.md)); the CommonJS export lexer is a port of Node's own, checked against Node on 20,998 files from npm, the compat starters' dependencies; and the Nest, Express, and vite-react starters run from their bundles in the [compatibility matrix](./compat/COMPATIBILITY.md).
+
+How fast it is: on esbuild's three.js benchmark (3,701 files), a rebuild with the module graph cached takes 654 ms, against 708 ms for esbuild and 418 ms for bun, and a build from nothing takes 867 ms. The method and every number are in [benchmarks/BENCHMARKS.md](./benchmarks/BENCHMARKS.md#bundling-esbuilds-threejs-benchmark).
 
 ## Benchmarks
 
@@ -171,6 +194,7 @@ Worth knowing before you point Opal at a project:
 - **Lifecycle scripts (`preinstall`/`install`/`postinstall`) do not run.** Packages shipping prebuilt binaries (`esbuild`, `sharp`, `@next/swc`) work; a package that needs `node-gyp` to compile at install time installs but does not build. `opal install` says so on every run: it names each dependency whose install scripts were skipped (including native addons that declare none and rely on npm running `node-gyp rebuild` for their `binding.gyp`), and the project's own lifecycle scripts, `prepare` included.
 - **`libc` isn't checked.** On Linux with glibc (most distributions), Opal also installs the musl builds of native packages, which npm and pnpm skip. On a Next.js app that's six extra packages and 124 MB, 91 MB of it `@next/swc-linux-x64-musl`. A glibc system doesn't use them, but they cost download time and disk.
 - **Peers are recorded and classified, never auto-installed.**
+- **`opal build` refuses more than other bundlers.** It refuses what it cannot bundle exactly (see [Bundling](#bundling)). The bundle reads its own location to find the original files' paths for `__filename`, `import.meta.url`, and runtime `require()`, so keep it next to the project it was built from.
 - **Versions can differ slightly from npm's.** Opal reuses a version already in the tree whenever it satisfies a range, where npm sometimes adds a newer copy: on a Next.js app, that's one package (`postcss` 8.5.23, where npm also installs 8.5.28). Opal doesn't prefer versions whose `engines` match your Node, which npm does. And it doesn't honor `bundleDependencies`: packages a dependency ships inside its own tarball are also resolved and downloaded from the registry, though Node still loads the bundled copy.
 - **`package-lock.json` is ignored.** In a project npm already installed, the first `opal install` resolves every version and downloads every package again.
 - **`git:` and `file:` specifiers are unsupported** and reported as such; dependencies come from a registry only.

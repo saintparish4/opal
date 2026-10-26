@@ -1,0 +1,1 @@
+{ "why": "Node does not add extensions to an ES module import, so it cannot link this program; neither may the bundle.", "expect": { "refused": "E-LINK" } }

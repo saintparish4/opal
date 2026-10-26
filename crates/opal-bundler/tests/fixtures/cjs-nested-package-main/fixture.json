@@ -1,0 +1,4 @@
+{
+  "entry": "main.cjs",
+  "why": "A package's `main` naming a directory loads that directory's index, and Node's `tryPackage` never reads a `package.json` inside it: with no `lib/index.js`, `require(\"nested\")` throws MODULE_NOT_FOUND."
+}

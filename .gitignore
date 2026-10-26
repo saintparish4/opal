@@ -9,3 +9,4 @@ base/
 /website/dist
 /website/.astro
 __pycache__/
+/crates/opal-bundler/tools/node_modules

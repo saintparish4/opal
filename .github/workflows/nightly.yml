@@ -42,6 +42,11 @@ jobs:
           node-version: "24"
       - name: Build
         run: cargo build --release --locked -p opal-cli
+      # The vite-react bundle's page load: Playwright and its Chromium.
+      - name: Install the bundler's tools
+        run: |
+          npm ci --prefix crates/opal-bundler/tools
+          cd crates/opal-bundler/tools && npx playwright install --with-deps chromium
       - name: Run
         run: |
           set -o pipefail

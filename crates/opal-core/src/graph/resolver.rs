@@ -21,12 +21,12 @@ use std::rc::Rc;
 use oxc_allocator::Allocator;
 use oxc_ast::ast::{
     Argument, CallExpression, ExportAllDeclaration, ExportFromDeclaration, Expression,
-    ImportDeclaration, ImportExpression, ImportOrExportKind, TSImportEqualsDeclaration,
+    ImportDeclaration, ImportExpression, ImportOrExportKind, Program, TSImportEqualsDeclaration,
     TSModuleReference,
 };
 use oxc_ast_visit::{Visit, walk};
 use oxc_parser::Parser;
-use oxc_span::SourceType;
+use oxc_span::{GetSpan, SourceType};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
@@ -108,7 +108,37 @@ pub struct ResolverOptions {
     /// `import type { T } from './t'` erases at compile time, so by default it
     /// is not an edge. Type-checking tools would want it on.
     pub follow_type_only_imports: bool,
+    /// The import source of the JSX automatic runtime (`react`), or `None`
+    /// for no JSX edges. When set, a `.jsx` or `.tsx` file that contains JSX
+    /// also depends on `<source>/jsx-runtime`, the import a JSX compiler
+    /// adds. A `@jsxImportSource` pragma overrides the source for its file,
+    /// and `@jsxRuntime classic` removes the edge, as they do for the
+    /// compiler.
+    pub jsx_runtime: Option<String>,
+    /// Resolve a JavaScript importer's specifiers exactly as Node 24 does:
+    /// an `import` of a relative path names the file itself, with no
+    /// extension or directory index added; a `require` adds only `.js`,
+    /// `.json`, and `.node`; and a package `main` follows Node's legacy main
+    /// resolution. Off, the resolver also accepts what TypeScript and
+    /// bundlers accept. TypeScript and JSX importers resolve the permissive
+    /// way either way, since what runs them is a compiler, not Node.
+    pub node_exact: bool,
 }
+
+/// How a specifier may be completed into a file.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Probing {
+    /// Extensions from the options, directory indexes, and TypeScript's
+    /// `.js` to `.ts` rewrite.
+    Permissive,
+    /// Node's ES module resolution: the file as named.
+    NodeEsm,
+    /// Node's CommonJS resolution: `.js`, `.json`, `.node`, and indexes.
+    NodeCjs,
+}
+
+/// `Module._extensions` in Node 24, the only extensions `require()` adds.
+const NODE_EXTENSIONS: [&str; 3] = [".js", ".json", ".node"];
 
 impl Default for ResolverOptions {
     fn default() -> Self {
@@ -121,6 +151,8 @@ impl Default for ResolverOptions {
             .collect(),
             conditions: vec!["node".to_string()],
             follow_type_only_imports: false,
+            jsx_runtime: None,
+            node_exact: false,
         }
     }
 }
@@ -138,6 +170,15 @@ impl ResolverOptions {
             builder.push_str(condition);
         }
         builder.push_u64(u64::from(self.follow_type_only_imports));
+        // Only when set, so a graph resolved without JSX edges keeps the key
+        // it had before the option existed.
+        if let Some(source) = &self.jsx_runtime {
+            builder.push_str("jsx-runtime");
+            builder.push_str(source);
+        }
+        if self.node_exact {
+            builder.push_str("node-exact");
+        }
         builder.finish()
     }
 }
@@ -147,10 +188,17 @@ impl ResolverOptions {
 /// `files` are paths that were read, with the content that was read. `missing`
 /// are paths probed and found absent — probed *before* the candidate that won,
 /// so the set is exactly the negative facts the result relies on.
+/// `directories` and `missing_directories` are directories whose existence a
+/// resolution turned on: Node's ES module resolver stops at the first
+/// `node_modules/<name>` directory, whatever is in it.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ResolveTrace {
     pub files: BTreeMap<NormalizedPath, ContentHash>,
     pub missing: BTreeSet<NormalizedPath>,
+    #[serde(default)]
+    pub directories: BTreeSet<NormalizedPath>,
+    #[serde(default)]
+    pub missing_directories: BTreeSet<NormalizedPath>,
 }
 
 pub struct Resolution {
@@ -179,6 +227,8 @@ struct Resolver<'a> {
     builder: ModuleGraphBuilder,
     files: BTreeMap<NormalizedPath, ContentHash>,
     missing: BTreeSet<NormalizedPath>,
+    directories: BTreeSet<NormalizedPath>,
+    missing_directories: BTreeSet<NormalizedPath>,
     /// Directory -> parsed package.json. `Rc` because resolution reads a
     /// manifest while holding `&mut self`; single-threaded for now, and future
     /// parallelism would move this to `Arc` plus a shared cache.
@@ -187,6 +237,8 @@ struct Resolver<'a> {
     /// What each loaded file turned out to be. Kept because an extensionless
     /// file's kind is decided by its first line, which only `load` has seen.
     kinds: HashMap<NormalizedPath, SourceKind>,
+    /// How the specifier being resolved may be completed.
+    probing: Probing,
 }
 
 impl<'a> Resolver<'a> {
@@ -197,9 +249,12 @@ impl<'a> Resolver<'a> {
             options,
             files: BTreeMap::new(),
             missing: BTreeSet::new(),
+            directories: BTreeSet::new(),
+            missing_directories: BTreeSet::new(),
             manifests: HashMap::new(),
             sources: HashMap::new(),
             kinds: HashMap::new(),
+            probing: Probing::Permissive,
         }
     }
 
@@ -218,6 +273,7 @@ impl<'a> Resolver<'a> {
         while let Some((id, path)) = queue.pop_front() {
             for (specifier, kind) in self.dependencies_of(&path)? {
                 let directory = path.parent().unwrap_or_else(|| self.root.clone());
+                self.probing = self.probing_for(&path, kind);
                 let target = self.resolve_specifier(&directory, &specifier, kind);
                 let target = match target {
                     Target::Builtin(name) => DependencyTarget::Builtin { name },
@@ -264,6 +320,8 @@ impl<'a> Resolver<'a> {
                     .map(|(path, hash)| (relative(path), hash))
                     .collect(),
                 missing: self.missing.into_iter().map(relative).collect(),
+                directories: self.directories.into_iter().map(relative).collect(),
+                missing_directories: self.missing_directories.into_iter().map(relative).collect(),
             },
             graph: self.builder.finish(),
         })
@@ -294,6 +352,15 @@ impl<'a> Resolver<'a> {
             None => return Ok(Vec::new()),
         };
 
+        if nests_deeper_than(&source, MAX_BRACKET_NESTING) {
+            self.builder.add_diagnostic(
+                path,
+                format!(
+                    "brackets nest more than {MAX_BRACKET_NESTING} deep; not parsed, so its imports are not followed"
+                ),
+            );
+            return Ok(Vec::new());
+        }
         let source_type = SourceType::from_path(path.as_path()).unwrap_or_default();
         let allocator = Allocator::default();
         let parsed = Parser::new(&allocator, &source, source_type).parse();
@@ -314,8 +381,21 @@ impl<'a> Resolver<'a> {
         let mut collector = ImportCollector {
             found: Vec::new(),
             follow_type_only: self.options.follow_type_only_imports,
+            has_jsx: false,
         };
         collector.visit_program(&parsed.program);
+        if collector.has_jsx
+            && let Some(source) = jsx_runtime_source(
+                self.options.jsx_runtime.as_deref(),
+                &source,
+                &parsed.program,
+            )
+        {
+            collector.push(
+                &format!("{source}/jsx-runtime"),
+                DependencyKind::StaticImport,
+            );
+        }
 
         let mut seen = HashSet::new();
         Ok(collector
@@ -351,7 +431,7 @@ impl<'a> Resolver<'a> {
             || specifier == "..";
         if is_relative || specifier.starts_with('/') {
             let base = from.join(specifier);
-            return match self.resolve_path(&base) {
+            return match self.resolve_written(&base, specifier) {
                 Some(path) => Target::Path(path),
                 None => {
                     Target::Unresolved("no file, extension, or directory index matched".to_string())
@@ -407,15 +487,32 @@ impl<'a> Resolver<'a> {
         let manifest = self.manifest(package_dir);
 
         let Some(manifest) = manifest else {
-            // No package.json: only a directory-with-index counts as a package,
-            // which keeps a stray empty directory from shadowing a real
-            // package further up.
-            let resolved = self.resolve_directory(package_dir)?;
-            return Some(Target::Path(resolved));
+            return self.resolve_package_without_manifest(package_dir, subpath);
         };
 
         if let Some(exports) = manifest.get("exports") {
             return Some(self.resolve_exports(package_dir, exports, subpath, kind));
+        }
+
+        if subpath == "." && self.probing != Probing::Permissive {
+            // `tryPackage` for `require()` and `legacyMainResolve` for
+            // `import`: `main` as a file, with an extension, or as a
+            // directory's index, then the package's own index. Neither reads
+            // a package.json inside `main`.
+            return match self.resolve_directory_as_node(package_dir) {
+                Some(resolved) => Some(Target::Path(resolved)),
+                // `require()` moves on to the next `node_modules` from a
+                // package with no `main` and no index, and throws for a
+                // `main` that names nothing.
+                None if self.probing == Probing::NodeCjs
+                    && manifest.get("main").and_then(Value::as_str).is_none() =>
+                {
+                    None
+                }
+                None => Some(Target::Unresolved(
+                    "package has no main and no index file".to_string(),
+                )),
+            };
         }
 
         if subpath == "." {
@@ -432,10 +529,68 @@ impl<'a> Resolver<'a> {
         }
 
         let candidate = package_dir.join(subpath.trim_start_matches("./"));
-        Some(match self.resolve_path(&candidate) {
-            Some(resolved) => Target::Path(resolved),
-            None => Target::Unresolved(format!("{subpath} is not a file in the package")),
-        })
+        match self.resolve_written(&candidate, subpath) {
+            Some(resolved) => Some(Target::Path(resolved)),
+            // `require()` tries the subpath under each `node_modules` in turn.
+            None if self.probing == Probing::NodeCjs => None,
+            None => Some(Target::Unresolved(format!(
+                "{subpath} is not a file in the package"
+            ))),
+        }
+    }
+
+    /// A `node_modules/<name>` directory with no package.json.
+    fn resolve_package_without_manifest(
+        &mut self,
+        package_dir: &NormalizedPath,
+        subpath: &str,
+    ) -> Option<Target> {
+        if self.probing == Probing::NodeEsm {
+            // Node's ES module resolver stops at the first such directory,
+            // whatever is in it, and resolves there or fails.
+            if !self.directory_exists(package_dir) {
+                return None;
+            }
+            let resolved = if subpath == "." {
+                self.resolve_directory_as_node(package_dir)
+            } else {
+                let candidate = package_dir.join(subpath.trim_start_matches("./"));
+                self.resolve_written(&candidate, subpath)
+            };
+            return Some(match resolved {
+                Some(resolved) => Target::Path(resolved),
+                None => Target::Unresolved(format!(
+                    "{subpath} is not a file in a package directory with no package.json"
+                )),
+            });
+        }
+        // `require()`, and the permissive resolver, move past a directory
+        // that has nothing for the specifier, which also keeps a stray empty
+        // directory from shadowing a real package further up.
+        let resolved = if subpath == "." {
+            self.resolve_directory(package_dir)
+        } else {
+            let candidate = package_dir.join(subpath.trim_start_matches("./"));
+            self.resolve_written(&candidate, subpath)
+        }?;
+        Some(Target::Path(resolved))
+    }
+
+    /// `candidate` as the specifier wrote it: a path ending in `/`, or `.` or
+    /// `..`, names a directory only (`Module._findPath`), and the ES module
+    /// resolver imports no directory (ERR_UNSUPPORTED_DIR_IMPORT).
+    fn resolve_written(
+        &mut self,
+        candidate: &NormalizedPath,
+        written: &str,
+    ) -> Option<NormalizedPath> {
+        if !names_a_directory(written) {
+            return self.resolve_path(candidate);
+        }
+        match self.probing {
+            Probing::NodeEsm => None,
+            _ => self.resolve_directory(candidate),
+        }
     }
 
     /// Node's `exports` resolution, minus the parts we do not need.
@@ -502,10 +657,37 @@ impl<'a> Resolver<'a> {
         conditions
     }
 
+    fn probing_for(&self, importer: &NormalizedPath, kind: DependencyKind) -> Probing {
+        if !self.options.node_exact || self.kind_of(importer) != SourceKind::JavaScript {
+            return Probing::Permissive;
+        }
+        if kind.is_require_like() {
+            Probing::NodeCjs
+        } else {
+            Probing::NodeEsm
+        }
+    }
+
     /// File, then file+extension, then directory index.
     fn resolve_path(&mut self, candidate: &NormalizedPath) -> Option<NormalizedPath> {
         if self.probe(candidate) {
             return Some(candidate.clone());
+        }
+        match self.probing {
+            // Node's ESM resolver does not complete a path; a directory is
+            // ERR_UNSUPPORTED_DIR_IMPORT and a missing extension is
+            // ERR_MODULE_NOT_FOUND.
+            Probing::NodeEsm => return None,
+            Probing::NodeCjs => {
+                for extension in NODE_EXTENSIONS {
+                    let with_extension = candidate.with_suffix(extension);
+                    if self.probe(&with_extension) {
+                        return Some(with_extension);
+                    }
+                }
+                return self.resolve_directory(candidate);
+            }
+            Probing::Permissive => {}
         }
         for extension in &self.options.extensions.clone() {
             let with_extension = candidate.with_suffix(extension);
@@ -534,6 +716,9 @@ impl<'a> Resolver<'a> {
     }
 
     fn resolve_directory(&mut self, directory: &NormalizedPath) -> Option<NormalizedPath> {
+        if self.probing != Probing::Permissive {
+            return self.resolve_directory_as_node(directory);
+        }
         if let Some(manifest) = self.manifest(directory)
             && let Some(main) = manifest.get("main").and_then(Value::as_str)
         {
@@ -549,6 +734,40 @@ impl<'a> Resolver<'a> {
             }
         }
         for extension in &self.options.extensions.clone() {
+            let candidate = directory.join("index").with_suffix(extension);
+            if self.probe(&candidate) {
+                return Some(candidate);
+            }
+        }
+        None
+    }
+
+    /// A directory as Node finds its file: `main` as named, with each
+    /// extension, or as a directory's index, then the directory's own index.
+    /// This is `tryPackage` for `require()` and `legacyMainResolve` for
+    /// `import`, which try the same list.
+    fn resolve_directory_as_node(&mut self, directory: &NormalizedPath) -> Option<NormalizedPath> {
+        if let Some(manifest) = self.manifest(directory)
+            && let Some(main) = manifest.get("main").and_then(Value::as_str)
+        {
+            let main = directory.join(main);
+            if self.probe(&main) {
+                return Some(main);
+            }
+            for extension in NODE_EXTENSIONS {
+                let candidate = main.with_suffix(extension);
+                if self.probe(&candidate) {
+                    return Some(candidate);
+                }
+            }
+            for extension in NODE_EXTENSIONS {
+                let candidate = main.join("index").with_suffix(extension);
+                if self.probe(&candidate) {
+                    return Some(candidate);
+                }
+            }
+        }
+        for extension in NODE_EXTENSIONS {
             let candidate = directory.join("index").with_suffix(extension);
             if self.probe(&candidate) {
                 return Some(candidate);
@@ -689,6 +908,27 @@ impl<'a> Resolver<'a> {
             false
         }
     }
+
+    /// Whether `path` is a directory, recorded in the trace either way.
+    fn directory_exists(&mut self, path: &NormalizedPath) -> bool {
+        if path.as_path().is_dir() {
+            self.directories.insert(path.clone());
+            true
+        } else {
+            self.missing_directories.insert(path.clone());
+            false
+        }
+    }
+}
+
+/// Whether a specifier names a directory only: it ends in `/`, or its last
+/// segment is `.` or `..`.
+fn names_a_directory(specifier: &str) -> bool {
+    specifier.ends_with('/')
+        || specifier
+            .rsplit('/')
+            .next()
+            .is_some_and(|last| last == "." || last == "..")
 }
 
 fn is_builtin(specifier: &str) -> bool {
@@ -809,6 +1049,72 @@ fn source_kind_of(path: &NormalizedPath) -> SourceKind {
 struct ImportCollector {
     found: Vec<(String, DependencyKind)>,
     follow_type_only: bool,
+    has_jsx: bool,
+}
+
+/// The JSX runtime a file's JSX compiles against: its `@jsxImportSource`
+/// pragma, else the configured default, and none under `@jsxRuntime
+/// classic`. Pragmas are read as oxc's transformer reads them
+/// (`oxc_transformer/src/jsx/comments.rs`), so the edge is the import the
+/// compiled file makes: only in comments before the first statement, the
+/// last of each kind winning.
+fn jsx_runtime_source<'s>(
+    default: Option<&'s str>,
+    source: &'s str,
+    program: &Program<'_>,
+) -> Option<&'s str> {
+    let default = default?;
+    let Some(first) = program.body.first() else {
+        return Some(default);
+    };
+    let (mut automatic, mut chosen) = (true, default);
+    for comment in program
+        .comments
+        .iter()
+        .take_while(|comment| comment.span.start < first.span().start)
+    {
+        let mut text = comment.content_span().source_text(source);
+        while let Some((keyword, value, rest)) = jsx_pragma(text) {
+            match (keyword, value) {
+                ("Runtime", "classic") => automatic = false,
+                ("Runtime", "automatic") => automatic = true,
+                ("ImportSource", value) => chosen = value,
+                _ => {}
+            }
+            text = rest;
+        }
+    }
+    automatic.then_some(chosen)
+}
+
+/// The next `@jsx` pragma in a comment's text, as oxc finds it: an `@` at
+/// the start or after whitespace or `*`, then `jsx`, a keyword (``,
+/// `Runtime`, `ImportSource`, `Frag`), spaces or tabs, and a value up to
+/// the next whitespace. Returns the keyword, the value, and the rest.
+fn jsx_pragma(mut text: &str) -> Option<(&str, &str, &str)> {
+    loop {
+        let at = text.find('@')?;
+        let after = &text[at + 1..];
+        let starts =
+            at == 0 || matches!(text.as_bytes()[at - 1], b' ' | b'\t' | b'\r' | b'\n' | b'*');
+        let Some(after) = after.strip_prefix("jsx").filter(|_| starts) else {
+            text = after;
+            continue;
+        };
+        let space = after.find([' ', '\t'])?;
+        let keyword = &after[..space];
+        text = &after[space + 1..];
+        if !matches!(keyword, "" | "Runtime" | "ImportSource" | "Frag") {
+            continue;
+        }
+        let value_start = text.trim_start_matches([' ', '\t']);
+        let end = value_start
+            .find([' ', '\t', '\r', '\n', '\x0B', '\x0C'])
+            .unwrap_or(value_start.len());
+        let value = &value_start[..end];
+        let rest = value_start.get(end + 1..).unwrap_or("");
+        return (!value.is_empty()).then_some((keyword, value, rest));
+    }
 }
 
 impl ImportCollector {
@@ -862,6 +1168,16 @@ impl<'a> Visit<'a> for ImportCollector {
         walk::walk_call_expression(self, call);
     }
 
+    fn visit_jsx_element(&mut self, element: &oxc_ast::ast::JSXElement<'a>) {
+        self.has_jsx = true;
+        walk::walk_jsx_element(self, element);
+    }
+
+    fn visit_jsx_fragment(&mut self, fragment: &oxc_ast::ast::JSXFragment<'a>) {
+        self.has_jsx = true;
+        walk::walk_jsx_fragment(self, fragment);
+    }
+
     fn visit_ts_import_equals_declaration(&mut self, declaration: &TSImportEqualsDeclaration<'a>) {
         if let TSModuleReference::ExternalModuleReference(reference) = &declaration.module_reference
             && self.keeps(declaration.import_kind)
@@ -870,6 +1186,32 @@ impl<'a> Visit<'a> for ImportCollector {
         }
         walk::walk_ts_import_equals_declaration(self, declaration);
     }
+}
+
+/// How deep `(`, `[`, and `{` may nest in a file the resolver parses. The
+/// parser recurses once per bracket, and a file nested deeper could
+/// overflow the caller's stack and abort the process; V8 itself rejects
+/// about 5,000 nested parentheses.
+pub const MAX_BRACKET_NESTING: usize = 4_000;
+
+/// Whether `(`, `[`, and `{` nest deeper than `limit` in `source`. Brackets
+/// inside strings, comments, and regular expressions count too, opening and
+/// closing, so the count can be off either way for a file that has them.
+pub fn nests_deeper_than(source: &str, limit: usize) -> bool {
+    let mut depth = 0usize;
+    for byte in source.bytes() {
+        match byte {
+            b'(' | b'[' | b'{' => {
+                depth += 1;
+                if depth > limit {
+                    return true;
+                }
+            }
+            b')' | b']' | b'}' => depth = depth.saturating_sub(1),
+            _ => {}
+        }
+    }
+    false
 }
 
 #[cfg(test)]
@@ -980,5 +1322,54 @@ mod tests {
         let mut changed = baseline.clone();
         changed.follow_type_only_imports = true;
         assert_ne!(baseline.digest(), changed.digest());
+    }
+
+    #[test]
+    fn test_options_digest_changes_with_the_bundlers_options() {
+        let baseline = ResolverOptions::default();
+        let mut react = baseline.clone();
+        react.jsx_runtime = Some("react".into());
+        let mut preact = baseline.clone();
+        preact.jsx_runtime = Some("preact".into());
+        let mut exact = baseline.clone();
+        exact.node_exact = true;
+        let digests = [
+            baseline.digest(),
+            react.digest(),
+            preact.digest(),
+            exact.digest(),
+        ];
+        for (i, digest) in digests.iter().enumerate() {
+            for other in &digests[i + 1..] {
+                assert_ne!(digest, other);
+            }
+        }
+    }
+
+    #[test]
+    fn test_options_digest_is_unchanged_while_the_bundlers_options_are_unset() {
+        // The digest as it was before `jsx_runtime` and `node_exact`, so a
+        // graph cached then keeps its key.
+        let options = ResolverOptions::default();
+        let mut builder = HashBuilder::new("opal.resolver.options.v1");
+        builder.push_u64(options.extensions.len() as u64);
+        for extension in &options.extensions {
+            builder.push_str(extension);
+        }
+        builder.push_u64(options.conditions.len() as u64);
+        for condition in &options.conditions {
+            builder.push_str(condition);
+        }
+        builder.push_u64(u64::from(options.follow_type_only_imports));
+        assert_eq!(options.digest(), builder.finish());
+    }
+
+    #[test]
+    fn test_bracket_nesting_is_measured_across_kinds() {
+        assert!(!nests_deeper_than("f([{}])", 3));
+        assert!(nests_deeper_than("f([{(}])", 3));
+        // Closing more than was opened does not go below zero.
+        assert!(!nests_deeper_than(")))(((", 3));
+        assert!(nests_deeper_than(")))((((", 3));
     }
 }

@@ -1,0 +1,1 @@
+{ "why": "A lazy module runs in a generator, whose arguments a top-level read of arguments would see; in an ES module it is a global.", "expect": { "refused": "E-UNSUPPORTED" } }

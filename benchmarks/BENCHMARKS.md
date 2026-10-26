@@ -13,6 +13,7 @@ Opal against npm, pnpm, yarn, and bun, each installing the same `package.json`. 
 - [Concurrent installs on one store](#concurrent-installs-on-one-store)
 - [The internal install benchmark](#the-internal-install-benchmark)
   - [Scaling: package count and peak memory](#scaling-package-count-and-peak-memory)
+- [Bundling: esbuild's three.js benchmark](#bundling-esbuilds-threejs-benchmark)
 
 ## Method
 
@@ -499,3 +500,58 @@ What it shows:
 - **So does memory, and it stays small:** about 14 KiB per package cold and 12 KiB warm, on top of about 22 MiB. 10,000 packages peak at 158 MiB.
 - **Package count doesn't explain Opal's 491 MB on the Next.js app; its metadata does.** Measured the same day with GNU time on the real app, a cold install, which resolves, peaked at 494 MiB, and a lockfile-only install, which reads no metadata, at 172 MiB. Those 418 packuments are 185 MiB of JSON on disk, and the resolver keeps every one for the whole run. The packuments here have 12 versions each; real ones have hundreds or thousands.
 - **Bytes in flight come next.** The scaffold workload, with real-sized tarballs, peaks at 85 MiB cold against 12 MiB for a no-op: up to 16 tarballs are held in memory at once.
+
+## Bundling: esbuild's three.js benchmark
+
+`opal build` against esbuild, rolldown, and bun on the fixture esbuild's own published numbers use (`make bench-three` in esbuild's repository): three.js r108's `src` copied ten times, 3,701 files, and an entry that imports each copy as a namespace and re-exports it. The harness is [`compare-bundlers.py`](./compare-bundlers.py).
+
+The method is this file's:
+
+- **Same work.** Every tool writes one ES module with a source map, unminified, since opal does not minify. esbuild with `--minify`, its published configuration, is timed too, for scale.
+- **Correctness.** Before timing, each tool's bundle is imported under Node, and its export names and a `Vector3` computation are compared with the unbundled program's. A tool whose bundle fails gets no number.
+- **Interleaving.** 2 untimed rounds, then 10 timed ones. Each round runs every tool once, starting from a different tool each round.
+- **Measurement.** Wall time and peak RSS come from `wait4` on the tool's process. esbuild runs as its native binary, not the Node shim npm installs; rolldown's CLI is a Node program and runs as one.
+- **opal twice.** With its module graph cache emptied before each run (untimed), and with the cache warm, which is a rebuild of an unchanged project. Its phase timers (`--timings`) are the median of 5 more builds of each kind.
+
+### Results: 2026-10-25, `bundler-p0` at `17dbd45`
+
+AMD Ryzen 5 5625U (WSL limited to 8 of 12 threads), 16 GB RAM, Linux under WSL2, Node 24.19.0. Raw samples: [`results/bundlers-20261025-020040.json`](./results/bundlers-20261025-020040.json). The run's `repository` field reads `c66e870-dirty`: the binary was built from `c66e870` with the parallel build uncommitted, and that change was then committed unaltered as `17dbd45`. Its `opal --revision` reads `84c7a7f`, a stale value the build script did not refresh in this worktree; the SHA-256 of the binary is recorded too.
+
+| | Median | Min | Max | Peak memory | Bundle |
+|---|---|---|---|---|---|
+| opal, graph cache empty | 867 ms | 806 ms | 1128 ms | 302 MB | 11.1 MB |
+| opal, graph cache warm | 654 ms | 624 ms | 755 ms | 302 MB | 11.1 MB |
+| opal before `17dbd45`, cache warm | 1111 ms | 1079 ms | 1573 ms | 285 MB | 11.1 MB |
+| esbuild 0.28.2 | 708 ms | 693 ms | 772 ms | 535 MB | 10.8 MB |
+| esbuild 0.28.2 `--minify` | 714 ms | 658 ms | 816 ms | 532 MB | 6.1 MB |
+| rolldown 1.2.13 | 1682 ms | 1651 ms | 1766 ms | 722 MB | 10.1 MB |
+| bun 1.4.2 | **418 ms** | **402 ms** | **437 ms** | 336 MB | 10.6 MB |
+
+opal's phases, median of 5 builds each:
+
+| | resolve | parse | link | print | write |
+|---|---|---|---|---|---|
+| graph cache empty | 278 ms | 160 ms | 64 ms | 170 ms | 527 ms |
+| graph cache warm | 57 ms | 187 ms | 67 ms | 175 ms | 83 ms |
+| before `17dbd45`, warm | 56 ms | 409 ms | 187 ms | 299 ms | 83 ms |
+
+### What these show
+
+- **bun is fastest, opal with a warm graph is second, and esbuild is close behind.** Without the graph cache, opal is about 20% slower than esbuild. rolldown, which starts in Node, is slowest.
+- **Parallel parse and print made opal 1.7× faster on this fixture.** The row before `17dbd45` is the sequential build, timed on the same rounds; the harness checked that both builds wrote the same bundle and map, byte for byte.
+- **opal has the lowest peak memory of the five,** 302 MB against bun's 336 MB and esbuild's 535 MB.
+- **The empty-cache write phase is an artifact of the method.** Each of those builds runs right after the cache directory is deleted. On a three-copy fixture, the cold write phase measured the same as the warm one.
+- **The bundles do not all promise the same.** opal keeps every function's and class's `.name` and the program's evaluation order, as [SEMANTICS.md](../crates/opal-bundler/SEMANTICS.md) requires. esbuild by default does not keep names, and [the arbiter runs](../crates/opal-bundler/tests/arbiters/RESULTS.md) show where each bundler's output behaves differently from the program.
+
+### Reproducing
+
+You need git, Node, bun on `PATH`, and `npm ci` in `crates/opal-bundler/tools` for esbuild and rolldown. The first run clones three.js r108 into `target/bench-bundlers`. A run takes a few minutes.
+
+```sh
+cargo build --release -p opal-cli
+python3 benchmarks/compare-bundlers.py --opal target/release/opal
+```
+
+- `--baseline <binary>` times a second opal build on the same rounds, and checks that it writes the same bundle.
+- `--runs N` sets the number of timed rounds (default 10).
+- `--results DIR` sets where the raw samples go (default `benchmarks/results/`).
