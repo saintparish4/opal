@@ -1,0 +1,24 @@
+name: V8's static library
+description: >
+  Puts back the static library the v8 crate's build script downloads, when a
+  restored cache has dropped it.
+# Swatinem/rust-cache keeps only cargo's own folders under target/<profile>
+# (build, deps, .fingerprint), so a restored cache can hold v8's build-script
+# output without what the script left beside them (gn_out/obj/librusty_v8.a
+# and gn_out/src_binding.rs). Cargo sees the script as up to date and doesn't
+# run it again, and compiling v8, which anything it depends on changing makes
+# it do, fails to find the library. Cleaning v8 makes cargo run the script,
+# which downloads the library again.
+runs:
+  using: composite
+  steps:
+    - name: Clean v8 if its library is missing
+      shell: bash
+      run: |
+        for profile in debug release; do
+          if compgen -G "target/$profile/build/v8-*/output" > /dev/null \
+            && [ ! -e "target/$profile/gn_out/obj/librusty_v8.a" ]; then
+            echo "target/$profile has v8's build output but not its library; cleaning v8"
+            if [ "$profile" = release ]; then cargo clean -p v8 --release; else cargo clean -p v8; fi
+          fi
+        done

@@ -36,6 +36,8 @@ jobs:
         run: rustup show
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
+      - name: V8's static library
+        uses: ./.github/actions/rusty-v8
       - name: Install Node
         uses: actions/setup-node@v7
         with:
@@ -84,6 +86,8 @@ jobs:
         run: rustup show
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
+      - name: V8's static library
+        uses: ./.github/actions/rusty-v8
       - name: Run
         run: |
           set -o pipefail
@@ -124,6 +128,8 @@ jobs:
         run: rustup show
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
+      - name: V8's static library
+        uses: ./.github/actions/rusty-v8
       - name: Run
         run: |
           set -o pipefail
@@ -162,6 +168,8 @@ jobs:
         run: rustup show
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
+      - name: V8's static library
+        uses: ./.github/actions/rusty-v8
       - name: Run
         run: |
           set -euo pipefail

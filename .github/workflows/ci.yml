@@ -30,6 +30,8 @@ jobs:
 
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
+      - name: V8's static library
+        uses: ./.github/actions/rusty-v8
 
       - name: Format
         run: cargo fmt --all -- --check
@@ -62,6 +64,8 @@ jobs:
         run: rustup show
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
+      - name: V8's static library
+        uses: ./.github/actions/rusty-v8
       - name: Install
         run: cargo test -p opal-cli --test npm-compatibility -- --ignored test_install
 
@@ -75,6 +79,8 @@ jobs:
         run: rustup show
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
+      - name: V8's static library
+        uses: ./.github/actions/rusty-v8
       # The installed tree has to run, not merely exist, so this job needs a
       # Node to run it with.
       - name: Install Node
@@ -98,6 +104,8 @@ jobs:
         run: rustup show
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
+      - name: V8's static library
+        uses: ./.github/actions/rusty-v8
       - name: Install Node
         uses: actions/setup-node@v7
         with:
@@ -119,6 +127,8 @@ jobs:
         run: rustup show
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
+      - name: V8's static library
+        uses: ./.github/actions/rusty-v8
       - name: Install Node
         uses: actions/setup-node@v7
         with:
@@ -146,6 +156,8 @@ jobs:
         run: rustup show
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
+      - name: V8's static library
+        uses: ./.github/actions/rusty-v8
       - name: Install Node
         uses: actions/setup-node@v7
         with:
@@ -169,6 +181,8 @@ jobs:
         run: rustup show
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
+      - name: V8's static library
+        uses: ./.github/actions/rusty-v8
       - name: Install Node
         uses: actions/setup-node@v7
         with:
@@ -194,6 +208,8 @@ jobs:
         run: rustup show
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
+      - name: V8's static library
+        uses: ./.github/actions/rusty-v8
       - name: Install Node
         uses: actions/setup-node@v7
         with:
@@ -219,6 +235,8 @@ jobs:
         run: rustup show
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
+      - name: V8's static library
+        uses: ./.github/actions/rusty-v8
       - name: Build opal
         run: cargo build -p opal-cli
       - name: Checksums
@@ -256,6 +274,8 @@ jobs:
         run: rustup show
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
+      - name: V8's static library
+        uses: ./.github/actions/rusty-v8
       # Pinned for the same reason: a new cargo-deny release must not be able
       # to fail a pull request that didn't touch a dependency.
       - name: Install cargo-deny
@@ -279,6 +299,8 @@ jobs:
         run: rustup show
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
+      - name: V8's static library
+        uses: ./.github/actions/rusty-v8
       - name: Install strace
         run: sudo apt-get update && sudo apt-get install -y strace
       - name: Build
@@ -310,6 +332,8 @@ jobs:
         run: rustup show
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
+      - name: V8's static library
+        uses: ./.github/actions/rusty-v8
       - name: Run
         run: |
           set -euo pipefail
