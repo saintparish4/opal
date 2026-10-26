@@ -39,22 +39,24 @@ The files are those for the areas the runtime implements (the selection below). 
 | Area | Pass | Fail | Time out | Pass rate |
 |---|---|---|---|---|
 | `test-assert*.js` | 4 | 15 | 0 | 21% |
-| `test-buffer-*.js` | 53 | 16 | 0 | 77% |
+| `test-buffer-*.js` | 54 | 15 | 0 | 78% |
 | `test-console-*.js` | 5 | 16 | 0 | 24% |
 | `test-event-emitter-*.js` | 21 | 5 | 0 | 81% |
 | `test-events-*.js` | 3 | 5 | 0 | 38% |
-| `test-fs-*.js` | 83 | 173 | 0 | 32% |
+| `test-fs-*.js` | 116 | 140 | 0 | 45% |
 | `test-module-*.js` | 8 | 23 | 0 | 26% |
 | `test-next-tick*.js` | 8 | 1 | 0 | 89% |
+| `test-os*.js` | 3 | 5 | 0 | 38% |
 | `test-path*.js` | 15 | 2 | 0 | 88% |
 | `test-process-*.js` | 17 | 70 | 0 | 20% |
 | `test-require-*.js` | 12 | 9 | 0 | 57% |
+| `test-string-decoder*.js` | 3 | 0 | 0 | 100% |
 | `test-timers*.js` | 37 | 21 | 0 | 64% |
 | `test-util-format*.js` | 1 | 0 | 0 | 100% |
 | `test-util-inspect*.js` | 2 | 3 | 0 | 40% |
 | `test-util-types*.js` | 1 | 1 | 0 | 50% |
 | `test-util.js` | 0 | 1 | 0 | 0% |
-| **all** | **270** | **361** | **0** | **43%** |
+| **all** | **310** | **332** | **0** | **48%** |
 
 10 more files fail under node on the machine that ran them, so they say nothing about Opal and aren't counted.
 
@@ -139,7 +141,7 @@ The files are those for the areas the runtime implements (the selection below). 
 | `test-buffer-tojson.js` | pass |  |
 | `test-buffer-tostring-4gb.js` | pass |  |
 | `test-buffer-tostring-range.js` | pass |  |
-| `test-buffer-tostring-rangeerror.js` | **fail** | Error: Opal does not implement the built-in module node:os yet |
+| `test-buffer-tostring-rangeerror.js` | pass |  |
 | `test-buffer-tostring.js` | pass |  |
 | `test-buffer-write-fast.js` | **fail** | Error: Cannot find module 'internal/test/binding' |
 | `test-buffer-write.js` | pass |  |
@@ -205,10 +207,10 @@ The files are those for the areas the runtime implements (the selection below). 
 | `test-events-once.js` | **fail** | Error: kaboom |
 | `test-events-static-geteventlisteners.js` | **fail** | Error: Cannot find module 'internal/event_target' |
 | `test-events-uncaught-exception-stack.js` | pass |  |
-| `test-fs-access.js` | **fail** | Error: Opal does not implement the built-in module node:os yet |
-| `test-fs-append-file-flush.js` | **fail** | Error: Opal does not implement the built-in module node:fs/promises yet |
+| `test-fs-access.js` | **fail** | Error: Cannot find module 'internal/test/binding' |
+| `test-fs-append-file-flush.js` | **fail** | Error: Opal does not implement the built-in module node:test yet |
 | `test-fs-append-file-sync.js` | pass |  |
-| `test-fs-append-file.js` | **fail** | Error: Opal does not implement this yet: it needs node:internal/fs/promises, which Opal doesn't have |
+| `test-fs-append-file.js` | pass |  |
 | `test-fs-assert-encoding-error.js` | **fail** | AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal: |
 | `test-fs-buffer.js` | pass |  |
 | `test-fs-buffertype-writesync.js` | pass |  |
@@ -219,7 +221,7 @@ The files are those for the areas the runtime implements (the selection below). 
 | `test-fs-close-errors.js` | pass |  |
 | `test-fs-close.js` | pass |  |
 | `test-fs-constants.js` | **fail** | AssertionError [ERR_ASSERTION]: Expected values to be strictly equal: |
-| `test-fs-copyfile-respect-permissions.js` | **fail** | Error: Opal does not implement the built-in module node:os yet |
+| `test-fs-copyfile-respect-permissions.js` | pass |  |
 | `test-fs-copyfile.js` | **fail** | Error: Cannot find module 'internal/test/binding' |
 | `test-fs-cp-sync-dereference.js` | **fail** | Error: Opal does not implement this yet: it needs node:internal/fs/cp/cp, which Opal doesn't have |
 | `test-fs-empty-readStream.js` | **fail** | Error: Opal does not implement this yet: it needs node:internal/fs/streams, which Opal doesn't have |
@@ -230,72 +232,72 @@ The files are those for the areas the runtime implements (the selection below). 
 | `test-fs-fchmod.js` | pass |  |
 | `test-fs-fchown-negative-one.js` | pass |  |
 | `test-fs-fchown.js` | pass |  |
-| `test-fs-filehandle-use-after-close.js` | **fail** | Error: Opal does not implement this yet: it needs node:internal/fs/promises, which Opal doesn't have |
+| `test-fs-filehandle-use-after-close.js` | pass |  |
 | `test-fs-filehandle.js` | **fail** | Error: Cannot find module 'internal/test/binding' |
 | `test-fs-fmap.js` | pass |  |
 | `test-fs-fsync.js` | pass |  |
-| `test-fs-internal-assertencoding.js` | **fail** | Error: Opal does not implement this yet: it needs node:internal/fs/dir, which Opal doesn't have |
-| `test-fs-lchmod.js` | **fail** | Error: Opal does not implement this yet: it needs node:internal/fs/promises, which Opal doesn't have |
+| `test-fs-internal-assertencoding.js` | pass |  |
+| `test-fs-lchmod.js` | pass |  |
 | `test-fs-lchown-negative-one.js` | pass |  |
-| `test-fs-lchown.js` | **fail** | Error: Opal does not implement this yet: it needs node:internal/fs/promises, which Opal doesn't have |
+| `test-fs-lchown.js` | pass |  |
 | `test-fs-link.js` | pass |  |
 | `test-fs-long-path.js` | pass |  |
 | `test-fs-make-callback.js` | pass |  |
 | `test-fs-makeStatsCallback.js` | pass |  |
 | `test-fs-mkdir-mode-mask.js` | pass |  |
-| `test-fs-mkdir-recursive-eaccess.js` | **fail** | Error: Opal does not implement the built-in module node:os yet |
+| `test-fs-mkdir-recursive-eaccess.js` | **fail** | Error: Opal does not implement the built-in module node:child_process yet |
 | `test-fs-mkdir-rmdir.js` | pass |  |
 | `test-fs-mkdir.js` | **fail** | Error: Opal does not implement the built-in module node:worker_threads yet |
 | `test-fs-mkdtemp-prefix-check.js` | pass |  |
 | `test-fs-mkdtemp.js` | **fail** | Error: url.pathToFileURL: node:url is not in Opal yet |
 | `test-fs-mkdtempDisposableSync.js` | **fail** | Error: Opal does not implement the built-in module node:worker_threads yet |
-| `test-fs-negative-zero.js` | **fail** | Error: Opal does not implement the built-in module node:os yet |
+| `test-fs-negative-zero.js` | **fail** | Error: Opal implements only the synchronous fs functions yet, not fs.watchFile |
 | `test-fs-non-number-arguments-throw.js` | **fail** | Error: Opal does not implement this yet: it needs node:internal/fs/streams, which Opal doesn't have |
-| `test-fs-null-bytes.js` | **fail** | AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal: |
+| `test-fs-null-bytes.js` | **fail** | ReferenceError: URL is not defined |
 | `test-fs-open-flags.js` | **fail** | Error: Cannot find module 'internal/fs/utils' |
 | `test-fs-open-mode-mask.js` | pass |  |
 | `test-fs-open-no-close.js` | pass |  |
 | `test-fs-open-numeric-flags.js` | pass |  |
-| `test-fs-open.js` | **fail** | Error: Opal does not implement this yet: it needs node:internal/fs/promises, which Opal doesn't have |
-| `test-fs-opendir.js` | **fail** | Error: Opal does not implement this yet: it needs node:internal/fs/dir, which Opal doesn't have |
+| `test-fs-open.js` | pass |  |
+| `test-fs-opendir.js` | pass |  |
 | `test-fs-operations-with-surrogate-pairs.js` | **fail** | Error: Opal does not implement the built-in module node:test yet |
-| `test-fs-options-immutable.js` | **fail** | Error: Opal does not implement the built-in module node:os yet |
-| `test-fs-promises-exists.js` | **fail** | Error: Opal does not implement the built-in module node:fs/promises yet |
-| `test-fs-promises-file-handle-aggregate-errors.js` | **fail** | Error: Opal does not implement the built-in module node:fs/promises yet |
-| `test-fs-promises-file-handle-append-file.js` | **fail** | Error: Opal does not implement this yet: it needs node:internal/fs/promises, which Opal doesn't have |
-| `test-fs-promises-file-handle-chmod.js` | **fail** | Error: Opal does not implement this yet: it needs node:internal/fs/promises, which Opal doesn't have |
-| `test-fs-promises-file-handle-close-errors.js` | **fail** | Error: Opal does not implement the built-in module node:fs/promises yet |
-| `test-fs-promises-file-handle-close.js` | **fail** | Error: Opal does not implement this yet: it needs node:internal/fs/promises, which Opal doesn't have |
-| `test-fs-promises-file-handle-dispose.js` | **fail** | Error: Opal does not implement this yet: it needs node:internal/fs/dir, which Opal doesn't have |
-| `test-fs-promises-file-handle-op-errors.js` | **fail** | Error: Opal does not implement the built-in module node:fs/promises yet |
+| `test-fs-options-immutable.js` | **fail** | Error: Opal does not implement fs.watch yet |
+| `test-fs-promises-exists.js` | pass |  |
+| `test-fs-promises-file-handle-aggregate-errors.js` | **fail** | Error: Cannot find module 'internal/fs/promises' |
+| `test-fs-promises-file-handle-append-file.js` | **fail** | ReferenceError: AbortController is not defined |
+| `test-fs-promises-file-handle-chmod.js` | pass |  |
+| `test-fs-promises-file-handle-close-errors.js` | **fail** | Error: Cannot find module 'internal/fs/promises' |
+| `test-fs-promises-file-handle-close.js` | **fail** | TypeError: globalThis.gc is not a function |
+| `test-fs-promises-file-handle-dispose.js` | pass |  |
+| `test-fs-promises-file-handle-op-errors.js` | **fail** | Error: Cannot find module 'internal/fs/promises' |
 | `test-fs-promises-file-handle-read-worker.js` | **fail** | Error: Opal does not implement the built-in module node:worker_threads yet |
-| `test-fs-promises-file-handle-read.js` | **fail** | Error: Opal does not implement this yet: it needs node:internal/fs/promises, which Opal doesn't have |
-| `test-fs-promises-file-handle-readFile.js` | **fail** | Error: Opal does not implement this yet: it needs node:internal/fs/promises, which Opal doesn't have |
-| `test-fs-promises-file-handle-stat.js` | **fail** | Error: Opal does not implement this yet: it needs node:internal/fs/promises, which Opal doesn't have |
-| `test-fs-promises-file-handle-stream.js` | **fail** | Error: Opal does not implement this yet: it needs node:internal/fs/promises, which Opal doesn't have |
-| `test-fs-promises-file-handle-sync.js` | **fail** | Error: Opal does not implement this yet: it needs node:internal/fs/promises, which Opal doesn't have |
-| `test-fs-promises-file-handle-truncate.js` | **fail** | Error: Opal does not implement this yet: it needs node:internal/fs/promises, which Opal doesn't have |
-| `test-fs-promises-file-handle-write.js` | **fail** | Error: Opal does not implement this yet: it needs node:internal/fs/promises, which Opal doesn't have |
-| `test-fs-promises-file-handle-writeFile.js` | **fail** | Error: Opal does not implement this yet: it needs node:internal/fs/promises, which Opal doesn't have |
-| `test-fs-promises-mkdtempDisposable.js` | **fail** | Error: Opal does not implement the built-in module node:fs/promises yet |
-| `test-fs-promises-readfile-buffer-option.js` | **fail** | Error: Opal does not implement this yet: it needs node:internal/fs/promises, which Opal doesn't have |
-| `test-fs-promises-readfile-empty.js` | **fail** | Error: Opal does not implement this yet: it needs node:internal/fs/promises, which Opal doesn't have |
-| `test-fs-promises-readfile-with-fd.js` | **fail** | Error: Opal does not implement this yet: it needs node:internal/fs/promises, which Opal doesn't have |
-| `test-fs-promises-readfile.js` | **fail** | Error: Opal does not implement this yet: it needs node:internal/fs/promises, which Opal doesn't have |
-| `test-fs-promises-statfs-validate-path.js` | **fail** | Error: Opal does not implement this yet: it needs node:internal/fs/promises, which Opal doesn't have |
-| `test-fs-promises-watch-iterator.js` | **fail** | Error: Opal does not implement the built-in module node:fs/promises yet |
-| `test-fs-promises-watch.js` | **fail** | Error: Opal does not implement the built-in module node:os yet |
-| `test-fs-promises-write-optional-params.js` | **fail** | Error: Opal does not implement this yet: it needs node:internal/fs/promises, which Opal doesn't have |
-| `test-fs-promises-writefile-typedarray.js` | **fail** | Error: Opal does not implement this yet: it needs node:internal/fs/promises, which Opal doesn't have |
-| `test-fs-promises-writefile-with-fd.js` | **fail** | Error: Opal does not implement this yet: it needs node:internal/fs/promises, which Opal doesn't have |
-| `test-fs-promises-writefile.js` | **fail** | Error: Opal does not implement this yet: it needs node:internal/fs/promises, which Opal doesn't have |
-| `test-fs-promises.js` | **fail** | Error: Opal does not implement this yet: it needs node:internal/fs/promises, which Opal doesn't have |
+| `test-fs-promises-file-handle-read.js` | **fail** | Error: Opal does not implement this yet: it needs node:internal/fs/streams, which Opal doesn't have |
+| `test-fs-promises-file-handle-readFile.js` | **fail** | ReferenceError: AbortSignal is not defined |
+| `test-fs-promises-file-handle-stat.js` | pass |  |
+| `test-fs-promises-file-handle-stream.js` | **fail** | Error: Opal does not implement the built-in module node:stream/promises yet |
+| `test-fs-promises-file-handle-sync.js` | pass |  |
+| `test-fs-promises-file-handle-truncate.js` | pass |  |
+| `test-fs-promises-file-handle-write.js` | pass |  |
+| `test-fs-promises-file-handle-writeFile.js` | **fail** | Error: Opal does not implement the built-in module node:stream yet |
+| `test-fs-promises-mkdtempDisposable.js` | **fail** | Error: Opal does not implement the built-in module node:worker_threads yet |
+| `test-fs-promises-readfile-buffer-option.js` | **fail** | Error: Cannot find module 'internal/test/binding' |
+| `test-fs-promises-readfile-empty.js` | pass |  |
+| `test-fs-promises-readfile-with-fd.js` | pass |  |
+| `test-fs-promises-readfile.js` | **fail** | Error: Cannot find module 'internal/test/binding' |
+| `test-fs-promises-statfs-validate-path.js` | pass |  |
+| `test-fs-promises-watch-iterator.js` | **fail** | Error: Opal does not implement the built-in module node:timers/promises yet |
+| `test-fs-promises-watch.js` | **fail** | Error: Opal does not implement the built-in module node:timers/promises yet |
+| `test-fs-promises-write-optional-params.js` | pass |  |
+| `test-fs-promises-writefile-typedarray.js` | pass |  |
+| `test-fs-promises-writefile-with-fd.js` | pass |  |
+| `test-fs-promises-writefile.js` | **fail** | Error: Opal does not implement the built-in module node:stream yet |
+| `test-fs-promises.js` | pass |  |
 | `test-fs-promisified.js` | pass |  |
-| `test-fs-read-empty-buffer.js` | **fail** | Error: Opal does not implement this yet: it needs node:internal/fs/promises, which Opal doesn't have |
+| `test-fs-read-empty-buffer.js` | pass |  |
 | `test-fs-read-file-assert-encoding.js` | pass |  |
 | `test-fs-read-file-sync-hostname.js` | pass |  |
 | `test-fs-read-file-sync.js` | pass |  |
-| `test-fs-read-offset-null.js` | **fail** | Error: Opal does not implement this yet: it needs node:internal/fs/promises, which Opal doesn't have |
+| `test-fs-read-offset-null.js` | pass |  |
 | `test-fs-read-optional-params.js` | pass |  |
 | `test-fs-read-promises-optional-params.js` | pass |  |
 | `test-fs-read-stream-autoClose.js` | **fail** | Error: Opal does not implement this yet: it needs node:internal/fs/streams, which Opal doesn't have |
@@ -305,7 +307,7 @@ The files are those for the areas the runtime implements (the selection below). 
 | `test-fs-read-stream-err.js` | **fail** | Error: Opal does not implement this yet: it needs node:internal/fs/streams, which Opal doesn't have |
 | `test-fs-read-stream-fd-leak.js` | **fail** | Error: Opal does not implement this yet: it needs node:internal/fs/streams, which Opal doesn't have |
 | `test-fs-read-stream-fd.js` | **fail** | Error: Opal does not implement this yet: it needs node:internal/fs/streams, which Opal doesn't have |
-| `test-fs-read-stream-file-handle.js` | **fail** | Error: Opal does not implement this yet: it needs node:internal/fs/promises, which Opal doesn't have |
+| `test-fs-read-stream-file-handle.js` | **fail** | Error: Opal does not implement this yet: it needs node:internal/fs/streams, which Opal doesn't have |
 | `test-fs-read-stream-inherit.js` | **fail** | Error: Opal does not implement this yet: it needs node:internal/fs/streams, which Opal doesn't have |
 | `test-fs-read-stream-patch-open.js` | **fail** | Error: Opal does not implement this yet: it needs node:internal/fs/streams, which Opal doesn't have |
 | `test-fs-read-stream-pos.js` | **fail** | Error: Opal does not implement this yet: it needs node:internal/fs/streams, which Opal doesn't have |
@@ -314,7 +316,7 @@ The files are those for the areas the runtime implements (the selection below). 
 | `test-fs-read-stream.js` | **fail** | Error: Opal does not implement the built-in module node:child_process yet |
 | `test-fs-read-type.js` | pass |  |
 | `test-fs-read-zero-length.js` | pass |  |
-| `test-fs-read.js` | **fail** | AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal: |
+| `test-fs-read.js` | pass |  |
 | `test-fs-readSync-optional-params.js` | pass |  |
 | `test-fs-readdir-buffer.js` | pass |  |
 | `test-fs-readdir-pipe.js` | pass |  |
@@ -326,19 +328,19 @@ The files are those for the areas the runtime implements (the selection below). 
 | `test-fs-readdir.js` | pass |  |
 | `test-fs-readfile-buffer-option.js` | **fail** | Error: Cannot find module 'internal/test/binding' |
 | `test-fs-readfile-empty.js` | pass |  |
-| `test-fs-readfile-eof.js` | **fail** | Error: Opal does not implement the built-in module node:os yet |
-| `test-fs-readfile-error.js` | **fail** | Error: Opal does not implement the built-in module node:os yet |
+| `test-fs-readfile-eof.js` | **fail** | Error: Opal does not implement the built-in module node:child_process yet |
+| `test-fs-readfile-error.js` | **fail** | Error: Opal does not implement the built-in module node:child_process yet |
 | `test-fs-readfile-fd.js` | pass |  |
 | `test-fs-readfile-flags.js` | pass |  |
-| `test-fs-readfile-pipe-large.js` | **fail** | Error: Opal does not implement the built-in module node:os yet |
-| `test-fs-readfile-pipe.js` | **fail** | Error: Opal does not implement the built-in module node:os yet |
+| `test-fs-readfile-pipe-large.js` | **fail** | Error: Opal does not implement the built-in module node:child_process yet |
+| `test-fs-readfile-pipe.js` | **fail** | Error: Opal does not implement the built-in module node:child_process yet |
 | `test-fs-readfile-unlink.js` | pass |  |
 | `test-fs-readfile-zero-byte-liar.js` | pass |  |
 | `test-fs-readfile.js` | **fail** | ReferenceError: AbortSignal is not defined |
 | `test-fs-readfilesync-enoent.js` | pass |  |
-| `test-fs-readfilesync-pipe-large.js` | **fail** | Error: Opal does not implement the built-in module node:os yet |
+| `test-fs-readfilesync-pipe-large.js` | **fail** | Error: Opal does not implement the built-in module node:child_process yet |
 | `test-fs-readlink-type-check.js` | pass |  |
-| `test-fs-readv-promises.js` | **fail** | Error: Opal does not implement this yet: it needs node:internal/fs/promises, which Opal doesn't have |
+| `test-fs-readv-promises.js` | pass |  |
 | `test-fs-readv-promisify.js` | pass |  |
 | `test-fs-readv-sync.js` | pass |  |
 | `test-fs-readv.js` | pass |  |
@@ -346,22 +348,22 @@ The files are those for the areas the runtime implements (the selection below). 
 | `test-fs-realpath-buffer-encoding.js` | pass |  |
 | `test-fs-realpath-native.js` | (fails under node) |  |
 | `test-fs-realpath-on-substed-drive.js` | pass |  |
-| `test-fs-realpath-pipe.js` | **fail** | Error: Opal does not implement the built-in module node:os yet |
+| `test-fs-realpath-pipe.js` | **fail** | Error: Opal does not implement the built-in module node:child_process yet |
 | `test-fs-realpath.js` | (fails under node) |  |
 | `test-fs-rename-type-check.js` | pass |  |
 | `test-fs-rm.js` | **fail** | Error: Opal does not implement the built-in module node:url yet |
 | `test-fs-rmSync-special-char.js` | pass |  |
 | `test-fs-rmdir-recursive-sync-warns-not-found.js` | pass |  |
 | `test-fs-rmdir-recursive-sync-warns-on-file.js` | pass |  |
-| `test-fs-rmdir-recursive-throws-not-found.js` | **fail** | Error: Opal does not implement this yet: it needs node:internal/fs/promises, which Opal doesn't have |
-| `test-fs-rmdir-recursive-throws-on-file.js` | **fail** | Error: Opal does not implement this yet: it needs node:internal/fs/promises, which Opal doesn't have |
+| `test-fs-rmdir-recursive-throws-not-found.js` | pass |  |
+| `test-fs-rmdir-recursive-throws-on-file.js` | pass |  |
 | `test-fs-rmdir-recursive-warns-not-found.js` | pass |  |
 | `test-fs-rmdir-recursive-warns-on-file.js` | pass |  |
 | `test-fs-rmdir-recursive.js` | **fail** | Error: Cannot find module 'internal/fs/utils' |
 | `test-fs-rmdir-type-check.js` | pass |  |
 | `test-fs-sir-writes-alot.js` | **fail** | Error: Opal does not implement this yet: it needs node:internal/fs/streams, which Opal doesn't have |
 | `test-fs-stat-abort-test.js` | **fail** | Error: Opal does not implement the built-in module node:test yet |
-| `test-fs-stat-bigint.js` | **fail** | Error: Opal does not implement this yet: it needs node:internal/fs/promises, which Opal doesn't have |
+| `test-fs-stat-bigint.js` | pass |  |
 | `test-fs-stat.js` | pass |  |
 | `test-fs-statfs.js` | pass |  |
 | `test-fs-stream-construct-compat-error-read.js` | **fail** | Error: Opal does not implement this yet: it needs node:internal/fs/streams, which Opal doesn't have |
@@ -375,9 +377,9 @@ The files are those for the areas the runtime implements (the selection below). 
 | `test-fs-symlink-buffer-path.js` | pass |  |
 | `test-fs-symlink-dir-junction-relative.js` | pass |  |
 | `test-fs-symlink-dir-junction.js` | pass |  |
-| `test-fs-symlink-dir.js` | **fail** | Error: Opal does not implement this yet: it needs node:internal/fs/promises, which Opal doesn't have |
+| `test-fs-symlink-dir.js` | pass |  |
 | `test-fs-symlink-longpath.js` | pass |  |
-| `test-fs-symlink.js` | **fail** | Error: Opal does not implement this yet: it needs node:internal/fs/promises, which Opal doesn't have |
+| `test-fs-symlink.js` | pass |  |
 | `test-fs-sync-fd-leak.js` | **fail** | Error: Cannot find module 'internal/test/binding' |
 | `test-fs-syncwritestream.js` | **fail** | Error: Opal does not implement the built-in module node:child_process yet |
 | `test-fs-timestamp-parsing-error.js` | pass |  |
@@ -389,11 +391,11 @@ The files are those for the areas the runtime implements (the selection below). 
 | `test-fs-utils-get-dirents.js` | **fail** | Error: Cannot find module 'internal/fs/utils' |
 | `test-fs-utimes-y2K38.js` | **fail** | Error: Opal does not implement the built-in module node:child_process yet |
 | `test-fs-utimes.js` | **fail** | Error: Opal does not implement the built-in module node:url yet |
-| `test-fs-watch-abort-signal.js` | **fail** | Error: Opal does not implement the built-in module node:os yet |
-| `test-fs-watch-close-when-destroyed.js` | **fail** | Error: Opal does not implement the built-in module node:os yet |
-| `test-fs-watch-encoding.js` | **fail** | Error: Opal does not implement the built-in module node:os yet |
-| `test-fs-watch-enoent.js` | **fail** | Error: Opal does not implement the built-in module node:os yet |
-| `test-fs-watch-file-enoent-after-deletion.js` | **fail** | Error: Opal does not implement this yet: it needs node:internal/fs/watchers, which Opal doesn't have |
+| `test-fs-watch-abort-signal.js` | **fail** | ReferenceError: AbortController is not defined |
+| `test-fs-watch-close-when-destroyed.js` | **fail** | Error: Opal does not implement fs.watch yet |
+| `test-fs-watch-encoding.js` | **fail** | Error: Opal does not implement fs.watch yet |
+| `test-fs-watch-enoent.js` | **fail** | Error: Cannot find module 'internal/test/binding' |
+| `test-fs-watch-file-enoent-after-deletion.js` | **fail** | Error: Opal implements only the synchronous fs functions yet, not fs.watchFile |
 | `test-fs-watch-ignore-function.js` | **fail** | Error: Opal does not implement the built-in module node:timers/promises yet |
 | `test-fs-watch-ignore-glob.js` | **fail** | Error: Opal does not implement the built-in module node:timers/promises yet |
 | `test-fs-watch-ignore-invalid.js` | **fail** | Error: Opal does not implement the built-in module node:timers/promises yet |
@@ -403,34 +405,34 @@ The files are those for the areas the runtime implements (the selection below). 
 | `test-fs-watch-ignore-recursive-mixed.js` | **fail** | Error: Opal does not implement the built-in module node:timers/promises yet |
 | `test-fs-watch-ignore-recursive-regexp.js` | **fail** | Error: Opal does not implement the built-in module node:timers/promises yet |
 | `test-fs-watch-ignore-regexp.js` | **fail** | Error: Opal does not implement the built-in module node:timers/promises yet |
-| `test-fs-watch-recursive-add-file-to-existing-subfolder.js` | **fail** | Error: Opal does not implement the built-in module node:os yet |
-| `test-fs-watch-recursive-add-file-to-new-folder.js` | **fail** | Error: Opal does not implement the built-in module node:os yet |
+| `test-fs-watch-recursive-add-file-to-existing-subfolder.js` | **fail** | Error: Opal does not implement fs.watch yet |
+| `test-fs-watch-recursive-add-file-to-new-folder.js` | **fail** | Error: Opal does not implement fs.watch yet |
 | `test-fs-watch-recursive-add-file-with-url.js` | **fail** | Error: Opal does not implement the built-in module node:timers/promises yet |
-| `test-fs-watch-recursive-add-file.js` | **fail** | Error: Opal does not implement the built-in module node:os yet |
+| `test-fs-watch-recursive-add-file.js` | **fail** | Error: Opal does not implement fs.watch yet |
 | `test-fs-watch-recursive-add-folder.js` | **fail** | Error: Opal does not implement the built-in module node:timers/promises yet |
 | `test-fs-watch-recursive-assert-leaks.js` | **fail** | Error: Opal does not implement the built-in module node:timers/promises yet |
 | `test-fs-watch-recursive-delete-race.js` | **fail** | Error: Cannot find module 'internal/fs/watchers' |
-| `test-fs-watch-recursive-delete.js` | **fail** | Error: Opal does not implement the built-in module node:os yet |
+| `test-fs-watch-recursive-delete.js` | **fail** | Error: Opal does not implement fs.watch yet |
 | `test-fs-watch-recursive-linux-parallel-remove.js` | **fail** | Error: Opal does not implement the built-in module node:child_process yet |
-| `test-fs-watch-recursive-prefix-sibling.js` | **fail** | Error: Opal does not implement the built-in module node:os yet |
-| `test-fs-watch-recursive-promise.js` | **fail** | Error: Opal does not implement the built-in module node:os yet |
+| `test-fs-watch-recursive-prefix-sibling.js` | **fail** | Error: Opal does not implement the built-in module node:timers/promises yet |
+| `test-fs-watch-recursive-promise.js` | **fail** | Error: Opal does not implement fs.watch yet |
 | `test-fs-watch-recursive-symlink.js` | **fail** | Error: Opal does not implement the built-in module node:timers/promises yet |
-| `test-fs-watch-recursive-sync-write.js` | **fail** | Error: Opal does not implement the built-in module node:os yet |
-| `test-fs-watch-recursive-update-file.js` | **fail** | Error: Opal does not implement the built-in module node:os yet |
-| `test-fs-watch-recursive-validate.js` | **fail** | Error: Opal does not implement the built-in module node:os yet |
-| `test-fs-watch-recursive-watch-file.js` | **fail** | Error: Opal does not implement the built-in module node:os yet |
-| `test-fs-watch-ref-unref.js` | **fail** | Error: Opal does not implement the built-in module node:os yet |
-| `test-fs-watch-stop-async.js` | **fail** | Error: Opal does not implement this yet: it needs node:internal/fs/watchers, which Opal doesn't have |
-| `test-fs-watch-stop-sync.js` | **fail** | Error: Opal does not implement this yet: it needs node:internal/fs/watchers, which Opal doesn't have |
-| `test-fs-watch.js` | **fail** | Error: Opal does not implement the built-in module node:os yet |
+| `test-fs-watch-recursive-sync-write.js` | **fail** | Error: Opal does not implement fs.watch yet |
+| `test-fs-watch-recursive-update-file.js` | **fail** | Error: Opal does not implement fs.watch yet |
+| `test-fs-watch-recursive-validate.js` | pass |  |
+| `test-fs-watch-recursive-watch-file.js` | **fail** | Error: Opal does not implement fs.watch yet |
+| `test-fs-watch-ref-unref.js` | **fail** | Error: Opal does not implement fs.watch yet |
+| `test-fs-watch-stop-async.js` | **fail** | Error: Opal implements only the synchronous fs functions yet, not fs.watchFile |
+| `test-fs-watch-stop-sync.js` | **fail** | Error: Opal implements only the synchronous fs functions yet, not fs.watchFile |
+| `test-fs-watch.js` | **fail** | Error: Opal does not implement fs.watch yet |
 | `test-fs-watchfile-bigint.js` | **fail** | Error: Cannot find module 'internal/fs/utils' |
-| `test-fs-watchfile-ref-unref.js` | **fail** | Error: Opal does not implement this yet: it needs node:internal/fs/watchers, which Opal doesn't have |
-| `test-fs-watchfile.js` | **fail** | Error: Opal does not implement this yet: it needs node:internal/fs/watchers, which Opal doesn't have |
+| `test-fs-watchfile-ref-unref.js` | **fail** | Error: Opal implements only the synchronous fs functions yet, not fs.watchFile |
+| `test-fs-watchfile.js` | **fail** | Error: Opal implements only the synchronous fs functions yet, not fs.watchFile |
 | `test-fs-whatwg-url.js` | **fail** | Error: Opal does not implement the built-in module node:worker_threads yet |
 | `test-fs-write-buffer-large.js` | pass |  |
 | `test-fs-write-buffer.js` | pass |  |
 | `test-fs-write-file-buffer.js` | pass |  |
-| `test-fs-write-file-flush.js` | **fail** | Error: Opal does not implement the built-in module node:fs/promises yet |
+| `test-fs-write-file-flush.js` | **fail** | Error: Opal does not implement the built-in module node:test yet |
 | `test-fs-write-file-invalid-path.js` | pass |  |
 | `test-fs-write-file-sync.js` | **fail** | Error: Opal does not implement the built-in module node:worker_threads yet |
 | `test-fs-write-file-typedarrays.js` | pass |  |
@@ -447,9 +449,9 @@ The files are those for the areas the runtime implements (the selection below). 
 | `test-fs-write-stream-encoding.js` | **fail** | Error: Opal does not implement the built-in module node:stream yet |
 | `test-fs-write-stream-end.js` | **fail** | Error: Opal does not implement this yet: it needs node:internal/fs/streams, which Opal doesn't have |
 | `test-fs-write-stream-err.js` | **fail** | Error: Opal does not implement this yet: it needs node:internal/fs/streams, which Opal doesn't have |
-| `test-fs-write-stream-file-handle-2.js` | **fail** | Error: Opal does not implement this yet: it needs node:internal/fs/promises, which Opal doesn't have |
-| `test-fs-write-stream-file-handle.js` | **fail** | Error: Opal does not implement this yet: it needs node:internal/fs/promises, which Opal doesn't have |
-| `test-fs-write-stream-flush.js` | **fail** | Error: Opal does not implement the built-in module node:fs/promises yet |
+| `test-fs-write-stream-file-handle-2.js` | **fail** | Error: Opal does not implement this yet: it needs node:internal/fs/streams, which Opal doesn't have |
+| `test-fs-write-stream-file-handle.js` | **fail** | Error: Opal does not implement this yet: it needs node:internal/fs/streams, which Opal doesn't have |
+| `test-fs-write-stream-flush.js` | **fail** | Error: Opal does not implement the built-in module node:test yet |
 | `test-fs-write-stream-fs.js` | **fail** | Error: Opal does not implement this yet: it needs node:internal/fs/streams, which Opal doesn't have |
 | `test-fs-write-stream-patch-open.js` | **fail** | Error: Opal does not implement the built-in module node:child_process yet |
 | `test-fs-write-stream-throw-type-error.js` | **fail** | Error: Opal does not implement this yet: it needs node:internal/fs/streams, which Opal doesn't have |
@@ -460,11 +462,11 @@ The files are those for the areas the runtime implements (the selection below). 
 | `test-fs-writefile-with-fd.js` | **fail** | ReferenceError: AbortController is not defined |
 | `test-fs-writestream-open-write.js` | **fail** | Error: Opal does not implement this yet: it needs node:internal/fs/streams, which Opal doesn't have |
 | `test-fs-writesync-crash.js` | **fail** | AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal: |
-| `test-fs-writev-promises.js` | **fail** | Error: Opal does not implement this yet: it needs node:internal/fs/promises, which Opal doesn't have |
+| `test-fs-writev-promises.js` | pass |  |
 | `test-fs-writev-sync.js` | pass |  |
 | `test-fs-writev.js` | pass |  |
 | `test-module-builtin.js` | pass |  |
-| `test-module-cache.js` | **fail** | Error: Cannot find module '/tmp/opal-node-tests-5jnjbtlq/opal/test/.tmp.test-module-cache.js/test-module-cache.json' |
+| `test-module-cache.js` | **fail** | Error: Cannot find module '/tmp/opal-node-tests-6wt42obu/opal/test/.tmp.test-module-cache.js/test-module-cache.json' |
 | `test-module-children.js` | **fail** | Error: Opal does not implement the built-in module node:sys yet |
 | `test-module-circular-dependency-warning.js` | **fail** |  |
 | `test-module-circular-symlinks.js` | pass |  |
@@ -478,7 +480,7 @@ The files are those for the areas the runtime implements (the selection below). 
 | `test-module-main-extension-lookup.js` | **fail** | Error: Opal does not implement the built-in module node:child_process yet |
 | `test-module-main-fail.js` | **fail** | Error: Opal does not implement the built-in module node:child_process yet |
 | `test-module-main-preserve-symlinks-fail.js` | **fail** | Error: Opal does not implement the built-in module node:child_process yet |
-| `test-module-multi-extensions.js` | **fail** | Error: Cannot find module '/tmp/opal-node-tests-5jnjbtlq/opal/test/.tmp.test-module-multi-extensions.js/test-extensions' |
+| `test-module-multi-extensions.js` | **fail** | Error: Cannot find module '/tmp/opal-node-tests-6wt42obu/opal/test/.tmp.test-module-multi-extensions.js/test-extensions' |
 | `test-module-nodemodulepaths.js` | pass |  |
 | `test-module-parent-deprecation.js` | **fail** |  |
 | `test-module-parent-setter-deprecation.js` | **fail** |  |
@@ -503,6 +505,14 @@ The files are those for the areas the runtime implements (the selection below). 
 | `test-next-tick-ordering2.js` | pass |  |
 | `test-next-tick-when-exiting.js` | pass |  |
 | `test-next-tick.js` | pass |  |
+| `test-os-checked-function.js` | **fail** | Error: Cannot find module 'internal/test/binding' |
+| `test-os-constants-signals.js` | **fail** | Error: Opal does not implement the built-in module node:test yet |
+| `test-os-eol.js` | pass |  |
+| `test-os-fast.js` | **fail** | Error: Cannot find module 'internal/test/binding' |
+| `test-os-homedir-no-envvar.js` | **fail** | Error: Opal does not implement the built-in module node:child_process yet |
+| `test-os-process-priority.js` | pass |  |
+| `test-os-userinfo-handles-getter-errors.js` | **fail** | Error: Opal does not implement the built-in module node:child_process yet |
+| `test-os.js` | pass |  |
 | `test-path-basename.js` | pass |  |
 | `test-path-dirname.js` | pass |  |
 | `test-path-extname.js` | pass |  |
@@ -557,15 +567,15 @@ The files are those for the areas the runtime implements (the selection below). 
 | `test-process-exception-capture.js` | **fail** | TypeError: process.hasUncaughtExceptionCaptureCallback is not a function |
 | `test-process-exec-argv.js` | **fail** | Error: Opal does not implement the built-in module node:child_process yet |
 | `test-process-execpath.js` | **fail** | Error: Opal does not implement the built-in module node:child_process yet |
-| `test-process-execve-abort.js` | **fail** | Error: Opal does not implement the built-in module node:os yet |
-| `test-process-execve-no-args.js` | **fail** | Error: Opal does not implement the built-in module node:os yet |
-| `test-process-execve-on-exit.js` | **fail** | Error: Opal does not implement the built-in module node:os yet |
-| `test-process-execve-permission-fail.js` | **fail** | Error: Opal does not implement the built-in module node:os yet |
-| `test-process-execve-permission-granted.js` | **fail** | Error: Opal does not implement the built-in module node:os yet |
-| `test-process-execve-socket.js` | **fail** | Error: Opal does not implement the built-in module node:os yet |
-| `test-process-execve-validation.js` | **fail** | Error: Opal does not implement the built-in module node:os yet |
-| `test-process-execve-worker-threads.js` | **fail** | Error: Opal does not implement the built-in module node:os yet |
-| `test-process-execve.js` | **fail** | Error: Opal does not implement the built-in module node:os yet |
+| `test-process-execve-abort.js` | **fail** | Error: Opal does not implement the built-in module node:child_process yet |
+| `test-process-execve-no-args.js` | **fail** | Error: Opal does not implement the built-in module node:worker_threads yet |
+| `test-process-execve-on-exit.js` | **fail** | Error: Opal does not implement the built-in module node:worker_threads yet |
+| `test-process-execve-permission-fail.js` | **fail** | Error: Opal does not implement the built-in module node:worker_threads yet |
+| `test-process-execve-permission-granted.js` | **fail** | Error: Opal does not implement the built-in module node:worker_threads yet |
+| `test-process-execve-socket.js` | **fail** | Error: Opal does not implement the built-in module node:net yet |
+| `test-process-execve-validation.js` | **fail** | Error: Opal does not implement the built-in module node:worker_threads yet |
+| `test-process-execve-worker-threads.js` | **fail** | Error: Opal does not implement the built-in module node:worker_threads yet |
+| `test-process-execve.js` | **fail** | Error: Opal does not implement the built-in module node:worker_threads yet |
 | `test-process-exit-code-validation.js` | **fail** | Error: Opal does not implement the built-in module node:child_process yet |
 | `test-process-exit-code.js` | **fail** | TypeError: require(...).debuglog is not a function |
 | `test-process-exit-from-before-exit.js` | pass |  |
@@ -594,7 +604,7 @@ The files are those for the areas the runtime implements (the selection below). 
 | `test-process-no-deprecation.js` | pass |  |
 | `test-process-ppid.js` | **fail** | Error: Opal does not implement the built-in module node:child_process yet |
 | `test-process-prototype.js` | pass |  |
-| `test-process-raw-debug.js` | **fail** | Error: Opal does not implement the built-in module node:os yet |
+| `test-process-raw-debug.js` | **fail** | Error: Opal does not implement the built-in module node:child_process yet |
 | `test-process-really-exit.js` | **fail** | Error: Opal does not implement the built-in module node:child_process yet |
 | `test-process-redirect-warnings-env.js` | **fail** | Error: Opal does not implement the built-in module node:child_process yet |
 | `test-process-redirect-warnings.js` | **fail** | Error: Opal does not implement the built-in module node:child_process yet |
@@ -605,7 +615,7 @@ The files are those for the areas the runtime implements (the selection below). 
 | `test-process-setsourcemapsenabled.js` | **fail** | AssertionError [ERR_ASSERTION]: The input did not match the regular expression /ERR_INVALID_ARG_TYPE/. Input: |
 | `test-process-threadCpuUsage-main-thread.js` | **fail** | TypeError: process.threadCpuUsage is not a function |
 | `test-process-threadCpuUsage-worker-threads.js` | pass |  |
-| `test-process-title-cli.js` | **fail** | Error: Opal does not implement the built-in module node:os yet |
+| `test-process-title-cli.js` | **fail** | AssertionError [ERR_ASSERTION]: Expected values to be strictly equal: |
 | `test-process-uid-gid.js` | **fail** | Error: Opal does not implement the built-in module node:worker_threads yet |
 | `test-process-umask-mask.js` | **fail** | Error: Opal does not implement the built-in module node:worker_threads yet |
 | `test-process-umask.js` | **fail** | Error: Opal does not implement the built-in module node:worker_threads yet |
@@ -636,6 +646,9 @@ The files are those for the areas the runtime implements (the selection below). 
 | `test-require-resolve.js` | (fails under node) |  |
 | `test-require-symlink.js` | **fail** | Error: Opal does not implement the built-in module node:worker_threads yet |
 | `test-require-unicode.js` | pass |  |
+| `test-string-decoder-end.js` | pass |  |
+| `test-string-decoder-fuzz.js` | pass |  |
+| `test-string-decoder.js` | pass |  |
 | `test-timers-api-refs.js` | pass |  |
 | `test-timers-args.js` | pass |  |
 | `test-timers-clear-null-does-not-throw-error.js` | pass |  |

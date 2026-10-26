@@ -401,55 +401,32 @@ fn position(scope: &mut v8::PinScope, value: v8::Local<v8::Value>) -> i64 {
     }
 }
 
-/// What the stat and statfs calls fill, and the prototype of the Buffers
-/// fs returns: set up once, when internalBinding('fs') is first made.
+/// What the stat and statfs calls fill: set up once, when
+/// internalBinding('fs') is first made.
 pub struct FsState {
     stats: v8::Global<v8::Float64Array>,
     bigint_stats: v8::Global<v8::BigInt64Array>,
     statfs: v8::Global<v8::Float64Array>,
     bigint_statfs: v8::Global<v8::BigInt64Array>,
-    buffer_prototype: v8::Global<v8::Object>,
 }
 
-/// `fsSetup(statValues, bigintStatValues, statFsValues, bigintStatFsValues,
-/// Buffer.prototype)`.
+/// `fsSetup(statValues, bigintStatValues, statFsValues, bigintStatFsValues)`.
 pub fn fs_setup(scope: &mut v8::PinScope, args: Args, _: Ret) {
-    let (Ok(stats), Ok(bigint_stats), Ok(statfs), Ok(bigint_statfs), Ok(buffer_prototype)) = (
+    let (Ok(stats), Ok(bigint_stats), Ok(statfs), Ok(bigint_statfs)) = (
         v8::Local::<v8::Float64Array>::try_from(args.get(0)),
         v8::Local::<v8::BigInt64Array>::try_from(args.get(1)),
         v8::Local::<v8::Float64Array>::try_from(args.get(2)),
         v8::Local::<v8::BigInt64Array>::try_from(args.get(3)),
-        v8::Local::<v8::Object>::try_from(args.get(4)),
     ) else {
-        return type_error(scope, "fsSetup takes the stat arrays and Buffer.prototype");
+        return type_error(scope, "fsSetup takes the stat arrays");
     };
     let state = FsState {
         stats: v8::Global::new(scope, stats),
         bigint_stats: v8::Global::new(scope, bigint_stats),
         statfs: v8::Global::new(scope, statfs),
         bigint_statfs: v8::Global::new(scope, bigint_statfs),
-        buffer_prototype: v8::Global::new(scope, buffer_prototype),
     };
     scope.set_slot(state);
-}
-
-/// A Buffer holding a copy of `data`, as Node's Buffer::Copy makes one.
-pub(super) fn new_buffer<'s>(
-    scope: &mut v8::PinScope<'s, '_>,
-    data: &[u8],
-) -> v8::Local<'s, v8::Value> {
-    let length = data.len();
-    let store = v8::ArrayBuffer::new_backing_store_from_vec(data.to_vec()).make_shared();
-    let buffer = v8::ArrayBuffer::with_backing_store(scope, &store);
-    let array = v8::Uint8Array::new(scope, buffer, 0, length).unwrap();
-    let prototype = scope
-        .get_slot::<FsState>()
-        .map(|s| s.buffer_prototype.clone());
-    if let Some(prototype) = prototype {
-        let prototype = v8::Local::new(scope, prototype);
-        array.set_prototype(scope, prototype.into());
-    }
-    array.into()
 }
 
 /// Field indices of Node's stat arrays (node_file.h's FsStatsOffset).
@@ -1772,6 +1749,184 @@ pub fn fs_mkdtemp<'s>(scope: &mut v8::PinScope<'s, '_>, args: Args<'s>, mut rv: 
         });
         sync(scope, &mut rv, outcome, None);
     }
+}
+
+/// The JavaScript classes of the handles fs returns, which ops/requests.rs
+/// makes when an open delivers one.
+pub struct Handles {
+    file: v8::Global<v8::Function>,
+    dir: v8::Global<v8::Function>,
+}
+
+pub enum Handle {
+    File,
+    Dir,
+}
+
+/// `fsHandles(FileHandle, DirHandle)`: the classes, from realm.js.
+pub fn fs_handles(scope: &mut v8::PinScope, args: Args, _: Ret) {
+    let (Ok(file), Ok(dir)) = (
+        v8::Local::<v8::Function>::try_from(args.get(0)),
+        v8::Local::<v8::Function>::try_from(args.get(1)),
+    ) else {
+        return type_error(
+            scope,
+            "fsHandles takes the FileHandle and DirHandle classes",
+        );
+    };
+    let handles = Handles {
+        file: v8::Global::new(scope, file),
+        dir: v8::Global::new(scope, dir),
+    };
+    scope.set_slot(handles);
+}
+
+/// A new FileHandle or DirHandle around `value` (a descriptor, a directory
+/// id).
+pub(super) fn new_handle<'s>(
+    scope: &mut v8::PinScope<'s, '_>,
+    kind: Handle,
+    value: v8::Local<'s, v8::Value>,
+) -> v8::Local<'s, v8::Value> {
+    let class = scope.get_slot::<Handles>().map(|handles| match kind {
+        Handle::File => handles.file.clone(),
+        Handle::Dir => handles.dir.clone(),
+    });
+    let Some(class) = class else {
+        return v8::undefined(scope).into();
+    };
+    let class = v8::Local::new(scope, class);
+    class
+        .new_instance(scope, &[value])
+        .map_or_else(|| v8::undefined(scope).into(), Into::into)
+}
+
+/// `openFileHandle(path, flags, mode, req)`: fs.promises' open, a
+/// FileHandle for the new descriptor.
+pub fn fs_open_file_handle<'s>(scope: &mut v8::PinScope<'s, '_>, args: Args<'s>, mut rv: Ret<'s>) {
+    let path = path_arg(scope, args.get(0));
+    let flags = int(scope, args.get(1));
+    let mode = uint(scope, args.get(2));
+    let probe = path.clone();
+    call(
+        scope,
+        &args,
+        &mut rv,
+        3,
+        move || open_blocks(&probe),
+        move || {
+            open(&path, flags, mode)
+                .map(Done::FileHandle)
+                .map_err(|e| Failure::path(e, "open", &path))
+        },
+    );
+}
+
+/// Directories open through fs.opendir, by id: std's ReadDir, which reads
+/// them as libuv's uv_fs_readdir does (`.` and `..` left out, in the
+/// directory's own order).
+static DIRS: std::sync::Mutex<Option<(u64, std::collections::HashMap<u64, std::fs::ReadDir>)>> =
+    std::sync::Mutex::new(None);
+
+fn with_dirs<T>(
+    f: impl FnOnce(&mut u64, &mut std::collections::HashMap<u64, std::fs::ReadDir>) -> T,
+) -> T {
+    let mut dirs = DIRS.lock().unwrap_or_else(|e| e.into_inner());
+    let (next, map) = dirs.get_or_insert_with(|| (1, std::collections::HashMap::new()));
+    f(next, map)
+}
+
+fn open_dir(path: &[u8]) -> Result<u64, i32> {
+    let read = std::fs::read_dir(std::ffi::OsStr::from_bytes(path))
+        .map_err(|error| -error.raw_os_error().unwrap_or(libc::EIO))?;
+    Ok(with_dirs(|next, map| {
+        let id = *next;
+        *next += 1;
+        map.insert(id, read);
+        id
+    }))
+}
+
+/// `opendir(path, encoding, req)`: internalBinding('fs_dir')'s, a
+/// DirHandle.
+pub fn fs_opendir<'s>(scope: &mut v8::PinScope<'s, '_>, args: Args<'s>, mut rv: Ret<'s>) {
+    let path = path_arg(scope, args.get(0));
+    call(
+        scope,
+        &args,
+        &mut rv,
+        2,
+        || Blocking::No,
+        move || {
+            open_dir(&path)
+                .map(Done::DirHandle)
+                .map_err(|e| Failure::path(e, "opendir", &path))
+        },
+    );
+}
+
+/// `opendirSync(path)`: as opendir, its error naming no path, as
+/// node_dir.cc's OpenDirSync throws it.
+pub fn fs_opendir_sync<'s>(scope: &mut v8::PinScope<'s, '_>, args: Args<'s>, mut rv: Ret<'s>) {
+    let path = path_arg(scope, args.get(0));
+    let outcome = open_dir(&path)
+        .map(Done::DirHandle)
+        .map_err(|e| Failure::new(e, "opendir"));
+    sync(scope, &mut rv, outcome, None);
+}
+
+/// `DirHandle.read(id, encoding, bufferSize, req)`: up to bufferSize
+/// entries, or null at the end.
+pub fn fs_dir_read<'s>(scope: &mut v8::PinScope<'s, '_>, args: Args<'s>, mut rv: Ret<'s>) {
+    let id = args.get(0).number_value(scope).unwrap_or(0.0) as u64;
+    let encoding = Encoding::from_value(scope, args.get(1));
+    let size = args.get(2).number_value(scope).unwrap_or(32.0).max(1.0) as usize;
+    call(
+        scope,
+        &args,
+        &mut rv,
+        3,
+        || Blocking::No,
+        move || {
+            with_dirs(|_, map| {
+                let Some(read) = map.get_mut(&id) else {
+                    return Err(Failure::new(-libc::EBADF, "readdir"));
+                };
+                let mut entries = Vec::new();
+                for entry in read.by_ref() {
+                    let entry = entry.map_err(|error| {
+                        Failure::new(-error.raw_os_error().unwrap_or(libc::EIO), "readdir")
+                    })?;
+                    let kind = entry.file_type().map_or(0, dirent_type);
+                    entries.push((entry.file_name().as_bytes().to_vec(), kind));
+                    if entries.len() == size {
+                        break;
+                    }
+                }
+                if entries.is_empty() {
+                    Ok(Done::Null)
+                } else {
+                    Ok(Done::Entries(entries, encoding))
+                }
+            })
+        },
+    );
+}
+
+/// `DirHandle.close(id, req)`.
+pub fn fs_dir_close<'s>(scope: &mut v8::PinScope<'s, '_>, args: Args<'s>, mut rv: Ret<'s>) {
+    let id = args.get(0).number_value(scope).unwrap_or(0.0) as u64;
+    call(
+        scope,
+        &args,
+        &mut rv,
+        1,
+        || Blocking::No,
+        move || match with_dirs(|_, map| map.remove(&id)) {
+            Some(_) => Ok(Done::Undefined),
+            None => Err(Failure::new(-libc::EBADF, "closedir")),
+        },
+    );
 }
 
 /// `copyFile(src, dest, mode, req)`: libuv's uv_fs_copyfile. A copy can be

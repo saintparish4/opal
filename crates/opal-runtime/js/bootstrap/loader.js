@@ -59,6 +59,9 @@
   defineBuiltin("util/types", () => requireBuiltin("util/types"));
   defineBuiltin("buffer", () => requireBuiltin("buffer"));
   defineBuiltin("fs", () => requireBuiltin("fs"));
+  defineBuiltin("fs/promises", () => requireBuiltin("fs").promises);
+  defineBuiltin("os", () => requireBuiltin("os"));
+  defineBuiltin("string_decoder", () => requireBuiltin("string_decoder"));
   defineBuiltin("assert", () => requireBuiltin("assert"));
   defineBuiltin("assert/strict", () => requireBuiltin("assert").strict);
   defineBuiltin("console", () => internals.console);
@@ -68,10 +71,10 @@
   // Node's other built-ins, which require() must not look for on disk.
   const unimplemented = [
     "async_hooks", "child_process", "cluster", "constants", "crypto", "dgram",
-    "diagnostics_channel", "dns", "dns/promises", "domain", "fs/promises", "http", "http2", "https",
-    "inspector", "inspector/promises", "net", "os", "perf_hooks", "punycode", "querystring", "readline",
+    "diagnostics_channel", "dns", "dns/promises", "domain", "http", "http2", "https",
+    "inspector", "inspector/promises", "net", "perf_hooks", "punycode", "querystring", "readline",
     "readline/promises", "repl", "stream", "stream/consumers", "stream/promises", "stream/web",
-    "string_decoder", "sys", "timers/promises", "tls", "trace_events", "tty", "url", "v8", "vm", "wasi",
+    "sys", "timers/promises", "tls", "trace_events", "tty", "url", "v8", "vm", "wasi",
     "worker_threads", "zlib",
   ];
   const schemeOnly = ["sea", "sqlite", "test", "test/reporters"];

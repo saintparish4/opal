@@ -42,3 +42,16 @@ internal/promise_hooks
 internal/async_context_frame
 internal/fs/read/context
 internal/fs/rimraf
+internal/fs/promises
+internal/fs/dir
+internal/fs/watchers
+string_decoder
+internal/fs/recursive_watch
+internal/streams/utils
+internal/readline/interface
+internal/readline/utils
+internal/readline/callbacks
+internal/repl/history
+os
+internal/webidl
+internal/worker/js_transferable

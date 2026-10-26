@@ -204,8 +204,11 @@
 
   // process.nextTick's queue, a FixedQueue as in lib/internal/process/
   // task_queues.js, drained by main.js before each microtask checkpoint so
-  // that ticks run before promise callbacks.
+  // that ticks run before promise callbacks. tickInfo[0] is Node's
+  // kHasTickScheduled, which engine/mod.rs reads: with no tick scheduled, it
+  // runs the microtask queue itself, as Node does from C++.
   const tickQueue = new FixedQueue();
+  const tickInfo = new Uint8Array(1);
   process.nextTick = function nextTick(callback) {
     if (typeof callback !== "function") validators().validateFunction(callback, "callback");
     if (process._exiting) return;
@@ -226,15 +229,9 @@
         args = new Array(arguments.length - 1);
         for (let i = 1; i < arguments.length; i++) args[i - 1] = arguments[i];
     }
+    tickInfo[0] = 1;
     tickQueue.push({ callback, args });
   };
-  function runTicks() {
-    while (!tickQueue.isEmpty()) {
-      const { callback, args } = tickQueue.shift();
-      if (args === undefined) callback();
-      else ReflectApply(callback, undefined, args);
-    }
-  }
 
   process.emitWarning = function emitWarning(...args) {
     processEmitter.become();
@@ -320,15 +317,23 @@
     });
   }
 
-  // Values are strings, as in Node: assigning a number stores "1".
+  // Values are strings, as in Node: assigning a number stores "1". As in
+  // Node, a change is made to the process's environment too, where child
+  // processes and os.homedir() and os.tmpdir() find it.
   function makeEnv(store) {
     return new Proxy(store, {
       set(target, key, value) {
         if (typeof key === "symbol") {
           throw new TypeError("Cannot convert a Symbol value to a string");
         }
-        target[key] = String(value);
+        value = String(value);
+        target[key] = value;
+        ops.setenv(key, value);
         return true;
+      },
+      deleteProperty(target, key) {
+        if (typeof key === "string") ops.unsetenv(key);
+        return delete target[key];
       },
       defineProperty(target, key, descriptor) {
         if (!("value" in descriptor) || descriptor.get || descriptor.set) {
@@ -338,7 +343,9 @@
           error.code = "ERR_INVALID_OBJECT_DEFINE_PROPERTY";
           throw error;
         }
-        target[key] = String(descriptor.value);
+        const value = String(descriptor.value);
+        target[key] = value;
+        if (typeof key === "string") ops.setenv(key, value);
         return true;
       },
     });
@@ -367,5 +374,5 @@
 
   internals.processSetup = setup;
   internals.tickQueue = tickQueue;
-  internals.runTicks = runTicks;
+  internals.tickInfo = tickInfo;
 })

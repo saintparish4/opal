@@ -242,9 +242,7 @@ pub fn run_main(entry: &Path, args: &[String]) -> ! {
     let argv0 = std::env::args_os().next().unwrap_or_default();
     let argv0 = v8::String::new(scope, &argv0.to_string_lossy()).unwrap();
 
-    let main = Loop {
-        main: v8::Global::new(scope, main),
-    };
+    let main = Loop::new(scope, main);
     main.call(scope, "start", &[argv.into(), argv0.into()]);
     trace::checkpoint("main module ran");
     loop {
@@ -299,9 +297,26 @@ pub fn run_main(entry: &Path, args: &[String]) -> ! {
 /// The bootstrap's entry points (main.js), called by name.
 struct Loop {
     main: v8::Global<v8::Object>,
+    /// Node's tickInfo: [kHasTickScheduled].
+    tick_info: v8::Global<v8::Uint8Array>,
+    /// What drain() is called on, as Node calls processTicksAndRejections.
+    process: v8::Global<v8::Value>,
 }
 
 impl Loop {
+    fn new(scope: &mut v8::PinScope, main: v8::Local<v8::Object>) -> Loop {
+        let key = v8::String::new(scope, "tickInfo").unwrap();
+        let tick_info = main.get(scope, key.into()).unwrap();
+        let tick_info = v8::Local::<v8::Uint8Array>::try_from(tick_info).expect("main.tickInfo");
+        let key = v8::String::new(scope, "process").unwrap();
+        let process = main.get(scope, key.into()).unwrap();
+        Loop {
+            main: v8::Global::new(scope, main),
+            tick_info: v8::Global::new(scope, tick_info),
+            process: v8::Global::new(scope, process),
+        }
+    }
+
     /// Calls `main[name](...args)`. An exception that escapes it is
     /// uncaught: it goes to 'uncaughtException' listeners, or ends the
     /// process the way Node does.
@@ -358,11 +373,21 @@ impl Loop {
 
     /// Runs process.nextTick callbacks and microtasks until both are empty,
     /// then reports the first promise still rejected with no handler, as
-    /// Node's default `--unhandled-rejections=throw` does.
+    /// Node's default `--unhandled-rejections=throw` does. As in Node's
+    /// InternalCallbackScope::Close, the microtask queue is run from here
+    /// when no tick is scheduled, under no JavaScript frame, and the rest is
+    /// main.js's processTicksAndRejections, called on process.
     fn drain(&self, scope: &mut v8::PinScope) {
+        let mut scheduled = [0];
+        v8::Local::new(scope, &self.tick_info).copy_contents(&mut scheduled);
+        if scheduled[0] == 0 {
+            scope.perform_microtask_checkpoint();
+        }
         loop {
             v8::scope!(let scope, scope);
-            let Some(rejected) = self.call(scope, "drain", &[]) else {
+            let (function, _) = self.function(scope, "drain");
+            let process = v8::Local::new(scope, &self.process);
+            let Some(rejected) = self.invoke(scope, function, process, &[]) else {
                 continue;
             };
             let Ok(rejected) = v8::Local::<v8::Array>::try_from(rejected) else {

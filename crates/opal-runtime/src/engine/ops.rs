@@ -25,8 +25,14 @@ pub use buffer::*;
 #[path = "ops/fs.rs"]
 mod fs;
 pub use fs::*;
+#[path = "ops/os.rs"]
+mod os;
+pub use os::*;
 #[path = "ops/requests.rs"]
 pub mod requests;
+#[path = "ops/string_decoder.rs"]
+mod string_decoder;
+pub use string_decoder::*;
 
 type Args<'a> = v8::FunctionCallbackArguments<'a>;
 type Ret<'a> = v8::ReturnValue<'a, v8::Value>;

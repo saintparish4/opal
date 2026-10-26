@@ -5,7 +5,9 @@
 //! same way. The corpora aim at the parts of the runtime whose output has
 //! rules a near miss breaks: util.inspect's layout (console.log of any
 //! object), Buffer's encodings and search offsets, which are ports of
-//! Node's C++, and the synchronous fs functions' results and errors.
+//! Node's C++, the fs functions' results and errors in each of their sync,
+//! callback and promise forms, and node:os, which reads the machine as
+//! libuv does.
 //!
 //! Needs `node` on PATH, at the pinned version, which is why the tests are
 //! `#[ignore]`d in the ordinary suite; CI runs them in their own job:
@@ -93,6 +95,22 @@ fn fs() {
 #[ignore = "needs node on PATH"]
 fn fs_callbacks() {
     check("fs-callbacks.js");
+}
+
+/// fs.promises, FileHandle and Dir: what each call resolves to or rejects
+/// with, and the stack a rejection carries.
+#[test]
+#[ignore = "needs node on PATH"]
+fn fs_promises() {
+    check("fs-promises.js");
+}
+
+/// node:os on this machine, the parts that change by the moment shown by
+/// shape only.
+#[test]
+#[ignore = "needs node on PATH"]
+fn os() {
+    check("os.js");
 }
 
 /// import across a project: tests/node-diff/esm/.

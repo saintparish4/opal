@@ -58,6 +58,36 @@ impl Encoding {
     }
 }
 
+/// Buffer.prototype, which the Buffers natives make are given: Node's
+/// setBufferPrototype, made by the first binding whose natives make them.
+pub struct BufferPrototype(v8::Global<v8::Object>);
+
+/// `setBufferPrototype(Buffer.prototype)`.
+pub fn set_buffer_prototype(scope: &mut v8::PinScope, args: Args, _: Ret) {
+    let Ok(prototype) = v8::Local::<v8::Object>::try_from(args.get(0)) else {
+        return type_error(scope, "setBufferPrototype takes Buffer.prototype");
+    };
+    let prototype = BufferPrototype(v8::Global::new(scope, prototype));
+    scope.set_slot(prototype);
+}
+
+/// A Buffer holding a copy of `data`, as Node's Buffer::Copy makes one.
+pub(super) fn new_buffer<'s>(
+    scope: &mut v8::PinScope<'s, '_>,
+    data: &[u8],
+) -> v8::Local<'s, v8::Value> {
+    let length = data.len();
+    let store = v8::ArrayBuffer::new_backing_store_from_vec(data.to_vec()).make_shared();
+    let buffer = v8::ArrayBuffer::with_backing_store(scope, &store);
+    let array = v8::Uint8Array::new(scope, buffer, 0, length).unwrap();
+    let prototype = scope.get_slot::<BufferPrototype>().map(|p| p.0.clone());
+    if let Some(prototype) = prototype {
+        let prototype = v8::Local::new(scope, prototype);
+        array.set_prototype(scope, prototype.into());
+    }
+    array.into()
+}
+
 /// The bytes a typed array, DataView or ArrayBuffer views. Valid until
 /// JavaScript runs again, which no op here lets happen while it holds them.
 pub(super) fn bytes<'a>(

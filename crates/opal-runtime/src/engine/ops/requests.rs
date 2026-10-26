@@ -46,6 +46,15 @@ pub enum Done {
     StatFs([i64; 8], bool),
     /// Bytes read, for the buffers the request named.
     Read(Vec<u8>),
+    /// null: a directory read to its end.
+    Null,
+    /// A directory's next entries as DirHandle.read gives them: name,
+    /// type, name, type, ...
+    Entries(Vec<(Vec<u8>, i32)>, Encoding),
+    /// A new FileHandle for a descriptor.
+    FileHandle(i32),
+    /// A new DirHandle for an open directory.
+    DirHandle(u64),
 }
 
 /// A failed call, as Node's UVException reports it.
@@ -402,6 +411,23 @@ pub fn value<'s>(
         Done::StatFs(fields, bigint) => {
             super::fs::stats_array(scope, &fields, bigint, true, shared)
         }
+        Done::Null => v8::null(scope).into(),
+        Done::Entries(entries, encoding) => {
+            let mut items = Vec::with_capacity(entries.len() * 2);
+            for (name, kind) in &entries {
+                items.push(encoded(scope, name, encoding));
+                items.push(v8::Integer::new(scope, *kind).into());
+            }
+            v8::Array::new_with_elements(scope, &items).into()
+        }
+        Done::FileHandle(fd) => {
+            let fd = v8::Integer::new(scope, fd).into();
+            super::fs::new_handle(scope, super::fs::Handle::File, fd)
+        }
+        Done::DirHandle(id) => {
+            let id = v8::Number::new(scope, id as f64).into();
+            super::fs::new_handle(scope, super::fs::Handle::Dir, id)
+        }
         Done::Read(bytes) => {
             if let Some(dest) = dest {
                 fill(scope, dest, &bytes);
@@ -418,7 +444,7 @@ pub fn encoded<'s>(
     encoding: Encoding,
 ) -> v8::Local<'s, v8::Value> {
     match encoding {
-        Encoding::Buffer => super::fs::new_buffer(scope, bytes),
+        Encoding::Buffer => super::buffer::new_buffer(scope, bytes),
         encoding => match decode(scope, bytes, encoding) {
             Some(text) => text.into(),
             None => {

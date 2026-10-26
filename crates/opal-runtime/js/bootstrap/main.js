@@ -3,8 +3,10 @@
 //
 //   start(argv, argv0)   set up process for this run and run the main module
 //   drain()              nextTick callbacks and microtasks until both are
-//                        empty; returns [error] for an exception from a
-//                        microtask or a rejection nobody handled
+//                        empty, called on process; returns [error] for an
+//                        exception from a microtask or a rejection nobody
+//                        handled
+//   tickInfo, process    what drain() needs to run as Node's does
 //   runTimers()          the timers phase: the due timers (timers.js)
 //   runImmediates()      the check phase: the pending immediates (timers.js)
 //   nextTimer()          ms until something can run, -1 if nothing is pending
@@ -21,11 +23,11 @@
 (function (internals, ops, primordials) {
   "use strict";
 
-  const { ObjectIs } = primordials;
+  const { ObjectIs, ReflectApply } = primordials;
 
   const process = internals.process;
   const tickQueue = internals.tickQueue;
-  const runTicks = internals.runTicks;
+  const tickInfo = internals.tickInfo;
   const pendingUncaught = internals.pendingUncaught;
   const timers = internals.timers;
   const inspect = (...args) => internals.requireBuiltin("internal/util/inspect").inspect(...args);
@@ -90,22 +92,9 @@
       internals.loader.runMain(argv[1]);
     },
 
-    drain() {
-      for (;;) {
-        runTicks();
-        ops.run_microtasks();
-        if (pendingUncaught.length > 0) return [pendingUncaught.shift()];
-        if (!tickQueue.isEmpty()) continue;
-        const rejected = ops.take_unhandled_rejection();
-        if (rejected === undefined) return undefined;
-        const { 0: reason, 1: promise } = rejected;
-        if (listeners("unhandledRejection") > 0) {
-          process.emit("unhandledRejection", reason, promise);
-          continue;
-        }
-        return [unhandledRejectionError(reason)];
-      }
-    },
+    drain: processTicksAndRejections,
+    tickInfo,
+    process,
 
     runTimers: timers.runTimers,
     runImmediates: timers.runImmediates,
@@ -193,13 +182,42 @@
     },
   };
 
+  // Node's processTicksAndRejections (lib/internal/process/task_queues.js),
+  // called on process as Node calls it, so that what it runs shows the same
+  // frame under it: the ticks and microtasks, until both are empty.
+  function processTicksAndRejections() {
+    for (;;) {
+      while (!tickQueue.isEmpty()) {
+        const { callback, args } = tickQueue.shift();
+        if (args === undefined) callback();
+        else ReflectApply(callback, undefined, args);
+      }
+      ops.run_microtasks();
+      if (pendingUncaught.length > 0) break;
+      if (!tickQueue.isEmpty()) continue;
+      tickInfo[0] = 0;
+      const rejected = ops.take_unhandled_rejection();
+      if (rejected === undefined) return undefined;
+      const { 0: reason, 1: promise } = rejected;
+      if (listeners("unhandledRejection") > 0) {
+        process.emit("unhandledRejection", reason, promise);
+        continue;
+      }
+      return [unhandledRejectionError(reason)];
+    }
+    tickInfo[0] = tickQueue.isEmpty() ? 0 : 1;
+    return [pendingUncaught.shift()];
+  }
+
   // What Node's timers call between timer lists and between immediates
   // (lib/internal/process/task_queues.js): the ticks and microtasks, and an
-  // uncaught exception or unhandled rejection they leave thrown on.
+  // uncaught exception or unhandled rejection they leave thrown on. With no
+  // tick scheduled the microtasks run first, here, as Node's do.
   const noError = {};
   let rethrownError = noError;
   internals.runNextTicks = function runNextTicks() {
-    const failed = main.drain();
+    if (tickInfo[0] === 0) ops.run_microtasks();
+    const failed = ReflectApply(processTicksAndRejections, process, []);
     if (failed !== undefined) {
       rethrownError = failed[0];
       throw failed[0];
