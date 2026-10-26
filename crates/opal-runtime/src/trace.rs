@@ -35,6 +35,19 @@ pub fn checkpoint(name: &'static str) {
     }
 }
 
+/// Lines printed after the timeline, for what a checkpoint can't say.
+static NOTES: Mutex<Vec<String>> = Mutex::new(Vec::new());
+
+/// Records a line for the end of the timeline, if tracing is on.
+pub fn note(line: impl FnOnce() -> String) {
+    if TRACE.get_or_init(open).is_none() {
+        return;
+    }
+    if let Ok(mut notes) = NOTES.lock() {
+        notes.push(line());
+    }
+}
+
 /// Prints the timeline, if tracing is on, and clears it. Called before the
 /// process exits or replaces itself with `exec`.
 pub fn finish() {
@@ -47,6 +60,11 @@ pub fn finish() {
     let mut stderr = std::io::stderr().lock();
     let _ = stderr.write_all(render(&points).as_bytes());
     points.clear();
+    if let Ok(mut notes) = NOTES.lock() {
+        for line in notes.drain(..) {
+            let _ = writeln!(stderr, "opal-trace {line}");
+        }
+    }
 }
 
 fn open() -> Option<Mutex<Vec<Point>>> {

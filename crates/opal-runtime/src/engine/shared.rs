@@ -171,14 +171,37 @@ macro_rules! for_each_type_check {
     };
 }
 
+/// A built-in's embedded source as a V8 string. An ASCII one, which nearly
+/// all are, V8 reads in place as a one-byte string; any other (acorn's, with
+/// its Unicode tables) is copied into a string of V8's own.
+fn builtin_source_string<'s>(
+    scope: &mut v8::PinScope<'s, '_>,
+    source: &'static str,
+) -> Option<v8::Local<'s, v8::String>> {
+    if source.is_ascii() {
+        v8::String::new_external_onebyte_static(scope, source.as_bytes())
+    } else {
+        v8::String::new(scope, source)
+    }
+}
+
+/// How many code caches V8 has refused (one made by another V8, or under
+/// other flags). The module compiles from source then, so a refusal costs
+/// time, not correctness; the startup trace reports the count.
+static CODE_CACHES_REJECTED: std::sync::atomic::AtomicUsize =
+    std::sync::atomic::AtomicUsize::new(0);
+
 /// Compiles a built-in module's source as Node does: the body of a function
 /// of `params` (BUILTIN_PARAMS for a module; per-context scripts take
-/// others), named `node:<id>` in stack traces.
+/// others), named `node:<id>` in stack traces. With `cache`, the code cache
+/// build.rs made for it (only ever for BUILTIN_PARAMS), V8 deserializes the
+/// compiled code instead of parsing and compiling the source.
 fn compile_builtin_source<'s>(
     scope: &mut v8::PinScope<'s, '_>,
     id: &str,
     source: v8::Local<'s, v8::String>,
     params: &[v8::Local<'s, v8::String>],
+    cache: Option<&'static [u8]>,
 ) -> Option<v8::Local<'s, v8::Function>> {
     let resource = v8::String::new(scope, &format!("node:{id}"))?;
     let origin = v8::ScriptOrigin::new(
@@ -194,13 +217,24 @@ fn compile_builtin_source<'s>(
         false,
         None,
     );
-    let mut source = v8::script_compiler::Source::new(source, Some(&origin));
-    v8::script_compiler::compile_function(
+    use v8::script_compiler::{CachedData, CompileOptions, NoCacheReason, Source};
+    let (mut source, options) = match cache {
+        Some(bytes) => (
+            Source::new_with_cached_data(source, Some(&origin), CachedData::new(bytes)),
+            CompileOptions::ConsumeCodeCache,
+        ),
+        None => (Source::new(source, Some(&origin)), CompileOptions::NoCompileOptions),
+    };
+    let function = v8::script_compiler::compile_function(
         scope,
         &mut source,
         params,
         &[],
-        v8::script_compiler::CompileOptions::NoCompileOptions,
-        v8::script_compiler::NoCacheReason::NoReason,
-    )
+        options,
+        NoCacheReason::NoReason,
+    );
+    if source.get_cached_data().is_some_and(|data| data.rejected()) {
+        CODE_CACHES_REJECTED.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    }
+    function
 }

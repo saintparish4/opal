@@ -35,6 +35,7 @@ use ops::Rejections;
 static SNAPSHOT: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/snapshot.bin"));
 
 include!(concat!(env!("OUT_DIR"), "/builtins.rs"));
+include!(concat!(env!("OUT_DIR"), "/code_caches.rs"));
 
 /// The embedded source of built-in module `id`.
 fn builtin_source(id: &str) -> Option<&'static str> {
@@ -42,6 +43,15 @@ fn builtin_source(id: &str) -> Option<&'static str> {
         .binary_search_by(|(name, _)| (*name).cmp(id))
         .ok()
         .map(|index| BUILTINS[index].1)
+}
+
+/// The code cache build.rs made for built-in module `id`.
+fn builtin_code_cache(id: &str) -> Option<&'static [u8]> {
+    let index = CODE_CACHES
+        .binary_search_by(|(name, _, _)| (*name).cmp(id))
+        .ok()?;
+    let (_, start, length) = CODE_CACHES[index];
+    Some(&CODE_CACHE.0[start..start + length])
 }
 
 macro_rules! op_references {
@@ -402,6 +412,10 @@ impl Loop {
 /// Ends the process with `code`, after printing the startup trace.
 fn leave(code: i32) -> ! {
     trace::checkpoint("exit");
+    trace::note(|| {
+        let rejected = CODE_CACHES_REJECTED.load(std::sync::atomic::Ordering::Relaxed);
+        format!("built-in code caches rejected: {rejected}")
+    });
     trace::finish();
     std::process::exit(code)
 }

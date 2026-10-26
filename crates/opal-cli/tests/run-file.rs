@@ -443,3 +443,27 @@ fn fs_functions_with_a_callback_say_they_are_not_there_yet() {
         out.stderr
     );
 }
+
+#[test]
+fn built_in_modules_compile_from_their_code_caches() {
+    // V8 refuses a cache made by another V8 or under other flags, and the
+    // module then compiles from source: slower, but otherwise unnoticed.
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::write(
+        dir.path().join("main.js"),
+        "require(\"fs\");\nrequire(\"assert\");\n",
+    )
+    .unwrap();
+    let output = Command::new(OPAL)
+        .current_dir(dir.path())
+        .args(["run", "main.js"])
+        .env("OPAL_TRACE_STARTUP", "1")
+        .output()
+        .unwrap();
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(output.status.success(), "{stderr}");
+    assert!(
+        stderr.contains("opal-trace built-in code caches rejected: 0\n"),
+        "{stderr}"
+    );
+}

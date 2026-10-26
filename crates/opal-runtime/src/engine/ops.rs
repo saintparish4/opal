@@ -12,8 +12,9 @@
 use std::io;
 
 use super::{
-    BUILTIN_PARAMS, builtin_source, compile_builtin_source, error_arrow_op, esm, leave,
-    package_type_op, resolve_op, strip_types_op, take_resolution_warnings_op,
+    BUILTIN_PARAMS, builtin_code_cache, builtin_source, builtin_source_string,
+    compile_builtin_source, error_arrow_op, esm, leave, package_type_op, resolve_op,
+    strip_types_op, take_resolution_warnings_op,
 };
 
 // Explicit, so build.rs (which includes this file by path) and the crate
@@ -354,9 +355,8 @@ pub fn compile_function<'s>(
 /// `compileBuiltin(id, params?)`: the built-in module `id` (js/node/<id>.js
 /// or js/opal/<id>.js), compiled as the body of a function of `params`
 /// (BUILTIN_PARAMS by default), or undefined when there is no such module.
-/// Its source is embedded in the binary. An ASCII one, which nearly all are,
-/// V8 reads in place as a one-byte string; any other (acorn's, with its
-/// Unicode tables) is copied into a string of V8's own.
+/// Its source is embedded in the binary, with the code cache build.rs made
+/// for it, which is used when it is compiled as a module.
 pub fn compile_builtin<'s>(
     scope: &mut v8::PinScope<'s, '_>,
     args: v8::FunctionCallbackArguments<'s>,
@@ -366,12 +366,7 @@ pub fn compile_builtin<'s>(
     let Some(source) = builtin_source(&id) else {
         return;
     };
-    let source = if source.is_ascii() {
-        v8::String::new_external_onebyte_static(scope, source.as_bytes())
-    } else {
-        v8::String::new(scope, source)
-    };
-    let Some(source) = source else {
+    let Some(source) = builtin_source_string(scope, source) else {
         return type_error(scope, "built-in source is too large");
     };
     let mut params = Vec::new();
@@ -389,7 +384,14 @@ pub fn compile_builtin<'s>(
         }
         Err(_) => params.extend(BUILTIN_PARAMS.iter().map(|name| string(scope, name))),
     }
-    if let Some(function) = compile_builtin_source(scope, &id, source, &params) {
+    // A cache holds code compiled for BUILTIN_PARAMS, so a per-context
+    // script, compiled with its own, gets none.
+    let cache = if args.get(1).is_array() {
+        None
+    } else {
+        builtin_code_cache(&id)
+    };
+    if let Some(function) = compile_builtin_source(scope, &id, source, &params, cache) {
         rv.set(function.into());
     }
 }

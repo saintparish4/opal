@@ -13,6 +13,9 @@
            on this machine) and `opal --version` (opal's own start with no
            runtime work). Ratios to bun and node are what the targets are
            stated in, because absolute times are a property of the machine.
+           `modules` is startup again, for a program that loads node's
+           library the way a CLI tool's first lines do (fs, path, util,
+           assert, events): what a runtime pays to make those modules.
   steady   how fast code runs once started: a recursive numeric workload
            (fib), JSON stringify and parse, and a regex scan. A runtime
            without a JIT can win startup and lose these by an order of
@@ -66,11 +69,27 @@ from pathlib import Path
 
 PINNED = {"node": "v24.19.0", "bun": "1.4.2"}
 
-# Each prints one line, and only through console.log, so that an engine spike
-# with nothing else bound can run them all.
+# Each prints one line, and all but `modules` only through console.log, so
+# that an engine spike with nothing else bound can run them (one that can't
+# run `modules` is left out of its table, as any command that can't is).
 WORKLOADS = {
     # The program bun.com's startup table times.
     "hello": 'console.log("hello")\n',
+    # Startup with node's library: a CLI tool's first lines.
+    "modules": (
+        "const fs = require('fs')\n"
+        "const path = require('path')\n"
+        "const util = require('util')\n"
+        "const assert = require('assert')\n"
+        "const { EventEmitter } = require('events')\n"
+        "const text = fs.readFileSync(__filename, 'utf8')\n"
+        "assert.ok(text.length > 0)\n"
+        "const lines = new EventEmitter()\n"
+        "let count = 0\n"
+        "lines.on('line', () => count++)\n"
+        "for (const line of text.split('\\n')) lines.emit('line', line)\n"
+        "console.log(util.format('%s %d', path.basename(__filename), count))\n"
+    ),
     # ~1.6M calls: call overhead and integer arithmetic.
     "fib": (
         "function fib(n) { return n < 2 ? n : fib(n - 1) + fib(n - 2) }\n"
@@ -109,7 +128,7 @@ STARTUP = "hello"
 CONTROLS = ("floor", "opal-version")
 # hyperfine samples per command per round; the steady workloads run longer,
 # so fewer of them buy the same confidence.
-RUNS = {"hello": (5, 20), "fib": (1, 3), "json": (1, 3), "regex": (1, 3)}  # (warmup, runs)
+RUNS = {"hello": (5, 20), "modules": (5, 20), "fib": (1, 3), "json": (1, 3), "regex": (1, 3)}  # (warmup, runs)
 CENSUS_REPEATS = 3
 TIMEOUT = 120
 SHIM_BINARY = None
