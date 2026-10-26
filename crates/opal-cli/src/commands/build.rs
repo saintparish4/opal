@@ -6,7 +6,7 @@ use std::process::ExitCode;
 use std::time::Instant;
 
 use clap::Args;
-use opal_bundler::{BuildOptions, Define, Target};
+use opal_bundler::{BuildOptions, Code, Define, Target};
 use opal_core::graph::{
     DependencyKind, DependencyTarget, ModuleGraph, ModuleId, resolve, resolve_cached,
 };
@@ -79,7 +79,7 @@ fn build_here(args: BuildArgs) -> Result<ExitCode, Failure> {
         // Uncached: the answer includes what resolution read and probed,
         // which only a fresh resolution records.
         let resolution = resolve(&root, &relative_entry, &resolver)?;
-        return why(&resolution.graph, &resolution.trace, module);
+        return why(&resolution.graph, &resolution.trace, module, &options);
     }
 
     let started = Instant::now();
@@ -95,6 +95,11 @@ fn build_here(args: BuildArgs) -> Result<ExitCode, Failure> {
         .and_then(|mut output| opal_bundler::write(outdir.as_path(), &mut output).map(|()| output));
     let output = match built {
         Ok(output) => output,
+        // Not a refusal of the program: the build could not read or write.
+        Err(diagnostic) if diagnostic.code == Code::Io => {
+            eprintln!("{} {diagnostic}", Paint::for_stderr().red("opal:"));
+            return Ok(ExitCode::FAILURE);
+        }
         Err(diagnostic) => {
             let paint = Paint::for_stderr();
             eprintln!("{} {diagnostic}", paint.red("opal: refused"));
@@ -137,11 +142,13 @@ fn build_here(args: BuildArgs) -> Result<ExitCode, Failure> {
 }
 
 /// The shortest chain of imports from the entry to `module`, and what the
-/// resolver read and probed to find it.
+/// resolver read and probed to find it. An import of an external stays an
+/// import in the bundle, so no chain goes through one.
 fn why(
     graph: &ModuleGraph,
     trace: &opal_core::graph::ResolveTrace,
     module: &str,
+    options: &BuildOptions,
 ) -> Result<ExitCode, Failure> {
     let target = NormalizedPath::new(module);
     let Some(target_id) = graph.id_of(&target) else {
@@ -160,12 +167,19 @@ fn why(
         for (index, dependency) in graph.module(id).dependencies.iter().enumerate() {
             if let DependencyTarget::Module { id: next } = dependency.target
                 && !seen[next.index()]
+                // As the linker decides it: by specifier or by path.
+                && !options.is_external(&dependency.specifier)
+                && !options.is_external(graph.module(next).path.as_str())
             {
                 seen[next.index()] = true;
                 previous[next.index()] = Some((id, index));
                 queue.push_back(next);
             }
         }
+    }
+    if !seen[target_id.index()] {
+        println!("{target} is not in the bundle: every import of it is through an external");
+        return Ok(ExitCode::FAILURE);
     }
     let mut chain = Vec::new();
     let mut current = target_id;
