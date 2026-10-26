@@ -1,0 +1,5 @@
+stdout differs from line 1:
+  original: "<end>"
+  bundle:   "outer pkg"
+exit code: original Some(1), bundle Some(0)
+uncaught error: original Some(Uncaught { origin: "unhandledRejection", name: Some("Error"), message: Some("Cannot find package '<tmp>/program/sub/node_modules/pkg/index.js' imported from <tmp>/program/sub/main.mjs\nDid you mean to import \"pkg/index.js\"?") }), bundle None
