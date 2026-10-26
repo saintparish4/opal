@@ -145,11 +145,14 @@ fn a_rejection_handled_late_in_the_same_tick_is_not_reported() {
 }
 
 #[test]
-fn ticks_then_microtasks_then_timers_then_immediates() {
+fn ticks_then_microtasks_then_immediates_then_timers_from_a_timer() {
+    // Set from a timer, an immediate runs in that turn's check phase and a
+    // 0 ms timer in the next turn. (Set from the main module, which runs
+    // first depends on how soon the first turn starts, in Node as here.)
     let (_dir, out) = run(
-        "setTimeout(()=>console.log(1));setImmediate(()=>console.log(2));process.nextTick(()=>console.log(3));Promise.resolve().then(()=>console.log(4));queueMicrotask(()=>console.log(5));\n",
+        "setTimeout(() => { setTimeout(() => console.log(1)); setImmediate(() => console.log(2)); process.nextTick(() => console.log(3)); Promise.resolve().then(() => console.log(4)); queueMicrotask(() => console.log(5)); });\n",
     );
-    assert_eq!(out.stdout, "3\n4\n5\n1\n2\n");
+    assert_eq!(out.stdout, "3\n4\n5\n2\n1\n");
 }
 
 #[test]
