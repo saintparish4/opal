@@ -8,3 +8,4 @@ base/
 /website/node_modules
 /website/dist
 /website/.astro
+/crates/opal-bundler/tools/node_modules

@@ -1,0 +1,3 @@
+stdout differs from line 2:
+  original: "late is in its TDZ: ReferenceError"
+  bundle:   "second runs"

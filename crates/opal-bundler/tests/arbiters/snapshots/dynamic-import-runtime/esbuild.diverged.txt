@@ -1,0 +1,5 @@
+stdout differs from line 3:
+  original: "./dep.mjs d"
+  bundle:   "<end>"
+exit code: original Some(0), bundle Some(1)
+uncaught error: original None, bundle Some(Uncaught { origin: "unhandledRejection", name: Some("Error"), message: Some("Cannot find module '<tmp>/program/.opal-out/dep.mjs' imported from <tmp>/program/.opal-out/esbuild.mjs\nDid you mean to import \"../dep.mjs\"?") })

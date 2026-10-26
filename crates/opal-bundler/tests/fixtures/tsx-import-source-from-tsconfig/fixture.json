@@ -1,0 +1,1 @@
+{ "original": "tsc", "why": "Rule 13: tsconfig's `jsxImportSource` decides the runtime the compiled JSX imports, and the module graph has to follow the same one, or the bundler refuses the program with E-LINK." }

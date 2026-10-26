@@ -1,0 +1,4 @@
+stdout differs from line 2:
+  original: "exit 1"
+  bundle:   "microtask before the throw was handled"
+uncaught error: original Some(Uncaught { origin: "uncaughtException", name: Some("RangeError"), message: Some("from the entry") }), bundle Some(Uncaught { origin: "unhandledRejection", name: Some("RangeError"), message: Some("from the entry") })

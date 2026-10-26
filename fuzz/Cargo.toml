@@ -16,7 +16,11 @@ cargo-fuzz = true
 libfuzzer-sys = "0.4"
 opal-core = { path = "../crates/opal-core" }
 opal-pm = { path = "../crates/opal-pm" }
+opal-bundler = { path = "../crates/opal-bundler", features = ["oracle"] }
 serde_json = "1"
+oxc_allocator = "0.152.0"
+oxc_parser = "0.152.0"
+oxc_span = "0.152.0"
 tempfile = "3"
 
 [[bin]]
@@ -57,6 +61,20 @@ bench = false
 [[bin]]
 name = "edit"
 path = "fuzz_targets/edit.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "bundle_graph"
+path = "fuzz_targets/bundle_graph.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "bundle_source"
+path = "fuzz_targets/bundle_source.rs"
 test = false
 doc = false
 bench = false

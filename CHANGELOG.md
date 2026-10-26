@@ -4,6 +4,18 @@ What changed in each Opal release, newest first.
 
 Opal is pre-1.0, so a release can change behaviour you depend on. Anything that does is under **Breaking**, and every release says whether it changes the `opal.lock` format. Dates are when the release was published. The numbers are measurements made at the time on one machine, and they compare a release with the one before it. Opal against npm, pnpm, yarn, and bun is in [benchmarks/BENCHMARKS.md](./benchmarks/BENCHMARKS.md).
 
+## [Unreleased]
+
+### Added
+
+- **`opal build`** bundles an entry file into one ES module with a source map, for Node (`--target node`, the default) or browsers (`--target browser`). The bundle behaves like the unbundled program under Node, by the contract in [crates/opal-bundler/SEMANTICS.md](./crates/opal-bundler/SEMANTICS.md), and anything the bundler cannot keep that way is refused with a code naming the module and line. `--why <module>` prints the import chain that pulls a module in. It parses and prints modules on every core: on esbuild's three.js benchmark (r108 copied ten times, 3,701 files), a rebuild with the module graph cached takes 654 ms (esbuild 708 ms, bun 418 ms), median of 10 rounds on one 8-thread machine; see [benchmarks/BENCHMARKS.md](./benchmarks/BENCHMARKS.md#bundling-esbuilds-threejs-benchmark).
+- `opal graph` resolves a `.jsx`/`.tsx` file's JSX runtime import when asked to (the bundler asks), and can resolve JavaScript modules exactly as Node does, without the extensions and indexes TypeScript adds.
+
+### Fixed
+
+- `opal graph` no longer aborts with a stack overflow on a deeply nested module. It resolves on a 256 MiB stack, as `opal build` does, where it ran on the main thread's 8 MiB and overflowed at about 20,000 chained `?:`, a program Node runs. A module whose brackets nest more than 4,000 deep is not parsed, so its imports are not followed, and `--json` lists it under `diagnostics`.
+- `opal graph` resolves `pkg/sub`, in a package with no `package.json`, to the subpath; it gave the package's index. A relative specifier ending in `/`, or `.` or `..`, now resolves to a directory only, as in Node and TypeScript; `import "."` could pick a sibling `src.ts` over `src/index.ts`. Graphs cached by earlier versions are resolved again once.
+
 ## [0.4.1] (2026-10-15)
 
 A faster `opal add` over old metadata, release notes taken from this changelog, and new checks that what Opal installs builds and runs. No `opal.lock` format change.

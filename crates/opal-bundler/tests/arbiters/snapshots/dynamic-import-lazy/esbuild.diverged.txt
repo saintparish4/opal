@@ -1,0 +1,3 @@
+stdout differs from line 10:
+  original: "cycle partner has it too: true"
+  bundle:   "eager namespace: true"

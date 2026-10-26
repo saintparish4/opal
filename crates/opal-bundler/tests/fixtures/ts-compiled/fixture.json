@@ -1,0 +1,1 @@
+{ "original": "tsc", "why": "Rule 13 against tsc: enums, const enums, namespaces, parameter properties, legacy decorators with design metadata, useDefineForClassFields false, and elision of an import used only as a type." }

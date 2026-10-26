@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "jsx": "react",
+    "allowJs": true,
+    "checkJs": false,
+    "skipLibCheck": true,
+    "types": []
+  },
+  "files": ["main.jsx"]
+}

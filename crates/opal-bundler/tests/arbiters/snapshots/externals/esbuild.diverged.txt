@@ -1,0 +1,5 @@
+stdout differs from line 1:
+  original: "ext-esm value ext-cjs via require"
+  bundle:   "<end>"
+exit code: original Some(0), bundle Some(1)
+uncaught error: original None, bundle Some(Uncaught { origin: "unhandledRejection", name: Some("Error"), message: Some("Dynamic require of \"ext-cjs\" is not supported") })

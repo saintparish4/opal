@@ -23,7 +23,10 @@ pub use memo::{
     CacheStatus, CachedResolution, GraphCache, MEMO_FORMAT_VERSION, MemoError, MemoKey, MissReason,
     resolve_cached,
 };
-pub use resolver::{Resolution, ResolveError, ResolveTrace, ResolverOptions, resolve};
+pub use resolver::{
+    MAX_BRACKET_NESTING, Resolution, ResolveError, ResolveTrace, ResolverOptions,
+    nests_deeper_than, resolve,
+};
 
 /// Bumped when the serialized shape changes; older snapshots then miss instead
 /// of being misread.

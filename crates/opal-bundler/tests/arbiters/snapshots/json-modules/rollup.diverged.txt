@@ -1,0 +1,5 @@
+stdout differs from line 1:
+  original: "[ 'a', '__proto__', 'list' ] true"
+  bundle:   "[ 'a', 'list' ] false"
+exit code: original Some(0), bundle Some(1)
+uncaught error: original None, bundle Some(Uncaught { origin: "unhandledRejection", name: Some("Error"), message: Some("Cannot find module './data.json'\nRequire stack:\n- <tmp>/program/.opal-out/rollup.mjs") })

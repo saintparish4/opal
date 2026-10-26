@@ -1,0 +1,1 @@
+{ "target": "browser", "expect": { "refused": "E-BROWSER-FIELD" }, "why": "The browser field replaces the file the bundle would hold, and the graph does not apply it." }

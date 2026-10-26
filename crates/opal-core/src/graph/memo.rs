@@ -37,8 +37,12 @@ pub const FAULT_BEFORE_RENAME: FaultPoint = FaultPoint::new("memo-before-rename"
 /// previously had no edges into files that have them. v3 added the project
 /// root to the record, which is a shape change rather than a behaviour one.
 /// v4 stopped an `exports` target from resolving outside its package, which
-/// turns edges that used to resolve into unresolved ones.
-pub const MEMO_FORMAT_VERSION: u32 = 4;
+/// turns edges that used to resolve into unresolved ones. v5 resolves a
+/// subpath of a package with no package.json to the subpath, not the
+/// package's index, and a specifier ending in `/`, `.`, or `..` to a
+/// directory only; leaves unparsed a file whose brackets nest more than
+/// 4,000 deep; and records the directories a resolution turned on.
+pub const MEMO_FORMAT_VERSION: u32 = 5;
 
 #[derive(Debug, thiserror::Error)]
 pub enum MemoError {
@@ -350,6 +354,16 @@ fn validate(trace: &ResolveTrace, root: &NormalizedPath) -> Option<MissReason> {
         // Mirrors the resolver's only question — "is there a file here?" — so a
         // directory appearing where a file was probed is correctly not a miss.
         if root.join(relative.as_str()).as_path().is_file() {
+            return Some(MissReason::MissingPathAppeared(relative.clone()));
+        }
+    }
+    for relative in &trace.directories {
+        if !root.join(relative.as_str()).as_path().is_dir() {
+            return Some(MissReason::InputRemoved(relative.clone()));
+        }
+    }
+    for relative in &trace.missing_directories {
+        if root.join(relative.as_str()).as_path().is_dir() {
             return Some(MissReason::MissingPathAppeared(relative.clone()));
         }
     }

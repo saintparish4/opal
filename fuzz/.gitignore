@@ -4,3 +4,5 @@ corpus/
 artifacts/
 target/
 Cargo.lock
+# libFuzzer writes one log per worker into the directory it runs in.
+fuzz-*.log

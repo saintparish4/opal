@@ -1,0 +1,4 @@
+{
+  "why": "Rule 15: sideEffects is the package author's statement. The honest package is equivalent; the lying package loses its log, the one divergence the contract allows.",
+  "expect": { "known-divergence": { "section": "Rule 15: sideEffects", "lines": "lying package" } }
+}

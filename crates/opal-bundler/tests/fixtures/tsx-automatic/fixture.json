@@ -1,0 +1,1 @@
+{ "original": "tsc", "why": "Rule 13: JSX with the automatic runtime, against what tsc emits." }

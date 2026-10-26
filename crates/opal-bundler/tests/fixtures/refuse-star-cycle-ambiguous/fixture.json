@@ -1,0 +1,4 @@
+{
+  "why": "`b` is ambiguous in both namespaces, and the `export *` declarations form a cycle: V8 puts `b` in whichever of the two namespaces it builds second (import `hub` first and `hub` has it; import `ring` first and `ring` has it), where ECMA-262 leaves it out of both. Found by the generated-graph fuzzer (seed 4191301).",
+  "expect": { "refused": "E-LINK" }
+}

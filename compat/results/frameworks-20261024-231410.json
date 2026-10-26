@@ -1,0 +1,338 @@
+{
+  "meta": {
+    "date": "2026-10-24T23:11:48",
+    "host": "Linux 6.6.87.2-microsoft-standard-WSL2, 8 threads",
+    "versions": {
+      "opal": "0.4.1",
+      "node": "24.19.0",
+      "npm": "12.0.2"
+    },
+    "opal_binary": {
+      "path": "/home/saint/msgd/opal-bundler/target/release/opal",
+      "sha256": "52f89aa6cb72bbef2e7458b8e5757683e9e9b4a971dadf50ab84adeb10b71322"
+    },
+    "timeouts": {
+      "install": 900,
+      "build": 900,
+      "test": 600,
+      "runtime": 120,
+      "bundle": 300,
+      "bundle test": 600,
+      "bundle runtime": 120
+    },
+    "commands": {
+      "next": {
+        "install": "opal install",
+        "build": "npm run build",
+        "runtime": "npm run start -- --port <port> --hostname 127.0.0.1"
+      },
+      "vite-react": {
+        "install": "opal install",
+        "build": "npm run build",
+        "runtime": "npm run preview -- --port <port> --strictPort --host 127.0.0.1",
+        "bundle": "opal build src/main.tsx --root . --outdir dist-opal --cache-dir <cache> --target browser --assets --define process.env.NODE_ENV=\"production\""
+      },
+      "vite-vue": {
+        "install": "opal install",
+        "build": "npm run build",
+        "runtime": "npm run preview -- --port <port> --strictPort --host 127.0.0.1"
+      },
+      "astro": {
+        "install": "opal install",
+        "build": "npm run build",
+        "runtime": "npm run preview -- --port <port> --host 127.0.0.1 --ignore-lock"
+      },
+      "sveltekit": {
+        "install": "opal install",
+        "build": "npm run build",
+        "runtime": "npm run preview -- --port <port> --strictPort --host 127.0.0.1"
+      },
+      "nest": {
+        "install": "opal install",
+        "build": "npm run build",
+        "test": "npm run test",
+        "runtime": "npm run start:prod",
+        "bundle": "opal build src/main.ts --root . --outdir dist-opal --cache-dir <cache> --target node"
+      },
+      "express": {
+        "install": "opal install",
+        "runtime": "npm run start",
+        "bundle": "opal build server.js --root . --outdir dist-opal --cache-dir <cache> --target node"
+      }
+    },
+    "seconds": 156.6
+  },
+  "results": [
+    {
+      "framework": "next",
+      "scaffold": "npx --yes create-next-app@16.3.2 next-test --ts --tailwind --eslint --app --no-src-dir --no-react-compiler --no-agents-md --import-alias \"@/*\" --use-npm --skip-install --disable-git --yes",
+      "install": {
+        "status": "pass",
+        "exit": 0,
+        "seconds": 37.893,
+        "summary": "364 packages installed [37.6s]  (resolve 6.8s, fetch 28.4s, link 2.3s)",
+        "packages": 364
+      },
+      "scripts_not_run": {
+        "unrs-resolver@1.12.2": "postinstall"
+      },
+      "scripts_warning": [
+        "warning: install scripts were not run for 1 package (opal does not run install scripts), so anything they build or download is missing:",
+        "  unrs-resolver@1.12.2: postinstall"
+      ],
+      "versions": {
+        "next": "16.3.2",
+        "react": "19.2.8"
+      },
+      "build": {
+        "status": "pass",
+        "exit": 0,
+        "seconds": 15.996
+      },
+      "test": null,
+      "runtime": {
+        "status": "pass",
+        "seconds": 0.956,
+        "url": "http://127.0.0.1:<port>/",
+        "reason": "HTTP 200"
+      },
+      "bundle": null,
+      "bundle test": null,
+      "bundle runtime": null
+    },
+    {
+      "framework": "vite-react",
+      "scaffold": "npx --yes create-vite@9.2.1 vite-react --template react-ts --no-immediate --no-interactive",
+      "install": {
+        "status": "pass",
+        "exit": 0,
+        "seconds": 5.693,
+        "summary": "30 packages installed [5.5s]  (resolve 1.4s, fetch 4.0s, link 84ms)",
+        "packages": 30
+      },
+      "scripts_not_run": {},
+      "scripts_warning": [],
+      "versions": {
+        "vite": "8.3.5",
+        "react": "19.3.1"
+      },
+      "build": {
+        "status": "pass",
+        "exit": 0,
+        "seconds": 4.288
+      },
+      "test": null,
+      "runtime": {
+        "status": "pass",
+        "seconds": 0.771,
+        "url": "http://127.0.0.1:<port>/",
+        "reason": "HTTP 200"
+      },
+      "bundle": {
+        "status": "pass",
+        "exit": 0,
+        "seconds": 0.375,
+        "summary": "22 modules into dist-opal/main.mjs (1502 KB) in 341.4ms"
+      },
+      "bundle test": null,
+      "bundle runtime": {
+        "status": "pass",
+        "seconds": 2.75,
+        "url": "http://127.0.0.1:<port>/",
+        "reason": "no console errors; button.counter shows 'Count is 1'",
+        "page": {
+          "ok": true,
+          "problems": [],
+          "text": "Count is 1",
+          "rendered": 198
+        }
+      }
+    },
+    {
+      "framework": "vite-vue",
+      "scaffold": "npx --yes create-vite@9.2.1 vite-vue --template vue-ts --no-immediate --no-interactive",
+      "install": {
+        "status": "pass",
+        "exit": 0,
+        "seconds": 5.294,
+        "summary": "50 packages installed [5.1s]  (resolve 1.3s, fetch 3.6s, link 145ms)",
+        "packages": 50
+      },
+      "scripts_not_run": {},
+      "scripts_warning": [],
+      "versions": {
+        "vite": "8.3.5",
+        "vue": "3.5.44"
+      },
+      "build": {
+        "status": "pass",
+        "exit": 0,
+        "seconds": 4.694
+      },
+      "test": null,
+      "runtime": {
+        "status": "pass",
+        "seconds": 0.772,
+        "url": "http://127.0.0.1:<port>/",
+        "reason": "HTTP 200"
+      },
+      "bundle": null,
+      "bundle test": null,
+      "bundle runtime": null
+    },
+    {
+      "framework": "astro",
+      "scaffold": "npx --yes create-astro@5.2.6 astro --template basics --no-install --no-git --no-ai --skip-houston --yes",
+      "install": {
+        "status": "pass",
+        "exit": 0,
+        "seconds": 11.836,
+        "summary": "191 packages installed [11.7s]  (resolve 1.8s, fetch 9.1s, link 757ms)",
+        "packages": 191
+      },
+      "scripts_not_run": {},
+      "scripts_warning": [],
+      "versions": {
+        "astro": "7.4.2"
+      },
+      "build": {
+        "status": "pass",
+        "exit": 0,
+        "seconds": 3.517
+      },
+      "test": null,
+      "runtime": {
+        "status": "pass",
+        "seconds": 1.781,
+        "url": "http://127.0.0.1:<port>/",
+        "reason": "HTTP 200"
+      },
+      "bundle": null,
+      "bundle test": null,
+      "bundle runtime": null
+    },
+    {
+      "framework": "sveltekit",
+      "scaffold": "npx --yes sv@1.1.1 create sveltekit --template minimal --types ts --no-add-ons --no-install",
+      "install": {
+        "status": "pass",
+        "exit": 0,
+        "seconds": 5.748,
+        "summary": "56 packages installed [5.6s]  (resolve 2.0s, fetch 3.3s, link 224ms)",
+        "packages": 56
+      },
+      "scripts_not_run": {
+        "(project)": "prepare"
+      },
+      "scripts_warning": [
+        "warning: this project's own install scripts were not run (opal does not run install scripts): prepare"
+      ],
+      "versions": {
+        "@sveltejs/kit": "3.1.0",
+        "vite": "8.3.5"
+      },
+      "build": {
+        "status": "pass",
+        "exit": 0,
+        "seconds": 5.962
+      },
+      "test": null,
+      "runtime": {
+        "status": "pass",
+        "seconds": 1.543,
+        "url": "http://127.0.0.1:<port>/",
+        "reason": "HTTP 200"
+      },
+      "bundle": null,
+      "bundle test": null,
+      "bundle runtime": null
+    },
+    {
+      "framework": "nest",
+      "scaffold": "npx --yes @nestjs/cli@12.0.8 new nest --package-manager npm --skip-install --skip-git --no-observe",
+      "install": {
+        "status": "pass",
+        "exit": 0,
+        "seconds": 15.207,
+        "summary": "342 packages installed [15.1s]  (resolve 2.4s, fetch 11.3s, link 1.2s)",
+        "packages": 342
+      },
+      "scripts_not_run": {},
+      "scripts_warning": [],
+      "versions": {
+        "@nestjs/core": "12.2.0",
+        "vitest": "4.1.12"
+      },
+      "build": {
+        "status": "pass",
+        "exit": 0,
+        "seconds": 4.142
+      },
+      "test": {
+        "status": "pass",
+        "exit": 0,
+        "seconds": 1.911
+      },
+      "runtime": {
+        "status": "pass",
+        "seconds": 1.023,
+        "url": "http://127.0.0.1:<port>/",
+        "reason": "HTTP 200"
+      },
+      "bundle": {
+        "status": "pass",
+        "exit": 0,
+        "seconds": 0.525,
+        "summary": "854 modules into dist-opal/main.mjs (3214 KB) in 497.6ms"
+      },
+      "bundle test": {
+        "status": "pass",
+        "exit": 0,
+        "seconds": 6.14
+      },
+      "bundle runtime": {
+        "status": "pass",
+        "seconds": 0.518,
+        "url": "http://127.0.0.1:<port>/",
+        "reason": "HTTP 200"
+      }
+    },
+    {
+      "framework": "express",
+      "scaffold": "Hand-written, not generated by a scaffolder.",
+      "install": {
+        "status": "pass",
+        "exit": 0,
+        "seconds": 1.702,
+        "summary": "65 packages installed [1.6s]  (resolve 694ms, fetch 737ms, link 204ms)",
+        "packages": 65
+      },
+      "scripts_not_run": {},
+      "scripts_warning": [],
+      "versions": {
+        "express": "5.3.0"
+      },
+      "build": null,
+      "test": null,
+      "runtime": {
+        "status": "pass",
+        "seconds": 0.517,
+        "url": "http://127.0.0.1:<port>/health",
+        "reason": "HTTP 200"
+      },
+      "bundle": {
+        "status": "pass",
+        "exit": 0,
+        "seconds": 0.167,
+        "summary": "140 modules into dist-opal/server.mjs (987 KB) in 146.0ms"
+      },
+      "bundle test": null,
+      "bundle runtime": {
+        "status": "pass",
+        "seconds": 0.272,
+        "url": "http://127.0.0.1:<port>/health",
+        "reason": "HTTP 200"
+      }
+    }
+  ]
+}

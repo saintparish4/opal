@@ -1,0 +1,42 @@
+[package]
+name = "opal-bundler"
+description = "The opal build command: bundles a module graph into one ES module that behaves like the unbundled program."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[features]
+# The differential oracle (src/oracle.rs) spawns `node`. Tests and the fuzz
+# workspace turn it on; the opal binary never does.
+oracle = ["dep:tempfile"]
+
+[dependencies]
+opal-core.workspace = true
+oxc_allocator.workspace = true
+oxc_ast.workspace = true
+oxc_ast_visit.workspace = true
+oxc_codegen.workspace = true
+oxc_parser = { workspace = true, features = ["regular_expression"] }
+oxc_semantic.workspace = true
+oxc_sourcemap.workspace = true
+oxc_span.workspace = true
+oxc_syntax.workspace = true
+oxc_transformer.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tempfile = { workspace = true, optional = true }
+
+[dev-dependencies]
+opal-bundler = { path = ".", features = ["oracle"] }
+opal-core.workspace = true
+serde_json.workspace = true
+tempfile.workspace = true
+
+[[example]]
+name = "generated-graphs"
+required-features = ["oracle"]
+
+[[example]]
+name = "side-effects-survey"
+required-features = ["oracle"]

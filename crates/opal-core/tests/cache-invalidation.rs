@@ -326,3 +326,49 @@ fn test_pruning_leaves_a_live_record_alone() {
         "pruning must not evict a live record"
     );
 }
+
+#[test]
+fn test_a_package_directory_appearing_or_vanishing_misses_under_node_resolution() {
+    // Node's ES module resolver stops at the first `node_modules/<name>`
+    // directory, whatever is in it, so the graph rests on whether a stray
+    // one exists: its appearing and its vanishing must both miss.
+    let project = Project::new();
+    project
+        .write("sub/main.mjs", "import 'pkg';\n")
+        .write("node_modules/pkg/package.json", "{\"main\":\"index.js\"}\n")
+        .write("node_modules/pkg/index.js", "export default 1;\n");
+    let options = ResolverOptions {
+        node_exact: true,
+        ..ResolverOptions::default()
+    };
+    let (directory, cache) = cache();
+    let resolve = || {
+        let resolved =
+            resolve_cached(&cache, &project.root(), &entry("sub/main.mjs"), &options).unwrap();
+        (resolved.graph, resolved.status)
+    };
+
+    let (outer, _) = resolve();
+    assert_eq!(outer.len(), 2, "pkg resolves to the outer package");
+    assert_eq!(resolve().1, CacheStatus::Hit);
+
+    project.write("sub/node_modules/pkg/README.md", "stray\n");
+    let (stray, status) = resolve();
+    assert_eq!(
+        status,
+        CacheStatus::Miss(MissReason::MissingPathAppeared(entry(
+            "sub/node_modules/pkg"
+        )))
+    );
+    assert_eq!(stray.len(), 1, "the stray directory stops the walk");
+    assert_eq!(resolve().1, CacheStatus::Hit);
+
+    std::fs::remove_dir_all(project.root().join("sub/node_modules").as_path()).unwrap();
+    let (again, status) = resolve();
+    assert_eq!(
+        status,
+        CacheStatus::Miss(MissReason::InputRemoved(entry("sub/node_modules/pkg")))
+    );
+    assert_eq!(again.len(), 2);
+    drop(directory);
+}

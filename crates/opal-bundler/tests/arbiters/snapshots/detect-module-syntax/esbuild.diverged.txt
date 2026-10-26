@@ -1,0 +1,3 @@
+stdout differs from line 1:
+  original: "detected as ESM: undefined lib also ESM"
+  bundle:   "detected as ESM: function lib also ESM"
