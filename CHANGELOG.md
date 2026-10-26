@@ -28,6 +28,7 @@ Opal is pre-1.0, so a release can change behaviour you depend on. Anything that 
 ### Changed
 
 - **The binary is about ten times larger**, 71 MB instead of 7.4 MB, almost all of it V8. On Linux every opal command, not only `opal run`, starts about 1.5 ms later (`opal --version`: 2.6 ms before, 4.1 ms after, on one machine), most of it the loader relocating V8's data at startup.
+- **Node's shared internals start ready.** `internal/errors`, the validators, `internal/util`, `util.inspect` and async_hooks are in the startup snapshot, so the first timer, the first `console.log` of an object, and the first `require` of a Node module don't build them: a script that loads `fs`, `path`, `util`, `assert` and `events` starts in 18.0 ms instead of 21.6 ms (0.99× bun), and one timer in 15.3 ms instead of 17.7 ms. A script that uses none of them, like hello world, starts 2 ms slower (10.6 to 12.7 ms) for the larger snapshot.
 - **Release binaries for linux-arm64 and macos-x64 are built on machines of their own architecture**, not cross-compiled, because the build runs V8 for the target to make the startup snapshot.
 
 ### Fixed

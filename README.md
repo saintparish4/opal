@@ -137,7 +137,7 @@ What it doesn't do yet: `fs` with callbacks or promises, `os`, `child_process`, 
 
 How it is checked: five corpora (inspect, buffer, fs, modules, ES modules) are run under `opal run` and under node 24.19.0 in CI and must print the same bytes; the TypeScript stripper matches Node's on 18,522 real-world files, and resolution matches Node's on 198,352 generated cases. Node's own tests for these areas run unmodified through [`compat/node-tests.py`](./compat/node-tests.py): 225 of 631 pass today, file by file in [compat/NODE-TESTS.md](./compat/NODE-TESTS.md), with the reason each other one fails.
 
-How fast it starts: `opal run hello.js` takes 10.5 ms here, against 6.7 ms for bun and 35.7 ms for node, and a script that loads `fs`, `path`, `util`, `assert` and `events` takes 24.0 ms (1.20× bun, 0.61× node), measured by [`benchmarks/compare-runtimes.py`](./benchmarks/compare-runtimes.py). Being faster than bun to start is the goal, and not met yet.
+How fast it starts: a script that loads `fs`, `path`, `util`, `assert` and `events` starts in 18.0 ms here, as fast as bun (0.99×) and half node's time; `opal run hello.js`, which loads none of Node's library, takes 12.7 ms, against 6.6 ms for bun and 36.1 ms for node. Both are measured by [`benchmarks/compare-runtimes.py`](./benchmarks/compare-runtimes.py). Node's shared internals are in the startup snapshot, which makes the first faster and the second slower; starting faster than bun is the goal, and not met for hello yet.
 
 ### Bundling
 

@@ -29,8 +29,8 @@
         "run",
         "hello.js"
       ],
-      "syscalls": 257,
-      "minor_faults": 1151
+      "syscalls": 305,
+      "minor_faults": 1541
     }
   },
   "files": {

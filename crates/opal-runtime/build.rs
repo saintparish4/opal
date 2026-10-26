@@ -49,13 +49,21 @@ const BOOTSTRAP: &[&str] = &[
 ];
 
 /// Built-in modules loaded while the snapshot is made, so they cost
-/// deserialization on every start instead of compilation on first use.
-/// None, on measurement: with events (and the internal/util, errors,
-/// validators and inspect it brings) in the snapshot, hello.js started
-/// 5.7 ms slower than the bare spike; process and console load them on
-/// first use instead (js/bootstrap/process.js). The bootstrap itself still
-/// loads internal/fixed_queue, which is small.
-const SNAPSHOT_BUILTINS: &[&str] = &[];
+/// deserialization on every start instead of running on first use. These
+/// are the ones nearly everything else loads: internal/errors, the
+/// validators, internal/util, util.inspect, and async_hooks (timers), so a
+/// script that reads a timer, logs an object, or requires any of Node's
+/// modules finds them made. Measured on 2026-10-26 (snapshot 748 KB to
+/// 1,317 KB): hello.js 10.7 to 12.7 ms, one setTimeout 17.7 to 15.3 ms, a
+/// script requiring fs, path, util, assert and events 21.9 to 17.9 ms.
+/// hello.js loads none of Node's library, so it pays without gaining.
+const SNAPSHOT_BUILTINS: &[&str] = &[
+    "internal/errors",
+    "internal/validators",
+    "internal/util",
+    "internal/util/inspect",
+    "internal/async_hooks",
+];
 
 /// Where the built-in modules come from, by directory: js/node is Node's
 /// library, copied unmodified (js/node/update.sh); js/opal is Opal's own
