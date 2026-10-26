@@ -1176,6 +1176,46 @@ mod tests {
     }
 
     #[test]
+    fn test_options_digest_changes_with_the_bundlers_options() {
+        let baseline = ResolverOptions::default();
+        let mut react = baseline.clone();
+        react.jsx_runtime = Some("react".into());
+        let mut preact = baseline.clone();
+        preact.jsx_runtime = Some("preact".into());
+        let mut exact = baseline.clone();
+        exact.node_exact = true;
+        let digests = [
+            baseline.digest(),
+            react.digest(),
+            preact.digest(),
+            exact.digest(),
+        ];
+        for (i, digest) in digests.iter().enumerate() {
+            for other in &digests[i + 1..] {
+                assert_ne!(digest, other);
+            }
+        }
+    }
+
+    #[test]
+    fn test_options_digest_is_unchanged_while_the_bundlers_options_are_unset() {
+        // The digest as it was before `jsx_runtime` and `node_exact`, so a
+        // graph cached then keeps its key.
+        let options = ResolverOptions::default();
+        let mut builder = HashBuilder::new("opal.resolver.options.v1");
+        builder.push_u64(options.extensions.len() as u64);
+        for extension in &options.extensions {
+            builder.push_str(extension);
+        }
+        builder.push_u64(options.conditions.len() as u64);
+        for condition in &options.conditions {
+            builder.push_str(condition);
+        }
+        builder.push_u64(u64::from(options.follow_type_only_imports));
+        assert_eq!(options.digest(), builder.finish());
+    }
+
+    #[test]
     fn test_bracket_nesting_is_measured_across_kinds() {
         assert!(!nests_deeper_than("f([{}])", 3));
         assert!(nests_deeper_than("f([{(}])", 3));
