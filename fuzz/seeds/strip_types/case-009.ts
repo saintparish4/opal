@@ -1,0 +1,1 @@
+namespace N { type X = 1 }

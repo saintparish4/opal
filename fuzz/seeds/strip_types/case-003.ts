@@ -1,0 +1,1 @@
+class C<T> extends B<T> implements I, J { private x?: number; readonly y!: string; declare z: number; static s: T; constructor() { super() } m?(): void {} abstract q(): void; [k: string]: any }

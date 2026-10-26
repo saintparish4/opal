@@ -1,0 +1,1 @@
+const v = <T>(x: T) => x

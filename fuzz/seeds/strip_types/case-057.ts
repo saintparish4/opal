@@ -1,0 +1,1 @@
+type Fn = (a: string) => void; let s = new Set<Fn>()

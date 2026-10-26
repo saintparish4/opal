@@ -1,0 +1,1 @@
+const z = function<T>(this: T) {}

@@ -1,0 +1,42 @@
+# Node's own library files run by Opal's runtime, by builtin id, copied
+# unmodified by update.sh. Whatever they require that isn't listed here is
+# provided by ../internal/ (an Opal version of that module) or is reached only
+# lazily, by a code path the runtime doesn't support yet.
+internal/per_context/primordials
+internal/assert
+internal/constants
+internal/errors
+internal/util
+internal/util/inspect
+internal/util/types
+internal/validators
+internal/events/abort_listener
+events
+path
+internal/fixed_queue
+internal/process/warning
+buffer
+internal/buffer
+util/types
+internal/per_context/domexception
+fs
+internal/fs/utils
+internal/process/permission
+assert
+internal/assert/assertion_error
+internal/assert/utils
+internal/assert/calltracker
+internal/assert/myers_diff
+internal/util/colors
+internal/util/comparisons
+internal/util/debuglog
+internal/errors/error_source
+internal/source_map/source_map_cache
+internal/deps/acorn/acorn/dist/acorn
+timers
+internal/timers
+internal/async_hooks
+internal/priority_queue
+internal/linkedlist
+internal/promise_hooks
+internal/async_context_frame

@@ -1,0 +1,1 @@
+namespace N { export type X = 1; interface I {} }

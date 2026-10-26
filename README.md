@@ -28,7 +28,7 @@ opal cache verify                # re-hash the shared store and check it for cor
 opal cache gc                    # delete store files no project uses anymore
 ```
 
-> **Status**: Beta. The package manager works today — `opal install` resolves against the real npm registry and produces a `node_modules` tree Node runs against, validated on real projects (a Next.js scaffold at 365 packages, express, webpack, and a curated compatibility suite), and it is under active development, so expect rough edges and breaking releases. The bundler (`opal build`) is new and deliberately narrow: see [Bundling](#bundling). The runtime (`opal run`) and test runner (`opal test`) are **not implemented**; their directories under `crates/` hold placeholder files only.
+> **Status**: Beta. The package manager works today — `opal install` resolves against the real npm registry and produces a `node_modules` tree Node runs against, validated on real projects (a Next.js scaffold at 365 packages, express, webpack, and a curated compatibility suite), and it is under active development, so expect rough edges and breaking releases. `opal run` runs package.json scripts and `opal x` runs package commands, both checked against npm's. The bundler (`opal build`) is new and deliberately narrow: see [Bundling](#bundling). Running a JavaScript or TypeScript file (`opal run app.js`) is new too, and covers part of Node's API so far: see [Running files](#running-files). The test runner (`opal test`) is **not implemented**; its directory under `crates/` holds placeholder files only.
 
 ## Install
 
@@ -78,7 +78,7 @@ There's no canary channel; every release is a tagged [GitHub Release](https://gi
 
 ## Usage
 
-Opal has seven commands today: `opal install`, `opal add`, `opal remove`, `opal build`, `opal graph`, `opal cache`, and `opal upgrade`. Run `opal <command> --help` to see their flags.
+Opal has nine commands today: `opal install`, `opal add`, `opal remove`, `opal run`, `opal x`, `opal build`, `opal graph`, `opal cache`, and `opal upgrade`. Run `opal <command> --help` to see their flags.
 
 Commit `opal.lock`. In CI, run `opal install --frozen-lockfile`, which installs exactly what `opal.lock` records and fails instead of changing it.
 
@@ -103,7 +103,41 @@ opal add old-ms@npm:ms@^2.0.0    # an alias
 
 Not supported yet, and planned for v0.5.0: `--peer`, `--global`, `git:` and `file:` specifiers, and `opal add` in a directory that has no `package.json`.
 
+### Running scripts and package commands
+
+```bash
+opal run                         # list package.json's scripts
+opal run build                   # prebuild, build, postbuild, as npm runs them
+opal run test --watch            # everything after the name is the script's
+opal x tsc --noEmit              # a command from node_modules/.bin
+opal x cowsay@1.6.0 hello        # installed once into the cache, then run
+```
+
+`opal run` follows npm's own source (`@npmcli/run-script`): the script runs in the project folder with every `node_modules/.bin` from there up on `PATH`, sees the `npm_package_*` and `npm_lifecycle_*` variables tools read, and ends opal with its own exit code or signal. Where it differs: npm's own settings (`npm_config_cache` and the like) aren't exported, the shell is `/bin/sh` (npm's `script-shell` isn't read), workspaces aren't supported, and flags after the script's name are the script's, where npm would read them as its own.
+
+`opal x` installs a package the first time it's asked for and reuses that install after, so a range or tag (`cowsay`, `cowsay@latest`) is resolved once, not on every run.
+
 `update`, `why`, `outdated`, `audit`, and `publish` aren't implemented yet, so the binary doesn't have them. A command that exists and does nothing is worse than one that doesn't exist.
+
+### Running files
+
+`opal run` runs a JavaScript or TypeScript file on an embedded V8, the way Node 24 runs it.
+
+```bash
+opal run app.js                  # CommonJS or an ES module, as Node decides
+opal run script.ts --verbose     # types stripped as Node 24 strips them; arguments go to the script
+opal run ./bin/tool              # a name with a `/` in it is a file, not a script
+```
+
+It aims to be exact rather than complete. Most of what a program reaches is Node's own library code, copied unmodified from Node 24.19.0: `util.inspect`, `events`, `path`, `buffer`, `fs`, `assert`, timers, and the error messages and codes, over native code that does what Node's C++ does. So `console.log` of any object, a failed `readFileSync`, and an uncaught error print what Node prints, byte for byte.
+
+What it does: CommonJS, ES modules and JSON with Node's resolution, `require()` of an ES module, `import()`, `import.meta`, top-level `await`, TypeScript files (`.ts`, `.mts`, `.cts`), `console`, `process` (argv, env, exit codes, `nextTick`, warnings, `uncaughtException`), `path`, `Buffer`, `events`, `util` (in part), every synchronous `fs` function, `assert`, and timers.
+
+What it doesn't do yet: `fs` with callbacks or promises, `os`, `child_process`, `net` and `http`, streams, `worker_threads`, `crypto`, `url`, and Node's command-line flags. Requiring one of those fails with an error that says Opal doesn't implement it yet, rather than with something that half works.
+
+How it is checked: five corpora (inspect, buffer, fs, modules, ES modules) are run under `opal run` and under node 24.19.0 in CI and must print the same bytes; the TypeScript stripper matches Node's on 18,522 real-world files, and resolution matches Node's on 198,352 generated cases. Node's own tests for these areas run unmodified through [`compat/node-tests.py`](./compat/node-tests.py): 225 of 631 pass today, file by file in [compat/NODE-TESTS.md](./compat/NODE-TESTS.md), with the reason each other one fails.
+
+How fast it starts: `opal run hello.js` takes 10.5 ms here, against 6.7 ms for bun and 35.7 ms for node, and a script that loads `fs`, `path`, `util`, `assert` and `events` takes 24.0 ms (1.20× bun, 0.61× node), measured by [`benchmarks/compare-runtimes.py`](./benchmarks/compare-runtimes.py). Being faster than bun to start is the goal, and not met yet.
 
 ### Bundling
 

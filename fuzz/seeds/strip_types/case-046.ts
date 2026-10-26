@@ -1,0 +1,1 @@
+class K { declare readonly d: string; x!: number; [k]?: T; }

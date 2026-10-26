@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = [ "crates/opal-core", "crates/opal-cli", "crates/opal-pm", "crates/opal-bundler" ] # TODO: add more crates
+members = [ "crates/opal-core", "crates/opal-cli", "crates/opal-pm", "crates/opal-runtime", "crates/opal-bundler" ] # TODO: add more crates
 
 [workspace.package]
 version = "0.4.1"
@@ -11,6 +11,7 @@ repository = "https://github.com/saintparish4/opal"
 [workspace.dependencies]
 opal-core = { path = "crates/opal-core" }
 opal-pm = { path = "crates/opal-pm" }
+opal-runtime = { path = "crates/opal-runtime" }
 opal-bundler = { path = "crates/opal-bundler" }
 
 blake3 = "1.8.6"
@@ -62,3 +63,9 @@ console = { version = "0.16.4", default-features = false, features = ["std"] }
 # std has no advisory file locking; this is one extern function (flock), not
 # worth a wrapper crate like fs2/fd-lock for.
 libc = "0.2.189"
+# The JavaScript engine `opal run app.js` embeds, chosen by measurement in
+# benchmarks/engine-spikes/README.md: V8 with a startup snapshot. Its build
+# script downloads V8's prebuilt static library from denoland/rusty_v8's
+# GitHub releases (RUSTY_V8_ARCHIVE points it at a local copy instead), which
+# is outside what `cargo deny` checks.
+v8 = "152.2.0"

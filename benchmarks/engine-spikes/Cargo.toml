@@ -1,0 +1,14 @@
+# The engine spikes: two minimal runtimes, measured by
+# benchmarks/compare-runtimes.py against node and bun before an engine is
+# chosen (README.md). A workspace of its own on purpose, so that neither
+# engine enters opal's Cargo.lock, cargo-deny run, or build until one is
+# chosen.
+[workspace]
+resolver = "3"
+members = ["quickjs", "v8"]
+
+[profile.release]
+codegen-units = 1
+lto = "fat"
+panic = "abort"
+strip = true

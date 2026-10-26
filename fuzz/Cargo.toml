@@ -78,3 +78,10 @@ path = "fuzz_targets/bundle_source.rs"
 test = false
 doc = false
 bench = false
+
+[[bin]]
+name = "strip_types"
+path = "fuzz_targets/strip_types.rs"
+test = false
+doc = false
+bench = false

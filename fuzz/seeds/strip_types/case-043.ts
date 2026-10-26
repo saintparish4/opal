@@ -1,0 +1,1 @@
+class K { m(): void; m(a?: any) {} }

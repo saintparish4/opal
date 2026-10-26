@@ -10,6 +10,7 @@
 //! structures, not merely equivalent ones.
 
 pub mod memo;
+pub mod node_resolution;
 pub mod resolver;
 
 use std::collections::HashMap;

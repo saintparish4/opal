@@ -4,6 +4,7 @@ Does a project Opal installed build, pass its tests, and serve? Each framework's
 
 - [Method](#method)
 - [Results: 2026-10-24, bundler-p0, unreleased](#results-2026-10-24-bundler-p0-unreleased)
+- [Results: 2026-10-24, scripts run by `opal run`](#results-2026-10-24-scripts-run-by-opal-run)
 - [Results: 2026-10-14, v0.4.0 baseline, before v0.4.1](#results-2026-10-14-v040-baseline-before-v041)
 - [`sideEffects`: which packages say it, and whether it held](#sideeffects-which-packages-say-it-and-whether-it-held)
 - [Reproducing](#reproducing)
@@ -19,7 +20,7 @@ The harness is [`frameworks.py`](./frameworks.py). For each scaffold it:
    - **test**: `npm test` has to exit 0, for a scaffold that ships tests;
    - **runtime**: the production server is started through its npm script on a free port and polled until it answers HTTP 200, and then its whole process group is killed.
 
-Every script runs through npm, using the `node_modules` Opal linked, because that is what a user does. Opal is only the installer here. Next.js and Astro telemetry and npm's update check are turned off, since they're network requests that aren't part of what's being checked. `TMPDIR` points inside the scratch folder, and the whole folder is deleted at the end.
+By default every script runs through npm, using the `node_modules` Opal linked, so Opal is only the installer. With `--runner opal`, the same scripts run through `opal run` instead (`opal run build`, `opal run start --port <port>`, and so on), which checks that Opal starts each framework's own tools the way npm does. Next.js and Astro telemetry and npm's update check are turned off, since they're network requests that aren't part of what's being checked. `TMPDIR` points inside the scratch folder, and the whole folder is deleted at the end.
 
 ### The scaffolds
 
@@ -47,8 +48,8 @@ Some notes on individual scaffolds:
 - **Framework**: the scaffold, a folder under `frameworks/`.
 - **Resolved**: the installed versions of the one or two packages that define the scaffold, read from `node_modules` after the install.
 - **install**: `opal install` exited 0. The time is its wall time.
-- **build**: `npm run build` exited 0, and the output named above exists.
-- **test**: `npm test` exited 0.
+- **build**: `npm run build` (or `opal run build`) exited 0, and the output named above exists.
+- **test**: `npm test` (or `opal run test`) exited 0.
 - **runtime**: the server answered HTTP 200 within the timeout. The time runs from starting the npm script to the first 200.
 - **bundle**: `opal build` of the scaffold's entry exited 0 and wrote the bundle (nest: `src/main.ts`; express: `server.js`; vite-react: `src/main.tsx` with `--target browser --assets --define process.env.NODE_ENV='"production"'`). The bundle replaces the project's own build in the next two columns.
 - **bundle test**: each unit test file, bundled with `--external vitest` (the runner's own `describe` and `expect` have to be the runner's), passed under the project's own vitest (nest).
@@ -90,6 +91,26 @@ A review then corrected how the module graph resolves package subpaths, director
 - **Three scaffolds run from their bundle.** Nest's bundle holds 854 modules (Nest's packages, Express under it, RxJS, and the app's decorated TypeScript with its `design:paramtypes` metadata), starts, and answers `Hello World!`; its unit test, bundled with the app, passes under vitest, and fails when the service's string is changed. Express's bundle holds 140 CommonJS modules, sloppy ones compiled at run time with their own file names. vite-react's bundle holds React, ReactDOM, and the app compiled from TSX, with its two stylesheets linked and three images copied under `--assets`.
 - **The other four are not bundled, on purpose.** Next.js, Astro, SvelteKit, and Vue's single-file components each need their framework's own compiler, which is not a bundler's job here.
 - **What it took.** The nest scaffold was the first real program to call `import()` with a variable (`@nestjs/common`'s `loadPackage`), which the bundler refused until run-time resolution (SEMANTICS.md rule 10) existed. vite-react imports CSS and images, which no runtime gives a meaning to, so the bundle takes Vite's under `--assets` (rule 17).
+
+## Results: 2026-10-24, scripts run by `opal run`
+
+The same seven scaffolds, with every build, test, and server started by `opal run` instead of npm. Opal is a release build of the `runtime` branch, made from the commit that adds `opal run` (SHA-256 of the binary `5691531a079f94c0b037b0bfe4df26a6850eb84690c5bdaccb7e8e771c1bc58a`). Tool versions: Node 24.19.0, npm 12.0.2 (installed, not used to run scripts). Same laptop as below. The whole run took 96s. Raw results: [`results/frameworks-opal-run-20261024-213655.json`](./results/frameworks-opal-run-20261024-213655.json).
+
+| Framework | Resolved | install | build | test | runtime | Scripts skipped |
+|---|---|---|---|---|---|---|
+| next | next 16.3.2, react 19.2.8 | pass (30.26s) | pass (8.75s) | - | pass (508ms) | unrs-resolver@1.12.2 |
+| vite-react | vite 8.3.5, react 19.3.1 | pass (4.99s) | pass (2.04s) | - | pass (263ms) | none |
+| vite-vue | vite 8.3.5, vue 3.5.44 | pass (4.79s) | pass (2.47s) | - | pass (261ms) | none |
+| astro | astro 7.4.2 | pass (8.09s) | pass (1.84s) | - | pass (1.03s) | none |
+| sveltekit | @sveltejs/kit 3.1.0, vite 8.3.5 | pass (4.33s) | pass (3.15s) | - | pass (785ms) | project (prepare) |
+| nest | @nestjs/core 12.2.0, vitest 4.1.12 | pass (9.04s) | pass (2.19s) | pass (982ms) | pass (512ms) | none |
+| express | express 5.3.0 | pass (1.14s) | - | - | pass (266ms) | none |
+
+### What this shows
+
+- **All 21 checks passed through `opal run`:** each framework's CLI was found on the `PATH` Opal built from `node_modules/.bin`, got its arguments (`--port`, `--host`, `--strictPort`, `--ignore-lock`) as npm would have passed them, and served.
+- **The first run warned that a server was still listening after the kill**, for every framework. Nothing was: with npm as the process-group leader, npm outlives the server, but `opal run` replaces itself with the shell, so the leader is the server itself and the port check ran before its workers finished exiting. `kill_group` now waits for the whole group to be gone. This rerun, with that fix, has no warnings.
+- Times are not a comparison with the npm table below: they are a different day, resolved versions moved (vite 8.3.4 to 8.3.5, astro 7.3.8 to 7.4.2), and the build and server times are each framework's own.
 
 ## Results: 2026-10-14, v0.4.0 baseline, before v0.4.1
 
@@ -143,6 +164,7 @@ python3 compat/frameworks.py --opal ~/opal-bench/v0.4.0/opal                    
 python3 compat/frameworks.py --opal ./opal sveltekit nest                        # a subset
 python3 compat/frameworks.py --opal ./opal --timeout build=1800,runtime=300      # longer timeouts
 python3 compat/frameworks.py --opal ./opal next --keep                           # keep scratch to debug
+python3 compat/frameworks.py --opal ./opal --runner opal                         # scripts through opal run
 ```
 
 The `sideEffects` survey and probe, over installed scaffolds:

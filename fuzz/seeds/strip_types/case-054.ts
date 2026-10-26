@@ -1,0 +1,1 @@
+let o = { m(this: T, a: number): string { return "" } }

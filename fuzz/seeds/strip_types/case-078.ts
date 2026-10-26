@@ -1,0 +1,1 @@
+async <T>(a: T): Promise<T> => a

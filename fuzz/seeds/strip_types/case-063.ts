@@ -1,0 +1,1 @@
+declare namespace N.M { const x: number }

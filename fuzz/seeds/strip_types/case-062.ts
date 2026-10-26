@@ -1,0 +1,1 @@
+namespace N.M { export const x = 1 }

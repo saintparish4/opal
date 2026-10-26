@@ -1,0 +1,1 @@
+function g<const T extends readonly unknown[]>(...args: T): T[number] { return args[0] }

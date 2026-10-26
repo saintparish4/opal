@@ -30,6 +30,8 @@ jobs:
 
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
+      - name: V8's static library
+        uses: ./.github/actions/rusty-v8
 
       - name: Format
         run: cargo fmt --all -- --check
@@ -62,6 +64,8 @@ jobs:
         run: rustup show
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
+      - name: V8's static library
+        uses: ./.github/actions/rusty-v8
       - name: Install
         run: cargo test -p opal-cli --test npm-compatibility -- --ignored test_install
 
@@ -75,6 +79,8 @@ jobs:
         run: rustup show
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
+      - name: V8's static library
+        uses: ./.github/actions/rusty-v8
       # The installed tree has to run, not merely exist, so this job needs a
       # Node to run it with.
       - name: Install Node
@@ -98,12 +104,69 @@ jobs:
         run: rustup show
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
+      - name: V8's static library
+        uses: ./.github/actions/rusty-v8
       - name: Install Node
         uses: actions/setup-node@v7
         with:
           node-version: "22"
       - name: Cross-check
         run: cargo test -p opal-pm --test npm-cross-check -- --ignored --nocapture
+
+  # `opal run` held to `npm run` on the same package.json: stdout, exit
+  # status, and the environment a script sees, minus an explicit allowlist
+  # (crates/opal-cli/tests/npm-run-cross-check.rs). Its `opal x` case also
+  # installs a real package from the public registry, like npx.
+  npm-run-cross-check:
+    name: npm cross-check (scripts)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Install Rust toolchain
+        run: rustup show
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+      - name: V8's static library
+        uses: ./.github/actions/rusty-v8
+      - name: Install Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - name: Cross-check
+        run: |
+          npm --version
+          cargo test -p opal-cli --test npm-run-cross-check -- --ignored
+
+  # `opal run <file>` held to `node` on the same files: byte-for-byte stdout
+  # and the exit status, for the corpora in crates/opal-cli/tests/node-diff/
+  # (util.inspect's layout, Buffer's encodings); and the TypeScript stripper
+  # held to node's own (module.stripTypeScriptTypes) on
+  # crates/opal-core/tests/strip/cases.json; and module resolution held to
+  # require.resolve and node's ES module resolver on generated package trees.
+  # node is pinned to the release
+  # the runtime is measured against; the tests refuse any other.
+  node-cross-check:
+    name: node cross-check (runtime)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Install Rust toolchain
+        run: rustup show
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+      - name: V8's static library
+        uses: ./.github/actions/rusty-v8
+      - name: Install Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24.19.0"
+      - name: Cross-check
+        run: |
+          cargo test --release -p opal-cli --test node-cross-check -- --ignored
+          cargo test --release -p opal-core --test strip-cross-check -- --ignored --nocapture
+          cargo test --release -p opal-core --test node-resolution-cross-check -- --ignored --nocapture
 
   # crates/opal-bundler/SEMANTICS.md: every fixture is run unbundled and
   # bundled under Node, and the two runs must be indistinguishable. Node is
@@ -118,6 +181,8 @@ jobs:
         run: rustup show
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
+      - name: V8's static library
+        uses: ./.github/actions/rusty-v8
       - name: Install Node
         uses: actions/setup-node@v7
         with:
@@ -143,6 +208,8 @@ jobs:
         run: rustup show
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
+      - name: V8's static library
+        uses: ./.github/actions/rusty-v8
       - name: Install Node
         uses: actions/setup-node@v7
         with:
@@ -168,6 +235,8 @@ jobs:
         run: rustup show
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
+      - name: V8's static library
+        uses: ./.github/actions/rusty-v8
       - name: Build opal
         run: cargo build -p opal-cli
       - name: Checksums
@@ -205,12 +274,42 @@ jobs:
         run: rustup show
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
+      - name: V8's static library
+        uses: ./.github/actions/rusty-v8
       # Pinned for the same reason: a new cargo-deny release must not be able
       # to fail a pull request that didn't touch a dependency.
       - name: Install cargo-deny
         run: cargo install --locked cargo-deny@0.20.2
       - name: Check
         run: cargo deny --locked check bans licenses sources
+
+  # Wall time on a shared runner is too noisy to fail a build on, so startup
+  # is gated on what doesn't move with load: syscalls and minor page faults
+  # of opal commands, each minus the same counts for an empty static C
+  # program run on the same runner. Budgets are in
+  # benchmarks/runtime-budget.json; a change that needs more rebases them and
+  # says why. Times are measured by `compare-runtimes.py bench`, not here.
+  startup-budget:
+    name: Startup budget (syscalls, page faults)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Install Rust toolchain
+        run: rustup show
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+      - name: V8's static library
+        uses: ./.github/actions/rusty-v8
+      - name: Install strace
+        run: sudo apt-get update && sudo apt-get install -y strace
+      - name: Build
+        run: cargo build --release --locked -p opal-cli
+      - name: Gate
+        # An explicit `shell: bash` runs with pipefail, so tee can't hide the
+        # gate's exit code.
+        shell: bash
+        run: python3 benchmarks/compare-runtimes.py gate --opal target/release/opal | tee -a "$GITHUB_STEP_SUMMARY"
 
   # `testing_strategy.md` §7: record every run's numbers, never gate on them.
   # No noise threshold has been agreed, so nothing here can fail the build on a
@@ -233,6 +332,8 @@ jobs:
         run: rustup show
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
+      - name: V8's static library
+        uses: ./.github/actions/rusty-v8
       - name: Run
         run: |
           set -euo pipefail

@@ -1,0 +1,1 @@
+class P2 { constructor(readonly a) {} }

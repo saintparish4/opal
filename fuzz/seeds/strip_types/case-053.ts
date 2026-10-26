@@ -1,0 +1,1 @@
+for (let i: number = 0; i < 1; i++) {}

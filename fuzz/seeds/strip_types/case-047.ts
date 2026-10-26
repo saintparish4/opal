@@ -1,0 +1,1 @@
+abstract class A { abstract m(): void; abstract p: number; protected abstract q?: string }

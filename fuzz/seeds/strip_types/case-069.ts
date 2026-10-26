@@ -1,0 +1,1 @@
+function h(): asserts this is T {}

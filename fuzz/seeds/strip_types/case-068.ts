@@ -1,0 +1,1 @@
+label: { type Q = 1 }

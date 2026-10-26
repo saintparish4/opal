@@ -1,0 +1,24 @@
+[package]
+name = "opal-runtime"
+description = "Running JavaScript and package.json scripts: the opal run and opal x commands."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+blake3.workspace = true
+libc.workspace = true
+opal-core.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+v8.workspace = true
+
+# build.rs runs the bootstrap on V8, with the same native functions
+# (src/engine/ops.rs, which uses libc), and embeds the snapshot it leaves.
+[build-dependencies]
+libc.workspace = true
+v8.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

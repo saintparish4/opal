@@ -1,0 +1,1 @@
+class Q { accessor x: number = 1; override m() {} }
