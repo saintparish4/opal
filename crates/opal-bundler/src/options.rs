@@ -1,6 +1,10 @@
 //! What a build is asked to do.
 
+use std::path::Path;
+
 use opal_core::graph::ResolverOptions;
+
+use crate::tsconfig::{Jsx, TsConfigs};
 
 /// The runtime the bundle is for. `SEMANTICS.md` ("The reference").
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -111,6 +115,23 @@ impl Default for BuildOptions {
 }
 
 impl BuildOptions {
+    /// The module graph's options for bundling `entry` (absolute) under
+    /// `root`: the target's, with the JSX import source that the tsconfig
+    /// nearest the entry compiles JSX against, so the graph has the edge the
+    /// compiled JSX imports. A module under another tsconfig that names
+    /// another source is refused (E-LINK) for the edge it lacks.
+    pub fn resolver_options(&self, root: &Path, entry: &Path) -> ResolverOptions {
+        let jsx_runtime = match TsConfigs::new(root, &self.jsx_import_source).settings_for(entry) {
+            Ok(settings) => match settings.jsx {
+                Jsx::Automatic { import_source } => Some(import_source),
+                Jsx::Classic { .. } | Jsx::Preserve => None,
+            },
+            // The build reports a tsconfig it cannot read, naming the module.
+            Err(_) => Some(self.jsx_import_source.clone()),
+        };
+        self.target.resolver_options(jsx_runtime)
+    }
+
     /// Whether a specifier names an external.
     pub fn is_external(&self, specifier: &str) -> bool {
         self.externals.iter().any(|external| {

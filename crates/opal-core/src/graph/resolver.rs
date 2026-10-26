@@ -21,12 +21,12 @@ use std::rc::Rc;
 use oxc_allocator::Allocator;
 use oxc_ast::ast::{
     Argument, CallExpression, ExportAllDeclaration, ExportFromDeclaration, Expression,
-    ImportDeclaration, ImportExpression, ImportOrExportKind, TSImportEqualsDeclaration,
+    ImportDeclaration, ImportExpression, ImportOrExportKind, Program, TSImportEqualsDeclaration,
     TSModuleReference,
 };
 use oxc_ast_visit::{Visit, walk};
 use oxc_parser::Parser;
-use oxc_span::SourceType;
+use oxc_span::{GetSpan, SourceType};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
@@ -388,7 +388,7 @@ impl<'a> Resolver<'a> {
             && let Some(source) = jsx_runtime_source(
                 self.options.jsx_runtime.as_deref(),
                 &source,
-                &parsed.program.comments,
+                &parsed.program,
             )
         {
             collector.push(
@@ -1053,28 +1053,68 @@ struct ImportCollector {
 }
 
 /// The JSX runtime a file's JSX compiles against: its `@jsxImportSource`
-/// pragma, else the configured default, and none under `@jsxRuntime classic`.
+/// pragma, else the configured default, and none under `@jsxRuntime
+/// classic`. Pragmas are read as oxc's transformer reads them
+/// (`oxc_transformer/src/jsx/comments.rs`), so the edge is the import the
+/// compiled file makes: only in comments before the first statement, the
+/// last of each kind winning.
 fn jsx_runtime_source<'s>(
     default: Option<&'s str>,
     source: &'s str,
-    comments: &[oxc_ast::Comment],
+    program: &Program<'_>,
 ) -> Option<&'s str> {
     let default = default?;
-    let mut chosen = default;
-    for comment in comments {
-        let text = &source[comment.span.start as usize..comment.span.end as usize];
-        if let Some(rest) = text.split("@jsxRuntime").nth(1)
-            && rest.split_whitespace().next() == Some("classic")
-        {
-            return None;
-        }
-        if let Some(rest) = text.split("@jsxImportSource").nth(1)
-            && let Some(name) = rest.split_whitespace().next()
-        {
-            chosen = name.trim_end_matches("*/");
+    let Some(first) = program.body.first() else {
+        return Some(default);
+    };
+    let (mut automatic, mut chosen) = (true, default);
+    for comment in program
+        .comments
+        .iter()
+        .take_while(|comment| comment.span.start < first.span().start)
+    {
+        let mut text = comment.content_span().source_text(source);
+        while let Some((keyword, value, rest)) = jsx_pragma(text) {
+            match (keyword, value) {
+                ("Runtime", "classic") => automatic = false,
+                ("Runtime", "automatic") => automatic = true,
+                ("ImportSource", value) => chosen = value,
+                _ => {}
+            }
+            text = rest;
         }
     }
-    Some(chosen)
+    automatic.then_some(chosen)
+}
+
+/// The next `@jsx` pragma in a comment's text, as oxc finds it: an `@` at
+/// the start or after whitespace or `*`, then `jsx`, a keyword (``,
+/// `Runtime`, `ImportSource`, `Frag`), spaces or tabs, and a value up to
+/// the next whitespace. Returns the keyword, the value, and the rest.
+fn jsx_pragma(mut text: &str) -> Option<(&str, &str, &str)> {
+    loop {
+        let at = text.find('@')?;
+        let after = &text[at + 1..];
+        let starts =
+            at == 0 || matches!(text.as_bytes()[at - 1], b' ' | b'\t' | b'\r' | b'\n' | b'*');
+        let Some(after) = after.strip_prefix("jsx").filter(|_| starts) else {
+            text = after;
+            continue;
+        };
+        let space = after.find([' ', '\t'])?;
+        let keyword = &after[..space];
+        text = &after[space + 1..];
+        if !matches!(keyword, "" | "Runtime" | "ImportSource" | "Frag") {
+            continue;
+        }
+        let value_start = text.trim_start_matches([' ', '\t']);
+        let end = value_start
+            .find([' ', '\t', '\r', '\n', '\x0B', '\x0C'])
+            .unwrap_or(value_start.len());
+        let value = &value_start[..end];
+        let rest = value_start.get(end + 1..).unwrap_or("");
+        return (!value.is_empty()).then_some((keyword, value, rest));
+    }
 }
 
 impl ImportCollector {

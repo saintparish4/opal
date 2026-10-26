@@ -385,6 +385,20 @@ fn test_jsx_runtime_is_an_edge_only_when_asked_for_and_only_from_jsx() {
             "/** @jsxImportSource preact */\nexport const P = () => <div />;\n",
         )
         .write("plain.tsx", "export const none = 1;\n")
+        // oxc reads pragmas only before the first statement, only after
+        // whitespace or `*`, and lets the last of each kind win.
+        .write(
+            "late.jsx",
+            "export const x = 1;\n/** @jsxImportSource preact */\nexport const L = () => <div />;\n",
+        )
+        .write(
+            "quoted.jsx",
+            "// this file does not use `@jsxRuntime classic`\nexport const Q = () => <div />;\n",
+        )
+        .write(
+            "flipped.jsx",
+            "/* @jsxRuntime classic @jsxRuntime automatic */\nexport const F = () => <div />;\n",
+        )
         .write("node_modules/react/package.json", "{\"name\": \"react\"}\n")
         .write(
             "node_modules/react/jsx-runtime.js",
@@ -434,6 +448,13 @@ fn test_jsx_runtime_is_an_edge_only_when_asked_for_and_only_from_jsx() {
         )]
     );
     assert_eq!(edges("plain.tsx"), vec![]);
+    let react = vec![(
+        "react/jsx-runtime".to_string(),
+        "node_modules/react/jsx-runtime.js".to_string(),
+    )];
+    assert_eq!(edges("late.jsx"), react);
+    assert_eq!(edges("quoted.jsx"), react);
+    assert_eq!(edges("flipped.jsx"), react);
 }
 
 #[test]

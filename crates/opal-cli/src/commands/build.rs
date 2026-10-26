@@ -74,7 +74,7 @@ fn build_here(args: BuildArgs) -> Result<ExitCode, Failure> {
         options.defines.push(Define::parse(define)?);
     }
 
-    let resolver = target.resolver_options(Some(options.jsx_import_source.clone()));
+    let resolver = options.resolver_options(root.as_path(), entry.as_path());
     if let Some(module) = &args.why {
         // Uncached: the answer includes what resolution read and probed,
         // which only a fresh resolution records.

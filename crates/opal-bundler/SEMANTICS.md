@@ -451,6 +451,16 @@ these `compilerOptions`, read from the `tsconfig.json` nearest each file
 `const enum` is compiled like `enum`, as `isolatedModules` requires. An
 `export =` or `import x = require()` in an ES module is refused.
 
+The automatic runtime's import (`<source>/jsx-runtime`) comes from the
+module graph like any other, which adds it for the import source the
+`tsconfig.json` nearest the entry names, after a file's own
+`@jsxImportSource` and `@jsxRuntime` pragmas, read as oxc reads them: in
+the comments before the first statement, the last of each kind winning.
+A JSX file under another `tsconfig.json` that names another import
+source, or that a pragma switches from the classic runtime to the
+automatic one, has no edge for its import and is refused
+([`E-LINK`](#refusals)).
+
 ### 14. `--define`
 
 `--define <expr>=<value>` replaces each read of the global property path

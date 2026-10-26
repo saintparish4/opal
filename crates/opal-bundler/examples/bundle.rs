@@ -10,7 +10,7 @@ fn main() {
     let resolution = resolve(
         &root,
         &NormalizedPath::new(&args[2]),
-        &options.target.resolver_options(Some("react".into())),
+        &options.resolver_options(root.as_path(), &root.as_path().join(&args[2])),
     )
     .unwrap();
     let out = root

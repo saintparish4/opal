@@ -333,9 +333,7 @@ pub fn options(fixture: &Fixture) -> BuildOptions {
 pub fn build_fixture(fixture: &Fixture, program: &Path) -> Result<PathBuf, (String, String)> {
     let options = options(fixture);
     let root = NormalizedPath::from_native(&std::fs::canonicalize(program).unwrap()).unwrap();
-    let resolver = options
-        .target
-        .resolver_options(Some(options.jsx_import_source.clone()));
+    let resolver = options.resolver_options(root.as_path(), &root.as_path().join(&fixture.entry));
     let resolution = resolve(&root, &NormalizedPath::new(&fixture.entry), &resolver)
         .map_err(|error| ("E-IO".to_string(), error.to_string()))?;
     let out = root.as_path().join(OUT_DIR);
