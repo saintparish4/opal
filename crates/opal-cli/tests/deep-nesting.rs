@@ -1,5 +1,5 @@
-//! `opal graph` and `opal build` on modules nested deeper than a fixed
-//! stack holds.
+//! `opal graph`, `opal build`, and `opal run` of TypeScript, on modules
+//! nested deeper than a fixed stack holds.
 //!
 //! oxc's parser recurses once per level of nesting, and has no stack check.
 //! `opal graph` parsed on the main thread's 8 MiB, which overflowed at about
@@ -116,4 +116,52 @@ fn test_brackets_hidden_from_the_count_do_not_overflow() {
     let stderr = String::from_utf8_lossy(&build.stderr);
     assert_eq!(build.status.code(), Some(1), "({}): {stderr}", build.status);
     assert!(stderr.contains("E-PARSE"), "{stderr}");
+}
+
+/// `opal run` on a TypeScript file whose types are stripped first, with a
+/// cache of its own, so the stripper runs rather than a cached answer.
+fn opal_run_typescript(source: &str) -> Output {
+    let directory = tempfile::tempdir().expect("temp dir");
+    std::fs::write(directory.path().join("deep.ts"), source).expect("write deep.ts");
+    Command::new(OPAL)
+        .args(["run", "./deep.ts"])
+        .env("OPAL_CACHE_DIR", directory.path().join("cache"))
+        .current_dir(directory.path())
+        .output()
+        .expect("run opal")
+}
+
+#[test]
+fn test_opal_run_strips_a_typescript_file_too_deep_for_the_main_thread() {
+    // The stripper parsed on the main thread's 8 MiB, which 20,000 chained
+    // `?:` overflow, aborting the process.
+    let source = format!(
+        "let a: number = 0;\nconst v: number = {}0;\nconsole.log(\"ran\", v);\n",
+        "a?1:".repeat(20_000)
+    );
+    let output = opal_run_typescript(&source);
+    assert!(
+        output.status.success(),
+        "opal run failed ({}): {}",
+        output.status,
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert_eq!(String::from_utf8_lossy(&output.stdout), "ran 0\n");
+}
+
+#[test]
+fn test_opal_run_leaves_a_typescript_file_too_deep_for_v8_to_v8() {
+    // Stripped, 300,000 chained arrows are more than V8 compiles, and it
+    // says so as it does for the same file as JavaScript, under Node too.
+    let source = format!(
+        "const f: unknown = {}0;\nconsole.log(\"ran\");\n",
+        "a=>".repeat(300_000)
+    );
+    let output = opal_run_typescript(&source);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert_eq!(output.status.code(), Some(1), "{stderr}");
+    assert!(
+        stderr.contains("RangeError: Maximum call stack size exceeded"),
+        "{stderr}"
+    );
 }
