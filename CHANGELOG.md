@@ -32,7 +32,7 @@ Opal is pre-1.0, so a release can change behaviour you depend on. Anything that 
 
 ### Fixed
 
-- `opal graph` no longer aborts with a stack overflow on a deeply nested module. It resolves on a 256 MiB stack, as `opal build` does, where it ran on the main thread's 8 MiB and overflowed at about 20,000 chained `?:`, a program Node runs. A module whose brackets nest more than 4,000 deep is not parsed, so its imports are not followed, and `--json` lists it under `diagnostics`.
+- `opal graph` no longer aborts with a stack overflow on a deeply nested module. It parsed on the main thread's 8 MiB, which overflowed at about 20,000 chained `?:`, a program Node runs; it now parses each module on a stack sized to the file, as `opal build` does. A module whose brackets nest more than 4,000 deep is not parsed, so its imports are not followed, and `--json` lists it under `diagnostics`.
 - `opal graph` resolves `pkg/sub`, in a package with no `package.json`, to the subpath; it gave the package's index. A relative specifier ending in `/`, or `.` or `..`, now resolves to a directory only, as in Node and TypeScript; `import "."` could pick a sibling `src.ts` over `src/index.ts`. Graphs cached by earlier versions are resolved again once.
 
 ## [0.4.1] (2026-10-15)

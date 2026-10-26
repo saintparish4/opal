@@ -361,45 +361,50 @@ impl<'a> Resolver<'a> {
             );
             return Ok(Vec::new());
         }
-        let source_type = SourceType::from_path(path.as_path()).unwrap_or_default();
-        let allocator = Allocator::default();
-        let parsed = Parser::new(&allocator, &source, source_type).parse();
+        // Parsing and walking the tree recurse once per level of nesting, so
+        // they run on a stack with room for this file.
+        let text: &str = &source;
+        let file = path.as_path();
+        let follow_type_only = self.options.follow_type_only_imports;
+        let jsx_runtime = self.options.jsx_runtime.as_deref();
+        let (diagnostic, found) = crate::stack::with_room_for(text, move || {
+            let source_type = SourceType::from_path(file).unwrap_or_default();
+            let allocator = Allocator::default();
+            let parsed = Parser::new(&allocator, text, source_type).parse();
 
-        if parsed.fatal_error {
-            self.builder
-                .add_diagnostic(path, "parser could not recover; imports may be missing");
-        } else if !parsed.diagnostics.is_empty() {
-            self.builder.add_diagnostic(
-                path,
-                format!(
+            let diagnostic = if parsed.fatal_error {
+                Some("parser could not recover; imports may be missing".to_string())
+            } else if !parsed.diagnostics.is_empty() {
+                Some(format!(
                     "{} syntax error(s); parsed on a best-effort basis",
                     parsed.diagnostics.len()
-                ),
-            );
-        }
+                ))
+            } else {
+                None
+            };
 
-        let mut collector = ImportCollector {
-            found: Vec::new(),
-            follow_type_only: self.options.follow_type_only_imports,
-            has_jsx: false,
-        };
-        collector.visit_program(&parsed.program);
-        if collector.has_jsx
-            && let Some(source) = jsx_runtime_source(
-                self.options.jsx_runtime.as_deref(),
-                &source,
-                &parsed.program,
-            )
-        {
-            collector.push(
-                &format!("{source}/jsx-runtime"),
-                DependencyKind::StaticImport,
-            );
+            let mut collector = ImportCollector {
+                found: Vec::new(),
+                follow_type_only,
+                has_jsx: false,
+            };
+            collector.visit_program(&parsed.program);
+            if collector.has_jsx
+                && let Some(source) = jsx_runtime_source(jsx_runtime, text, &parsed.program)
+            {
+                collector.push(
+                    &format!("{source}/jsx-runtime"),
+                    DependencyKind::StaticImport,
+                );
+            }
+            (diagnostic, collector.found)
+        });
+        if let Some(diagnostic) = diagnostic {
+            self.builder.add_diagnostic(path, diagnostic);
         }
 
         let mut seen = HashSet::new();
-        Ok(collector
-            .found
+        Ok(found
             .into_iter()
             .filter(|entry| seen.insert(entry.clone()))
             .collect())
@@ -1188,10 +1193,10 @@ impl<'a> Visit<'a> for ImportCollector {
     }
 }
 
-/// How deep `(`, `[`, and `{` may nest in a file the resolver parses. The
-/// parser recurses once per bracket, and a file nested deeper could
-/// overflow the caller's stack and abort the process; V8 itself rejects
-/// about 5,000 nested parentheses.
+/// How deep `(`, `[`, and `{` may nest in a file the resolver parses. V8
+/// itself rejects about 5,000 nested parentheses, and a bracket takes more
+/// stack to parse than any other form of nesting, so the cap also bounds
+/// what [`crate::stack::needed`] asks for.
 pub const MAX_BRACKET_NESTING: usize = 4_000;
 
 /// Whether `(`, `[`, and `{` nest deeper than `limit` in `source`. Brackets

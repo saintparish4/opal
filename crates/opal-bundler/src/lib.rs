@@ -38,10 +38,11 @@ use std::path::Path;
 use std::sync::{OnceLock, mpsc};
 use std::time::{Duration, Instant};
 
-/// The stack each build thread gets. Parsing, analysis, and printing
-/// recurse once per level of nesting, and a module may nest up to
-/// [`load::MAX_DEPTH`] levels; the main thread's 8 MiB is not enough for
-/// that, let alone a spawned thread's default 2 MiB. Only the pages used
+/// The least stack a build thread gets. Analysis and printing recurse once
+/// per level of nesting, and a module may nest up to [`load::MAX_DEPTH`]
+/// levels; the main thread's 8 MiB is not enough for that, let alone a
+/// spawned thread's default 2 MiB. A thread whose modules could need more
+/// to parse gets more ([`opal_core::stack::needed`]). Only the pages used
 /// are committed.
 pub const STACK_SIZE: usize = 256 * 1024 * 1024;
 
@@ -191,66 +192,81 @@ pub fn build(
                 let (sources, settings, rels, defines) = (&sources, &settings, &rels, &defines);
                 let (infos_cell, linked_cell, shared_cell) =
                     (&infos_cell, &linked_cell, &shared_cell);
-                let spawned = std::thread::Builder::new()
-                    .name("opal-build".to_string())
-                    .stack_size(STACK_SIZE)
-                    .spawn_scoped(scope, move || {
-                        let allocators: Vec<Allocator> =
-                            share.iter().map(|_| Allocator::default()).collect();
-                        let mut parsed: Vec<Option<Parsed<'_>>> = Vec::with_capacity(share.len());
-                        for (slot, &index) in share.iter().enumerate() {
-                            let source = &sources[index];
-                            let result = match &settings[index] {
-                                None => Ok((Info::opaque(source), None, None)),
-                                Some(Err(diagnostic)) => Err(diagnostic.clone()),
-                                Some(Ok(settings)) => {
-                                    load::parse(&allocators[slot], source, settings).and_then(
-                                        |module| {
-                                            let info = analyze::analyze(source, &module)?;
-                                            let lexed = (source.format == Format::Cjs)
-                                                .then(|| cjs_lexer::exports(&source.text));
-                                            Ok((info, lexed, Some(module)))
-                                        },
-                                    )
-                                }
-                            };
-                            match result {
-                                Ok((info, lexed, module)) => {
-                                    parsed.push(module);
-                                    let _ = facts_tx.send((index, Ok((info, lexed))));
-                                }
-                                Err(diagnostic) => {
-                                    parsed.push(None);
-                                    let _ = facts_tx.send((index, Err(diagnostic)));
-                                }
+                // Parsing a module, and the walk that measures its depth, can
+                // need more than STACK_SIZE, so the thread gets room for its
+                // largest module, or STACK_SIZE if the OS will not reserve
+                // that much.
+                let stack = share
+                    .iter()
+                    .map(|&index| opal_core::stack::needed(&sources[index].text))
+                    .fold(STACK_SIZE, usize::max);
+                let work = std::sync::Arc::new(std::sync::Mutex::new(Some(move || {
+                    let allocators: Vec<Allocator> =
+                        share.iter().map(|_| Allocator::default()).collect();
+                    let mut parsed: Vec<Option<Parsed<'_>>> = Vec::with_capacity(share.len());
+                    for (slot, &index) in share.iter().enumerate() {
+                        let source = &sources[index];
+                        let result = match &settings[index] {
+                            None => Ok((Info::opaque(source), None, None)),
+                            Some(Err(diagnostic)) => Err(diagnostic.clone()),
+                            Some(Ok(settings)) => load::parse(&allocators[slot], source, settings)
+                                .and_then(|module| {
+                                    let info = analyze::analyze(source, &module)?;
+                                    let lexed = (source.format == Format::Cjs)
+                                        .then(|| cjs_lexer::exports(&source.text));
+                                    Ok((info, lexed, Some(module)))
+                                }),
+                        };
+                        match result {
+                            Ok((info, lexed, module)) => {
+                                parsed.push(module);
+                                let _ = facts_tx.send((index, Ok((info, lexed))));
+                            }
+                            Err(diagnostic) => {
+                                parsed.push(None);
+                                let _ = facts_tx.send((index, Err(diagnostic)));
                             }
                         }
-                        drop(facts_tx);
-                        if !go_rx.recv().unwrap_or(false) {
-                            return;
-                        }
-                        let (Some(infos), Some(linked), Some(shared)) =
-                            (infos_cell.get(), linked_cell.get(), shared_cell.get())
-                        else {
-                            return;
+                    }
+                    drop(facts_tx);
+                    if !go_rx.recv().unwrap_or(false) {
+                        return;
+                    }
+                    let (Some(infos), Some(linked), Some(shared)) =
+                        (infos_cell.get(), linked_cell.get(), shared_cell.get())
+                    else {
+                        return;
+                    };
+                    for (slot, &index) in share.iter().enumerate() {
+                        let Some(module) = parsed[slot].take() else {
+                            continue;
                         };
-                        for (slot, &index) in share.iter().enumerate() {
-                            let Some(module) = parsed[slot].take() else {
-                                continue;
-                            };
-                            let mut unit = emit::Unit {
-                                source: &sources[index],
-                                info: &infos[index],
-                                parsed: Some(module),
-                                allocator: &allocators[slot],
-                                rel: rels[index].clone(),
-                            };
-                            let _ = piece_tx.send((
-                                index,
-                                emit::print(index, &mut unit, linked, options, defines, shared),
-                            ));
-                        }
-                    });
+                        let mut unit = emit::Unit {
+                            source: &sources[index],
+                            info: &infos[index],
+                            parsed: Some(module),
+                            allocator: &allocators[slot],
+                            rel: rels[index].clone(),
+                        };
+                        let _ = piece_tx.send((
+                            index,
+                            emit::print(index, &mut unit, linked, options, defines, shared),
+                        ));
+                    }
+                })));
+                let spawn = |size: usize| {
+                    let work = std::sync::Arc::clone(&work);
+                    std::thread::Builder::new()
+                        .name("opal-build".to_string())
+                        .stack_size(size)
+                        .spawn_scoped(scope, move || {
+                            let work = work.lock().unwrap_or_else(|e| e.into_inner()).take();
+                            if let Some(work) = work {
+                                work();
+                            }
+                        })
+                };
+                let spawned = spawn(stack).or_else(|_| spawn(STACK_SIZE));
                 if let Err(error) = spawned {
                     stop(&go);
                     return Err(Diagnostic::new(

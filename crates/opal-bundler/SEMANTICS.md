@@ -551,14 +551,18 @@ line.
 | `E-DEFINE` | An assignment to a `--define`d path. | Rule 14. |
 | `E-UNSUPPORTED` | An ES module's import of a file that is not JavaScript or JSON, without `--assets`, or a stylesheet with `url()` or `@import`, or outside a browser (rule 17; a `require()` of one is Node's own); an entry that is not JavaScript; source or defer phase imports; `arguments` at the top level of a lazily imported module (rule 10); a destructuring or `for-in`/`for-of` assignment to an import binding; a module whose brackets nest more than 4,000 deep, or whose syntax tree nests more than 10,000 nodes deep. | Out of scope for this version, or (the last) a form the rewriter does not turn into its `TypeError`. |
 
-One limit is not a refusal. The parser recurses once per level of nesting
-and has no stack check of its own, and the bundler parses on 256 MiB
-stacks, so a module nested deeper than that holds, through forms the
-bracket count does not see, aborts the build with a stack overflow
-instead of a code. The shallowest found are about 300,000 chained arrow
-functions (`a=>a=>…`, 880 KB), which Node fails from 1,000, and between
-300,000 and 500,000 chained `?:` (1.2 to 2 MB), which Node runs. Up to
-those depths, both are refused as nesting more than 10,000 nodes deep.
+Nesting that the bracket count does not see, such as 500,000 chained
+`?:` (which Node runs) or 300,000 chained arrow functions (which Node
+fails from 1,000), is refused as nesting more than 10,000 nodes deep,
+however deep it goes. oxc's parser has no stack check of its own and
+recurses once per level, so each module is parsed on a stack sized to
+the file, by the most stack per byte and per bracket that
+`examples/parse-stack.rs` measured, doubled (`opal_core::stack`); a
+byte pays for at least half the worst bracket, so brackets hidden from
+the count in a comment or a string are paid for too. If the
+OS will not reserve that much, which takes a file of several megabytes,
+the module is parsed on 256 MiB, where nesting deeper than about 300,000
+levels aborts the build instead of being refused.
 
 Out of scope altogether, so the command line has no flag for them: code
 splitting, plugins, CSS and HTML entry points, minification, macros,
