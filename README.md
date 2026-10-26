@@ -119,6 +119,26 @@ opal x cowsay@1.6.0 hello        # installed once into the cache, then run
 
 `update`, `why`, `outdated`, `audit`, and `publish` aren't implemented yet, so the binary doesn't have them. A command that exists and does nothing is worse than one that doesn't exist.
 
+### Running files
+
+`opal run` runs a JavaScript or TypeScript file on an embedded V8, the way Node 24 runs it.
+
+```bash
+opal run app.js                  # CommonJS or an ES module, as Node decides
+opal run script.ts --verbose     # types stripped as Node 24 strips them; arguments go to the script
+opal run ./bin/tool              # a name with a `/` in it is a file, not a script
+```
+
+It aims to be exact rather than complete. Most of what a program reaches is Node's own library code, copied unmodified from Node 24.19.0: `util.inspect`, `events`, `path`, `buffer`, `fs`, `assert`, timers, and the error messages and codes, over native code that does what Node's C++ does. So `console.log` of any object, a failed `readFileSync`, and an uncaught error print what Node prints, byte for byte.
+
+What it does: CommonJS, ES modules and JSON with Node's resolution, `require()` of an ES module, `import()`, `import.meta`, top-level `await`, TypeScript files (`.ts`, `.mts`, `.cts`), `console`, `process` (argv, env, exit codes, `nextTick`, warnings, `uncaughtException`), `path`, `Buffer`, `events`, `util` (in part), every synchronous `fs` function, `assert`, and timers.
+
+What it doesn't do yet: `fs` with callbacks or promises, `os`, `child_process`, `net` and `http`, streams, `worker_threads`, `crypto`, `url`, and Node's command-line flags. Requiring one of those fails with an error that says Opal doesn't implement it yet, rather than with something that half works.
+
+How it is checked: five corpora (inspect, buffer, fs, modules, ES modules) are run under `opal run` and under node 24.19.0 in CI and must print the same bytes; the TypeScript stripper matches Node's on 18,522 real-world files, and resolution matches Node's on 198,352 generated cases. Node's own tests for these areas run unmodified through [`compat/node-tests.py`](./compat/node-tests.py): 225 of 631 pass today, file by file in [compat/NODE-TESTS.md](./compat/NODE-TESTS.md), with the reason each other one fails.
+
+How fast it starts: `opal run hello.js` takes 10.5 ms here, against 6.7 ms for bun and 35.7 ms for node, and a script that loads `fs`, `path`, `util`, `assert` and `events` takes 24.0 ms (1.20× bun, 0.61× node), measured by [`benchmarks/compare-runtimes.py`](./benchmarks/compare-runtimes.py). Being faster than bun to start is the goal, and not met yet.
+
 ### Bundling
 
 `opal build` bundles an entry file and everything it imports into one ES module, with a source map, from the same module graph `opal graph` prints.
