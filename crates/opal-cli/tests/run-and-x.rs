@@ -152,13 +152,17 @@ fn run_passes_a_sigterm_sent_to_opal_on_to_the_script() {
         r#"{"scripts": {"preserve": "true", "serve": "trap 'echo got-term; exit 0' TERM; echo ready; while :; do sleep 0.05; done"}}"#,
     )
     .unwrap();
+    // Its own process group, so that a failure can stop the script too.
+    use std::os::unix::process::CommandExt;
     let mut child = Command::new(OPAL)
         .current_dir(dir.path())
         .args(["run", "serve"])
         .stdout(Stdio::piped())
         .stderr(Stdio::null())
+        .process_group(0)
         .spawn()
         .unwrap();
+    let group = child.id() as i32;
     let mut stdout = child.stdout.take().unwrap();
     let mut seen = Vec::new();
     let mut buffer = [0u8; 64];
@@ -171,8 +175,24 @@ fn run_passes_a_sigterm_sent_to_opal_on_to_the_script() {
     std::thread::sleep(Duration::from_millis(50));
     // SAFETY: signalling a child this test started.
     unsafe { libc::kill(child.id() as i32, libc::SIGTERM) };
-    stdout.read_to_end(&mut seen).unwrap();
-    let status = child.wait().unwrap();
+    let rest = std::thread::spawn(move || {
+        let mut rest = Vec::new();
+        stdout.read_to_end(&mut rest).unwrap();
+        rest
+    });
+    let deadline = std::time::Instant::now() + Duration::from_secs(20);
+    let status = loop {
+        if let Some(status) = child.try_wait().unwrap() {
+            break status;
+        }
+        if std::time::Instant::now() > deadline {
+            // SAFETY: killing the process group this test made.
+            unsafe { libc::kill(-group, libc::SIGKILL) };
+            panic!("the script never got the SIGTERM sent to opal");
+        }
+        std::thread::sleep(Duration::from_millis(20));
+    };
+    seen.extend(rest.join().unwrap());
     assert!(String::from_utf8_lossy(&seen).contains("got-term"));
     assert_eq!(status.code(), Some(0), "signal {:?}", status.signal());
 }
