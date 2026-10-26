@@ -435,15 +435,18 @@ fn fs_reads_and_writes_files_and_fails_as_node_fails() {
 }
 
 #[test]
-fn fs_functions_with_a_callback_say_they_are_not_there_yet() {
-    let (_dir, out) = run("require(\"fs\").stat(\"main.js\", () => {});\n");
-    assert_eq!(out.code, Some(1));
-    assert!(
-        out.stderr.contains(
-            "Error: Opal implements only the synchronous fs functions yet, not fs functions with a callback"
-        ),
-        "{}",
-        out.stderr
+fn fs_callbacks_run_on_the_loop_as_node_runs_them() {
+    // Node's order: the script first, then an I/O callback, in which an
+    // immediate runs before the next I/O callback, which a later turn
+    // delivers. (A 0 ms timer set there may run before or after that
+    // callback, in Node as here.) A failed call's error is made outside any
+    // JavaScript, so it has no stack but its message.
+    let (_dir, out) = run(
+        "const fs = require(\"fs\");\nfs.readFile(__filename, \"utf8\", (err, text) => {\n  console.log(\"read\", err, text.startsWith(\"const fs\"));\n  setImmediate(() => console.log(\"immediate\"));\n  fs.open(\"missing.txt\", \"r\", (err) => console.log(err.message, err.stack === `Error: ${err.message}`, err.code));\n});\nconsole.log(\"sync\");\n",
+    );
+    assert_eq!(
+        out.stdout,
+        "sync\nread null true\nimmediate\nENOENT: no such file or directory, open 'missing.txt' true ENOENT\n"
     );
 }
 

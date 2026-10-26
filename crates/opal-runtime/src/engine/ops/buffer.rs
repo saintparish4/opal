@@ -13,7 +13,7 @@ use super::{Args, Ret, string, type_error};
 /// Node's `enum encoding` (src/node.h), as internal/util's encodingsMap
 /// numbers them.
 #[derive(Clone, Copy, PartialEq, Eq)]
-pub(super) enum Encoding {
+pub enum Encoding {
     Ascii = 0,
     Utf8 = 1,
     Base64 = 2,

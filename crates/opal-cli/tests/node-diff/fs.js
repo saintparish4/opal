@@ -191,9 +191,9 @@ show("lstatSync missing no throw", () => fs.lstatSync(at("missing"), { throwIfNo
 show("statSync bad option", () => fs.statSync(at("a.txt"), { throwIfNoEntry: "x" }));
 show("statfsSync", () => {
   const stats = fs.statfsSync(root);
-  return [Object.keys(stats).join(","), typeof stats.bsize, stats.bsize > 0].join(" ");
+  return [Object.keys(stats).join(","), Object.values(stats).map((v) => typeof v).join(","), stats.bsize > 0].join(" ");
 });
-show("statfsSync bigint", () => typeof fs.statfsSync(root, { bigint: true }).blocks);
+show("statfsSync bigint", () => Object.values(fs.statfsSync(root, { bigint: true })).map((v) => typeof v).join(","));
 show("statfsSync missing", () => fs.statfsSync(at("missing")));
 show("chmodSync", () => {
   fs.chmodSync(at("a.txt"), 0o640);

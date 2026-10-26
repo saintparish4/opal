@@ -389,8 +389,9 @@
       const kFsStatsFieldsNumber = 18;
       const statValues = new Float64Array(kFsStatsFieldsNumber * 2);
       const bigintStatValues = new BigInt64Array(kFsStatsFieldsNumber * 2);
-      const statFsValues = new Float64Array(7);
-      const bigintStatFsValues = new BigInt64Array(7);
+      // StatFs's fields (node_file.h's FsStatFsOffset).
+      const statFsValues = new Float64Array(8);
+      const bigintStatFsValues = new BigInt64Array(8);
       ops.fs_setup(statValues, bigintStatValues, statFsValues, bigintStatFsValues, requireBuiltin("buffer").Buffer.prototype);
       const unsupported = (what) =>
         class {

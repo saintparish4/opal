@@ -40,3 +40,5 @@ internal/priority_queue
 internal/linkedlist
 internal/promise_hooks
 internal/async_context_frame
+internal/fs/read/context
+internal/fs/rimraf

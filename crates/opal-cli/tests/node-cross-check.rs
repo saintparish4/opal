@@ -87,6 +87,14 @@ fn fs() {
     check("fs.js");
 }
 
+/// fs's callback forms: each call's callback arguments and errors, run one
+/// after another.
+#[test]
+#[ignore = "needs node on PATH"]
+fn fs_callbacks() {
+    check("fs-callbacks.js");
+}
+
 /// import across a project: tests/node-diff/esm/.
 #[test]
 #[ignore = "needs node on PATH"]

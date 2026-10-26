@@ -31,6 +31,7 @@ use v8::MapFnTo;
 
 use crate::trace;
 use ops::Rejections;
+use ops::requests;
 
 static SNAPSHOT: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/snapshot.bin"));
 
@@ -252,31 +253,43 @@ pub fn run_main(entry: &Path, args: &[String]) -> ! {
         // does: a script with an interval runs for as long as it likes.
         v8::scope!(let scope, scope);
         main.drain(scope);
-        // Timers phase, then check phase: Node's processTimers and
-        // processImmediate, which drain ticks between callbacks themselves.
-        // A callback that throws ends the call; once the exception is
-        // reported, the phase is called again for the rest, as Node's
-        // RunTimers and CheckImmediate do.
-        for phase in ["runTimers", "runImmediates"] {
-            while main.call(scope, phase, &[]).is_none() {
-                main.drain(scope);
-            }
-            main.drain(scope);
-        }
+        // The phases of a libuv loop turn that Node uses: timers, then poll
+        // (wait for I/O while nothing can run sooner, then deliver what
+        // finished), then check (immediates).
+        main.phase(scope, "runTimers");
         let wait = main.call(scope, "nextTimer", &[]);
         let wait = wait.and_then(|w| w.number_value(scope)).unwrap_or(-1.0);
-        if wait < 0.0 {
-            // Nothing is pending. 'beforeExit' listeners may schedule more.
+        if wait < 0.0 && requests::pending(scope) == 0 {
+            // Nothing is pending. 'beforeExit' listeners may start more.
             let more = main.call(scope, "beforeExit", &[]);
             main.drain(scope);
-            if more.is_some_and(|more| more.is_true()) {
+            if more.is_some_and(|more| more.is_true()) || requests::pending(scope) > 0 {
                 continue;
             }
             break;
         }
-        if wait > 0.0 {
-            std::thread::sleep(Duration::from_secs_f64(wait / 1000.0));
+        let timeout = if requests::ready(scope) {
+            Some(Duration::ZERO)
+        } else if wait < 0.0 {
+            None
+        } else {
+            Some(Duration::from_secs_f64(wait / 1000.0))
+        };
+        requests::poll(scope, timeout);
+        // Each callback is a call of its own, with ticks and microtasks
+        // drained after it, as MakeCallback does. Only what was ready when
+        // the phase began is delivered: a request a callback makes waits
+        // for a later turn, as libuv delivers work it finishes.
+        for _ in 0..requests::ready_count(scope) {
+            let Some(delivery) = requests::next(scope) else {
+                break;
+            };
+            if let Some((function, receiver, args)) = delivery {
+                main.invoke(scope, function, receiver, &args);
+            }
+            main.drain(scope);
         }
+        main.phase(scope, "runImmediates");
     }
     let code = main.call(scope, "exit", &[]);
     let code = code.and_then(|c| c.int32_value(scope)).unwrap_or(1);
@@ -292,6 +305,17 @@ impl Loop {
     /// Calls `main[name](...args)`. An exception that escapes it is
     /// uncaught: it goes to 'uncaughtException' listeners, or ends the
     /// process the way Node does.
+    /// Runs a loop phase (main.js's runTimers or runImmediates), which
+    /// drains ticks between callbacks itself. A callback that throws ends
+    /// the call; once the exception is reported, the phase is called again
+    /// for the rest, as Node's RunTimers and CheckImmediate do.
+    fn phase(&self, scope: &mut v8::PinScope, name: &str) {
+        while self.call(scope, name, &[]).is_none() {
+            self.drain(scope);
+        }
+        self.drain(scope);
+    }
+
     fn call<'s>(
         &self,
         scope: &mut v8::PinScope<'s, '_>,
@@ -299,6 +323,18 @@ impl Loop {
         args: &[v8::Local<'s, v8::Value>],
     ) -> Option<v8::Local<'s, v8::Value>> {
         let (function, receiver) = self.function(scope, name);
+        self.invoke(scope, function, receiver, args)
+    }
+
+    /// Calls `function` on `receiver`, reporting an exception it throws as
+    /// uncaught.
+    fn invoke<'s>(
+        &self,
+        scope: &mut v8::PinScope<'s, '_>,
+        function: v8::Local<'s, v8::Function>,
+        receiver: v8::Local<'s, v8::Value>,
+        args: &[v8::Local<'s, v8::Value>],
+    ) -> Option<v8::Local<'s, v8::Value>> {
         let (result, failure) = {
             v8::tc_scope!(let tc, scope);
             let result = function.call(tc, receiver, args);
