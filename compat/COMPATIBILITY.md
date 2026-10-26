@@ -70,7 +70,9 @@ The times come from a single cold run over the public registry. They're there to
 
 ## Results: 2026-10-25, bundler-p0, unreleased
 
-Opal built from the `bundler-p0` branch at `98badfc` (`cargo build --release`; later commits change only tests and docs), SHA-256 `c999350e8e140ef5392f922fdef661f95a574e4de57ecf60ee567e890af6db7a`. Tool versions: Node 24.19.0, npm 12.0.2, and for the browser check Playwright 1.64.0 driving Chrome 156. Same laptop as below, with the bundler's fuzzers running on six of its eight threads, so the times are slower than they would otherwise be. Raw results: [`results/frameworks-20261025-111632.json`](./results/frameworks-20261025-111632.json); the first run on this branch, before the last linker fixes, is [`results/frameworks-20261024-231410.json`](./results/frameworks-20261024-231410.json), with the same verdicts.
+Opal built from the `bundler-p0` branch at `98badfc` (`cargo build --release`), SHA-256 `c999350e8e140ef5392f922fdef661f95a574e4de57ecf60ee567e890af6db7a`. Tool versions: Node 24.19.0, npm 12.0.2, and for the browser check Playwright 1.64.0 driving Chrome 156. Same laptop as below, with the bundler's fuzzers running on six of its eight threads, so the times are slower than they would otherwise be. Raw results: [`results/frameworks-20261025-111632.json`](./results/frameworks-20261025-111632.json); the first run on this branch, before the last linker fixes, is [`results/frameworks-20261024-231410.json`](./results/frameworks-20261024-231410.json), with the same verdicts.
+
+A review then corrected how the module graph resolves package subpaths, directory specifiers, and the JSX runtime (`fe6f372`, `4ad9685`). The three bundled starters were run again at `1c4ab54`, and pass every check: [`results/frameworks-20261025-213524.json`](./results/frameworks-20261025-213524.json).
 
 | Framework | Resolved | install | build | test | runtime | bundle | bundle test | bundle runtime | Scripts skipped |
 |---|---|---|---|---|---|---|---|---|---|

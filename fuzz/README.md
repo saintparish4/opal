@@ -173,6 +173,17 @@ import cycle and 2,604 import a module lazily that depends on an entry that
 awaits (rule 11), and all 57 `E-LINK` are a namespace with an ambiguous
 name over a cycle of `export *` (rule 4).
 
+A review then changed how the module graph resolves package subpaths,
+directory specifiers, and the JSX runtime (`fe6f372`, `4ad9685`). On
+`1c4ab54`, after those, both targets ran for 30 minutes more: 43,292
+generated programs (seeds 10,000,000 to 10,043,291), 41,215 equivalent,
+2,077 refused, 0 diverged; and 127,271 `bundle_source` inputs (63,336
+and 63,935) with no crash. A replay
+with `--save-refused` gave the same counts, and every refusal is again
+one the contract lists: 1,323 top-level `await` in an entry in a cycle,
+741 lazy imports of a module that depends on an entry that awaits, and
+13 ambiguous names over a cycle of `export *`.
+
 `artifacts/bundle_source` holds no crash. It keeps one slow input from an
 earlier run, 18 bytes that take 153 ms on their own and passed libFuzzer's
 10-second slow-input mark only while the machine was loaded.
