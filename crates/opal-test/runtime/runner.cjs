@@ -12,18 +12,23 @@ const vm = require('vm');
 const {createEnvironment} = require('./environment.cjs');
 const {Loader} = require('./loader.cjs');
 const sourcemaps = require('./sourcemaps.cjs');
+const {separateMessageFromStack} = require('./support.cjs');
+const {babelrcBetween, projectTransforms} = require('./transformers.cjs');
 
 // Everything in this folder but the host side below runs inside each test
 // file's context, loaded on first require. Compiled once per worker, run in
 // each file's context.
 const HOST_FILES = new Set([
+  'babel-config.cjs',
   'bridge-thread.cjs',
   'bridge.cjs',
+  'checker.cjs',
   'config.cjs',
   'environment.cjs',
   'loader.cjs',
   'runner.cjs',
   'sourcemaps.cjs',
+  'transformers.cjs',
   'worker.cjs',
 ]);
 const frameworkScripts = new Map();
@@ -165,14 +170,59 @@ function createBufferedConsole(entries) {
   };
 }
 
+// jest-message-util's checkForCommonEnvironmentErrors.
+function checkForCommonEnvironmentErrors(message) {
+  const wrong = environment => {
+    const chalk = require('./chalk.cjs');
+    return (
+      chalk.bold.red(
+        `The error below may be caused by using the wrong test environment, see ${chalk.dim.underline(
+          'https://jestjs.io/docs/configuration#testenvironment-string',
+        )}.\nConsider using the "${environment}" test environment.\n\n`,
+      ) + message
+    );
+  };
+  if (/ReferenceError: (?:document|window|navigator) is not defined/.test(message)) return wrong('jsdom');
+  if (message.includes('.unref is not a function')) return wrong('node');
+  return message;
+}
+
+// jest-message-util's formatExecError, for a file that fails before its
+// tests run: the error's message, as its stack has it when the stack starts
+// with it, then the stack's frames without opal's own, as Jest leaves out
+// its own. An error with an empty stack, ts-jest's TSError for one, is its
+// message alone. (Jest also prints a code frame of the first frame; opal
+// doesn't, COMPATIBILITY.md.)
+function formatExecError(error) {
+  let message;
+  let stack;
+  if (typeof error === 'string' || !error) {
+    message = '';
+    stack = error || 'EMPTY ERROR';
+  } else {
+    message = String(error.message);
+    stack = typeof error.stack === 'string' ? error.stack : `thrown: ${util.inspect(error, {depth: 3})}`;
+  }
+  const separated = separateMessageFromStack(stack);
+  if (separated.message.includes(message.trim())) message = separated.message;
+  message = checkForCommonEnvironmentErrors(message)
+    .split('\n')
+    .map(line => (line ? `    ${line}` : line))
+    .join('\n');
+  const frames = separated.stack
+    .split('\n')
+    .filter(line => line.trim() && !line.includes('node:internal') && !line.includes(__dirname))
+    .map(line => `      ${line.trim()}`)
+    .join('\n');
+  if (!message.trim() && !frames) message = `    thrown: ${util.inspect(error, {depth: 3})}`;
+  return `  ● Test suite failed to run\n\n${message}${frames ? `\n\n${frames}` : ''}\n`;
+}
+
 function failure(testPath, error) {
   const stack = error && error.stack ? String(error.stack) : String(error);
   const message = error && error.message !== undefined ? String(error.message) : String(error);
   return {
-    failureMessage: `  ● Test suite failed to run\n\n${stack
-      .split('\n')
-      .map(line => (line ? `    ${line}` : line))
-      .join('\n')}\n`,
+    failureMessage: formatExecError(error),
     numFailingTests: 0,
     numPassingTests: 0,
     numPendingTests: 0,
@@ -222,20 +272,31 @@ const profile = process.env.OPAL_TEST_PROFILE ? {transformNanos: 0n, transforms:
 const transformed = new Map();
 
 function createTransform(config, bridge) {
-  if (!bridge || (config.transform && Object.keys(config.transform).length === 0)) return undefined;
+  if (!bridge || (config.transform && config.transform.length === 0)) return undefined;
   const ignore = (config.transformIgnorePatterns || ['/node_modules/', '\\.pnp\\.[^\\/]+$']).map(
     pattern => new RegExp(pattern),
   );
+  const project = config.transform ? projectTransforms(config) : null;
+  // babel-jest's JSX runtime, where opal transforms in its place.
+  const jsx = config.babelJsx
+    ? {jsx: config.babelJsx.classic ? 'classic' : 'automatic', jsxImportSource: config.babelJsx.importSource}
+    : null;
   return (filename, code) => {
-    if (ignore.some(regex => regex.test(filename))) {
+    const ignored = ignore.some(regex => regex.test(filename));
+    let entry = !ignored && project ? project.entryFor(filename) : null;
+    if (entry && entry.runner === 'opal' && path.isAbsolute(entry.transformPath) && babelrcBetween(filename, config.rootDir)) {
+      entry = project.babelJest(entry);
+    }
+    if (entry && entry.runner !== 'opal') return projectTransform(project, entry, filename, code, bridge);
+    if (ignored) {
       if (!isEsModule(filename)) return code;
     } else if (!ALWAYS.has(path.extname(filename)) && !NEEDS_TRANSFORM.test(code)) {
       return code;
     }
     const known = transformed.get(filename);
-    if (known && known.source === code) return known.code;
+    if (known && known.source === code && !known.entry) return known.code;
     const started = profile ? process.hrtime.bigint() : 0n;
-    const reply = bridge.request({path: filename});
+    const reply = bridge.request(entry && jsx ? {path: filename, ...jsx} : {path: filename});
     if (profile) {
       profile.transforms += 1;
       profile.transformNanos += process.hrtime.bigint() - started;
@@ -249,6 +310,21 @@ function createTransform(config, bridge) {
     transformed.set(filename, {code: reply.code, source: code});
     return reply.code;
   };
+}
+
+// A file the project's own transformer handles (transformers.cjs).
+function projectTransform(project, entry, filename, code, bridge) {
+  const known = transformed.get(filename);
+  if (known && known.source === code && known.entry === entry) return known.code;
+  const started = profile ? process.hrtime.bigint() : 0n;
+  const result = project.transform(entry, filename, code, bridge);
+  if (profile) {
+    profile.transforms += 1;
+    profile.transformNanos += process.hrtime.bigint() - started;
+  }
+  sourcemaps.register(filename, result.map);
+  transformed.set(filename, {code: result.code, entry, source: code});
+  return result.code;
 }
 
 // A test file that imports from vitest is in Vitest's dialect whatever the

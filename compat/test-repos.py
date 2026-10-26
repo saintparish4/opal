@@ -66,19 +66,8 @@ REPOS = {
         # package.json's `test` script colors on purpose: its snapshots hold
         # matcher messages with their colors.
         "reference": ["corepack", "yarn", "jest", "--color=true", "--ci", "--json", "--outputFile={out}"],
+        # ts-jest emits, so a function's text is TypeScript's, `() => { }`.
         "opal": ["--color=true", "--ci"],
-        "renamed": [("() => { }", "() => {}", FUNCTION_TEXT)],
-        "failing": {
-            ("test/matchers/toBeArrayOfSize.test.ts", ".toBeArrayOfSize fails when given type of () => {} which is not an array"): FUNCTION_TEXT,
-            ("test/matchers/toBeExtensible.test.ts", ".not.toBeExtensible fails when given an extensible object: () => {}"): FUNCTION_TEXT,
-            ("test/matchers/toBeObject.test.ts", ".toBeObject fails when not given an object: () => {}"): FUNCTION_TEXT,
-        },
-        # The same three snapshot keys, renamed by `-u`.
-        "round_trip": {
-            "test/matchers/__snapshots__/toBeArrayOfSize.test.ts.snap": FUNCTION_TEXT,
-            "test/matchers/__snapshots__/toBeExtensible.test.ts.snap": FUNCTION_TEXT,
-            "test/matchers/__snapshots__/toBeObject.test.ts.snap": FUNCTION_TEXT,
-        },
     },
     "es-toolkit": {
         "url": "https://github.com/toss/es-toolkit.git",

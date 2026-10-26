@@ -4,6 +4,13 @@
 'use strict';
 
 const net = require('net');
+// Node's compile cache, for what loads in this process's own realm: a
+// project's transformer, and TypeScript, load in half the time the second
+// time.
+const Module = require('module');
+if (process.env.OPAL_TEST_CACHE && typeof Module.enableCompileCache === 'function') {
+  Module.enableCompileCache(require('path').join(process.env.OPAL_TEST_CACHE, 'node-compile-cache'));
+}
 const {loadConfig} = require('./config.cjs');
 const {Bridge} = require('./bridge.cjs');
 const {runTestFile, saveCodeCache} = require('./runner.cjs');
@@ -14,6 +21,7 @@ const worker = Number(process.env.OPAL_TEST_WORKER);
 delete process.env.OPAL_TEST_PORT;
 delete process.env.OPAL_TEST_TOKEN;
 delete process.env.OPAL_TEST_WORKER;
+delete process.env.OPAL_TEST_CACHE;
 
 // Between files nothing claims an uncaught error (each file's run installs
 // its own handlers and puts these back after), and one must not take the

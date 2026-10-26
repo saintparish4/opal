@@ -14,6 +14,7 @@
 //! Vitest and Bun.
 
 mod changed;
+mod checker;
 mod colors;
 pub mod config;
 mod discover;
@@ -152,6 +153,7 @@ pub fn run(options: &RunOptions, out: &mut dyn Write) -> Result<Outcome, TestErr
         transforms,
         color,
         code_cache,
+        &options.cache_dir,
     )?;
     pool.spawn()?;
     let result = match options.watch {
@@ -266,7 +268,14 @@ fn run_files(
     let workers = options.max_workers.unwrap_or_else(default_workers);
     let count = files.len();
     let mut write_error = None;
-    pool.run(files, &context, workers, |outcome| {
+    // ts-jest emits in the workers and checks types here, once for the run.
+    let checks_types = config_value["transformRunners"]
+        .as_array()
+        .is_some_and(|runners| runners.iter().any(|r| r["runner"] == "ts-jest"));
+    if checks_types {
+        pool.start_checker(&config_value, &files);
+    }
+    let ran = pool.run(files, &context, workers, |outcome| {
         let mut result = outcome.result;
         if result["testFilePath"].is_null() {
             result["testFilePath"] = json!(outcome.path);
@@ -274,8 +283,14 @@ fn run_files(
         if let Err(error) = aggregate.add(result, out) {
             write_error.get_or_insert(error);
         }
-    })?;
-    let _ = aggregate.print_summary(out);
+    });
+    if ran.is_ok() {
+        let _ = aggregate.print_summary(out);
+    }
+    if checks_types {
+        pool.finish_checker();
+    }
+    ran?;
     write_json(options, &aggregate)?;
     Ok(Outcome {
         success: aggregate.success(),

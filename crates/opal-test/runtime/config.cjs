@@ -20,11 +20,13 @@
 const fs = require('fs');
 const path = require('path');
 const {pathToFileURL} = require('url');
+const {babelPlan} = require('./babel-config.cjs');
 
 const CONFIG_NAMES = ['ts', 'js', 'mjs', 'cjs', 'cts', 'mts', 'json'].map(ext => `jest.config.${ext}`);
 
 const DEFAULTS = {
   clearMocks: false,
+  globals: {},
   injectGlobals: true,
   moduleFileExtensions: ['js', 'mjs', 'cjs', 'jsx', 'ts', 'mts', 'cts', 'tsx', 'json', 'node'],
   moduleNameMapper: {},
@@ -193,6 +195,119 @@ function replaceRootDir(rootDir, value) {
 
 const PATH_LISTS = ['roots', 'setupFiles', 'setupFilesAfterEnv', 'snapshotSerializers'];
 
+const PRESET_EXTENSIONS = ['.json', '.js', '.cjs', '.mjs'];
+
+// The deepmerge package's defaults, which jest-config merges globals with:
+// objects key by key, arrays one after the other.
+function deepmerge(target, source) {
+  const mergeable = value => value && typeof value === 'object' && !(value instanceof RegExp) && !(value instanceof Date);
+  if (Array.isArray(target) && Array.isArray(source)) return [...target, ...source];
+  if (!mergeable(target) || !mergeable(source) || Array.isArray(target) !== Array.isArray(source)) return source;
+  const merged = {...target};
+  for (const key of Object.keys(source)) {
+    merged[key] = key in target ? deepmerge(target[key], source[key]) : source[key];
+  }
+  return merged;
+}
+
+// jest-config's setupPreset: `preset` names a package with a
+// jest-preset.{json,js,cjs,mjs} at its root, or a file. The config's own
+// options win; setupFiles and setupFilesAfterEnv add to the preset's,
+// moduleNameMapper and transform take the preset's keys after the config's,
+// and globals merge deeply.
+async function applyPreset(rootDir, options) {
+  const presetPath = options.preset.startsWith('<rootDir>')
+    ? path.resolve(rootDir, path.normalize(`./${options.preset.slice('<rootDir>'.length)}`))
+    : options.preset;
+  const request = presetPath.startsWith('.') || path.isAbsolute(presetPath) ? presetPath : `${presetPath}/jest-preset`;
+  let presetModule = null;
+  for (const candidate of [request, ...PRESET_EXTENSIONS.map(extension => `${request}${extension}`)]) {
+    try {
+      presetModule = require.resolve(candidate, {paths: [rootDir]});
+      break;
+    } catch {}
+  }
+  if (!presetModule) {
+    throw new Error(`Preset ${presetPath} not found relative to rootDir ${rootDir}.`);
+  }
+  let preset;
+  if (presetModule.endsWith('.mjs')) {
+    preset = (await import(pathToFileURL(presetModule).href)).default;
+  } else {
+    delete require.cache[presetModule];
+    preset = require(presetModule);
+    if (preset && preset.__esModule) preset = preset.default;
+  }
+  options = {...options};
+  if (options.setupFiles) options.setupFiles = [...(preset.setupFiles || []), ...options.setupFiles];
+  if (options.setupFilesAfterEnv) {
+    options.setupFilesAfterEnv = [...(preset.setupFilesAfterEnv || []), ...options.setupFilesAfterEnv];
+  }
+  if (options.modulePathIgnorePatterns && preset.modulePathIgnorePatterns) {
+    options.modulePathIgnorePatterns = [...preset.modulePathIgnorePatterns, ...options.modulePathIgnorePatterns];
+  }
+  for (const key of ['moduleNameMapper', 'transform']) {
+    if (options[key] && preset[key]) options[key] = {...options[key], ...preset[key], ...options[key]};
+  }
+  if (options.globals && preset.globals) options.globals = deepmerge(preset.globals, options.globals);
+  return {...preset, ...options};
+}
+
+// jest-config's DEFAULT_JS_PATTERN, babel-jest's when `transform` isn't set.
+const DEFAULT_JS_PATTERN = '\\.[jt]sx?$';
+
+const packageNameOf = file => {
+  for (let dir = path.dirname(file); path.dirname(dir) !== dir; dir = path.dirname(dir)) {
+    try {
+      return JSON.parse(fs.readFileSync(path.join(dir, 'package.json'), 'utf8')).name || null;
+    } catch {}
+  }
+  return null;
+};
+
+// `transform` the way jest-config normalizes it, a list of [pattern,
+// transformer, its options] in the config's order, and beside it who runs
+// each one: "opal" is opal's own transform, for babel-jest when it would do
+// nothing more (babel-config.cjs); "ts-jest" is ts-jest, run to emit only,
+// with types checked once for the run (transformers.cjs, checker.cjs);
+// "jest" is any other transformer, run as Jest runs it.
+async function planTransform(rootDir, transform) {
+  const entries = Object.entries(transform || {[DEFAULT_JS_PATTERN]: 'babel-jest'});
+  const plan = [];
+  let babel;
+  for (const [pattern, value] of entries) {
+    const [name, options] = Array.isArray(value) ? value : [value, {}];
+    let resolved = null;
+    try {
+      resolved = require.resolve(name, {paths: [rootDir]});
+    } catch {}
+    const packageName = resolved ? packageNameOf(resolved) : name === 'babel-jest' ? 'babel-jest' : null;
+    let runner = 'jest';
+    let reason;
+    if (packageName === 'babel-jest') {
+      babel = await babelPlan(rootDir, options);
+      runner = babel.custom ? 'jest' : 'opal';
+      reason = babel.custom;
+      // For a config without `transform`, Jest has a babel-jest of its own.
+      // A project running opal test without Jest installed has none, and
+      // opal transforms in its place, as it would for a standard config.
+      if (!resolved && runner === 'jest' && !transform) {
+        process.stderr.write(
+          `opal test: ${reason} needs babel-jest, which isn't installed; opal transforms these files itself, without it.\n`,
+        );
+        runner = 'opal';
+      }
+    } else if (packageName === 'ts-jest') {
+      runner = 'ts-jest';
+    }
+    if (!resolved && runner !== 'opal') {
+      throw new Error(`Module ${name} in the transform option was not found.\n         <rootDir> is: ${rootDir}`);
+    }
+    plan.push({options: options === undefined ? null : options, path: resolved || name, pattern, reason, runner});
+  }
+  return {babelJsx: babel && !babel.custom ? babel.jsx : null, plan};
+}
+
 async function loadConfig({rootDir: start, configPath}) {
   let file = configPath ? path.resolve(start, configPath) : findConfig(start);
   if (!configPath && file && path.basename(file) === 'package.json') {
@@ -214,7 +329,13 @@ async function loadConfig({rootDir: start, configPath}) {
   }
   const base = file ? path.dirname(file) : path.resolve(start);
   const rootDir = raw.rootDir ? path.resolve(base, raw.rootDir) : base;
+  if (raw.preset) raw = await applyPreset(rootDir, raw);
   const config = {...DEFAULTS, ...replaceRootDir(rootDir, raw)};
+  const {babelJsx, plan} = await planTransform(rootDir, config.transform);
+  config.transform = plan.map(({options, path: transformer, pattern}) => [pattern, transformer, options]);
+  config.transformRunners = plan.map(({reason, runner}) => (reason ? {reason, runner} : {runner}));
+  config.babelJsx = babelJsx;
+  config.cwd = process.cwd();
   config.rootDir = rootDir;
   config.configPath = file;
   config.roots = (config.roots || [rootDir]).map(root => path.resolve(rootDir, root));

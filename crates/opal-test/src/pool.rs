@@ -57,6 +57,10 @@ pub struct Pool {
     /// Whether workers get FORCE_COLOR=1.
     color: bool,
     code_cache: Option<PathBuf>,
+    /// opal's cache folder, where workers keep what a project's own
+    /// transformer made (transformers.cjs).
+    cache_dir: PathBuf,
+    transforms: Arc<TransformService>,
 }
 
 /// What a worker reported for one file, or what opal says about a file whose
@@ -76,6 +80,7 @@ impl Pool {
         transforms: Arc<TransformService>,
         color: bool,
         code_cache: Option<PathBuf>,
+        cache_dir: &Path,
     ) -> Result<Pool, TestError> {
         let listener = TcpListener::bind("127.0.0.1:0").map_err(TestError::Channel)?;
         let port = listener.local_addr().map_err(TestError::Channel)?.port();
@@ -83,8 +88,13 @@ impl Pool {
         let (sender, events) = mpsc::channel();
         let accept_sender = sender.clone();
         let accept_token = token.clone();
-        thread::spawn(move || accept_loop(listener, &accept_token, &accept_sender, &transforms));
+        let accept_transforms = Arc::clone(&transforms);
+        thread::spawn(move || {
+            accept_loop(listener, &accept_token, &accept_sender, &accept_transforms);
+        });
         Ok(Pool {
+            cache_dir: cache_dir.to_path_buf(),
+            transforms,
             color,
             code_cache,
             node: node.to_path_buf(),
@@ -96,6 +106,20 @@ impl Pool {
             slots: HashMap::new(),
             next_id: 0,
         })
+    }
+
+    /// Starts the run's type-check (checker.rs), for a config whose
+    /// transform is ts-jest.
+    pub fn start_checker(&self, config: &Value, tests: &[PathBuf]) {
+        let script = self.worker_script.with_file_name("checker.cjs");
+        self.transforms
+            .checker
+            .start(&self.node, &script, &self.cache_dir, config, tests);
+    }
+
+    /// Ends the run's type-check, once it has saved its state.
+    pub fn finish_checker(&self) {
+        self.transforms.checker.finish();
     }
 
     pub fn spawn(&mut self) -> Result<usize, TestError> {
@@ -127,6 +151,7 @@ impl Pool {
         if let Some(dir) = &self.code_cache {
             command.env("OPAL_TEST_CODE_CACHE", dir);
         }
+        command.env("OPAL_TEST_CACHE", &self.cache_dir);
         let child = command
             .stdin(Stdio::null())
             .stdout(Stdio::piped())

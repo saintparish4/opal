@@ -23,10 +23,13 @@ static STAGING: AtomicU64 = AtomicU64::new(0);
 
 use serde_json::{Value, json};
 
+use crate::checker::TypeChecker;
 use crate::transform;
 use crate::tsconfig::TsconfigCache;
 
 pub struct TransformService {
+    /// The run's type-check, when its transform is ts-jest (checker.rs).
+    pub checker: TypeChecker,
     /// The opal binary's own hash: any change to opal, and so possibly to
     /// what it emits, starts from an empty cache. Worked out on the first
     /// request, so a run that transforms nothing doesn't pay for it.
@@ -40,6 +43,7 @@ impl TransformService {
     pub fn new(cache_dir: &Path) -> Self {
         let disk = cache_dir.join("test-transform");
         TransformService {
+            checker: TypeChecker::default(),
             identity: OnceLock::new(),
             tsconfig: TsconfigCache::default(),
             memory: Mutex::new(HashMap::new()),
@@ -48,11 +52,19 @@ impl TransformService {
     }
 
     /// The reply to one request, as JSON bytes: `{code, mappings}` or
-    /// `{error}`.
+    /// `{error}`, or for a type-check question `{verdict}`.
     pub fn answer(&self, request: &Value) -> Arc<Vec<u8>> {
         let error = |message: String| {
             Arc::new(serde_json::to_vec(&json!({ "error": message })).expect("serializable"))
         };
+        if let Some(file) = request["check"].as_str() {
+            let verdict = self
+                .checker
+                .ask(file, request["entry"].as_u64().unwrap_or(0));
+            return Arc::new(
+                serde_json::to_vec(&json!({ "verdict": verdict })).expect("serializable"),
+            );
+        }
         let Some(path) = request["path"].as_str().map(Path::new) else {
             return error("a transform request names no path".to_string());
         };
@@ -60,7 +72,13 @@ impl TransformService {
             Ok(source) => source,
             Err(failure) => return error(format!("{}: {failure}", path.display())),
         };
-        let options = self.tsconfig.options_for(path);
+        let mut options = self.tsconfig.options_for(path);
+        // babel-jest's JSX runtime, when opal transforms in its place
+        // (babel-config.cjs): it decides over the tsconfig's.
+        if let Some(jsx) = request["jsx"].as_str() {
+            options.jsx_classic = jsx == "classic";
+            options.jsx_import_source = request["jsxImportSource"].as_str().map(str::to_string);
+        }
         let mut hasher = blake3::Hasher::new();
         let identity = self.identity.get_or_init(|| {
             std::env::current_exe()

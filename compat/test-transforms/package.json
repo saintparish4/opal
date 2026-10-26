@@ -1,0 +1,17 @@
+{
+  "name": "test-transforms-oracle",
+  "private": true,
+  "description": "What compat/test-transforms.py runs its projects with, pinned: Jest, and the transformers opal either replaces or runs as Jest does.",
+  "devDependencies": {
+    "@babel/core": "7.29.7",
+    "@babel/preset-env": "7.29.7",
+    "@babel/preset-react": "7.29.7",
+    "@swc/core": "1.16.20",
+    "@swc/jest": "0.2.39",
+    "babel-jest": "30.5.2",
+    "jest": "30.5.2",
+    "react": "19.3.1",
+    "ts-jest": "29.4.15",
+    "typescript": "5.9.3"
+  }
+}

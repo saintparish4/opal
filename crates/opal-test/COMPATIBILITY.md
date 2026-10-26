@@ -131,7 +131,7 @@ opal's mocks are jest-mock's, with `settledResults` and spy names added. Where @
 There is no Vite in opal test. A Vitest file's imports are resolved by Node's rules, transformed by opal's own transform (`src/transform.rs`) into CommonJS with Babel's interop, and loaded into the test's context.
 
 - **Vite plugins. Not run.** A transform that Vite plugins provide doesn't happen: `.vue`, `.svelte`, `.astro`, CSS modules, `?raw`, `?url` and other query imports, virtual modules, `define` replacements and `.env` files. `resolve.alias` is read, as `moduleNameMapper`; `resolve.conditions`, `resolve.tsconfigPaths` (tsconfig's `paths`) and `test.alias` aren't.
-- **A function's own text.** `Function.prototype.toString` gives the source as opal's transform printed it. Under Vitest, it is esbuild's output with Vite's module runner's edits on top, which, for one, put a `;` after an `if` block. A test that reads a function's source can tell the two apart (es-toolkit's `serializeFunction` test does). SEMANTICS.md has the same for tsc.
+- **A function's own text.** `Function.prototype.toString` gives the source as opal's transform printed it. Under Vitest, it is esbuild's output with Vite's module runner's edits on top, which, for one, put a `;` after an `if` block. A test that reads a function's source can tell the two apart (es-toolkit's `serializeFunction` test does). SEMANTICS.md has the same for Babel.
 - **ES modules run as CommonJS.** Imports are hoisted `require`s with live bindings, and `import()` becomes a `require` behind a promise. Only a test or setup file may await at its top level; a module it imports may not.
 - **`vi.mock` factories.**
   - A factory's object is the module's namespace, as in Vitest, and `importOriginal` is provided.

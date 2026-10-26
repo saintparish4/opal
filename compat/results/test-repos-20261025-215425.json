@@ -1,0 +1,75 @@
+{
+ "date": "2026-10-25T21:49:27",
+ "opal_sha256": "743566cb3db2b76e8011901af1756c22965498e852b91fb09d7a2890559f23f6",
+ "node": "v24.19.0",
+ "repos": {
+  "luxon": {
+   "commit": "f427515a38f6a671f8de663e6bcc040ed81f114e",
+   "reference": {
+    "numTotalTests": 1222,
+    "numPassedTests": 1222,
+    "numFailedTests": 0,
+    "numPendingTests": 0
+   },
+   "opal": {
+    "numTotalTests": 1222,
+    "numPassedTests": 1222,
+    "numFailedTests": 0,
+    "numPendingTests": 0
+   },
+   "agree": 1222,
+   "seconds": {
+    "reference": 9.25,
+    "opal": 1.84
+   },
+   "round_trip_changed": [],
+   "problems": []
+  },
+  "jest-extended": {
+   "commit": "06939e8abd223614e293b708413fac487b6ce50a",
+   "reference": {
+    "numTotalTests": 901,
+    "numPassedTests": 901,
+    "numFailedTests": 0,
+    "numPendingTests": 0
+   },
+   "opal": {
+    "numTotalTests": 901,
+    "numPassedTests": 901,
+    "numFailedTests": 0,
+    "numPendingTests": 0
+   },
+   "agree": 901,
+   "seconds": {
+    "reference": 13.67,
+    "opal": 1.78
+   },
+   "round_trip_changed": [],
+   "problems": []
+  },
+  "es-toolkit": {
+   "commit": "d79f9bb6ce4f4014d9f2a06b5882ed8b93f65e46",
+   "reference": {
+    "numTotalTests": 5184,
+    "numPassedTests": 5181,
+    "numFailedTests": 1,
+    "numPendingTests": 2
+   },
+   "opal": {
+    "numTotalTests": 5184,
+    "numPassedTests": 5176,
+    "numFailedTests": 6,
+    "numPendingTests": 2
+   },
+   "agree": 5179,
+   "seconds": {
+    "reference": 112.2,
+    "opal": 87.89
+   },
+   "round_trip_changed": [
+    "src/server/exec.spec.ts"
+   ],
+   "problems": []
+  }
+ }
+}

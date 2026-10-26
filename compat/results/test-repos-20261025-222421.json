@@ -1,0 +1,51 @@
+{
+ "date": "2026-10-25T22:23:57",
+ "opal_sha256": "fe2c3bde895f3dd6bacd370a50d3e2f5984986fbbb944db9d6579586e3d349ed",
+ "node": "v24.19.0",
+ "repos": {
+  "jest-extended": {
+   "commit": "06939e8abd223614e293b708413fac487b6ce50a",
+   "reference": {
+    "numTotalTests": 901,
+    "numPassedTests": 901,
+    "numFailedTests": 0,
+    "numPendingTests": 0
+   },
+   "opal": {
+    "numTotalTests": 901,
+    "numPassedTests": 901,
+    "numFailedTests": 0,
+    "numPendingTests": 0
+   },
+   "agree": 901,
+   "seconds": {
+    "reference": 12.58,
+    "opal": 1.35
+   },
+   "round_trip_changed": [],
+   "problems": []
+  },
+  "luxon": {
+   "commit": "f427515a38f6a671f8de663e6bcc040ed81f114e",
+   "reference": {
+    "numTotalTests": 1222,
+    "numPassedTests": 1222,
+    "numFailedTests": 0,
+    "numPendingTests": 0
+   },
+   "opal": {
+    "numTotalTests": 1222,
+    "numPassedTests": 1222,
+    "numFailedTests": 0,
+    "numPendingTests": 0
+   },
+   "agree": 1222,
+   "seconds": {
+    "reference": 7.03,
+    "opal": 1.61
+   },
+   "round_trip_changed": [],
+   "problems": []
+  }
+ }
+}
