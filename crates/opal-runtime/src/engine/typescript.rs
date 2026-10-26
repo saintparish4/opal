@@ -81,7 +81,11 @@ pub fn strip(source: &str) -> Stripped {
     if let Some(output) = store.and_then(|store| cached(store, &key, source.len())) {
         return Stripped::Code(output);
     }
-    match strip_types(source) {
+    // oxc's parser and the stripper's walk recurse once per level of
+    // nesting, with no stack check, so a file nested deeper than this
+    // thread's stack holds would abort the process: it is stripped on a
+    // stack sized to it.
+    match opal_core::stack::with_room_for(source, || strip_types(source)) {
         Ok(output) => {
             if let Some(store) = store {
                 let _ = remember(store, &key, &output);
