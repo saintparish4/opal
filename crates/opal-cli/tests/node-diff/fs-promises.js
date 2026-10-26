@@ -63,6 +63,7 @@ check("writeFile no dir", () => fsp.writeFile(at("no/file"), "x"));
 check("writeFile iterable", () => fsp.writeFile(at("it.txt"), ["a", "b", "c"]));
 check("readFile iterable", () => fsp.readFile(at("it.txt"), "utf8"));
 check("writeFile bad data", () => fsp.writeFile(at("bad.txt"), 5));
+check("readFile aborted", () => fsp.readFile(at("a.txt"), { signal: AbortSignal.abort() }));
 check("readFile big", async () => {
   const data = Buffer.alloc(300000, "abc");
   await fsp.writeFile(at("big"), data);
@@ -145,6 +146,13 @@ check("writeFile to handle", async () => {
   await fsp.writeFile(fh, "via handle");
   await fh.close();
   return fsp.readFile(at("h.txt"), "utf8");
+});
+check("handle readLines", async () => {
+  await fsp.writeFile(at("lines.txt"), "one\ntwo\n\nthree");
+  const fh = await fsp.open(at("lines.txt"));
+  const lines = [];
+  for await (const line of fh.readLines()) lines.push(line);
+  return lines;
 });
 check("handle Symbol.asyncDispose", async () => {
   const fh = await fsp.open(at("a.txt"));

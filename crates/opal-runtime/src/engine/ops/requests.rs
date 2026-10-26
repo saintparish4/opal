@@ -23,7 +23,7 @@
 
 use std::collections::{HashMap, VecDeque};
 use std::sync::mpsc::{Receiver, Sender, channel};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Condvar, Mutex};
 use std::time::Duration;
 
 use super::buffer::{Encoding, decode};
@@ -97,6 +97,79 @@ type Job = Box<dyn FnOnce() -> Outcome + Send>;
 /// Where bytes a read returned go: the views of the request, in order.
 pub struct Dest(pub Vec<v8::Global<v8::ArrayBufferView>>);
 
+/// The bytes of an ArrayBufferView, for a job to read into or write from on
+/// any thread: where V8 keeps them, as libuv's requests use the memory of
+/// the Buffer they are given, with the backing store held so the memory
+/// outlives the job. JavaScript can change the bytes meanwhile, as in
+/// Node. A buffer JavaScript can shrink, whose memory a shrink can take
+/// away, is copied instead: a read into it is filled in when the request
+/// is delivered, from the view's Dest.
+pub enum Memory {
+    Shared {
+        _store: v8::SharedRef<v8::BackingStore>,
+        ptr: *mut u8,
+        len: usize,
+    },
+    Copied(Vec<u8>),
+}
+
+// SAFETY: a backing store's reference count is atomic (a std::shared_ptr),
+// and V8 neither moves nor frees its memory while a reference is held.
+unsafe impl Send for Memory {}
+
+impl Memory {
+    pub fn of(view: v8::Local<v8::ArrayBufferView>) -> Memory {
+        let len = view.byte_length();
+        // Buffer() first: it moves a small typed array's bytes off V8's
+        // heap, where they could move.
+        let store = view.get_backing_store();
+        match store {
+            Some(store) if !store.is_resizable_by_user_javascript() || store.is_shared() => {
+                let ptr = match store.data() {
+                    // SAFETY: the view's bytes are within its buffer's.
+                    Some(data) => unsafe { data.as_ptr().cast::<u8>().add(view.byte_offset()) },
+                    None => std::ptr::null_mut(),
+                };
+                Memory::Shared {
+                    _store: store,
+                    ptr,
+                    len,
+                }
+            }
+            _ => {
+                let mut bytes = vec![0; len];
+                view.copy_contents(&mut bytes);
+                Memory::Copied(bytes)
+            }
+        }
+    }
+
+    pub fn bytes(&mut self) -> &mut [u8] {
+        match self {
+            Memory::Shared { ptr, len, .. } if !ptr.is_null() && *len > 0 => {
+                // SAFETY: `len` bytes at `ptr` are the view's, kept alive by
+                // the store.
+                unsafe { std::slice::from_raw_parts_mut(*ptr, *len) }
+            }
+            Memory::Shared { .. } => &mut [],
+            Memory::Copied(bytes) => bytes,
+        }
+    }
+
+    /// What a read of `n` bytes into these gives back.
+    pub fn read(memories: Vec<Memory>, n: usize) -> Done {
+        if memories.iter().all(|m| matches!(m, Memory::Shared { .. })) {
+            return Done::Number(n as f64);
+        }
+        let mut bytes: Vec<u8> = memories
+            .into_iter()
+            .flat_map(|mut m| m.bytes().to_vec())
+            .collect();
+        bytes.truncate(n);
+        Done::Read(bytes)
+    }
+}
+
 /// Whether a job can block, so it has to run off the loop's thread.
 pub enum Blocking {
     No,
@@ -113,6 +186,10 @@ enum Target {
 struct Request {
     target: Target,
     dest: Option<Dest>,
+    /// The async context the request was made in (V8's continuation data,
+    /// AsyncContextFrame's frame), which its callback runs in, as an
+    /// AsyncWrap's does.
+    frame: v8::Global<v8::Value>,
 }
 
 /// The pool's size, libuv's default (UV_THREADPOOL_SIZE).
@@ -126,8 +203,36 @@ pub struct Io {
     ready: VecDeque<(u64, Outcome)>,
     results: Sender<(u64, Outcome)>,
     finished: Receiver<(u64, Outcome)>,
-    pool: Option<Sender<(u64, Job)>>,
+    pool: Option<Arc<Pool>>,
     in_pool: usize,
+}
+
+/// The pool's queue, as libuv's threadpool keeps it: a list under a lock,
+/// and a condition variable that wakes one idle thread per job.
+#[derive(Default)]
+struct Pool {
+    jobs: Mutex<VecDeque<(u64, Job)>>,
+    work: Condvar,
+}
+
+impl Pool {
+    fn submit(&self, id: u64, job: Job) {
+        self.jobs
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .push_back((id, job));
+        self.work.notify_one();
+    }
+
+    fn take(&self) -> (u64, Job) {
+        let mut jobs = self.jobs.lock().unwrap_or_else(|e| e.into_inner());
+        loop {
+            if let Some(next) = jobs.pop_front() {
+                return next;
+            }
+            jobs = self.work.wait(jobs).unwrap_or_else(|e| e.into_inner());
+        }
+    }
 }
 
 impl Default for Io {
@@ -153,27 +258,25 @@ fn io<'a>(scope: &'a mut v8::PinScope) -> &'a mut Io {
 }
 
 impl Io {
-    fn pool(&mut self) -> &Sender<(u64, Job)> {
+    fn pool(&mut self) -> &Pool {
         let results = self.results.clone();
         self.pool.get_or_insert_with(|| {
-            let (jobs, queue) = channel::<(u64, Job)>();
-            let queue = Arc::new(Mutex::new(queue));
+            let pool = Arc::new(Pool::default());
             for n in 0..POOL_THREADS {
-                let queue = queue.clone();
+                let pool = pool.clone();
                 let results = results.clone();
                 let _ = std::thread::Builder::new()
                     .name(format!("opal-io-{n}"))
                     .spawn(move || {
                         loop {
-                            let next = queue.lock().ok().and_then(|q| q.recv().ok());
-                            let Some((id, job)) = next else { return };
+                            let (id, job) = pool.take();
                             if results.send((id, job())).is_err() {
                                 return;
                             }
                         }
                     });
             }
-            jobs
+            pool
         })
     }
 }
@@ -199,15 +302,24 @@ pub fn dispatch<'s>(
     } else {
         return Some(job());
     };
+    let frame = scope.get_continuation_preserved_embedder_data();
+    let frame = v8::Global::new(scope, frame);
     let state = io(scope);
     let id = state.next;
     state.next += 1;
-    state.waiting.insert(id, Request { target, dest });
+    state.waiting.insert(
+        id,
+        Request {
+            target,
+            dest,
+            frame,
+        },
+    );
     match blocking {
         Blocking::No => state.ready.push_back((id, job())),
         Blocking::Yes => {
             state.in_pool += 1;
-            let _ = state.pool().send((id, Box::new(job)));
+            state.pool().submit(id, Box::new(job));
         }
     }
     None
@@ -264,19 +376,10 @@ pub fn ready_count(scope: &mut v8::PinScope) -> usize {
     scope.get_slot::<Io>().map_or(0, |state| state.ready.len())
 }
 
-/// The next finished request's delivery: for a callback, the function to
-/// call, what to call it on, and its arguments, for the loop to call as it
-/// calls every callback; a promise is settled here, and gives None too.
-#[allow(clippy::type_complexity)]
-pub fn next<'s>(
-    scope: &mut v8::PinScope<'s, '_>,
-) -> Option<
-    Option<(
-        v8::Local<'s, v8::Function>,
-        v8::Local<'s, v8::Value>,
-        Vec<v8::Local<'s, v8::Value>>,
-    )>,
-> {
+/// The next finished request's delivery: for a callback, what the loop is
+/// to call, as it calls every callback; a promise is settled here, and
+/// gives None.
+pub fn next<'s>(scope: &mut v8::PinScope<'s, '_>) -> Option<Option<Delivery<'s>>> {
     let state = scope.get_slot_mut::<Io>()?;
     let (id, outcome) = state.ready.pop_front()?;
     let request = state.waiting.remove(&id)?;
@@ -310,9 +413,24 @@ pub fn next<'s>(
                 Ok(value) => vec![v8::null(scope).into(), value],
                 Err(failure) => vec![exception(scope, &failure)],
             };
-            Some(Some((function, object.into(), args)))
+            let frame = v8::Local::new(scope, request.frame);
+            Some(Some(Delivery {
+                function,
+                receiver: object.into(),
+                args,
+                frame,
+            }))
         }
     }
+}
+
+/// A callback to call: `receiver.oncomplete(...args)`, in the async
+/// context the request was made in.
+pub struct Delivery<'s> {
+    pub function: v8::Local<'s, v8::Function>,
+    pub receiver: v8::Local<'s, v8::Value>,
+    pub args: Vec<v8::Local<'s, v8::Value>>,
+    pub frame: v8::Local<'s, v8::Value>,
 }
 
 /// Node's UVException for a failure: `CODE: message, syscall 'path' ->

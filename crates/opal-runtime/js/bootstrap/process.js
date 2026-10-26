@@ -230,7 +230,8 @@
         for (let i = 1; i < arguments.length; i++) args[i - 1] = arguments[i];
     }
     tickInfo[0] = 1;
-    tickQueue.push({ callback, args });
+    // The async context the tick runs in, as Node's tick objects carry it.
+    tickQueue.push({ callback, args, frame: ops.cped_get() });
   };
 
   process.emitWarning = function emitWarning(...args) {

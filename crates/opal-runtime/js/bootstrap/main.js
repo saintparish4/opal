@@ -37,8 +37,9 @@
 
   // The globals Node adds to V8's, in the order Node adds them (its
   // Object.keys(globalThis) shows it), each enumerable or not as in Node.
-  // Buffer, atob, btoa and DOMException load their modules on first use,
-  // so a script that never touches them doesn't pay for compiling them.
+  // Buffer, atob, btoa, DOMException and the DOM's events load their modules
+  // on first use, so a script that never touches them doesn't pay for
+  // compiling them.
   const { defineLazyProperties } = internals.internalBinding("util");
   const define = (name, value, enumerable) =>
     Object.defineProperty(globalThis, name, { value, writable: true, enumerable, configurable: true });
@@ -50,6 +51,8 @@
   defineLazyProperties(globalThis, "buffer", ["atob", "btoa"], true);
   defineLazyProperties(globalThis, "buffer", ["Buffer"], false);
   defineLazyProperties(globalThis, "internal/opal/dom_exception", ["DOMException"], false);
+  defineLazyProperties(globalThis, "internal/abort_controller", ["AbortController", "AbortSignal"], false);
+  defineLazyProperties(globalThis, "internal/event_target", ["Event", "EventTarget", "CustomEvent"], false);
 
   // What Node does when a promise is rejected and nothing handles it, by
   // default (--unhandled-rejections=throw): 'unhandledRejection' listeners
@@ -188,9 +191,12 @@
   function processTicksAndRejections() {
     for (;;) {
       while (!tickQueue.isEmpty()) {
-        const { callback, args } = tickQueue.shift();
+        const { callback, args, frame } = tickQueue.shift();
+        const outer = ops.cped_get();
+        ops.cped_set(frame);
         if (args === undefined) callback();
         else ReflectApply(callback, undefined, args);
+        ops.cped_set(outer);
       }
       ops.run_microtasks();
       if (pendingUncaught.length > 0) break;

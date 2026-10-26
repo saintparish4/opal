@@ -282,8 +282,13 @@ pub fn run_main(entry: &Path, args: &[String]) -> ! {
             let Some(delivery) = requests::next(scope) else {
                 break;
             };
-            if let Some((function, receiver, args)) = delivery {
-                main.invoke(scope, function, receiver, &args);
+            if let Some(delivery) = delivery {
+                // As MakeCallback: in the request's async context, restored
+                // before the ticks and microtasks run.
+                let outer = scope.get_continuation_preserved_embedder_data();
+                scope.set_continuation_preserved_embedder_data(delivery.frame);
+                main.invoke(scope, delivery.function, delivery.receiver, &delivery.args);
+                scope.set_continuation_preserved_embedder_data(outer);
             }
             main.drain(scope);
         }

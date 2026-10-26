@@ -21,6 +21,7 @@
   const {
     ArrayPrototypeForEach,
     ArrayPrototypeIncludes,
+    DateNow,
     ObjectDefineProperty,
     ObjectKeys,
     SafeMap,
@@ -588,6 +589,29 @@
       getOSInformation: ops.os_information,
       isBigEndian: new Uint8Array(new Uint16Array([1]).buffer)[0] === 0,
     }),
+    // src/node_perf.cc's clock and time origin, which performance.now() and
+    // an Event's timeStamp read: the run's start, by the monotonic clock and
+    // the wall clock.
+    performance: () => {
+      const elapsedNs = ops.hrtime() - internals.startNs;
+      const milestones = new Float64Array(8).fill(-1);
+      milestones[0] = (DateNow() - Number(elapsedNs) / 1e6) * 1e3;
+      milestones[1] = Number(internals.startNs);
+      return {
+        constants: {
+          NODE_PERFORMANCE_MILESTONE_TIME_ORIGIN_TIMESTAMP: 0,
+          NODE_PERFORMANCE_MILESTONE_TIME_ORIGIN: 1,
+          NODE_PERFORMANCE_MILESTONE_ENVIRONMENT: 2,
+          NODE_PERFORMANCE_MILESTONE_NODE_START: 3,
+          NODE_PERFORMANCE_MILESTONE_V8_START: 4,
+          NODE_PERFORMANCE_MILESTONE_LOOP_START: 5,
+          NODE_PERFORMANCE_MILESTONE_LOOP_EXIT: 6,
+          NODE_PERFORMANCE_MILESTONE_BOOTSTRAP_COMPLETE: 7,
+        },
+        milestones,
+        now: () => Number(ops.hrtime() - internals.startNs) / 1e6,
+      };
+    },
     // src/node_credentials.cc's.
     credentials: () => ({
       safeGetenv: ops.safe_getenv,

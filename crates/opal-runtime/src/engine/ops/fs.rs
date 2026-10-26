@@ -10,7 +10,7 @@ use std::ffi::{CStr, CString};
 use std::os::unix::ffi::OsStrExt;
 
 use super::buffer::{Encoding, bytes, encode};
-use super::requests::{self as io, Blocking, Dest, Done, Failure, Outcome};
+use super::requests::{self as io, Blocking, Dest, Done, Failure, Memory, Outcome};
 use super::{Args, Ret, set, string, type_error};
 
 /// libuv's error names and messages (uv-common.c's UV_ERRNO_MAP), by
@@ -1035,11 +1035,10 @@ pub fn fs_read<'s>(scope: &mut v8::PinScope<'s, '_>, args: Args<'s>, mut rv: Ret
         transfer_blocks(fd, length)
     };
     let dest = Dest(vec![v8::Global::new(scope, view)]);
+    let mut memory = Memory::of(view);
     let job = move || {
-        let mut bytes = vec![0; length];
-        let n = read(fd, &mut bytes, position).map_err(|e| Failure::new(e, "read"))?;
-        bytes.truncate(n);
-        Ok(Done::Read(bytes))
+        let n = read(fd, memory.bytes(), position).map_err(|e| Failure::new(e, "read"))?;
+        Ok(Memory::read(vec![memory], n))
     };
     let sync_dest = Dest(dest.0.clone());
     if let Some(outcome) = io::dispatch(scope, request, &mut rv, blocking, Some(dest), job) {
@@ -1070,8 +1069,7 @@ pub fn fs_read_buffers<'s>(scope: &mut v8::PinScope<'s, '_>, args: Args<'s>, mut
         return type_error(scope, "buffers must be an array of ArrayBufferViews");
     };
     let position = position(scope, args.get(2));
-    let lengths: Vec<usize> = views.iter().map(|view| view.byte_length()).collect();
-    let total: usize = lengths.iter().sum();
+    let total: usize = views.iter().map(|view| view.byte_length()).sum();
     let request = args.get(3);
     let blocking = if request.is_undefined() {
         Blocking::No
@@ -1085,17 +1083,20 @@ pub fn fs_read_buffers<'s>(scope: &mut v8::PinScope<'s, '_>, args: Args<'s>, mut
             .collect(),
     );
     let sync_dest = Dest(dest.0.clone());
+    let mut memories: Vec<Memory> = views.iter().map(|view| Memory::of(*view)).collect();
     let job = move || {
-        let mut chunks: Vec<Vec<u8>> = lengths.iter().map(|&n| vec![0; n]).collect();
-        let vecs: Vec<libc::iovec> = chunks
+        let vecs: Vec<libc::iovec> = memories
             .iter_mut()
-            .map(|chunk| libc::iovec {
-                iov_base: chunk.as_mut_ptr().cast(),
-                iov_len: chunk.len(),
+            .map(|memory| {
+                let bytes = memory.bytes();
+                libc::iovec {
+                    iov_base: bytes.as_mut_ptr().cast(),
+                    iov_len: bytes.len(),
+                }
             })
             .collect();
         let count = vecs.len() as i32;
-        // SAFETY: each iovec describes one of `chunks`, alive until here.
+        // SAFETY: each iovec describes one of `memories`, alive until here.
         let n = retry(|| unsafe {
             if position < 0 {
                 libc::readv(fd, vecs.as_ptr(), count) as i64
@@ -1104,9 +1105,7 @@ pub fn fs_read_buffers<'s>(scope: &mut v8::PinScope<'s, '_>, args: Args<'s>, mut
             }
         })
         .map_err(|e| Failure::new(e, "read"))? as usize;
-        let mut bytes: Vec<u8> = chunks.concat();
-        bytes.truncate(n);
-        Ok(Done::Read(bytes))
+        Ok(Memory::read(memories, n))
     };
     if let Some(outcome) = io::dispatch(scope, request, &mut rv, blocking, Some(dest), job) {
         sync(scope, &mut rv, outcome, Some(&sync_dest));
@@ -1123,15 +1122,8 @@ pub fn fs_write_buffers<'s>(scope: &mut v8::PinScope<'s, '_>, args: Args<'s>, mu
         return type_error(scope, "buffers must be an array of ArrayBufferViews");
     };
     let position = position(scope, args.get(2));
-    let chunks: Vec<Vec<u8>> = views
-        .iter()
-        .map(|view| {
-            bytes(scope, (*view).into())
-                .map(|b| b.to_vec())
-                .unwrap_or_default()
-        })
-        .collect();
-    let total: usize = chunks.iter().map(Vec::len).sum();
+    let mut memories: Vec<Memory> = views.iter().map(|view| Memory::of(*view)).collect();
+    let total: usize = views.iter().map(|view| view.byte_length()).sum();
     call(
         scope,
         &args,
@@ -1139,15 +1131,19 @@ pub fn fs_write_buffers<'s>(scope: &mut v8::PinScope<'s, '_>, args: Args<'s>, mu
         3,
         || transfer_blocks(fd, total),
         move || {
-            let vecs: Vec<libc::iovec> = chunks
-                .iter()
-                .map(|chunk| libc::iovec {
-                    iov_base: chunk.as_ptr() as *mut libc::c_void,
-                    iov_len: chunk.len(),
+            let vecs: Vec<libc::iovec> = memories
+                .iter_mut()
+                .map(|memory| {
+                    let bytes = memory.bytes();
+                    libc::iovec {
+                        iov_base: bytes.as_mut_ptr().cast(),
+                        iov_len: bytes.len(),
+                    }
                 })
                 .collect();
             let count = vecs.len() as i32;
-            // SAFETY: each iovec describes one of `chunks`, alive until here.
+            // SAFETY: each iovec describes one of `memories`, alive until
+            // here.
             let n = retry(|| unsafe {
                 if position < 0 {
                     libc::writev(fd, vecs.as_ptr(), count) as i64
@@ -1170,17 +1166,17 @@ fn write_call<'s>(
     rv: &mut Ret<'s>,
     index: i32,
     fd: i32,
-    data: Vec<u8>,
+    mut data: Memory,
     position: i64,
 ) {
     let request = args.get(index);
     let blocking = if request.is_undefined() {
         Blocking::No
     } else {
-        transfer_blocks(fd, data.len())
+        transfer_blocks(fd, data.bytes().len())
     };
     let job = move || {
-        write(fd, &data, position)
+        write(fd, data.bytes(), position)
             .map(|n| Done::Number(n as f64))
             .map_err(|e| Failure::new(e, "write"))
     };
@@ -1210,9 +1206,7 @@ pub fn fs_write_buffer<'s>(scope: &mut v8::PinScope<'s, '_>, args: Args<'s>, mut
     let Some(view) = window(scope, &args, 1) else {
         return;
     };
-    let data = bytes(scope, view.into())
-        .map(|b| b.to_vec())
-        .unwrap_or_default();
+    let data = Memory::of(view);
     let position = position(scope, args.get(4));
     write_call(scope, &args, &mut rv, 5, fd, data, position);
 }
@@ -1227,7 +1221,7 @@ pub fn fs_write_string<'s>(scope: &mut v8::PinScope<'s, '_>, args: Args<'s>, mut
     };
     let position = position(scope, args.get(2));
     let encoding = Encoding::from_value(scope, args.get(3));
-    let data = encode(scope, text, encoding);
+    let data = Memory::Copied(encode(scope, text, encoding));
     write_call(scope, &args, &mut rv, 4, fd, data, position);
 }
 

@@ -6,8 +6,8 @@
 //! rules a near miss breaks: util.inspect's layout (console.log of any
 //! object), Buffer's encodings and search offsets, which are ports of
 //! Node's C++, the fs functions' results and errors in each of their sync,
-//! callback and promise forms, and node:os, which reads the machine as
-//! libuv does.
+//! callback and promise forms, streams, whose events have an order, and
+//! node:os, which reads the machine as libuv does.
 //!
 //! Needs `node` on PATH, at the pinned version, which is why the tests are
 //! `#[ignore]`d in the ordinary suite; CI runs them in their own job:
@@ -103,6 +103,14 @@ fn fs_callbacks() {
 #[ignore = "needs node on PATH"]
 fn fs_promises() {
     check("fs-promises.js");
+}
+
+/// node:stream, fs's streams, AbortController and EventTarget: the order
+/// events arrive in and what they carry.
+#[test]
+#[ignore = "needs node on PATH"]
+fn streams() {
+    check("streams.js");
 }
 
 /// node:os on this machine, the parts that change by the moment shown by
