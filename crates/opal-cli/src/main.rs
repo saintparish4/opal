@@ -309,23 +309,21 @@ fn run(cli: Cli) -> Result<ExitCode, Failure> {
 }
 
 /// Runs a command that resolves a module graph on a thread with the
-/// bundler's stack. Resolving parses every module, and the parser recurses
-/// once per level of nesting: 20,000 chained `?:`, which Node runs, overflow
-/// the main thread's 8 MiB and abort the process. The error crosses threads
-/// as its message, which is all that is printed of it.
+/// bundler's stack, recorded so that a module too deep for it is parsed on
+/// a thread sized for it ([`opal_core::stack`]). Resolving parses every
+/// module, and the parser recurses once per level of nesting: 20,000
+/// chained `?:`, which Node runs, overflow the main thread's 8 MiB and abort
+/// the process. The error crosses threads as its message, which is all that
+/// is printed of it.
 fn on_parse_stack(
     name: &str,
-    command: impl FnOnce() -> Result<ExitCode, Failure> + Send + 'static,
+    command: impl FnOnce() -> Result<ExitCode, Failure> + Send,
 ) -> Result<ExitCode, Failure> {
-    let thread = std::thread::Builder::new()
-        .name(name.to_string())
-        .stack_size(opal_bundler::STACK_SIZE)
-        .spawn(move || command().map_err(|error| error.to_string()))
-        .map_err(|error| format!("could not start the {name} thread: {error}"))?;
-    match thread.join() {
-        Ok(result) => result.map_err(Failure::from),
-        Err(panic) => std::panic::resume_unwind(panic),
-    }
+    opal_core::stack::run(name, opal_bundler::STACK_SIZE, move || {
+        command().map_err(|error| error.to_string())
+    })
+    .map_err(|error| format!("could not start the {name} thread: {error}"))?
+    .map_err(Failure::from)
 }
 
 fn graph(args: GraphArgs) -> Result<ExitCode, Failure> {
