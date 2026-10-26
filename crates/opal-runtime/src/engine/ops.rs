@@ -237,6 +237,27 @@ pub fn credentials(scope: &mut v8::PinScope, _: Args, mut rv: Ret) {
     rv.set(v8::Array::new_with_elements(scope, &items).into());
 }
 
+/// `getContinuationPreservedEmbedderData()`: internalBinding
+/// ('async_context_frame')'s, the value V8 carries along each continuation
+/// (promise reactions included), which AsyncContextFrame keeps its frame in.
+pub fn cped_get(scope: &mut v8::PinScope, _: Args, mut rv: Ret) {
+    rv.set(scope.get_continuation_preserved_embedder_data());
+}
+
+/// `setContinuationPreservedEmbedderData(value)`.
+pub fn cped_set(scope: &mut v8::PinScope, args: Args, _: Ret) {
+    scope.set_continuation_preserved_embedder_data(args.get(0));
+}
+
+/// `enqueueMicrotask(callback)`: internalBinding('task_queue')'s, onto V8's
+/// own microtask queue.
+pub fn enqueue_microtask(scope: &mut v8::PinScope, args: Args, _: Ret) {
+    match v8::Local::<v8::Function>::try_from(args.get(0)) {
+        Ok(callback) => scope.enqueue_microtask(callback),
+        Err(_) => type_error(scope, "enqueueMicrotask takes a function"),
+    }
+}
+
 /// `umask(mask)`: sets the file mode creation mask and returns the old
 /// one, or with no mask returns the current one (node_process_methods.cc).
 pub fn umask(scope: &mut v8::PinScope, args: Args, mut rv: Ret) {

@@ -347,6 +347,7 @@
   // Fills in what belongs to this run. Called once, before the main module.
   function setup(argv, argv0) {
     startNs = ops.hrtime();
+    internals.startNs = startNs;
     const [pid, ppid] = ops.process_info();
     process.pid = pid;
     process.ppid = ppid;

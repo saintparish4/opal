@@ -166,7 +166,213 @@
     errors: () => ({
       getErrorSourcePositions: ops.error_source_positions,
       setSourceMapsEnabled() {},
+      // An error a hook threw, which Node hands its fatal exception handler:
+      // thrown on, it reaches the event loop's.
+      triggerUncaughtException(error) {
+        throw error;
+      },
+      // ExitCode (src/node_exit_code.h).
+      exitCodes: {
+        kNoFailure: 0,
+        kGenericUserError: 1,
+        kInternalJSParseError: 3,
+        kInternalJSEvaluationFailure: 4,
+        kV8FatalError: 5,
+        kInvalidFatalExceptionMonkeyPatching: 6,
+        kExceptionInFatalExceptionHandler: 7,
+        kInvalidCommandLineArgument: 9,
+        kBootstrapFailure: 10,
+        kInvalidCommandLineArgument2: 12,
+        kUnsettledTopLevelAwait: 13,
+        kStartupSnapshotFailure: 14,
+        kAbort: 134,
+      },
     }),
+    // Node's per-isolate symbols (env_properties.h), one of each.
+    symbols: () => {
+      const symbols = {};
+      ArrayPrototypeForEach(
+        [
+          "fs_use_promises_symbol",
+          "async_id_symbol",
+          "constructor_key_symbol",
+          "handle_onclose",
+          "no_message_symbol",
+          "messaging_deserialize_symbol",
+          "imported_cjs_symbol",
+          "messaging_transfer_symbol",
+          "messaging_clone_symbol",
+          "messaging_transfer_list_symbol",
+          "oninit",
+          "owner_symbol",
+          "onpskexchange",
+          "resource_symbol",
+          "trigger_async_id_symbol",
+          "builtin_source_text_module_hdo",
+          "source_text_module_default_hdo",
+          "vm_context_no_contextify",
+          "vm_dynamic_import_default_internal",
+          "vm_dynamic_import_main_context_default",
+          "vm_dynamic_import_missing_flag",
+          "vm_dynamic_import_no_callback",
+        ],
+        (name) => {
+          symbols[name] = Symbol(name);
+        },
+      );
+      return symbols;
+    },
+    // What lib/internal/timers.js asks of Node's C++ (timers.js).
+    timers: () => internals.timerBinding,
+    task_queue: () => ({ enqueueMicrotask: ops.enqueue_microtask }),
+    // Where AsyncContextFrame keeps the current frame: V8's continuation
+    // data, which promise reactions carry along.
+    async_context_frame: () => ({
+      getContinuationPreservedEmbedderData: ops.cped_get,
+      setContinuationPreservedEmbedderData: ops.cped_set,
+    }),
+    // Environment::AsyncHooks, which lib/internal/async_hooks.js reads and
+    // writes directly. No hook can be registered (node:async_hooks isn't
+    // there yet), so the hook counts stay 0 but for kCheck, which is on by
+    // default; the ids are the main script's (1) until something else runs.
+    async_wrap: () => {
+      const constants = {
+        kInit: 0,
+        kBefore: 1,
+        kAfter: 2,
+        kDestroy: 3,
+        kPromiseResolve: 4,
+        kTotals: 5,
+        kCheck: 6,
+        kExecutionAsyncId: 0,
+        kTriggerAsyncId: 1,
+        kAsyncIdCounter: 2,
+        kDefaultTriggerAsyncId: 3,
+        kUsesExecutionAsyncResource: 8,
+        kStackLength: 7,
+      };
+      const { kCheck, kStackLength, kExecutionAsyncId, kTriggerAsyncId } = constants;
+      const async_hook_fields = new Uint32Array(9);
+      async_hook_fields[kCheck] = 1;
+      const async_id_fields = new Float64Array([1, 0, 1, -1]);
+      const execution_async_resources = [];
+      const binding = {
+        constants,
+        async_hook_fields,
+        async_id_fields,
+        async_ids_stack: new Float64Array(32),
+        execution_async_resources,
+        // AsyncWrap's provider types (async_wrap.h), as Node numbers them.
+        Providers: {
+          NONE: 0,
+          DIRHANDLE: 1,
+          DNSCHANNEL: 2,
+          ELDHISTOGRAM: 3,
+          FILEHANDLE: 4,
+          FILEHANDLECLOSEREQ: 5,
+          BLOBREADER: 6,
+          FSEVENTWRAP: 7,
+          FSREQCALLBACK: 8,
+          FSREQPROMISE: 9,
+          GETADDRINFOREQWRAP: 10,
+          GETNAMEINFOREQWRAP: 11,
+          HEAPSNAPSHOT: 12,
+          HTTP2SESSION: 13,
+          HTTP2STREAM: 14,
+          HTTP2PING: 15,
+          HTTP2SETTINGS: 16,
+          HTTPINCOMINGMESSAGE: 17,
+          HTTPCLIENTREQUEST: 18,
+          LOCKS: 19,
+          JSSTREAM: 20,
+          JSUDPWRAP: 21,
+          MESSAGEPORT: 22,
+          PIPECONNECTWRAP: 23,
+          PIPESERVERWRAP: 24,
+          PIPEWRAP: 25,
+          PROCESSWRAP: 26,
+          PROMISE: 27,
+          QUERYWRAP: 28,
+          QUIC_ENDPOINT: 29,
+          QUIC_LOGSTREAM: 30,
+          QUIC_SESSION: 31,
+          QUIC_STREAM: 32,
+          QUIC_UDP: 33,
+          SHUTDOWNWRAP: 34,
+          SIGNALWRAP: 35,
+          STATWATCHER: 36,
+          STREAMPIPE: 37,
+          TCPCONNECTWRAP: 38,
+          TCPSERVERWRAP: 39,
+          TCPWRAP: 40,
+          TTYWRAP: 41,
+          UDPSENDWRAP: 42,
+          UDPWRAP: 43,
+          SIGINTWATCHDOG: 44,
+          WORKER: 45,
+          WORKERCPUPROFILE: 46,
+          WORKERCPUUSAGE: 47,
+          WORKERHEAPPROFILE: 48,
+          WORKERHEAPSNAPSHOT: 49,
+          WORKERHEAPSTATISTICS: 50,
+          WRITEWRAP: 51,
+          ZLIB: 52,
+          CHECKPRIMEREQUEST: 53,
+          PBKDF2REQUEST: 54,
+          KEYPAIRGENREQUEST: 55,
+          KEYGENREQUEST: 56,
+          KEYEXPORTREQUEST: 57,
+          ARGON2REQUEST: 58,
+          CIPHERREQUEST: 59,
+          DERIVEBITSREQUEST: 60,
+          HASHREQUEST: 61,
+          RANDOMBYTESREQUEST: 62,
+          RANDOMPRIMEREQUEST: 63,
+          SCRYPTREQUEST: 64,
+          SIGNREQUEST: 65,
+          TLSWRAP: 66,
+          VERIFYREQUEST: 67,
+        },
+        // What the JavaScript calls when async_ids_stack is full: Node grows
+        // it natively, and so does this, then does what the JavaScript would.
+        pushAsyncContext(asyncId, triggerAsyncId) {
+          const offset = async_hook_fields[kStackLength];
+          if (offset * 2 >= binding.async_ids_stack.length) {
+            const grown = new Float64Array(binding.async_ids_stack.length * 2);
+            grown.set(binding.async_ids_stack);
+            binding.async_ids_stack = grown;
+          }
+          binding.async_ids_stack[offset * 2] = async_id_fields[kExecutionAsyncId];
+          binding.async_ids_stack[offset * 2 + 1] = async_id_fields[kTriggerAsyncId];
+          async_hook_fields[kStackLength] = offset + 1;
+          async_id_fields[kExecutionAsyncId] = asyncId;
+          async_id_fields[kTriggerAsyncId] = triggerAsyncId;
+        },
+        // Reached only when the ids no longer match, which Node reports and
+        // exits on (AsyncHooks::FailWithCorruptedAsyncStack).
+        popAsyncContext(asyncId) {
+          ops.write(
+            2,
+            `Error: async hook stack has become corrupted (actual: ${async_id_fields[kExecutionAsyncId]}, expected: ${asyncId})\n`,
+          );
+          ops.exit(1);
+        },
+        executionAsyncResource() {},
+        clearAsyncIdStack() {
+          async_id_fields[kExecutionAsyncId] = 0;
+          async_id_fields[kTriggerAsyncId] = 0;
+          async_hook_fields[kStackLength] = 0;
+          execution_async_resources.length = 0;
+        },
+        setupHooks() {},
+        setCallbackTrampoline() {},
+        queueDestroyAsyncId() {},
+        registerDestroyHook() {},
+        setPromiseHooks() {},
+        getPromiseHooks: () => [undefined, undefined, undefined, undefined],
+      };
+      return binding;
+    },
     // Tracing is never on: every category's enabled flag reads 0.
     trace_events: () => ({
       getCategoryEnabledBuffer: () => new Uint8Array(1),
@@ -207,7 +413,7 @@
         bigintStatValues,
         statFsValues,
         bigintStatFsValues,
-        kUsePromises: Symbol("fs_use_promises_symbol"),
+        kUsePromises: internalBinding("symbols").fs_use_promises_symbol,
         FSReqCallback,
         FileHandle: unsupported("fs.promises"),
         StatWatcher: unsupported("fs.watchFile"),
@@ -268,10 +474,7 @@
     // DOMException, from Node's own per-context script for it.
     messaging: () => {
       const exports = {};
-      const perIsolateSymbols = {
-        messaging_clone_symbol: Symbol("messaging_clone_symbol"),
-        messaging_deserialize_symbol: Symbol("messaging_deserialize_symbol"),
-      };
+      const perIsolateSymbols = internalBinding("symbols");
       const script = ops.compile_builtin("internal/per_context/domexception", [
         "exports",
         "primordials",

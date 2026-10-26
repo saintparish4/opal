@@ -5,21 +5,23 @@
 //   drain()              nextTick callbacks and microtasks until both are
 //                        empty; returns [error] for an exception from a
 //                        microtask or a rejection nobody handled
-//   runTimer()           run the earliest timer if it's due; true if it ran
-//   beginCheck()         start a check phase (the immediates queued so far)
-//   runImmediate()       run the next immediate of this phase; true if it ran
+//   runTimers()          the timers phase: the due timers (timers.js)
+//   runImmediates()      the check phase: the pending immediates (timers.js)
 //   nextTimer()          ms until something can run, -1 if nothing is pending
 //   beforeExit()         emit 'beforeExit'; true if a listener scheduled work
 //   exit()               emit 'exit'; returns the exit code
 //   uncaught(error)      true if an 'uncaughtException' listener took it
 //   initializeImportMeta, importDynamic   V8's import.meta and import() hooks
 //   hasArrow(error)      false for an error whose stack shows its own source
+//   rethrown(error)      true if drain's error was thrown on from runNextTicks
 //   prepareStackTrace    V8's hook for formatting error.stack
 //   inspectFatal(error)  what Node prints for an error that ends the process
 //   fatalExit()          exit code 1, emit 'exit'; returns the exit code
 //   warmup()             run at build time only, so compiled code is kept
 (function (internals, ops, primordials) {
   "use strict";
+
+  const { ObjectIs } = primordials;
 
   const process = internals.process;
   const tickQueue = internals.tickQueue;
@@ -39,17 +41,10 @@
   const define = (name, value, enumerable) =>
     Object.defineProperty(globalThis, name, { value, writable: true, enumerable, configurable: true });
   define("global", globalThis, true);
-  for (const name of [
-    "clearImmediate",
-    "setImmediate",
-    "clearInterval",
-    "clearTimeout",
-    "setInterval",
-    "setTimeout",
-    "queueMicrotask",
-  ]) {
-    define(name, timers[name], true);
+  for (const name of ["clearImmediate", "setImmediate", "clearInterval", "clearTimeout", "setInterval", "setTimeout"]) {
+    timers.defineGlobal(name);
   }
+  define("queueMicrotask", timers.queueMicrotask, true);
   defineLazyProperties(globalThis, "buffer", ["atob", "btoa"], true);
   defineLazyProperties(globalThis, "buffer", ["Buffer"], false);
   defineLazyProperties(globalThis, "internal/opal/dom_exception", ["DOMException"], false);
@@ -112,9 +107,8 @@
       }
     },
 
-    runTimer: timers.runTimer,
-    beginCheck: timers.beginCheck,
-    runImmediate: timers.runImmediate,
+    runTimers: timers.runTimers,
+    runImmediates: timers.runImmediates,
     nextTimer: timers.nextTimer,
 
     beforeExit() {
@@ -143,6 +137,16 @@
 
     importDynamic(specifier, referrer, type) {
       return internals.esm.importDynamic(specifier, referrer, type);
+    },
+
+    // An error drain() returned and runNextTicks threw on, so that it
+    // interrupts the timers or immediates as in Node. Its report is made
+    // from the error itself, as drain()'s are, not from where it was thrown
+    // on.
+    rethrown(error) {
+      const was = rethrownError !== noError && ObjectIs(error, rethrownError);
+      rethrownError = noError;
+      return was;
     },
 
     hasArrow(error) {
@@ -187,6 +191,19 @@
       internals.consolePlainText(["warm", "up"]);
       timers.nextTimer();
     },
+  };
+
+  // What Node's timers call between timer lists and between immediates
+  // (lib/internal/process/task_queues.js): the ticks and microtasks, and an
+  // uncaught exception or unhandled rejection they leave thrown on.
+  const noError = {};
+  let rethrownError = noError;
+  internals.runNextTicks = function runNextTicks() {
+    const failed = main.drain();
+    if (failed !== undefined) {
+      rethrownError = failed[0];
+      throw failed[0];
+    }
   };
 
   internals.main = main;

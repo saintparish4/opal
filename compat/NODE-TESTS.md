@@ -49,12 +49,12 @@ The files are those for the areas the runtime implements (the selection below). 
 | `test-path*.js` | 15 | 2 | 0 | 88% |
 | `test-process-*.js` | 17 | 70 | 0 | 20% |
 | `test-require-*.js` | 12 | 9 | 0 | 57% |
-| `test-timers*.js` | 31 | 27 | 0 | 53% |
+| `test-timers*.js` | 37 | 21 | 0 | 64% |
 | `test-util-format*.js` | 1 | 0 | 0 | 100% |
 | `test-util-inspect*.js` | 2 | 3 | 0 | 40% |
 | `test-util-types*.js` | 1 | 1 | 0 | 50% |
 | `test-util.js` | 0 | 1 | 0 | 0% |
-| **all** | **219** | **412** | **0** | **35%** |
+| **all** | **225** | **406** | **0** | **36%** |
 
 10 more files fail under node on the machine that ran them, so they say nothing about Opal and aren't counted.
 
@@ -464,7 +464,7 @@ The files are those for the areas the runtime implements (the selection below). 
 | `test-fs-writev-sync.js` | pass |  |
 | `test-fs-writev.js` | **fail** | Error: Opal implements only the synchronous fs functions yet, not fs functions with a callback or promise |
 | `test-module-builtin.js` | pass |  |
-| `test-module-cache.js` | **fail** | Error: Cannot find module '/tmp/opal-node-tests-5xhfx31k/opal/test/.tmp.test-module-cache.js/test-module-cache.json' |
+| `test-module-cache.js` | **fail** | Error: Cannot find module '/tmp/opal-node-tests-5bzsirek/opal/test/.tmp.test-module-cache.js/test-module-cache.json' |
 | `test-module-children.js` | **fail** | Error: Opal does not implement the built-in module node:sys yet |
 | `test-module-circular-dependency-warning.js` | **fail** |  |
 | `test-module-circular-symlinks.js` | pass |  |
@@ -478,7 +478,7 @@ The files are those for the areas the runtime implements (the selection below). 
 | `test-module-main-extension-lookup.js` | **fail** | Error: Opal does not implement the built-in module node:child_process yet |
 | `test-module-main-fail.js` | **fail** | Error: Opal does not implement the built-in module node:child_process yet |
 | `test-module-main-preserve-symlinks-fail.js` | **fail** | Error: Opal does not implement the built-in module node:child_process yet |
-| `test-module-multi-extensions.js` | **fail** | Error: Cannot find module '/tmp/opal-node-tests-5xhfx31k/opal/test/.tmp.test-module-multi-extensions.js/test-extensions' |
+| `test-module-multi-extensions.js` | **fail** | Error: Cannot find module '/tmp/opal-node-tests-5bzsirek/opal/test/.tmp.test-module-multi-extensions.js/test-extensions' |
 | `test-module-nodemodulepaths.js` | pass |  |
 | `test-module-parent-deprecation.js` | **fail** |  |
 | `test-module-parent-setter-deprecation.js` | **fail** |  |
@@ -658,21 +658,21 @@ The files are those for the areas the runtime implements (the selection below). 
 | `test-timers-invalid-clear.js` | pass |  |
 | `test-timers-linked-list.js` | **fail** | Error: Cannot find module 'internal/linkedlist' |
 | `test-timers-max-duration-warning.js` | pass |  |
-| `test-timers-nan-duration-emit-once-per-process.js` | **fail** |  |
+| `test-timers-nan-duration-emit-once-per-process.js` | pass |  |
 | `test-timers-nan-duration-warning-promises.js` | **fail** | Error: Opal does not implement the built-in module node:timers/promises yet |
 | `test-timers-nan-duration-warning.js` | **fail** | Error: Opal does not implement the built-in module node:child_process yet |
-| `test-timers-negative-duration-warning-emit-once-per-process.js` | **fail** |  |
+| `test-timers-negative-duration-warning-emit-once-per-process.js` | pass |  |
 | `test-timers-negative-duration-warning.js` | **fail** | Error: Opal does not implement the built-in module node:child_process yet |
 | `test-timers-nested.js` | **fail** | Error: Cannot find module 'internal/util' |
 | `test-timers-next-tick.js` | **fail** | Error: Cannot find module 'internal/util' |
-| `test-timers-non-integer-delay.js` | **fail** | AssertionError [ERR_ASSERTION]: Non-integer delay ordering should be 1,2,3,4, but got 1,4,3,2 |
+| `test-timers-non-integer-delay.js` | pass |  |
 | `test-timers-not-emit-duration-zero.js` | pass |  |
 | `test-timers-now.js` | **fail** | Error: Cannot find module 'internal/test/binding' |
 | `test-timers-ordering.js` | **fail** | Error: Cannot find module 'internal/test/binding' |
 | `test-timers-process-tampering.js` | pass |  |
 | `test-timers-promises-scheduler.js` | **fail** | Error: Opal does not implement the built-in module node:timers/promises yet |
 | `test-timers-promises.js` | **fail** | Error: Opal does not implement the built-in module node:timers/promises yet |
-| `test-timers-refresh-in-callback.js` | **fail** |  |
+| `test-timers-refresh-in-callback.js` | pass |  |
 | `test-timers-refresh.js` | **fail** | Error: Cannot find module 'internal/timers' |
 | `test-timers-reset-process-domain-on-throw.js` | **fail** | Error: Opal does not implement the built-in module node:domain yet |
 | `test-timers-same-timeout-wrong-list-deleted.js` | pass |  |
@@ -681,11 +681,11 @@ The files are those for the areas the runtime implements (the selection below). 
 | `test-timers-this.js` | pass |  |
 | `test-timers-throw-when-cb-not-function.js` | pass |  |
 | `test-timers-timeout-promisified.js` | **fail** | Error: Cannot find module 'internal/event_target' |
-| `test-timers-timeout-to-interval.js` | **fail** |  |
+| `test-timers-timeout-to-interval.js` | pass |  |
 | `test-timers-timeout-with-non-integer.js` | pass |  |
 | `test-timers-to-primitive.js` | pass |  |
 | `test-timers-uncaught-exception.js` | pass |  |
-| `test-timers-unenroll-unref-interval.js` | **fail** | TypeError: Function.prototype.apply was called on null, which is null and not a function |
+| `test-timers-unenroll-unref-interval.js` | pass |  |
 | `test-timers-unref-throw-then-ref.js` | pass |  |
 | `test-timers-unref.js` | pass |  |
 | `test-timers-unrefd-interval-still-fires.js` | pass |  |

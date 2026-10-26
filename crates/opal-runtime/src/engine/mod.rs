@@ -252,19 +252,15 @@ pub fn run_main(entry: &Path, args: &[String]) -> ! {
         // does: a script with an interval runs for as long as it likes.
         v8::scope!(let scope, scope);
         main.drain(scope);
-        // Timers phase: every due timer, draining after each.
-        while main
-            .call(scope, "runTimer", &[])
-            .is_some_and(|ran| ran.is_true())
-        {
-            main.drain(scope);
-        }
-        // Check phase: the immediates queued before it began.
-        main.call(scope, "beginCheck", &[]);
-        while main
-            .call(scope, "runImmediate", &[])
-            .is_some_and(|ran| ran.is_true())
-        {
+        // Timers phase, then check phase: Node's processTimers and
+        // processImmediate, which drain ticks between callbacks themselves.
+        // A callback that throws ends the call; once the exception is
+        // reported, the phase is called again for the rest, as Node's
+        // RunTimers and CheckImmediate do.
+        for phase in ["runTimers", "runImmediates"] {
+            while main.call(scope, phase, &[]).is_none() {
+                main.drain(scope);
+            }
             main.drain(scope);
         }
         let wait = main.call(scope, "nextTimer", &[]);
@@ -389,7 +385,14 @@ impl Loop {
         let arrow = self
             .call(scope, "hasArrow", &[error])
             .is_some_and(|a| a.is_true());
-        let message = message.unwrap_or_else(|| v8::Exception::create_message(scope, error));
+        // An error drain() returned that runNextTicks threw on is reported
+        // as drain()'s are, from the error, not from where it was thrown on.
+        let rethrown = self
+            .call(scope, "rethrown", &[error])
+            .is_some_and(|r| r.is_true());
+        let message = message
+            .filter(|_| !rethrown)
+            .unwrap_or_else(|| v8::Exception::create_message(scope, error));
         fatal::report(scope, error, arrow.then_some(message), &formatted);
         leave(code)
     }

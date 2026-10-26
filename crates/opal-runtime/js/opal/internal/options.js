@@ -8,6 +8,8 @@
 
 const defaults = {
   __proto__: null,
+  '--abort-on-uncaught-exception': false,
+  '--async-context-frame': true,
   '--diagnostic-dir': '',
   '--disable-warning': [],
   '--enable-source-maps': false,

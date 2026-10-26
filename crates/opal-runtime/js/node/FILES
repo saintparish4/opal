@@ -33,3 +33,10 @@ internal/util/debuglog
 internal/errors/error_source
 internal/source_map/source_map_cache
 internal/deps/acorn/acorn/dist/acorn
+timers
+internal/timers
+internal/async_hooks
+internal/priority_queue
+internal/linkedlist
+internal/promise_hooks
+internal/async_context_frame

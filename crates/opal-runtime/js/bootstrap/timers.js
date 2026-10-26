@@ -1,282 +1,140 @@
-// setTimeout, setInterval, setImmediate and queueMicrotask.
+// setTimeout, setInterval, setImmediate and their clear functions are Node's
+// own (lib/timers.js and lib/internal/timers.js, vendored unmodified), loaded
+// the first time a script reads one of those globals: they bring
+// internal/errors, the validators, util.inspect and async_hooks with them,
+// which a script that never uses a timer shouldn't pay for, and in the
+// snapshot they would cost every start more than loading them costs once
+// (the snapshot nearly doubles). Each global is a getter until then, as
+// Node's lazy globals are, so no script can see anything but Node's
+// functions.
 //
-// Timers are a binary heap ordered by due time, then by creation, so timers
-// due at the same millisecond run in the order they were set. The event loop
-// (engine/mod.rs, through main.js) runs one due timer per call to runTimer
-// and drains nextTick and the microtask queue between each, as Node has
-// since v11; then the immediates that were queued when the check phase
-// began, the same way. A timer or immediate that is unref'd fires if the
-// loop is still running for something else, but doesn't keep it running.
+// What Node's C++ does for them is here, as internalBinding('timers'): one
+// libuv timer, due when processTimers() says the next timer list is, the
+// count of pending immediates, and the loop's millisecond clock. The event
+// loop (engine/mod.rs, through main.js) calls runTimers() in its timers
+// phase and runImmediates() in its check phase, and calls each again after
+// an exception it has reported, as Node's RunTimers and CheckImmediate do,
+// so the timers and immediates after the one that threw still run.
 (function (internals, ops, primordials) {
   "use strict";
 
-  const { ReflectApply } = primordials;
+  const { MathAbs, MathFloor, MathMax, MathTrunc, ObjectDefineProperty } = primordials;
 
-  const TIMEOUT_MAX = 2 ** 31 - 1;
-
-  const heap = [];
-  let sequence = 0;
-  let nextId = 1;
-  let refedTimers = 0;
-
-  function now() {
-    return Number(ops.hrtime()) / 1e6;
+  // The loop's clock, as libuv keeps it: whole milliseconds, here since the
+  // process started (Node's GetLibuvNow subtracts its timer base the same
+  // way).
+  function preciseNow() {
+    return Number(ops.hrtime() - internals.startNs) / 1e6;
+  }
+  function getLibuvNow() {
+    return MathFloor(preciseNow());
   }
 
-  // Heap entries are { timer, when, seq }. A timer's current entry is
-  // timer._entry; refresh() and an interval's next run add a new entry, and
-  // the old one is skipped when it reaches the top.
-  function before(a, b) {
-    return a.when < b.when || (a.when === b.when && a.seq < b.seq);
-  }
+  // Environment::ImmediateInfo's fields (src/env.h).
+  const kCount = 0;
+  const kRefCount = 1;
+  const kHasOutstanding = 2;
+  const immediateInfo = new Uint32Array(3);
+  // The number of ref'd timers.
+  const timeoutInfo = new Int32Array(1);
 
-  function schedule(timer, when) {
-    const entry = { timer, when, seq: sequence++ };
-    timer._entry = entry;
-    heap.push(entry);
-    let i = heap.length - 1;
-    while (i > 0) {
-      const parent = (i - 1) >> 1;
-      if (!before(heap[i], heap[parent])) break;
-      [heap[i], heap[parent]] = [heap[parent], heap[i]];
-      i = parent;
+  // The timer handle: the loop time it is due at (null when stopped), and
+  // whether it keeps the loop alive. Both handles start unref'd, as Node's.
+  let due = null;
+  let timerRefed = false;
+  let immediateRefed = false;
+
+  internals.timerBinding = {
+    immediateInfo,
+    timeoutInfo,
+    getLibuvNow,
+    // uv_timer_start, which takes whole milliseconds.
+    scheduleTimer(duration) {
+      due = getLibuvNow() + MathTrunc(duration);
+    },
+    toggleTimerRef(refed) {
+      timerRefed = refed;
+    },
+    toggleImmediateRef(refed) {
+      immediateRefed = refed;
+    },
+    setupTimers() {},
+  };
+
+  let timers;
+  let callbacks;
+
+  // Loads Node's timers, once.
+  function load() {
+    if (timers === undefined) {
+      timers = internals.requireBuiltin("timers");
+      callbacks = internals.requireBuiltin("internal/timers").getTimerCallbacks(internals.runNextTicks);
     }
+    return timers;
   }
 
-  function pop() {
-    const top = heap[0];
-    const last = heap.pop();
-    if (heap.length > 0) {
-      heap[0] = last;
-      let i = 0;
-      for (;;) {
-        const left = 2 * i + 1;
-        const right = left + 1;
-        let smallest = i;
-        if (left < heap.length && before(heap[left], heap[smallest])) smallest = left;
-        if (right < heap.length && before(heap[right], heap[smallest])) smallest = right;
-        if (smallest === i) break;
-        [heap[i], heap[smallest]] = [heap[smallest], heap[i]];
-        i = smallest;
-      }
+  // Defines global `name` (one of lib/timers.js's exports) as a getter that
+  // loads Node's timers, and as Node's own value once assigned.
+  function defineGlobal(name) {
+    ObjectDefineProperty(globalThis, name, {
+      __proto__: null,
+      enumerable: true,
+      configurable: true,
+      get() {
+        return load()[name];
+      },
+      set(value) {
+        ObjectDefineProperty(globalThis, name, {
+          __proto__: null,
+          value,
+          writable: true,
+          enumerable: true,
+          configurable: true,
+        });
+      },
+    });
+  }
+
+  // The timers phase: Node's processTimers(now), when the timer is due. If
+  // it throws, the timer stays due, so the loop's next call carries on with
+  // the lists after the one that threw.
+  function runTimers() {
+    if (due === null) return;
+    const now = getLibuvNow();
+    if (now < due) return;
+    const next = MathTrunc(callbacks.processTimers(now));
+    // What Node's RunTimers does with the answer: the next list's expiry,
+    // negative when every timer left is unref'd, or 0 when none is left.
+    if (next === 0) {
+      due = null;
+      timerRefed = false;
+      return;
     }
-    return top;
+    const duration = MathAbs(next) - getLibuvNow();
+    due = getLibuvNow() + (duration > 0 ? duration : 1);
+    timerRefed = next > 0;
   }
 
-  // The earliest entry still current, dropping stale ones off the top.
-  function peek() {
-    while (heap.length > 0 && (heap[0].timer._destroyed || heap[0].timer._entry !== heap[0])) pop();
-    return heap[0];
+  // The check phase: Node's processImmediate(), when an immediate is
+  // pending or an exception interrupted the last one.
+  function runImmediates() {
+    if (immediateInfo[kCount] === 0 && immediateInfo[kHasOutstanding] === 0) return;
+    callbacks.processImmediate();
+  }
+
+  // Milliseconds until the loop has something to run: 0 while a ref'd
+  // immediate waits, until the timer is due while it is ref'd, and -1 when
+  // nothing ref'd is pending and the loop should end.
+  function nextTimer() {
+    if (immediateRefed && immediateInfo[kRefCount] > 0) return 0;
+    if (due !== null && timerRefed) return MathMax(0, due - preciseNow());
+    return -1;
   }
 
   function validateCallback(callback) {
     if (typeof callback !== "function") {
       internals.requireBuiltin("internal/validators").validateFunction(callback, "callback");
     }
-  }
-
-  function delayOf(after) {
-    after *= 1;
-    if (!(after >= 1 && after <= TIMEOUT_MAX)) {
-      if (after > TIMEOUT_MAX) {
-        internals.process.emitWarning(
-          `${after} does not fit into a 32-bit signed integer.\nTimeout duration was set to 1.`,
-          "TimeoutOverflowWarning",
-        );
-      }
-      after = 1;
-    }
-    return after;
-  }
-
-  class Timeout {
-    constructor(callback, after, args, repeat) {
-      this._idleTimeout = after;
-      this._onTimeout = callback;
-      this._timerArgs = args;
-      this._repeat = repeat ? after : null;
-      this._destroyed = false;
-      this._refed = true;
-      this._id = nextId++;
-      this._entry = null;
-      refedTimers++;
-      schedule(this, now() + after);
-    }
-
-    ref() {
-      if (!this._refed) {
-        this._refed = true;
-        if (!this._destroyed) refedTimers++;
-      }
-      return this;
-    }
-
-    unref() {
-      if (this._refed) {
-        this._refed = false;
-        if (!this._destroyed) refedTimers--;
-      }
-      return this;
-    }
-
-    hasRef() {
-      return this._refed;
-    }
-
-    refresh() {
-      if (!this._destroyed) schedule(this, now() + this._idleTimeout);
-      return this;
-    }
-
-    close() {
-      clearTimeout(this);
-      return this;
-    }
-
-    [Symbol.toPrimitive]() {
-      return this._id;
-    }
-
-    [Symbol.dispose]() {
-      clearTimeout(this);
-    }
-  }
-
-  const byId = new Map();
-
-  function setTimeout(callback, after, ...args) {
-    validateCallback(callback);
-    const timer = new Timeout(callback, delayOf(after), args, false);
-    byId.set(timer._id, timer);
-    return timer;
-  }
-
-  function setInterval(callback, repeat, ...args) {
-    validateCallback(callback);
-    const timer = new Timeout(callback, delayOf(repeat), args, true);
-    byId.set(timer._id, timer);
-    return timer;
-  }
-
-  function clearTimeout(timer) {
-    if (timer == null) return;
-    if (!(timer instanceof Timeout)) {
-      timer = byId.get(typeof timer === "number" ? timer : Number(timer));
-      if (timer === undefined) return;
-    }
-    if (!timer._destroyed) {
-      timer._destroyed = true;
-      if (timer._refed) refedTimers--;
-      byId.delete(timer._id);
-    }
-  }
-
-  // Runs the earliest timer if it is due. Returns whether it ran one.
-  function runTimer() {
-    const entry = peek();
-    if (entry === undefined) return false;
-    const current = now();
-    if (entry.when > current) return false;
-    pop();
-    const timer = entry.timer;
-    if (timer._repeat !== null) {
-      schedule(timer, current + timer._repeat);
-    } else {
-      timer._destroyed = true;
-      if (timer._refed) refedTimers--;
-      byId.delete(timer._id);
-    }
-    const callback = timer._onTimeout;
-    const args = timer._timerArgs;
-    // Through Reflect, not the callback's own call and apply, which code
-    // may have replaced.
-    ReflectApply(callback, timer, args);
-    return true;
-  }
-
-  class Immediate {
-    constructor(callback, args) {
-      this._onImmediate = callback;
-      this._argv = args;
-      this._destroyed = false;
-      this._refed = true;
-      refedImmediates++;
-    }
-
-    ref() {
-      if (!this._refed) {
-        this._refed = true;
-        if (!this._destroyed) refedImmediates++;
-      }
-      return this;
-    }
-
-    unref() {
-      if (this._refed) {
-        this._refed = false;
-        if (!this._destroyed) refedImmediates--;
-      }
-      return this;
-    }
-
-    hasRef() {
-      return this._refed;
-    }
-
-    [Symbol.dispose]() {
-      clearImmediate(this);
-    }
-  }
-
-  let refedImmediates = 0;
-  let immediateQueue = [];
-  let checkPhase = [];
-
-  function setImmediate(callback, ...args) {
-    validateCallback(callback);
-    const immediate = new Immediate(callback, args);
-    immediateQueue.push(immediate);
-    return immediate;
-  }
-
-  function clearImmediate(immediate) {
-    if (!(immediate instanceof Immediate) || immediate._destroyed) return;
-    immediate._destroyed = true;
-    if (immediate._refed) refedImmediates--;
-  }
-
-  // The check phase runs what was queued when it began; immediates set by
-  // those callbacks wait for the next loop iteration. Left over from a phase
-  // an exception interrupted run first.
-  function beginCheck() {
-    if (immediateQueue.length > 0) {
-      checkPhase = checkPhase.length === 0 ? immediateQueue : checkPhase.concat(immediateQueue);
-      immediateQueue = [];
-    }
-  }
-
-  function runImmediate() {
-    while (checkPhase.length > 0) {
-      const immediate = checkPhase.shift();
-      if (immediate._destroyed) continue;
-      immediate._destroyed = true;
-      if (immediate._refed) refedImmediates--;
-      const args = immediate._argv;
-      ReflectApply(immediate._onImmediate, immediate, args);
-      return true;
-    }
-    return false;
-  }
-
-  // Milliseconds until the loop has something to run: 0 if an immediate is
-  // waiting, the earliest timer's due time otherwise, -1 if nothing that is
-  // ref'd is pending and the loop should end.
-  function nextTimer() {
-    if (refedTimers <= 0 && refedImmediates <= 0) return -1;
-    if (immediateQueue.length > 0 || checkPhase.length > 0) return 0;
-    const entry = peek();
-    if (entry === undefined) return -1;
-    return Math.max(0, entry.when - now());
   }
 
   function queueMicrotask(callback) {
@@ -291,24 +149,14 @@
     });
   }
 
-  function clearInterval(timer) {
-    clearTimeout(timer);
-  }
-
   internals.pendingUncaught = [];
   internals.timers = {
-    Timeout,
-    Immediate,
-    setTimeout,
-    setInterval,
-    setImmediate,
-    clearTimeout,
-    clearInterval,
-    clearImmediate,
+    __proto__: null,
+    defineGlobal,
     queueMicrotask,
-    runTimer,
-    beginCheck,
-    runImmediate,
+    load,
+    runTimers,
+    runImmediates,
     nextTimer,
   };
 })

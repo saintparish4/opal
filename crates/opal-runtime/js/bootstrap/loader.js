@@ -63,17 +63,7 @@
   defineBuiltin("assert/strict", () => requireBuiltin("assert").strict);
   defineBuiltin("console", () => internals.console);
   defineBuiltin("process", () => internals.process);
-  defineBuiltin("timers", () => {
-    const t = internals.timers;
-    return {
-      setTimeout: t.setTimeout,
-      setInterval: t.setInterval,
-      setImmediate: t.setImmediate,
-      clearTimeout: t.clearTimeout,
-      clearInterval: t.clearInterval,
-      clearImmediate: t.clearImmediate,
-    };
-  });
+  defineBuiltin("timers", () => internals.timers.load());
 
   // Node's other built-ins, which require() must not look for on disk.
   const unimplemented = [
