@@ -1,6 +1,6 @@
 //! What the resolver produces for shapes that occur in real projects.
 
-mod support;
+use crate::support;
 
 use std::fs;
 use std::path::Path;

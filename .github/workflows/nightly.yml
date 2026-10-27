@@ -91,8 +91,8 @@ jobs:
       - name: Run
         run: |
           set -o pipefail
-          cargo test --all-features -p opal-cli --test install-crash-safety -- --nocapture \
-            kills_at_random_moments adds_killed_at_random_moments 2>&1 | tee chaos.log
+          cargo test --all-features -p opal-cli --test integration -- --nocapture \
+            install_crash_safety::test_kills_at_random_moments install_crash_safety::test_adds_killed_at_random_moments 2>&1 | tee chaos.log
       # Each line carries the seed, which replays the run with OPAL_CHAOS_SEED.
       - name: Summarize
         if: always()
@@ -133,7 +133,7 @@ jobs:
       - name: Run
         run: |
           set -o pipefail
-          cargo test --release --all-features -p opal-pm --test resolution-properties 2>&1 | tee properties.log
+          cargo test --release --all-features -p opal-pm --test integration -- resolution_properties:: 2>&1 | tee properties.log
       - name: Summarize
         if: always()
         run: |

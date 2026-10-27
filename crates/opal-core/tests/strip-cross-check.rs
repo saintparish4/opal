@@ -11,7 +11,7 @@
 //! Needs node 24.19.0 on PATH, so it is `#[ignore]`d in the ordinary suite:
 //!
 //! ```text
-//! cargo test -p opal-core --test strip-cross-check -- --ignored --nocapture
+//! cargo test -p opal-core --test integration -- --ignored --nocapture strip_cross_check::
 //! ```
 
 use std::io::Write;

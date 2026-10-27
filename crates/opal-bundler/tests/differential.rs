@@ -4,13 +4,13 @@
 //! ordinary suite and run by its own CI job:
 //!
 //! ```text
-//! cargo test -p opal-bundler --test differential -- --ignored --nocapture
+//! cargo test -p opal-bundler --test integration -- --ignored --nocapture differential::
 //! ```
 //!
 //! `OPAL_FIXTURE=<text>` runs only the fixtures whose names contain it, and
 //! `OPAL_NODE` names the node binary.
 
-mod support;
+use crate::support;
 
 use std::path::{Path, PathBuf};
 

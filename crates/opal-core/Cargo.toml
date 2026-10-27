@@ -5,6 +5,8 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
+# One test binary, tests/integration.rs, instead of one per file.
+autotests = false
 
 [dependencies]
 blake3.workspace = true
@@ -29,3 +31,7 @@ tempfile.workspace = true
 [[bin]]
 name = "cas-crash-probe"
 path = "src/bin/cas-crash-probe.rs"
+
+[[test]]
+name = "integration"
+path = "tests/integration.rs"

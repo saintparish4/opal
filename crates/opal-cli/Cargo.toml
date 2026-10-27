@@ -5,6 +5,8 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
+# One test binary, tests/integration.rs, instead of one per file.
+autotests = false
 
 [dependencies]
 opal-core.workspace = true
@@ -37,3 +39,7 @@ tempfile.workspace = true
 name = "opal"
 path = "src/main.rs"
 
+
+[[test]]
+name = "integration"
+path = "tests/integration.rs"

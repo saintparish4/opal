@@ -67,7 +67,7 @@ jobs:
       - name: V8's static library
         uses: ./.github/actions/rusty-v8
       - name: Install
-        run: cargo test -p opal-cli --test npm-compatibility -- --ignored test_install
+        run: cargo test -p opal-cli --test integration -- --ignored npm_compatibility::test_install
 
   compatibility-execute:
     name: npm compatibility (execute)
@@ -88,7 +88,7 @@ jobs:
         with:
           node-version: "22"
       - name: Execute
-        run: cargo test -p opal-cli --test npm-compatibility -- --ignored test_execute
+        run: cargo test -p opal-cli --test integration -- --ignored npm_compatibility::test_execute
 
   # `testing_strategy.md` §1: resolve the same package.json with npm and with
   # opal, and fail if the trees differ or either reads a range differently.
@@ -111,7 +111,7 @@ jobs:
         with:
           node-version: "22"
       - name: Cross-check
-        run: cargo test -p opal-pm --test npm-cross-check -- --ignored --nocapture
+        run: cargo test -p opal-pm --test integration -- --ignored --nocapture npm_cross_check::
 
   # `opal run` held to `npm run` on the same package.json: stdout, exit
   # status, and the environment a script sees, minus an explicit allowlist
@@ -136,7 +136,7 @@ jobs:
       - name: Cross-check
         run: |
           npm --version
-          cargo test -p opal-cli --test npm-run-cross-check -- --ignored
+          cargo test -p opal-cli --test integration -- --ignored npm_run_cross_check::
 
   # `opal run <file>` held to `node` on the same files: byte-for-byte stdout
   # and the exit status, for the corpora in crates/opal-cli/tests/node-diff/
@@ -164,9 +164,9 @@ jobs:
           node-version: "24.19.0"
       - name: Cross-check
         run: |
-          cargo test --release -p opal-cli --test node-cross-check -- --ignored
-          cargo test --release -p opal-core --test strip-cross-check -- --ignored --nocapture
-          cargo test --release -p opal-core --test node-resolution-cross-check -- --ignored --nocapture
+          cargo test --release -p opal-cli --test integration -- --ignored node_cross_check::
+          cargo test --release -p opal-core --test integration -- --ignored --nocapture strip_cross_check::
+          cargo test --release -p opal-core --test integration -- --ignored --nocapture node_resolution_cross_check::
 
   # crates/opal-bundler/SEMANTICS.md: every fixture is run unbundled and
   # bundled under Node, and the two runs must be indistinguishable. Node is
@@ -190,11 +190,11 @@ jobs:
       - name: Install the tools fixtures compare against
         run: npm ci --prefix crates/opal-bundler/tools
       - name: Differential
-        run: cargo test -p opal-bundler --test differential -- --ignored --nocapture
+        run: cargo test -p opal-bundler --test integration -- --ignored --nocapture differential::
       - name: CommonJS lexer against Node's
-        run: cargo test -p opal-bundler --test cjs-lexer -- --ignored --nocapture
+        run: cargo test -p opal-bundler --test integration -- --ignored --nocapture cjs_lexer::
       - name: Generated module graphs
-        run: cargo test -p opal-bundler --test generated -- --ignored --nocapture
+        run: cargo test -p opal-bundler --test integration -- --ignored --nocapture generated::
 
   # crates/opal-bundler/test262: every module test of test262 run as written
   # and bundled. The run fails on a failure without an annotation.

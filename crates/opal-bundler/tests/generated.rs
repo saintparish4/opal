@@ -3,7 +3,7 @@
 //! `bundle_graph` fuzz target; this is the fixed set CI runs.
 //!
 //! ```text
-//! cargo test -p opal-bundler --test generated -- --ignored --nocapture
+//! cargo test -p opal-bundler --test integration -- --ignored --nocapture generated::
 //! ```
 //!
 //! `OPAL_GENERATED_CASES` sets how many seeds (default 400).

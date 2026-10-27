@@ -5,7 +5,7 @@
 //! assert the cached graph is identical to a freshly resolved one rather than
 //! merely present.
 
-mod support;
+use crate::support;
 
 use std::collections::BTreeSet;
 

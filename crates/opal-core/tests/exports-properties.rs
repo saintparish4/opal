@@ -12,7 +12,7 @@
 //! catch. So the shapes are generated on purpose, next to random segments for
 //! breadth.
 
-mod support;
+use crate::support;
 
 use opal_core::graph::DependencyTarget;
 use opal_core::graph::resolver::{ResolverOptions, resolve};

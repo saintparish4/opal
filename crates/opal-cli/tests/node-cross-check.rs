@@ -11,7 +11,7 @@
 //! `#[ignore]`d in the ordinary suite; CI runs them in their own job:
 //!
 //! ```text
-//! cargo test -p opal-cli --test node-cross-check -- --ignored
+//! cargo test -p opal-cli --test integration -- --ignored node_cross_check::
 //! ```
 
 use std::path::{Path, PathBuf};

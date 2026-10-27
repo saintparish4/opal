@@ -10,8 +10,8 @@
 //! different triage paths, so they are different tests and different CI jobs:
 //!
 //! ```bash
-//! cargo test -p opal-cli --test npm-compatibility -- --ignored test_install
-//! cargo test -p opal-cli --test npm-compatibility -- --ignored test_execute
+//! cargo test -p opal-cli --test integration -- --ignored npm_compatibility::test_install
+//! cargo test -p opal-cli --test integration -- --ignored npm_compatibility::test_execute
 //! ```
 //!
 //! Every test is `#[ignore]`: these reach the public registry, and `cargo test`

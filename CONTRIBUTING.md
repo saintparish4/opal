@@ -53,6 +53,8 @@ cargo clippy --workspace --all-targets --all-features -- -D warnings
 cargo test --workspace --all-features
 ```
 
+Each crate's integration tests build as one binary, `tests/integration.rs`, which takes the other files in `tests/` as modules. A new test file needs a `#[path]` module line there; a test fails if one is missing. To run one file's tests, name its module: `cargo test -p opal-core --test integration -- graph_resolution::`.
+
 `--all-features` matters: it turns on `opal-pm`'s `fixtures` feature, a file-backed registry the `install-pipeline` and `install-crash-safety` suites use so they run offline. Without it those suites don't compile, and clippy never sees them.
 
 One of those tests kills installs at random moments. If it fails, it prints an `OPAL_CHAOS_SEED`: set that variable to replay the same run, and set `OPAL_CHAOS_TRIALS` to run more trials. Run it with `--nocapture` to see where the kills landed. A kill that arrives after the install has finished tests nothing, and about 44% of them do, so quote a long run by the number of kills that interrupted a running install, not by its trial count.
@@ -71,14 +73,14 @@ These need extra setup, so `cargo test` skips them. Each has its own CI job.
 
 ```bash
 # real packages from the public registry; test_execute also needs node
-cargo test -p opal-cli --test npm-compatibility -- --ignored test_install
-cargo test -p opal-cli --test npm-compatibility -- --ignored test_execute
+cargo test -p opal-cli --test integration -- --ignored npm_compatibility::test_install
+cargo test -p opal-cli --test integration -- --ignored npm_compatibility::test_execute
 
 # opal's resolution checked against npm's on the same package.json; needs node and npm
-cargo test -p opal-pm --test npm-cross-check -- --ignored --nocapture
+cargo test -p opal-pm --test integration -- --ignored --nocapture npm_cross_check::
 
 # opal run against npm run on the same package.json, and opal x against npx; needs npm
-cargo test -p opal-cli --test npm-run-cross-check -- --ignored
+cargo test -p opal-cli --test integration -- --ignored npm_run_cross_check::
 
 # the install benchmark: CI records its numbers but never fails on them
 cargo bench -p opal-pm --bench install-pipeline -- --rtt-ms 25 --scenario cold

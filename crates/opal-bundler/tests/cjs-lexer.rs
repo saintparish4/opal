@@ -4,7 +4,7 @@
 //! (24 or newer, the version the port follows), so it is `#[ignore]`d:
 //!
 //! ```text
-//! cargo test -p opal-bundler --test cjs-lexer -- --ignored --nocapture
+//! cargo test -p opal-bundler --test integration -- --ignored --nocapture cjs_lexer::
 //! ```
 //!
 //! `OPAL_LEXER_CORPUS=<dir>` lexes every `.js` and `.cjs` file under that

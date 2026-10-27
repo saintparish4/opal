@@ -14,7 +14,7 @@
 //! Needs node 24.19.0 on PATH, so it is `#[ignore]`d in the ordinary suite:
 //!
 //! ```text
-//! cargo test -p opal-core --test node-resolution-cross-check -- --ignored --nocapture
+//! cargo test -p opal-core --test integration -- --ignored --nocapture node_resolution_cross_check::
 //! ```
 //! `OPAL_RESOLUTION_TREES` sets how many trees (default 60).
 

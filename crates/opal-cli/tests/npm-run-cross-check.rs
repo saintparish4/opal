@@ -12,7 +12,7 @@
 //! ordinary suite; CI runs them in their own job:
 //!
 //! ```text
-//! cargo test -p opal-cli --test npm-run-cross-check -- --ignored
+//! cargo test -p opal-cli --test integration -- --ignored npm_run_cross_check::
 //! ```
 
 use std::collections::BTreeMap;

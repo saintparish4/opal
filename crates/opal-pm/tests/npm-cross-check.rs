@@ -17,7 +17,7 @@
 //! `#[ignore]`:
 //!
 //! ```text
-//! cargo test -p opal-pm --test npm-cross-check -- --ignored --nocapture
+//! cargo test -p opal-pm --test integration -- --ignored --nocapture npm_cross_check::
 //! ```
 //!
 //! **Identical fixtures are not the whole story, and the suite says so.** The

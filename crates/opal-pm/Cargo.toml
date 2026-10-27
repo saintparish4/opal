@@ -5,6 +5,8 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
+# One test binary, tests/integration.rs, instead of one per file.
+autotests = false
 
 [dependencies]
 opal-core.workspace = true
@@ -39,3 +41,7 @@ name = "install-pipeline"
 path = "benches/install-pipeline/main.rs"
 harness = false
 test = false
+
+[[test]]
+name = "integration"
+path = "tests/integration.rs"
