@@ -69,3 +69,14 @@ libc = "0.2.189"
 # GitHub releases (RUSTY_V8_ARCHIVE points it at a local copy instead), which
 # is outside what `cargo deny` checks.
 v8 = "152.2.0"
+
+# Debug builds keep line tables for opal's own crates, enough for a panic's
+# backtrace to name the file and line, and no debug info for dependencies.
+# Full debug info is most of target/ (V8's bindings, oxc and swc are large)
+# and most of each link. CARGO_PROFILE_DEV_DEBUG=full gives opal's crates
+# full debug info again, for a debugger session.
+[profile.dev]
+debug = "line-tables-only"
+
+[profile.dev.package."*"]
+debug = false
