@@ -1,0 +1,21 @@
+{
+  "bun": {
+    "why": "expect.addSnapshotSerializer throws 'Not implemented' in Bun, and Bun prints an Error subclass by its own name ([ErrorWithDetails: ...]) where Vitest prints [Error: ...].",
+    "verdicts": {
+      "snapshot-custom-serializer.test.ts": {
+        "(file)": [
+          "pass",
+          "fail"
+        ],
+        "basic": [
+          "pass",
+          "fail"
+        ],
+        "throwing snapshot": [
+          "pass",
+          "fail"
+        ]
+      }
+    }
+  }
+}

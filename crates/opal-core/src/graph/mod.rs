@@ -25,8 +25,8 @@ pub use memo::{
     resolve_cached,
 };
 pub use resolver::{
-    MAX_BRACKET_NESTING, Resolution, ResolveError, ResolveTrace, ResolverOptions,
-    nests_deeper_than, resolve,
+    MAX_BRACKET_NESTING, Resolution, ResolveError, ResolveTrace, ResolverHooks, ResolverOptions,
+    nests_deeper_than, resolve, resolve_with,
 };
 
 /// Bumped when the serialized shape changes; older snapshots then miss instead

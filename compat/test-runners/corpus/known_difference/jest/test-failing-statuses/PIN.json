@@ -1,0 +1,128 @@
+{
+  "vitest": {
+    "why": "Vitest has no test.failing (its equivalent is test.fails), so the file fails to load and no test is reported.",
+    "verdicts": {
+      "__tests__/statuses.test.js": {
+        ".add(1, 1)": [
+          "fail",
+          null
+        ],
+        ".add(1, 2)": [
+          "fail",
+          null
+        ],
+        ".add(2, 1)": [
+          "fail",
+          null
+        ],
+        "failing fails = passes": [
+          "pass",
+          null
+        ],
+        "failing fails = passes with test syntax": [
+          "pass",
+          null
+        ],
+        "failing passes = fails": [
+          "fail",
+          null
+        ],
+        "fails": [
+          "fail",
+          null
+        ],
+        "passes": [
+          "pass",
+          null
+        ],
+        "skipped failing 1": [
+          "skip",
+          null
+        ],
+        "skipped failing 2": [
+          "skip",
+          null
+        ],
+        "skipped failing with another different syntax": [
+          "skip",
+          null
+        ],
+        "skipped failing with different syntax": [
+          "skip",
+          null
+        ],
+        "skips": [
+          "skip",
+          null
+        ],
+        "todo": [
+          "todo",
+          null
+        ]
+      }
+    }
+  },
+  "bun": {
+    "why": "test.skip.failing throws in Bun while collecting ('Cannot get .failing on test.skip'), so the file fails before any test is reported.",
+    "verdicts": {
+      "__tests__/statuses.test.js": {
+        ".add(1, 1)": [
+          "fail",
+          null
+        ],
+        ".add(1, 2)": [
+          "fail",
+          null
+        ],
+        ".add(2, 1)": [
+          "fail",
+          null
+        ],
+        "failing fails = passes": [
+          "pass",
+          null
+        ],
+        "failing fails = passes with test syntax": [
+          "pass",
+          null
+        ],
+        "failing passes = fails": [
+          "fail",
+          null
+        ],
+        "fails": [
+          "fail",
+          null
+        ],
+        "passes": [
+          "pass",
+          null
+        ],
+        "skipped failing 1": [
+          "skip",
+          null
+        ],
+        "skipped failing 2": [
+          "skip",
+          null
+        ],
+        "skipped failing with another different syntax": [
+          "skip",
+          null
+        ],
+        "skipped failing with different syntax": [
+          "skip",
+          null
+        ],
+        "skips": [
+          "skip",
+          null
+        ],
+        "todo": [
+          "todo",
+          null
+        ]
+      }
+    }
+  }
+}

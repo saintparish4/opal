@@ -1,0 +1,120 @@
+{
+  "vitest": {
+    "why": "Vitest has no test.failing (its equivalent is test.fails), so the file fails to load and no test is reported.",
+    "verdicts": {
+      "__tests__/worksWithOnlyMode.test.js": {
+        "block with only in other it, should skip › failing passes = fails, should fail but skipped": [
+          "skip",
+          null
+        ],
+        "block with only in other it, should skip › failing test": [
+          "fail",
+          null
+        ],
+        "block with only in other it, should skip › passing test but skipped": [
+          "skip",
+          null
+        ],
+        "block with only with different syntax, should fail › failing passes = fails, should fail 1": [
+          "fail",
+          null
+        ],
+        "block with only with different syntax, should fail › failing passes = fails, should fail 2": [
+          "fail",
+          null
+        ],
+        "block with only with different syntax, should fail › failing test but skipped": [
+          "skip",
+          null
+        ],
+        "block with only with different syntax, should fail › passing test but skipped": [
+          "skip",
+          null
+        ],
+        "block with only, should fail › failing passes = fails, should fail": [
+          "fail",
+          null
+        ],
+        "block with only, should fail › failing test but skipped": [
+          "skip",
+          null
+        ],
+        "block with only, should fail › passing test but skipped": [
+          "skip",
+          null
+        ],
+        "block with only, should pass › .add(1, 1)": [
+          "fail",
+          null
+        ],
+        "block with only, should pass › .add(1, 2)": [
+          "fail",
+          null
+        ],
+        "block with only, should pass › .add(2, 1)": [
+          "fail",
+          null
+        ],
+        "block with only, should pass › failing fails = passes, should pass": [
+          "pass",
+          null
+        ],
+        "block with only, should pass › failing test but skipped": [
+          "skip",
+          null
+        ],
+        "block with only, should pass › passing test but skipped": [
+          "skip",
+          null
+        ]
+      }
+    }
+  },
+  "bun": {
+    "why": "Bun has no `fit`, so the describe using fit.failing throws while collecting and its tests are missing. When a file uses .only, Bun leaves every test it doesn't run out of its report, where Jest reports them as skipped.",
+    "verdicts": {
+      "__tests__/worksWithOnlyMode.test.js": {
+        "block with only in other it, should skip › failing passes = fails, should fail but skipped": [
+          "skip",
+          null
+        ],
+        "block with only in other it, should skip › passing test but skipped": [
+          "skip",
+          null
+        ],
+        "block with only with different syntax, should fail › failing passes = fails, should fail 1": [
+          "fail",
+          null
+        ],
+        "block with only with different syntax, should fail › failing passes = fails, should fail 2": [
+          "fail",
+          null
+        ],
+        "block with only with different syntax, should fail › failing test but skipped": [
+          "skip",
+          null
+        ],
+        "block with only with different syntax, should fail › passing test but skipped": [
+          "skip",
+          null
+        ],
+        "block with only, should fail › failing test but skipped": [
+          "skip",
+          null
+        ],
+        "block with only, should fail › passing test but skipped": [
+          "skip",
+          null
+        ],
+        "block with only, should pass › failing test but skipped": [
+          "skip",
+          null
+        ],
+        "block with only, should pass › passing test but skipped": [
+          "skip",
+          null
+        ]
+      }
+    }
+  }
+}

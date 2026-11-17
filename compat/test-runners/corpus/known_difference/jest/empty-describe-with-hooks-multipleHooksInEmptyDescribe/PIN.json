@@ -1,0 +1,13 @@
+{
+  "bun": {
+    "why": "A describe that holds several hooks and no tests: Jest fails the file; Bun accepts it.",
+    "verdicts": {
+      "__tests__/multipleHooksInEmptyDescribe.test.js": {
+        "(file)": [
+          "fail",
+          "pass"
+        ]
+      }
+    }
+  }
+}

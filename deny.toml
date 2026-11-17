@@ -26,6 +26,8 @@ allow = [
     "ISC",
     "Unicode-3.0",
     "CDLA-Permissive-2.0",
+    # A public-domain dedication (notify, opal test's file watcher): no terms.
+    "CC0-1.0",
 ]
 
 [bans]

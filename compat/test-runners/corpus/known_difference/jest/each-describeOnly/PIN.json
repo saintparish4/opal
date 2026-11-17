@@ -1,0 +1,29 @@
+{
+  "bun": {
+    "why": "Bun 1.4.2 doesn't format .each titles: %s, %p, %j and $name stay as written, in its console output as well as its report. When a file uses .only, Bun leaves every test it doesn't run out of its report, where Jest reports them as skipped.",
+    "verdicts": {
+      "__tests__/describeOnly.test.js": {
+        "fails all rows expected false == true › fails": [
+          "skip",
+          null
+        ],
+        "passes all rows expected %s == %s › passes": [
+          null,
+          "pass"
+        ],
+        "passes all rows expected %s == %s › passes [2]": [
+          null,
+          "pass"
+        ],
+        "passes all rows expected true == true › passes": [
+          "pass",
+          null
+        ],
+        "passes all rows expected true == true › passes [2]": [
+          "pass",
+          null
+        ]
+      }
+    }
+  }
+}

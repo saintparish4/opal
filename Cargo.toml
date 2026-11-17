@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = [ "crates/opal-core", "crates/opal-cli", "crates/opal-pm", "crates/opal-runtime", "crates/opal-bundler" ] # TODO: add more crates
+members = [ "crates/opal-core", "crates/opal-cli", "crates/opal-pm", "crates/opal-runtime", "crates/opal-bundler", "crates/opal-test" ] # TODO: add more crates
 
 [workspace.package]
 version = "0.4.1"
@@ -13,6 +13,7 @@ opal-core = { path = "crates/opal-core" }
 opal-pm = { path = "crates/opal-pm" }
 opal-runtime = { path = "crates/opal-runtime" }
 opal-bundler = { path = "crates/opal-bundler" }
+opal-test = { path = "crates/opal-test" }
 
 blake3 = "1.8.6"
 oxc_allocator = "0.152.0"
@@ -20,9 +21,11 @@ oxc_ast = "0.152.0"
 oxc_ast_visit = "0.152.0"
 oxc_parser = "0.152.0"
 oxc_span = "0.152.0"
-# The bundler's compiler: scopes and symbols, TypeScript and JSX, printing,
-# and source maps. Same release as the parser above; oxc moves as one.
-oxc_codegen = "0.152.0"
+# The bundler's compiler and opal test's transform: scopes and symbols
+# (oxc_semantic), TypeScript, decorators and JSX (oxc_transformer), printing
+# with source maps (oxc_codegen), and the maps themselves. Same release as the
+# parser above; oxc moves as one.
+oxc_codegen = { version = "0.152.0", features = ["sourcemap"] }
 oxc_semantic = "0.152.0"
 oxc_sourcemap = "9.0.0"
 oxc_syntax = "0.152.0"
@@ -60,6 +63,11 @@ indicatif = "0.18"
 # fills the last column wraps early in some terminals, and indicatif's next
 # redraw then clears the wrong row.
 console = { version = "0.16.4", default-features = false, features = ["std"] }
+# Jest's testRegex, testPathIgnorePatterns and path patterns are regular
+# expressions, and testMatch globs compile to them. A regex engine is not a
+# thing to hand-roll.
+regex = "1"
+notify = "8.2"
 # std has no advisory file locking; this is one extern function (flock), not
 # worth a wrapper crate like fs2/fd-lock for.
 libc = "0.2.189"

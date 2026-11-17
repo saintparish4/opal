@@ -1,0 +1,79 @@
+{
+ "date": "2026-10-25T18:38:31",
+ "opal_sha256": "7f648d9904ae21fbe77b61cd875dbb1c51e021ec98128bf4ebd336891925d744",
+ "node": "v24.19.0",
+ "repos": {
+  "luxon": {
+   "commit": "f427515a38f6a671f8de663e6bcc040ed81f114e",
+   "reference": {
+    "numTotalTests": 1222,
+    "numPassedTests": 1222,
+    "numFailedTests": 0,
+    "numPendingTests": 0
+   },
+   "opal": {
+    "numTotalTests": 1222,
+    "numPassedTests": 1222,
+    "numFailedTests": 0,
+    "numPendingTests": 0
+   },
+   "agree": 1222,
+   "seconds": {
+    "reference": 3.45,
+    "opal": 0.74
+   },
+   "round_trip_changed": [],
+   "problems": []
+  },
+  "jest-extended": {
+   "commit": "06939e8abd223614e293b708413fac487b6ce50a",
+   "reference": {
+    "numTotalTests": 901,
+    "numPassedTests": 901,
+    "numFailedTests": 0,
+    "numPendingTests": 0
+   },
+   "opal": {
+    "numTotalTests": 901,
+    "numPassedTests": 898,
+    "numFailedTests": 3,
+    "numPendingTests": 0
+   },
+   "agree": 898,
+   "seconds": {
+    "reference": 6.23,
+    "opal": 0.62
+   },
+   "round_trip_changed": [
+    "test/matchers/__snapshots__/toBeArrayOfSize.test.ts.snap",
+    "test/matchers/__snapshots__/toBeExtensible.test.ts.snap",
+    "test/matchers/__snapshots__/toBeObject.test.ts.snap"
+   ],
+   "problems": []
+  },
+  "es-toolkit": {
+   "commit": "d79f9bb6ce4f4014d9f2a06b5882ed8b93f65e46",
+   "reference": {
+    "numTotalTests": 5184,
+    "numPassedTests": 5181,
+    "numFailedTests": 1,
+    "numPendingTests": 2
+   },
+   "opal": {
+    "numTotalTests": 5184,
+    "numPassedTests": 5176,
+    "numFailedTests": 6,
+    "numPendingTests": 2
+   },
+   "agree": 5179,
+   "seconds": {
+    "reference": 48.94,
+    "opal": 31.19
+   },
+   "round_trip_changed": [
+    "src/server/exec.spec.ts"
+   ],
+   "problems": []
+  }
+ }
+}

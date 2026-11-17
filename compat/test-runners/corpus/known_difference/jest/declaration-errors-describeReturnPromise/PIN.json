@@ -1,0 +1,32 @@
+{
+  "vitest": {
+    "why": "A describe callback that returns a Promise: Jest fails the file; Vitest ignores the return value and runs the test inside.",
+    "verdicts": {
+      "__tests__/describeReturnPromise.test.js": {
+        "(file)": [
+          "fail",
+          "pass"
+        ],
+        "Promise describe errors › t": [
+          null,
+          "pass"
+        ]
+      }
+    }
+  },
+  "bun": {
+    "why": "A describe callback that returns a Promise: Jest fails the file; Bun ignores the return value and runs the test inside.",
+    "verdicts": {
+      "__tests__/describeReturnPromise.test.js": {
+        "(file)": [
+          "fail",
+          "pass"
+        ],
+        "Promise describe errors › t": [
+          null,
+          "pass"
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "vitest": {
+    "why": "Test names containing \\r and \\n: Jest escapes them in snapshot keys (CR\\\\r 1); Vitest writes the raw characters, doesn't find Jest's committed entries, and adds its own beside them.",
+    "written": {
+      "__tests__/__snapshots__/crlf.test.js.snap": "jest: not written, vitest: written\n--- jest/__tests__/__snapshots__/crlf.test.js.snap\n+++ vitest/__tests__/__snapshots__/crlf.test.js.snap\n@@ -0,0 +1,16 @@\n+// Snapshot v1\n+\n+exports[`CR\n+ 1`] = `1`;\n+\n+exports[`CR\\\\r 1`] = `1`;\n+\n+exports[`CRLF\n+ 1`] = `2`;\n+\n+exports[`CRLF\\\\r\\\\n 1`] = `2`;\n+\n+exports[`LF\n+ 1`] = `3`;\n+\n+exports[`LF\\\\n 1`] = `3`;"
+    }
+  },
+  "bun": {
+    "why": "Test names containing \\r and \\n: Jest escapes them in snapshot keys (CR\\\\r 1); Bun writes the raw characters, doesn't find Jest's committed entries, and adds its own beside them.",
+    "written": {
+      "__tests__/__snapshots__/crlf.test.js.snap": "jest: not written, bun: written\n--- jest/__tests__/__snapshots__/crlf.test.js.snap\n+++ bun/__tests__/__snapshots__/crlf.test.js.snap\n@@ -0,0 +1,15 @@\n+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing\n+\n+exports[`CR\\\\r 1`] = `1`;\n+\n+exports[`CRLF\\\\r\\\\n 1`] = `2`;\n+\n+exports[`LF\\\\n 1`] = `3`;\n+\n+exports[`CR\\r 1`] = `1`;\n+\n+exports[`CRLF\\r\n+ 1`] = `2`;\n+\n+exports[`LF\n+ 1`] = `3`;"
+    }
+  }
+}

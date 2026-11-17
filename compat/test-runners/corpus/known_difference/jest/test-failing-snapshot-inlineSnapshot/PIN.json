@@ -1,0 +1,17 @@
+{
+  "vitest": {
+    "why": "Vitest has no test.failing (its equivalent is test.fails), so the file fails to load and no test is reported.",
+    "verdicts": {
+      "__tests__/inlineSnapshot.test.js": {
+        "(file)": [
+          "pass",
+          "fail"
+        ],
+        "inline snapshot not updated": [
+          "pass",
+          null
+        ]
+      }
+    }
+  }
+}

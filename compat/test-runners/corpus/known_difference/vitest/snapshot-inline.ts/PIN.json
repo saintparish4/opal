@@ -1,0 +1,21 @@
+{
+  "bun": {
+    "why": "toThrowErrorMatchingInlineSnapshot: Bun snapshots the message (\"omega\"), Vitest the error ([Error: omega]); and expect(notAFunction).toThrow() says 'Expected value must be a function' where the test asserts Vitest's wording.",
+    "verdicts": {
+      "snapshot-inline.test.ts": {
+        "(file)": [
+          "pass",
+          "fail"
+        ],
+        "throwing expect should be a function": [
+          "pass",
+          "fail"
+        ],
+        "throwing inline snapshots": [
+          "pass",
+          "fail"
+        ]
+      }
+    }
+  }
+}

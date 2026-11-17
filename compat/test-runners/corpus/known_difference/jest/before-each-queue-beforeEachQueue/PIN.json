@@ -1,0 +1,21 @@
+{
+  "vitest": {
+    "why": "A beforeEach declared inside a running test: Jest fails the test ('Hooks cannot be defined inside tests'); Vitest accepts the hook and the test passes.",
+    "verdicts": {
+      "__tests__/beforeEachQueue.test.js": {
+        "(file)": [
+          "fail",
+          "pass"
+        ],
+        "test › bar": [
+          "fail",
+          "pass"
+        ],
+        "test › foo": [
+          "fail",
+          "pass"
+        ]
+      }
+    }
+  }
+}

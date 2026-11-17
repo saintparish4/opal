@@ -1,0 +1,69 @@
+{
+  "bun": {
+    "why": "Bun 1.4.2 doesn't format .each titles: %s, %p, %j and $name stay as written, in its console output as well as its report. Bun misreads tagged-template .each tables: it runs more rows than written, with undefined values, so an assertion comparing two cells compares undefined with undefined and passes. When a file uses .only, Bun leaves every test it doesn't run out of its report, where Jest reports them as skipped.",
+    "verdicts": {
+      "__tests__/eachOnly.test.js": {
+        "Should not be ran: fails all rows expected true == false": [
+          "skip",
+          null
+        ],
+        "Should not be ran: fails all rows expected true == false [2]": [
+          "skip",
+          null
+        ],
+        "Should not be ran: fails all rows expected true == false [3]": [
+          "skip",
+          null
+        ],
+        "Should not be ran: fails all rows expected true == true": [
+          "skip",
+          null
+        ],
+        "passes one row expected $left == $right": [
+          null,
+          "pass"
+        ],
+        "passes one row expected $left == $right [2]": [
+          null,
+          "pass"
+        ],
+        "passes one row expected $left == $right [3]": [
+          null,
+          "pass"
+        ],
+        "passes one row expected $left == $right [4]": [
+          null,
+          "pass"
+        ],
+        "passes one row expected $left == $right [5]": [
+          null,
+          "pass"
+        ],
+        "passes one row expected %s == %s": [
+          null,
+          "pass"
+        ],
+        "passes one row expected %s == %s [2]": [
+          null,
+          "pass"
+        ],
+        "passes one row expected true == true": [
+          "pass",
+          null
+        ],
+        "passes one row expected true == true [2]": [
+          "pass",
+          null
+        ],
+        "passes one row expected true == true [3]": [
+          "pass",
+          null
+        ],
+        "passes one row expected true == true [4]": [
+          "pass",
+          null
+        ]
+      }
+    }
+  }
+}

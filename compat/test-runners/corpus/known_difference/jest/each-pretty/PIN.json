@@ -1,0 +1,344 @@
+{
+  "vitest": {
+    "why": "Vitest doesn't support %p in array-table titles (it stays as written) and formats template values with its own printer ({ foo: 'bar' }), where Jest prints pretty-format's compact form ({\"foo\": \"bar\"}, [Function noop]).",
+    "verdicts": {
+      "__tests__/pretty.test.js": {
+        "array › \"hello\" == \"hello\"": [
+          "pass",
+          null
+        ],
+        "array › %p == %p": [
+          null,
+          "pass"
+        ],
+        "array › %p == %p [10]": [
+          null,
+          "pass"
+        ],
+        "array › %p == %p [11]": [
+          null,
+          "pass"
+        ],
+        "array › %p == %p [12]": [
+          null,
+          "pass"
+        ],
+        "array › %p == %p [13]": [
+          null,
+          "pass"
+        ],
+        "array › %p == %p [2]": [
+          null,
+          "pass"
+        ],
+        "array › %p == %p [3]": [
+          null,
+          "pass"
+        ],
+        "array › %p == %p [4]": [
+          null,
+          "pass"
+        ],
+        "array › %p == %p [5]": [
+          null,
+          "pass"
+        ],
+        "array › %p == %p [6]": [
+          null,
+          "pass"
+        ],
+        "array › %p == %p [7]": [
+          null,
+          "pass"
+        ],
+        "array › %p == %p [8]": [
+          null,
+          "pass"
+        ],
+        "array › %p == %p [9]": [
+          null,
+          "pass"
+        ],
+        "array › -Infinity == -Infinity": [
+          "pass",
+          null
+        ],
+        "array › 1 == 1": [
+          "pass",
+          null
+        ],
+        "array › 1.2 == 1.2": [
+          "pass",
+          null
+        ],
+        "array › Infinity == Infinity": [
+          "pass",
+          null
+        ],
+        "array › NaN == NaN": [
+          "pass",
+          null
+        ],
+        "array › [Function noop] == [Function noop]": [
+          "pass",
+          null
+        ],
+        "array › [[Object]] == [[Object]]": [
+          "pass",
+          null
+        ],
+        "array › [] == []": [
+          "pass",
+          null
+        ],
+        "array › null == null": [
+          "pass",
+          null
+        ],
+        "array › undefined == undefined": [
+          "pass",
+          null
+        ],
+        "array › {\"foo\": \"bar\"} == {\"foo\": \"bar\"}": [
+          "pass",
+          null
+        ],
+        "array › {\"foo\": [Object]} == {\"foo\": [Object]}": [
+          "pass",
+          null
+        ],
+        "template › 'hello' == 'hello'": [
+          null,
+          "pass"
+        ],
+        "template › [ { foo: { bar: 'baz' } } ] == [ { foo: { bar: 'baz' } } ]": [
+          null,
+          "pass"
+        ],
+        "template › [[Object]] == [[Object]]": [
+          "pass",
+          null
+        ],
+        "template › hello == hello": [
+          "pass",
+          null
+        ],
+        "template › { foo: 'bar' } == { foo: 'bar' }": [
+          null,
+          "pass"
+        ],
+        "template › { foo: { bar: 'baz' } } == { foo: { bar: 'baz' } }": [
+          null,
+          "pass"
+        ],
+        "template › {\"foo\": \"bar\"} == {\"foo\": \"bar\"}": [
+          "pass",
+          null
+        ],
+        "template › {\"foo\": [Object]} == {\"foo\": [Object]}": [
+          "pass",
+          null
+        ]
+      }
+    }
+  },
+  "bun": {
+    "why": "Bun formats %p in array-table titles with multi-line pretty-format and [Function: noop], where Jest uses the compact form. Bun 1.4.2 doesn't format .each titles: $name stays as written, in its console output as well as its report. Bun misreads tagged-template .each tables: it runs more rows than written, with undefined values, so an assertion comparing two cells compares undefined with undefined and passes.",
+    "verdicts": {
+      "__tests__/pretty.test.js": {
+        "array › [\n  {\n    foo: {\n      bar: \"baz\",\n    },\n  }\n] == [\n  {\n    foo: {\n      bar: \"baz\",\n    },\n  }\n]": [
+          null,
+          "pass"
+        ],
+        "array › [Function noop] == [Function noop]": [
+          "pass",
+          null
+        ],
+        "array › [Function: noop] == [Function: noop]": [
+          null,
+          "pass"
+        ],
+        "array › [[Object]] == [[Object]]": [
+          "pass",
+          null
+        ],
+        "array › {\n  foo: \"bar\",\n} == {\n  foo: \"bar\",\n}": [
+          null,
+          "pass"
+        ],
+        "array › {\n  foo: {\n    bar: \"baz\",\n  },\n} == {\n  foo: {\n    bar: \"baz\",\n  },\n}": [
+          null,
+          "pass"
+        ],
+        "array › {\"foo\": \"bar\"} == {\"foo\": \"bar\"}": [
+          "pass",
+          null
+        ],
+        "array › {\"foo\": [Object]} == {\"foo\": [Object]}": [
+          "pass",
+          null
+        ],
+        "template › $left == $right": [
+          null,
+          "pass"
+        ],
+        "template › $left == $right [10]": [
+          null,
+          "pass"
+        ],
+        "template › $left == $right [11]": [
+          null,
+          "pass"
+        ],
+        "template › $left == $right [12]": [
+          null,
+          "pass"
+        ],
+        "template › $left == $right [13]": [
+          null,
+          "pass"
+        ],
+        "template › $left == $right [14]": [
+          null,
+          "pass"
+        ],
+        "template › $left == $right [15]": [
+          null,
+          "pass"
+        ],
+        "template › $left == $right [16]": [
+          null,
+          "pass"
+        ],
+        "template › $left == $right [17]": [
+          null,
+          "pass"
+        ],
+        "template › $left == $right [18]": [
+          null,
+          "pass"
+        ],
+        "template › $left == $right [19]": [
+          null,
+          "pass"
+        ],
+        "template › $left == $right [20]": [
+          null,
+          "pass"
+        ],
+        "template › $left == $right [21]": [
+          null,
+          "pass"
+        ],
+        "template › $left == $right [22]": [
+          null,
+          "pass"
+        ],
+        "template › $left == $right [23]": [
+          null,
+          "pass"
+        ],
+        "template › $left == $right [24]": [
+          null,
+          "pass"
+        ],
+        "template › $left == $right [25]": [
+          null,
+          "pass"
+        ],
+        "template › $left == $right [26]": [
+          null,
+          "pass"
+        ],
+        "template › $left == $right [27]": [
+          null,
+          "pass"
+        ],
+        "template › $left == $right [2]": [
+          null,
+          "pass"
+        ],
+        "template › $left == $right [3]": [
+          null,
+          "pass"
+        ],
+        "template › $left == $right [4]": [
+          null,
+          "pass"
+        ],
+        "template › $left == $right [5]": [
+          null,
+          "pass"
+        ],
+        "template › $left == $right [6]": [
+          null,
+          "pass"
+        ],
+        "template › $left == $right [7]": [
+          null,
+          "pass"
+        ],
+        "template › $left == $right [8]": [
+          null,
+          "pass"
+        ],
+        "template › $left == $right [9]": [
+          null,
+          "pass"
+        ],
+        "template › -Infinity == -Infinity": [
+          "pass",
+          null
+        ],
+        "template › 1 == 1": [
+          "pass",
+          null
+        ],
+        "template › 1.2 == 1.2": [
+          "pass",
+          null
+        ],
+        "template › Infinity == Infinity": [
+          "pass",
+          null
+        ],
+        "template › NaN == NaN": [
+          "pass",
+          null
+        ],
+        "template › [Function noop] == [Function noop]": [
+          "pass",
+          null
+        ],
+        "template › [[Object]] == [[Object]]": [
+          "pass",
+          null
+        ],
+        "template › [] == []": [
+          "pass",
+          null
+        ],
+        "template › hello == hello": [
+          "pass",
+          null
+        ],
+        "template › null == null": [
+          "pass",
+          null
+        ],
+        "template › undefined == undefined": [
+          "pass",
+          null
+        ],
+        "template › {\"foo\": \"bar\"} == {\"foo\": \"bar\"}": [
+          "pass",
+          null
+        ],
+        "template › {\"foo\": [Object]} == {\"foo\": [Object]}": [
+          "pass",
+          null
+        ]
+      }
+    }
+  }
+}

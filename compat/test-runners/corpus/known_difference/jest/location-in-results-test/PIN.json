@@ -1,0 +1,104 @@
+{
+  "vitest": {
+    "why": "Vitest has no `fit` or `xit`, Jest's jasmine-style aliases, so the file fails to load.",
+    "verdicts": {
+      "__tests__/test.test.js": {
+        "(file)": [
+          "pass",
+          "fail"
+        ],
+        "fit no ancestors": [
+          "pass",
+          null
+        ],
+        "it each no ancestors": [
+          "skip",
+          null
+        ],
+        "it each no ancestors [2]": [
+          "skip",
+          null
+        ],
+        "it no ancestors": [
+          "skip",
+          null
+        ],
+        "nested › fit nested": [
+          "pass",
+          null
+        ],
+        "nested › it each nested": [
+          "skip",
+          null
+        ],
+        "nested › it each nested [2]": [
+          "skip",
+          null
+        ],
+        "nested › it nested": [
+          "skip",
+          null
+        ],
+        "nested › xit nested": [
+          "skip",
+          null
+        ],
+        "xit no ancestors": [
+          "skip",
+          null
+        ]
+      }
+    }
+  },
+  "bun": {
+    "why": "Bun has no `fit` or `xit`, Jest's jasmine-style aliases, so the file fails to load.",
+    "verdicts": {
+      "__tests__/test.test.js": {
+        "(file)": [
+          "pass",
+          "fail"
+        ],
+        "fit no ancestors": [
+          "pass",
+          null
+        ],
+        "it each no ancestors": [
+          "skip",
+          null
+        ],
+        "it each no ancestors [2]": [
+          "skip",
+          null
+        ],
+        "it no ancestors": [
+          "skip",
+          null
+        ],
+        "nested › fit nested": [
+          "pass",
+          null
+        ],
+        "nested › it each nested": [
+          "skip",
+          null
+        ],
+        "nested › it each nested [2]": [
+          "skip",
+          null
+        ],
+        "nested › it nested": [
+          "skip",
+          null
+        ],
+        "nested › xit nested": [
+          "skip",
+          null
+        ],
+        "xit no ancestors": [
+          "skip",
+          null
+        ]
+      }
+    }
+  }
+}

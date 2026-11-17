@@ -1,0 +1,32 @@
+{
+  "vitest": {
+    "why": "test.todo with a callback: Jest fails the file ('Todo must be called with only a description'); Vitest records the todo.",
+    "verdicts": {
+      "__tests__/todoMultipleArgs.test.js": {
+        "(file)": [
+          "fail",
+          "pass"
+        ],
+        "todo later": [
+          null,
+          "todo"
+        ]
+      }
+    }
+  },
+  "bun": {
+    "why": "test.todo with a callback: Jest fails the file ('Todo must be called with only a description'); Bun records the todo.",
+    "verdicts": {
+      "__tests__/todoMultipleArgs.test.js": {
+        "(file)": [
+          "fail",
+          "pass"
+        ],
+        "todo later": [
+          null,
+          "todo"
+        ]
+      }
+    }
+  }
+}

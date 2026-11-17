@@ -1,0 +1,23 @@
+{
+  "vitest": {
+    "why": "`.not.toMatchSnapshot()` throws in both runners, with different messages, and the test asserts Jest's ('Snapshot matchers cannot be used with not').",
+    "verdicts": {
+      "__tests__/snapshot.test.js": {
+        "(file)": [
+          "pass",
+          "fail"
+        ],
+        "snapshot › cannot be used with .not": [
+          "pass",
+          "fail"
+        ]
+      }
+    }
+  },
+  "bun": {
+    "why": "Same entries, different order: Jest writes a snapshot file's entries sorted by key with natural ordering; Bun doesn't.",
+    "written": {
+      "__tests__/__snapshots__/snapshot.test.js.snap": "jest: written, bun: written\n--- jest/__tests__/__snapshots__/snapshot.test.js.snap\n+++ bun/__tests__/__snapshots__/snapshot.test.js.snap\n@@ -1,15 +1,2 @@\n // Snapshot v1\n-\n-exports[`snapshot is not influenced by previous counter 1`] = `\n-{\n-  \"a\": 43,\n-  \"b\": \"43\",\n-  \"c\": \"fortythree\",\n-}\n-`;\n-\n-exports[`snapshot works with \\\\r\\\\n 1`] = `\n-\"<div>\n-</div>\"\n-`;\n \n@@ -31 +18,14 @@\n `;\n+\n+exports[`snapshot is not influenced by previous counter 1`] = `\n+{\n+  \"a\": 43,\n+  \"b\": \"43\",\n+  \"c\": \"fortythree\",\n+}\n+`;\n+\n+exports[`snapshot works with \\\\r\\\\n 1`] = `\n+\"<div>\n+</div>\"\n+`;"
+    }
+  }
+}

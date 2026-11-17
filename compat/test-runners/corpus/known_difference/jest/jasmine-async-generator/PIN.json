@@ -1,0 +1,18 @@
+{
+  "vitest": {
+    "why": "Jest runs a generator function given as a test through co. Vitest calls it, gets a generator object back and passes the test without running its body, so the planted failure in it passes.",
+    "mutant": {
+      "key": "__tests__/generator.test.js: generators › in spec",
+      "verdict": "pass",
+      "mutation": "insert .not on toBe at line 23"
+    }
+  },
+  "bun": {
+    "why": "Jest runs a generator function given as a test through co. Bun calls it, gets a generator object back and passes the test without running its body, so the planted failure in it passes.",
+    "mutant": {
+      "key": "__tests__/generator.test.js: generators › in spec",
+      "verdict": "pass",
+      "mutation": "insert .not on toBe at line 23"
+    }
+  }
+}

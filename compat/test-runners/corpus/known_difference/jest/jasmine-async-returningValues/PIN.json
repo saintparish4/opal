@@ -1,0 +1,112 @@
+{
+  "vitest": {
+    "why": "A test function returning something other than a Promise or undefined: Jest fails it; Vitest ignores the value and passes.",
+    "verdicts": {
+      "__tests__/returningValues.test.js": {
+        "(file)": [
+          "fail",
+          "pass"
+        ],
+        "returning values › throws if '() => {}:function' is returned": [
+          "fail",
+          "pass"
+        ],
+        "returning values › throws if '0.1:number' is returned": [
+          "fail",
+          "pass"
+        ],
+        "returning values › throws if '1:number' is returned": [
+          "fail",
+          "pass"
+        ],
+        "returning values › throws if '1:object' is returned": [
+          "fail",
+          "pass"
+        ],
+        "returning values › throws if 'Infinity:number' is returned": [
+          "fail",
+          "pass"
+        ],
+        "returning values › throws if 'NaN:number' is returned": [
+          "fail",
+          "pass"
+        ],
+        "returning values › throws if '[object Object]:object' is returned": [
+          "fail",
+          "pass"
+        ],
+        "returning values › throws if 'false:boolean' is returned": [
+          "fail",
+          "pass"
+        ],
+        "returning values › throws if 'null:object' is returned": [
+          "fail",
+          "pass"
+        ],
+        "returning values › throws if 'string:string' is returned": [
+          "fail",
+          "pass"
+        ],
+        "returning values › throws if 'true:boolean' is returned": [
+          "fail",
+          "pass"
+        ]
+      }
+    }
+  },
+  "bun": {
+    "why": "A test function returning something other than a Promise or undefined: Jest fails it; Bun ignores the value and passes.",
+    "verdicts": {
+      "__tests__/returningValues.test.js": {
+        "(file)": [
+          "fail",
+          "pass"
+        ],
+        "returning values › throws if '() => {}:function' is returned": [
+          "fail",
+          "pass"
+        ],
+        "returning values › throws if '0.1:number' is returned": [
+          "fail",
+          "pass"
+        ],
+        "returning values › throws if '1:number' is returned": [
+          "fail",
+          "pass"
+        ],
+        "returning values › throws if '1:object' is returned": [
+          "fail",
+          "pass"
+        ],
+        "returning values › throws if 'Infinity:number' is returned": [
+          "fail",
+          "pass"
+        ],
+        "returning values › throws if 'NaN:number' is returned": [
+          "fail",
+          "pass"
+        ],
+        "returning values › throws if '[object Object]:object' is returned": [
+          "fail",
+          "pass"
+        ],
+        "returning values › throws if 'false:boolean' is returned": [
+          "fail",
+          "pass"
+        ],
+        "returning values › throws if 'null:object' is returned": [
+          "fail",
+          "pass"
+        ],
+        "returning values › throws if 'string:string' is returned": [
+          "fail",
+          "pass"
+        ],
+        "returning values › throws if 'true:boolean' is returned": [
+          "fail",
+          "pass"
+        ]
+      }
+    }
+  }
+}

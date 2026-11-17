@@ -1,0 +1,148 @@
+{
+  "vitest": {
+    "why": "Vitest quotes strings interpolated into a describe.each template title ('a'); Jest prints them bare (a). Same tests, same verdicts, different names.",
+    "verdicts": {
+      "__tests__/failure.test.js": {
+        "template table describe fails on all rows expected \"'a'\" == \"'b'\" › fails ": [
+          null,
+          "fail"
+        ],
+        "template table describe fails on all rows expected \"'c'\" == \"'d'\" › fails ": [
+          null,
+          "fail"
+        ],
+        "template table describe fails on all rows expected \"a\" == \"b\" › fails ": [
+          "fail",
+          null
+        ],
+        "template table describe fails on all rows expected \"c\" == \"d\" › fails ": [
+          "fail",
+          null
+        ]
+      }
+    }
+  },
+  "bun": {
+    "why": "Bun 1.4.2 doesn't format .each titles: %s, %p, %j and $name stay as written, in its console output as well as its report. Bun misreads tagged-template .each tables: it runs more rows than written, with undefined values, so an assertion comparing two cells compares undefined with undefined and passes. So both failing template tables pass.",
+    "verdicts": {
+      "__tests__/failure.test.js": {
+        "array table fails on all rows expected %s == %s": [
+          null,
+          "fail"
+        ],
+        "array table fails on all rows expected %s == %s [2]": [
+          null,
+          "fail"
+        ],
+        "array table fails on all rows expected 1 == 2": [
+          "fail",
+          null
+        ],
+        "array table fails on all rows expected 3 == 4": [
+          "fail",
+          null
+        ],
+        "array table fails on one row: expected %s == %s": [
+          null,
+          "pass"
+        ],
+        "array table fails on one row: expected %s == %s [2]": [
+          null,
+          "fail"
+        ],
+        "array table fails on one row: expected true == false": [
+          "fail",
+          null
+        ],
+        "array table fails on one row: expected true == true": [
+          "pass",
+          null
+        ],
+        "template table describe fails on all rows expected \"$left\" == \"$right\" › fails ": [
+          null,
+          "pass"
+        ],
+        "template table describe fails on all rows expected \"$left\" == \"$right\" › fails  [2]": [
+          null,
+          "pass"
+        ],
+        "template table describe fails on all rows expected \"$left\" == \"$right\" › fails  [3]": [
+          null,
+          "pass"
+        ],
+        "template table describe fails on all rows expected \"$left\" == \"$right\" › fails  [4]": [
+          null,
+          "pass"
+        ],
+        "template table describe fails on all rows expected \"$left\" == \"$right\" › fails  [5]": [
+          null,
+          "pass"
+        ],
+        "template table describe fails on all rows expected \"a\" == \"b\" › fails ": [
+          "fail",
+          null
+        ],
+        "template table describe fails on all rows expected \"c\" == \"d\" › fails ": [
+          "fail",
+          null
+        ],
+        "template table fails on all rows expected: $left == $right": [
+          null,
+          "pass"
+        ],
+        "template table fails on all rows expected: $left == $right [2]": [
+          null,
+          "pass"
+        ],
+        "template table fails on all rows expected: $left == $right [3]": [
+          null,
+          "pass"
+        ],
+        "template table fails on all rows expected: $left == $right [4]": [
+          null,
+          "pass"
+        ],
+        "template table fails on all rows expected: $left == $right [5]": [
+          null,
+          "pass"
+        ],
+        "template table fails on all rows expected: 1 == 2": [
+          "fail",
+          null
+        ],
+        "template table fails on all rows expected: 3 == 4": [
+          "fail",
+          null
+        ],
+        "template table fails on one row expected: $left == $right": [
+          null,
+          "pass"
+        ],
+        "template table fails on one row expected: $left == $right [2]": [
+          null,
+          "pass"
+        ],
+        "template table fails on one row expected: $left == $right [3]": [
+          null,
+          "pass"
+        ],
+        "template table fails on one row expected: $left == $right [4]": [
+          null,
+          "pass"
+        ],
+        "template table fails on one row expected: $left == $right [5]": [
+          null,
+          "pass"
+        ],
+        "template table fails on one row expected: true == false": [
+          "fail",
+          null
+        ],
+        "template table fails on one row expected: true == true": [
+          "pass",
+          null
+        ]
+      }
+    }
+  }
+}

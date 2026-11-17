@@ -1,0 +1,64 @@
+{
+  "vitest": {
+    "why": "A test.only inside a describe.skip: Jest treats it as skipped and runs the file's other tests; Vitest switches the file to only-mode and skips them. Vitest also reports a test.todo inside describe.skip as todo, where Jest reports it skipped.",
+    "verdicts": {
+      "__tests__/beforeAllFiltered.test.js": {
+        "describe having only skipped test should not run afterAll": [
+          "pass",
+          "skip"
+        ],
+        "describe having only skipped test should not run beforeAll": [
+          "pass",
+          "skip"
+        ],
+        "describe.skip should not run afterAll": [
+          "pass",
+          "skip"
+        ],
+        "describe.skip should not run beforeAll": [
+          "pass",
+          "skip"
+        ],
+        "in describe.skip › in describe › it should also be skipped": [
+          "skip",
+          "todo"
+        ]
+      }
+    }
+  },
+  "bun": {
+    "why": "A test.only inside a describe.skip switches Bun's file to only-mode, as in Vitest, and Bun leaves every test it doesn't run out of its report, so the file's other tests are missing instead of passing.",
+    "verdicts": {
+      "__tests__/beforeAllFiltered.test.js": {
+        "describe having only skipped test should not run afterAll": [
+          "pass",
+          null
+        ],
+        "describe having only skipped test should not run beforeAll": [
+          "pass",
+          null
+        ],
+        "describe.skip should not run afterAll": [
+          "pass",
+          null
+        ],
+        "describe.skip should not run beforeAll": [
+          "pass",
+          null
+        ],
+        "in describe › it should be skipped": [
+          "skip",
+          null
+        ],
+        "in describe.skip › in describe › it should also be skipped": [
+          "skip",
+          null
+        ],
+        "in describe.skip › in describe › it should be skipped": [
+          "skip",
+          null
+        ]
+      }
+    }
+  }
+}

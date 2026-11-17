@@ -1,0 +1,8 @@
+{
+  "vitest": {
+    "why": "Vitest names the entry 'snapshot > some snapshots exists and are fine 1' where Jest's committed file has 'snapshot some snapshots exists and are fine 1', so it writes its own entry beside Jest's. (With the separator normalized, the two keys read the same here.)",
+    "written": {
+      "__tests__/__snapshots__/works.test.js.snap": "jest: not written, vitest: written\n--- jest/__tests__/__snapshots__/works.test.js.snap\n+++ vitest/__tests__/__snapshots__/works.test.js.snap\n@@ -0,0 +1,5 @@\n+// Snapshot v1\n+\n+exports[`snapshot some snapshots exists and are fine 1`] = `\"normal\"`;\n+\n+exports[`snapshot some snapshots exists and are fine 1`] = `\"normal\"`;"
+    }
+  }
+}

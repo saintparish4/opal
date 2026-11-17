@@ -1,0 +1,21 @@
+{
+  "vitest": {
+    "why": "Vitest 4 has no done callback: a test or hook that takes `done` returns at once without waiting for it, and calling done() throws 'done() callback is deprecated, use promise instead'. So two tests that fail after an async done pass, and the test calling done synchronously fails.",
+    "verdicts": {
+      "__tests__/promiseIt.test.js": {
+        "promise it › fails if failed expectation with done - async": [
+          "fail",
+          "pass"
+        ],
+        "promise it › fails with thrown error with done - async": [
+          "fail",
+          "pass"
+        ],
+        "promise it › works with done": [
+          "pass",
+          "fail"
+        ]
+      }
+    }
+  }
+}

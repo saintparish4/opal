@@ -1,0 +1,13 @@
+{
+  "bun": {
+    "why": "jest.mock(path) without a factory, for automock or a __mocks__ file, throws in Bun ('mock(module, fn) requires a function'), so the file fails before any test is reported.",
+    "verdicts": {
+      "__tests__/index.test.js": {
+        "first test": [
+          "fail",
+          null
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "vitest": {
+    "why": "Vitest rewrites a Jest-written snapshot file under its own header even when it adds no entry; the entry itself is unchanged.",
+    "written": {
+      "__tests__/__snapshots__/snapshot.test.js.snap": "jest: not written, vitest: written\n--- jest/__tests__/__snapshots__/snapshot.test.js.snap\n+++ vitest/__tests__/__snapshots__/snapshot.test.js.snap\n@@ -0,0 +1,3 @@\n+// Snapshot v1\n+\n+exports[`failing snapshot 1`] = `\"bar\"`;"
+    }
+  }
+}

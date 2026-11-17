@@ -1,0 +1,10 @@
+{
+  "name": "test-runners-oracle",
+  "private": true,
+  "description": "The reference test runners compat/test-runners.py diffs opal test against, pinned. @babel/parser locates the assertions the mutation set flips.",
+  "devDependencies": {
+    "@babel/parser": "7.29.11",
+    "jest": "30.5.2",
+    "vitest": "4.1.12"
+  }
+}

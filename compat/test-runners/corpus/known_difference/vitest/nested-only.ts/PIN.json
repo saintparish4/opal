@@ -1,0 +1,17 @@
+{
+  "bun": {
+    "why": "When a file uses .only, Bun leaves every test it doesn't run out of its report, where Vitest reports them as skipped.",
+    "verdicts": {
+      "nested-only.test.ts": {
+        "nested only behavior › another suite › should not run - outside describe.only": [
+          "skip",
+          null
+        ],
+        "nested only behavior › describe.only with nested test.only › should NOT run because the previous test has test.only": [
+          "skip",
+          null
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,104 @@
+{
+  "vitest": {
+    "why": "Vitest has no test.failing (its equivalent is test.fails), so the file fails to load and no test is reported.",
+    "verdicts": {
+      "__tests__/worksWithSkipMode.test.js": {
+        "block with only, should fail › failing passes = fails": [
+          "pass",
+          null
+        ],
+        "block with only, should fail › failing passes = fails, should fail": [
+          "skip",
+          null
+        ],
+        "block with only, should fail › failing test": [
+          "skip",
+          null
+        ],
+        "block with only, should fail › passing test": [
+          "pass",
+          null
+        ],
+        "block with only, should pass › .add(1, 1)": [
+          "skip",
+          null
+        ],
+        "block with only, should pass › .add(1, 2)": [
+          "skip",
+          null
+        ],
+        "block with only, should pass › .add(2, 1)": [
+          "skip",
+          null
+        ],
+        "block with only, should pass › failing fails = passes": [
+          "pass",
+          null
+        ],
+        "block with only, should pass › failing test": [
+          "fail",
+          null
+        ],
+        "block with only, should pass › passing test": [
+          "skip",
+          null
+        ],
+        "block with only, should pass › skipped failing fails = passes, should pass": [
+          "skip",
+          null
+        ]
+      }
+    }
+  },
+  "bun": {
+    "why": "test.skip.failing throws in Bun while collecting ('Cannot get .failing on test.skip'), so the file fails before any test is reported.",
+    "verdicts": {
+      "__tests__/worksWithSkipMode.test.js": {
+        "block with only, should fail › failing passes = fails": [
+          "pass",
+          null
+        ],
+        "block with only, should fail › failing passes = fails, should fail": [
+          "skip",
+          null
+        ],
+        "block with only, should fail › failing test": [
+          "skip",
+          null
+        ],
+        "block with only, should fail › passing test": [
+          "pass",
+          null
+        ],
+        "block with only, should pass › .add(1, 1)": [
+          "skip",
+          null
+        ],
+        "block with only, should pass › .add(1, 2)": [
+          "skip",
+          null
+        ],
+        "block with only, should pass › .add(2, 1)": [
+          "skip",
+          null
+        ],
+        "block with only, should pass › failing fails = passes": [
+          "pass",
+          null
+        ],
+        "block with only, should pass › failing test": [
+          "fail",
+          null
+        ],
+        "block with only, should pass › passing test": [
+          "skip",
+          null
+        ],
+        "block with only, should pass › skipped failing fails = passes, should pass": [
+          "skip",
+          null
+        ]
+      }
+    }
+  }
+}

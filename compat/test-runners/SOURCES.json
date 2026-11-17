@@ -1,0 +1,1386 @@
+{
+  "upstream": {
+    "jest": {
+      "url": "https://github.com/jestjs/jest",
+      "tag": "v30.5.2",
+      "commit": "202dd8a14777c270607c2416bd5034c3c0abc984",
+      "root": "e2e"
+    },
+    "vitest": {
+      "url": "https://github.com/vitest-dev/vitest",
+      "tag": "v4.1.12",
+      "commit": "4766ce1e72ded629d3a37637f57eeae643789a8c",
+      "root": "test/core/test"
+    }
+  },
+  "fixtures": {
+    "before-all-skipped-beforeAllFiltered": {
+      "upstream": "jest",
+      "files": {
+        "__tests__/beforeAllFiltered.test.js": {
+          "from": "e2e/before-all-skipped/__tests__/beforeAllFiltered.test.js",
+          "sha256": "79de6e48cadc622fb5f00e6a30708ef728925f809cc5d3ef1497d6fa6db78b6a"
+        }
+      },
+      "changes": []
+    },
+    "before-each-queue-beforeEachQueue": {
+      "upstream": "jest",
+      "files": {
+        "__tests__/beforeEachQueue.test.js": {
+          "from": "e2e/before-each-queue/__tests__/beforeEachQueue.test.js",
+          "sha256": "147d254ed8947f421fa9f124ff4dc9f52c2a6ea35a0eaf88aeffed7277966e06"
+        }
+      },
+      "changes": []
+    },
+    "bigint-each": {
+      "upstream": "jest",
+      "files": {
+        "__tests__/each.test.js": {
+          "from": "e2e/bigint/__tests__/each.test.js",
+          "sha256": "79627c8310ee72b0e3c9a6cc54fa73096c44d8536168f0dea6a860d8416d2335"
+        }
+      },
+      "changes": []
+    },
+    "bigint-failing": {
+      "upstream": "jest",
+      "files": {
+        "__tests__/failing.test.js": {
+          "from": "e2e/bigint/__tests__/failing.test.js",
+          "sha256": "53ec482ec5d1f89a9cba4d6c2c6374728035e71ce7dc6f2d9255b9c6352dadf3"
+        }
+      },
+      "changes": []
+    },
+    "call-done-twice-index": {
+      "upstream": "jest",
+      "files": {
+        "__tests__/index.test.js": {
+          "from": "e2e/call-done-twice/__tests__/index.test.js",
+          "sha256": "5438ee0897e981e638cce9cfbba4dce026014c5ad9bc54fbb339db23b9abb75e"
+        }
+      },
+      "changes": []
+    },
+    "circus-declaration-errors-asyncDefinition": {
+      "upstream": "jest",
+      "files": {
+        "__tests__/asyncDefinition.test.js": {
+          "from": "e2e/circus-declaration-errors/__tests__/asyncDefinition.test.js",
+          "sha256": "50b0ccfe95933cabcbeca31c3cc42a24ace75d6e710e2a4485333fd1ee76012a"
+        }
+      },
+      "changes": []
+    },
+    "declaration-errors-describeReturnPromise": {
+      "upstream": "jest",
+      "files": {
+        "__tests__/describeReturnPromise.test.js": {
+          "from": "e2e/declaration-errors/__tests__/describeReturnPromise.test.js",
+          "sha256": "9386b96e504f2964c6fcf1f86002084c5cab47ad1d719b47e6a629d0be575e6e"
+        }
+      },
+      "changes": []
+    },
+    "declaration-errors-describeReturnSomething": {
+      "upstream": "jest",
+      "files": {
+        "__tests__/describeReturnSomething.test.js": {
+          "from": "e2e/declaration-errors/__tests__/describeReturnSomething.test.js",
+          "sha256": "d12a03e7087c52f552ccdd368315c5e71073b4d806542d4922e4ee54740b130a"
+        }
+      },
+      "changes": []
+    },
+    "declaration-errors-describeThrow": {
+      "upstream": "jest",
+      "files": {
+        "__tests__/describeThrow.test.js": {
+          "from": "e2e/declaration-errors/__tests__/describeThrow.test.js",
+          "sha256": "6376cb26f2612bd82db3a0ae0fca8bcfade56b8a6c968d028d6ac06a0f866ceb"
+        }
+      },
+      "changes": []
+    },
+    "done-in-hooks-index": {
+      "upstream": "jest",
+      "files": {
+        "__tests__/index.test.js": {
+          "from": "e2e/done-in-hooks/__tests__/index.test.js",
+          "sha256": "fde176e399f26e3d3cc89f37c4ab212d6e4a49ec1b0c973e8c8e559832821655"
+        }
+      },
+      "changes": []
+    },
+    "each-describeOnly": {
+      "upstream": "jest",
+      "files": {
+        "__tests__/describeOnly.test.js": {
+          "from": "e2e/each/__tests__/describeOnly.test.js",
+          "sha256": "f8bd9a4bcbc2f78131b8fad5b3c95b2bf36245f94b8a3f03a2d9c74c70dc3f57"
+        }
+      },
+      "changes": []
+    },
+    "each-eachException": {
+      "upstream": "jest",
+      "files": {
+        "__tests__/eachException.test.js": {
+          "from": "e2e/each/__tests__/eachException.test.js",
+          "sha256": "c256a7bd975d2c6b980a76f9a1fde7de7a56f8b72771648f8c5d424532dcba1c"
+        }
+      },
+      "changes": []
+    },
+    "each-eachOnly": {
+      "upstream": "jest",
+      "files": {
+        "__tests__/eachOnly.test.js": {
+          "from": "e2e/each/__tests__/eachOnly.test.js",
+          "sha256": "89bb631c60c8913742f4c1aeee8f1591f12f2eb3953985deae184e4773d606cb"
+        }
+      },
+      "changes": []
+    },
+    "each-eachSkip": {
+      "upstream": "jest",
+      "files": {
+        "__tests__/eachSkip.test.js": {
+          "from": "e2e/each/__tests__/eachSkip.test.js",
+          "sha256": "d864a96f22e7dc1848a5026f16517f4429baa3b0cbacf55d57d837079935e772"
+        }
+      },
+      "changes": []
+    },
+    "each-eachTemplate": {
+      "upstream": "jest",
+      "files": {
+        "__tests__/eachTemplate.test.js": {
+          "from": "e2e/each/__tests__/eachTemplate.test.js",
+          "sha256": "e926bd7b74fcfb418882f2550d601a70cd8d023815f3cfb1d1b668ca45893c95"
+        }
+      },
+      "changes": []
+    },
+    "each-failure": {
+      "upstream": "jest",
+      "files": {
+        "__tests__/failure.test.js": {
+          "from": "e2e/each/__tests__/failure.test.js",
+          "sha256": "87fb63362b839ad12a267a8ab085c02509794d683d1b4a59b059526508644ced"
+        }
+      },
+      "changes": []
+    },
+    "each-pretty": {
+      "upstream": "jest",
+      "files": {
+        "__tests__/pretty.test.js": {
+          "from": "e2e/each/__tests__/pretty.test.js",
+          "sha256": "b2a5028cbc5e13c5f9586b641bb21e6c7d062d00d2ce410692aab99d155725ae"
+        }
+      },
+      "changes": []
+    },
+    "each-specialCharacterKeys": {
+      "upstream": "jest",
+      "files": {
+        "__tests__/specialCharacterKeys.test.js": {
+          "from": "e2e/each/__tests__/specialCharacterKeys.test.js",
+          "sha256": "21a5f028b32ad1b57ad58833b562b1258bd943f00faede21c0dd644cf46e8f02"
+        }
+      },
+      "changes": []
+    },
+    "each-success": {
+      "upstream": "jest",
+      "files": {
+        "__tests__/success.test.js": {
+          "from": "e2e/each/__tests__/success.test.js",
+          "sha256": "f1a6845401cd7d1d7c910c399c20b639d13e7ea0f9c29232441bef2f028c44cf"
+        }
+      },
+      "changes": []
+    },
+    "each.ts": {
+      "upstream": "vitest",
+      "files": {
+        "each.test.ts": {
+          "from": "test/core/test/each.test.ts",
+          "sha256": "4f4a2422aa96281e093ebec6bb2073da1bbf6639f7f661cb2da36a06f1f5596e"
+        }
+      },
+      "changes": [
+        "package.json is {\"type\": \"module\"}, as test/core/package.json declares"
+      ]
+    },
+    "empty-describe-with-hooks-hookInDescribeWithSkippedTest": {
+      "upstream": "jest",
+      "files": {
+        "__tests__/hookInDescribeWithSkippedTest.test.js": {
+          "from": "e2e/empty-describe-with-hooks/__tests__/hookInDescribeWithSkippedTest.test.js",
+          "sha256": "afca2edf1fdb08db52fe72614899dd84b1692daf5c2df250a884e3c8e1f66bd1"
+        }
+      },
+      "changes": []
+    },
+    "empty-describe-with-hooks-hookInEmptyDescribe": {
+      "upstream": "jest",
+      "files": {
+        "__tests__/hookInEmptyDescribe.test.js": {
+          "from": "e2e/empty-describe-with-hooks/__tests__/hookInEmptyDescribe.test.js",
+          "sha256": "26bcfee902fb96b42f114d8a23524a6a4a1858144748dde1df5c357b686641f3"
+        }
+      },
+      "changes": []
+    },
+    "empty-describe-with-hooks-hookInEmptyNestedDescribe": {
+      "upstream": "jest",
+      "files": {
+        "__tests__/hookInEmptyNestedDescribe.test.js": {
+          "from": "e2e/empty-describe-with-hooks/__tests__/hookInEmptyNestedDescribe.test.js",
+          "sha256": "10a025b71ae0f6e32bc09cf67a427e8ff6e834f5dcb0c0aa9c2362f697d598f8"
+        }
+      },
+      "changes": []
+    },
+    "empty-describe-with-hooks-multipleHooksInEmptyDescribe": {
+      "upstream": "jest",
+      "files": {
+        "__tests__/multipleHooksInEmptyDescribe.test.js": {
+          "from": "e2e/empty-describe-with-hooks/__tests__/multipleHooksInEmptyDescribe.test.js",
+          "sha256": "5f9d1a8aca58b051ef6618f0cd15639ba680947e5c4cde4174eccb943c1eba8e"
+        }
+      },
+      "changes": []
+    },
+    "empty-suite-error-emptySuite": {
+      "upstream": "jest",
+      "files": {
+        "__tests__/emptySuite.test.js": {
+          "from": "e2e/empty-suite-error/__tests__/emptySuite.test.js",
+          "sha256": "d4f63db9e42c7144f1af4198785b949150c1f477ad59742fd3328adf936e872d"
+        }
+      },
+      "changes": []
+    },
+    "execution-order.ts": {
+      "upstream": "vitest",
+      "files": {
+        "execution-order.test.ts": {
+          "from": "test/core/test/execution-order.test.ts",
+          "sha256": "1c858dbf6b7cd78c0a1881b5d008cd55ef52c5e91f97946c8f30d3a203384a47"
+        }
+      },
+      "changes": [
+        "package.json is {\"type\": \"module\"}, as test/core/package.json declares"
+      ]
+    },
+    "expect-circular.ts": {
+      "upstream": "vitest",
+      "files": {
+        "expect-circular.test.ts": {
+          "from": "test/core/test/expect-circular.test.ts",
+          "sha256": "010d6189605cb10219ffa355e9eaa78b541e0f9e6a6f604767ebbf5bbddab904"
+        }
+      },
+      "changes": [
+        "package.json is {\"type\": \"module\"}, as test/core/package.json declares"
+      ]
+    },
+    "failures-aggregateError": {
+      "upstream": "jest",
+      "files": {
+        "__tests__/aggregateError.test.js": {
+          "from": "e2e/failures/__tests__/aggregateError.test.js",
+          "sha256": "758bd9c93d99d1c03656d9d3ae1233d4e18f49da2dc9cdf9f29229bead53b0bb"
+        },
+        "macros.js": {
+          "from": "e2e/failures/macros.js",
+          "sha256": "aceeebd8d8f5e5a6f456c1fe19a3d83016fc9cb182fe8d1bd2c13f1a5538f20e"
+        }
+      },
+      "changes": []
+    },
+    "failures-assertionCount": {
+      "upstream": "jest",
+      "files": {
+        "__tests__/assertionCount.test.js": {
+          "from": "e2e/failures/__tests__/assertionCount.test.js",
+          "sha256": "43d3be1d4909f72bb28ef0436fe83b01ae2aa753641c80a34dddf32bf7e3472f"
+        },
+        "macros.js": {
+          "from": "e2e/failures/macros.js",
+          "sha256": "aceeebd8d8f5e5a6f456c1fe19a3d83016fc9cb182fe8d1bd2c13f1a5538f20e"
+        }
+      },
+      "changes": []
+    },
+    "failures-assertionError": {
+      "upstream": "jest",
+      "files": {
+        "__tests__/assertionError.test.js": {
+          "from": "e2e/failures/__tests__/assertionError.test.js",
+          "sha256": "f913e0eebd602f1777a6b378629adc1f8ad9fb163d096431e4b51406b926361f"
+        },
+        "macros.js": {
+          "from": "e2e/failures/macros.js",
+          "sha256": "aceeebd8d8f5e5a6f456c1fe19a3d83016fc9cb182fe8d1bd2c13f1a5538f20e"
+        }
+      },
+      "changes": []
+    },
+    "failures-assertionErrorExpand": {
+      "upstream": "jest",
+      "files": {
+        "__tests__/assertionErrorExpand.test.js": {
+          "from": "e2e/failures/__tests__/assertionErrorExpand.test.js",
+          "sha256": "a5518b8946bcde5ead1612c100e6abbaf0150a7a421c060ddffffcea5637594f"
+        },
+        "macros.js": {
+          "from": "e2e/failures/macros.js",
+          "sha256": "aceeebd8d8f5e5a6f456c1fe19a3d83016fc9cb182fe8d1bd2c13f1a5538f20e"
+        }
+      },
+      "changes": []
+    },
+    "failures-asyncFailures": {
+      "upstream": "jest",
+      "files": {
+        "__tests__/asyncFailures.test.js": {
+          "from": "e2e/failures/__tests__/asyncFailures.test.js",
+          "sha256": "4f0a43e724e4ede8eef07024473eeb0affd85ed261306a85ad53a74595f72e86"
+        },
+        "macros.js": {
+          "from": "e2e/failures/macros.js",
+          "sha256": "aceeebd8d8f5e5a6f456c1fe19a3d83016fc9cb182fe8d1bd2c13f1a5538f20e"
+        }
+      },
+      "changes": []
+    },
+    "failures-duringTests": {
+      "upstream": "jest",
+      "files": {
+        "__tests__/duringTests.test.js": {
+          "from": "e2e/failures/__tests__/duringTests.test.js",
+          "sha256": "a5b40e1af05dadaf0543e90419c94d464dc2fb9ba425139955992446a60a7ea4"
+        },
+        "macros.js": {
+          "from": "e2e/failures/macros.js",
+          "sha256": "aceeebd8d8f5e5a6f456c1fe19a3d83016fc9cb182fe8d1bd2c13f1a5538f20e"
+        }
+      },
+      "changes": []
+    },
+    "failures-errorAfterTestComplete": {
+      "upstream": "jest",
+      "files": {
+        "__tests__/errorAfterTestComplete.test.js": {
+          "from": "e2e/failures/__tests__/errorAfterTestComplete.test.js",
+          "sha256": "ab79db32312392544bb71623f04505dd083cea729dd3a3a47f42d17ece8bd333"
+        },
+        "macros.js": {
+          "from": "e2e/failures/macros.js",
+          "sha256": "aceeebd8d8f5e5a6f456c1fe19a3d83016fc9cb182fe8d1bd2c13f1a5538f20e"
+        }
+      },
+      "changes": []
+    },
+    "failures-snapshot": {
+      "upstream": "jest",
+      "files": {
+        "__tests__/__snapshots__/snapshot.test.js.snap": {
+          "from": "e2e/failures/__tests__/__snapshots__/snapshot.test.js.snap",
+          "sha256": "2587c7fc315769eed90f9f3be23c5a776ccbefda9640371e8b026ca3447559e0"
+        },
+        "__tests__/snapshot.test.js": {
+          "from": "e2e/failures/__tests__/snapshot.test.js",
+          "sha256": "eecc5ee29f63e3eebd63abe39474c25279374bfa01284f1477ea6e0914713b00"
+        },
+        "macros.js": {
+          "from": "e2e/failures/macros.js",
+          "sha256": "aceeebd8d8f5e5a6f456c1fe19a3d83016fc9cb182fe8d1bd2c13f1a5538f20e"
+        }
+      },
+      "changes": []
+    },
+    "failures-snapshotWithHint": {
+      "upstream": "jest",
+      "files": {
+        "__tests__/__snapshots__/snapshotWithHint.test.js.snap": {
+          "from": "e2e/failures/__tests__/__snapshots__/snapshotWithHint.test.js.snap",
+          "sha256": "fae771ef70f47cc2108d931417559987875ed67c204339a58a1a082ae5bc0656"
+        },
+        "__tests__/snapshotWithHint.test.js": {
+          "from": "e2e/failures/__tests__/snapshotWithHint.test.js",
+          "sha256": "a75def6ea9479350dcd2a27de72da98441aa46c55abd7639639557c5d725c489"
+        },
+        "macros.js": {
+          "from": "e2e/failures/macros.js",
+          "sha256": "aceeebd8d8f5e5a6f456c1fe19a3d83016fc9cb182fe8d1bd2c13f1a5538f20e"
+        }
+      },
+      "changes": []
+    },
+    "failures-throwNumber": {
+      "upstream": "jest",
+      "files": {
+        "__tests__/throwNumber.test.js": {
+          "from": "e2e/failures/__tests__/throwNumber.test.js",
+          "sha256": "b3b0934d25b7d330a6e86c07b433ca3889f099a955b5cddf48094f4be2550f8a"
+        },
+        "macros.js": {
+          "from": "e2e/failures/macros.js",
+          "sha256": "aceeebd8d8f5e5a6f456c1fe19a3d83016fc9cb182fe8d1bd2c13f1a5538f20e"
+        }
+      },
+      "changes": []
+    },
+    "failures-throwObject": {
+      "upstream": "jest",
+      "files": {
+        "__tests__/throwObject.test.js": {
+          "from": "e2e/failures/__tests__/throwObject.test.js",
+          "sha256": "33d48bed747d60a3268f2d7e9faec2fe74fa0b1084ded393dbb9906d80dbcdc4"
+        },
+        "macros.js": {
+          "from": "e2e/failures/macros.js",
+          "sha256": "aceeebd8d8f5e5a6f456c1fe19a3d83016fc9cb182fe8d1bd2c13f1a5538f20e"
+        }
+      },
+      "changes": []
+    },
+    "failures-throwObjectWithStackProp": {
+      "upstream": "jest",
+      "files": {
+        "__tests__/throwObjectWithStackProp.test.js": {
+          "from": "e2e/failures/__tests__/throwObjectWithStackProp.test.js",
+          "sha256": "09c544aaa2ba2383fa00490b30a147c78177c74ed2df4c3f8ee2388f71e63806"
+        },
+        "macros.js": {
+          "from": "e2e/failures/macros.js",
+          "sha256": "aceeebd8d8f5e5a6f456c1fe19a3d83016fc9cb182fe8d1bd2c13f1a5538f20e"
+        }
+      },
+      "changes": []
+    },
+    "failures-throwString": {
+      "upstream": "jest",
+      "files": {
+        "__tests__/throwString.test.js": {
+          "from": "e2e/failures/__tests__/throwString.test.js",
+          "sha256": "67bc6f704ffa466d3822a7bf17de1a30a6e764592958b9ccc6b71d8c0d04203d"
+        },
+        "macros.js": {
+          "from": "e2e/failures/macros.js",
+          "sha256": "aceeebd8d8f5e5a6f456c1fe19a3d83016fc9cb182fe8d1bd2c13f1a5538f20e"
+        }
+      },
+      "changes": []
+    },
+    "fn.ts": {
+      "upstream": "vitest",
+      "files": {
+        "fn.test.ts": {
+          "from": "test/core/test/fn.test.ts",
+          "sha256": "00536aad22178fedeaba9da656646033930cd46184ad2d97dcbd6423583e3276"
+        }
+      },
+      "changes": [
+        "package.json is {\"type\": \"module\"}, as test/core/package.json declares"
+      ]
+    },
+    "focused-tests-tests": {
+      "upstream": "jest",
+      "files": {
+        "__tests__/tests.test.js": {
+          "from": "e2e/focused-tests/__tests__/tests.js",
+          "sha256": "e2a3274caec2262a8dc74d727f983564f9c39ab0edfb170e7bf13120c607879a"
+        }
+      },
+      "changes": [
+        "renamed __tests__/tests.js to __tests__/tests.test.js"
+      ]
+    },
+    "generator-mock-generatorMock": {
+      "upstream": "jest",
+      "files": {
+        "__tests__/generatorMock.test.js": {
+          "from": "e2e/generator-mock/__tests__/generatorMock.test.js",
+          "sha256": "1588af108bfa19af580ee0b9ac606060c7f63ec4cb60a16a73922b12d19f420b"
+        },
+        "index.js": {
+          "from": "e2e/generator-mock/index.js",
+          "sha256": "30da6560c0665e533a22e9423fdd364b5809a861c2964f80b61e51f2368efe0c"
+        }
+      },
+      "changes": []
+    },
+    "hooks.js": {
+      "upstream": "vitest",
+      "files": {
+        "hooks.test.js": {
+          "from": "test/core/test/hooks.test.js",
+          "sha256": "37421803b45f87c882f03bd667b278dbfa0bbf3a30eb7eeb2b61097d6b279020"
+        }
+      },
+      "changes": [
+        "package.json is {\"type\": \"module\"}, as test/core/package.json declares"
+      ]
+    },
+    "hooks.ts": {
+      "upstream": "vitest",
+      "files": {
+        "hooks.test.ts": {
+          "from": "test/core/test/hooks.test.ts",
+          "sha256": "6f63d1cac5c87297c1bcab442a89b1e41bc0a6d3142f4f4d73855829267c9407"
+        }
+      },
+      "changes": [
+        "package.json is {\"type\": \"module\"}, as test/core/package.json declares"
+      ]
+    },
+    "isolate.ts": {
+      "upstream": "vitest",
+      "files": {
+        "isolate.test.ts": {
+          "from": "test/core/test/isolate.test.ts",
+          "sha256": "ae37af863d4a1da75cd86eb046829c90b91ca7a09fb7eb278bc323ab51e35365"
+        }
+      },
+      "changes": [
+        "package.json is {\"type\": \"module\"}, as test/core/package.json declares"
+      ]
+    },
+    "jasmine-async-generator": {
+      "upstream": "jest",
+      "files": {
+        "__tests__/generator.test.js": {
+          "from": "e2e/jasmine-async/__tests__/generator.test.js",
+          "sha256": "34e0f625b38a70bd974c19faca2c74885ebf1c091981cbe9d17966dbfa5980c9"
+        }
+      },
+      "changes": []
+    },
+    "jasmine-async-pendingInPromise": {
+      "upstream": "jest",
+      "files": {
+        "__tests__/pendingInPromise.test.js": {
+          "from": "e2e/jasmine-async/__tests__/pendingInPromise.test.js",
+          "sha256": "d881308ca2a4caa608e91761ca22a458e25fe9a4e4384f79472dce080f866da5"
+        }
+      },
+      "changes": []
+    },
+    "jasmine-async-promiseAfterAll": {
+      "upstream": "jest",
+      "files": {
+        "__tests__/promiseAfterAll.test.js": {
+          "from": "e2e/jasmine-async/__tests__/promiseAfterAll.test.js",
+          "sha256": "aada2fc85c2ca68952b37fa22c91aee62950fc553715da6a49fea178b17a4c6a"
+        }
+      },
+      "changes": []
+    },
+    "jasmine-async-promiseAfterEach": {
+      "upstream": "jest",
+      "files": {
+        "__tests__/promiseAfterEach.test.js": {
+          "from": "e2e/jasmine-async/__tests__/promiseAfterEach.test.js",
+          "sha256": "7bc43f818db8aa9d79cafe9f3c6cc66a5424e1fc9a749266c24378da058ab8a9"
+        }
+      },
+      "changes": []
+    },
+    "jasmine-async-promiseBeforeAll": {
+      "upstream": "jest",
+      "files": {
+        "__tests__/promiseBeforeAll.test.js": {
+          "from": "e2e/jasmine-async/__tests__/promiseBeforeAll.test.js",
+          "sha256": "74f99e2bd3b21a396f72b53a4ddfee82b6e033eeba5f6430bcfdb8aeb9e5d8e5"
+        }
+      },
+      "changes": []
+    },
+    "jasmine-async-promiseBeforeEach": {
+      "upstream": "jest",
+      "files": {
+        "__tests__/promiseBeforeEach.test.js": {
+          "from": "e2e/jasmine-async/__tests__/promiseBeforeEach.test.js",
+          "sha256": "f6ef8f4f23aa23112b1b16dfde23aa98bb2673b3af898423ef64b79e538c01ee"
+        }
+      },
+      "changes": []
+    },
+    "jasmine-async-promiseFit": {
+      "upstream": "jest",
+      "files": {
+        "__tests__/promiseFit.test.js": {
+          "from": "e2e/jasmine-async/__tests__/promiseFit.test.js",
+          "sha256": "05a91a28d4c7ac2354865172f3ee088f4ead580f96963d43d7d10d04aa99f541"
+        }
+      },
+      "changes": []
+    },
+    "jasmine-async-promiseIt": {
+      "upstream": "jest",
+      "files": {
+        "__tests__/promiseIt.test.js": {
+          "from": "e2e/jasmine-async/__tests__/promiseIt.test.js",
+          "sha256": "bae5e0f981e1674008da0144be32e25cae80d398384cc9e1d04944c0552322dd"
+        }
+      },
+      "changes": []
+    },
+    "jasmine-async-promiseXit": {
+      "upstream": "jest",
+      "files": {
+        "__tests__/promiseXit.test.js": {
+          "from": "e2e/jasmine-async/__tests__/promiseXit.test.js",
+          "sha256": "99e4f035afb0593365414242a2415b239e7e77d6e71fd4879c1a71cac99eae67"
+        }
+      },
+      "changes": []
+    },
+    "jasmine-async-returningValues": {
+      "upstream": "jest",
+      "files": {
+        "__tests__/returningValues.test.js": {
+          "from": "e2e/jasmine-async/__tests__/returningValues.test.js",
+          "sha256": "5e1e1331e95868818d73e9a3a650b766111d92d60b599ec97a6b331c612d03e8"
+        }
+      },
+      "changes": []
+    },
+    "jest-expect-no-url.ts": {
+      "upstream": "vitest",
+      "files": {
+        "jest-expect-no-url.test.ts": {
+          "from": "test/core/test/jest-expect-no-url.test.ts",
+          "sha256": "30af6af5fb74f9294315ac7ded2cecbb87abd760f19f013e2cfea4a773df51e7"
+        }
+      },
+      "changes": [
+        "package.json is {\"type\": \"module\"}, as test/core/package.json declares"
+      ]
+    },
+    "jest-expect.ts": {
+      "upstream": "vitest",
+      "files": {
+        "jest-expect.test.ts": {
+          "from": "test/core/test/jest-expect.test.ts",
+          "sha256": "e2afcebd3c05a657a76b3128dd4d68fa66463fdeef3720fe34fbc634c225b533"
+        },
+        "__snapshots__/jest-expect.test.ts.snap": {
+          "from": "test/core/test/__snapshots__/jest-expect.test.ts.snap",
+          "sha256": "dde8d66f990d1891274fd20dc306d0705494a4482402f20a81c3f361c407aabf"
+        }
+      },
+      "changes": [
+        "package.json is {\"type\": \"module\"}, as test/core/package.json declares"
+      ]
+    },
+    "jest-matcher-utils.ts": {
+      "upstream": "vitest",
+      "files": {
+        "jest-matcher-utils.test.ts": {
+          "from": "test/core/test/jest-matcher-utils.test.ts",
+          "sha256": "0d2c918479f45ac81fbbd189a1852923d5313807e7881893d5e96641dff4b0cb"
+        }
+      },
+      "changes": [
+        "package.json is {\"type\": \"module\"}, as test/core/package.json declares"
+      ]
+    },
+    "jest-mock.ts": {
+      "upstream": "vitest",
+      "files": {
+        "jest-mock.test.ts": {
+          "from": "test/core/test/jest-mock.test.ts",
+          "sha256": "058d5b8ab4cd0b92a381629f505c7eb1f642ee954de6fdc5d47e740b6f153a1f"
+        }
+      },
+      "changes": [
+        "package.json is {\"type\": \"module\"}, as test/core/package.json declares"
+      ]
+    },
+    "lifecycles-index": {
+      "upstream": "jest",
+      "files": {
+        "__tests__/index.test.js": {
+          "from": "e2e/lifecycles/__tests__/index.js",
+          "sha256": "190fdfb87be9996d51397a429187fc05c00c047213c269a0c6cb0edf3dcb72d1"
+        },
+        "index.js": {
+          "from": "e2e/lifecycles/index.js",
+          "sha256": "1884dd1237292fa2384b4a0c74445db6be08b279fd5c76901215e6f65742a75d"
+        }
+      },
+      "changes": [
+        "renamed __tests__/index.js to __tests__/index.test.js"
+      ]
+    },
+    "location-in-results-test": {
+      "upstream": "jest",
+      "files": {
+        "__tests__/test.test.js": {
+          "from": "e2e/location-in-results/__tests__/test.js",
+          "sha256": "981a86d5f64fb3787b24a0d3e6e7f5754f0e4bc083ab1b187da35a0022c69077"
+        }
+      },
+      "changes": [
+        "renamed __tests__/test.js to __tests__/test.test.js"
+      ]
+    },
+    "mock-functions-index": {
+      "upstream": "jest",
+      "files": {
+        "__tests__/index.test.js": {
+          "from": "e2e/mock-functions/__tests__/index.js",
+          "sha256": "394c80f6c4098de3d432ab02d236e2f68eb81fd10a7ad848066e11afff134337"
+        }
+      },
+      "changes": [
+        "renamed __tests__/index.js to __tests__/index.test.js"
+      ]
+    },
+    "mock-json-index": {
+      "upstream": "jest",
+      "files": {
+        "__mocks__/data.json": {
+          "from": "e2e/mock-json/__mocks__/data.json",
+          "sha256": "b9cd2605ea75293b16b892a97c5e4b0bc18f3dafd0cbdf897c80258d57415c80"
+        },
+        "__tests__/index.test.js": {
+          "from": "e2e/mock-json/__tests__/index.js",
+          "sha256": "58ad97f3ef146b534a3652b5ae2c261c92f9c1d506c4a620bf4612b497ae3a62"
+        },
+        "data.json": {
+          "from": "e2e/mock-json/data.json",
+          "sha256": "1c03029a186a13844f391d08387b187fef6b1e348b632064f0a103d61e011924"
+        },
+        "index.js": {
+          "from": "e2e/mock-json/index.js",
+          "sha256": "22a73ea0503eef2ea1eea64160b1958e1d5ce90d7f58783fc670003003b189de"
+        }
+      },
+      "changes": [
+        "renamed __tests__/index.js to __tests__/index.test.js"
+      ]
+    },
+    "mock-names-with-empty-mock-name-index": {
+      "upstream": "jest",
+      "files": {
+        "__tests__/index.test.js": {
+          "from": "e2e/mock-names/with-empty-mock-name/__tests__/index.js",
+          "sha256": "17302e9ca52c03b9a767a980b87da80fc83c379c63d7012bae9b655c15427bde"
+        },
+        "index.js": {
+          "from": "e2e/mock-names/with-empty-mock-name/index.js",
+          "sha256": "31ebe5f910b483fef7da8af7266aea12be71f0144c13079c611d547669d176ac"
+        }
+      },
+      "changes": [
+        "renamed __tests__/index.js to __tests__/index.test.js"
+      ]
+    },
+    "mock-names-with-empty-mock-name-not-called-index": {
+      "upstream": "jest",
+      "files": {
+        "__tests__/index.test.js": {
+          "from": "e2e/mock-names/with-empty-mock-name-not-called/__tests__/index.js",
+          "sha256": "727411a53e357dff6fe86add6bcecc53d1236fe67df03d5b2ecac2a31279dd3c"
+        },
+        "index.js": {
+          "from": "e2e/mock-names/with-empty-mock-name-not-called/index.js",
+          "sha256": "31ebe5f910b483fef7da8af7266aea12be71f0144c13079c611d547669d176ac"
+        }
+      },
+      "changes": [
+        "renamed __tests__/index.js to __tests__/index.test.js"
+      ]
+    },
+    "mock-names-with-mock-name-call-times-fail-index": {
+      "upstream": "jest",
+      "files": {
+        "__tests__/index.test.js": {
+          "from": "e2e/mock-names/with-mock-name-call-times-fail/__tests__/index.js",
+          "sha256": "56467733a388d399f7f77f6c0da6262140098c123348e06897f8fa726bde4fc3"
+        },
+        "index.js": {
+          "from": "e2e/mock-names/with-mock-name-call-times-fail/index.js",
+          "sha256": "31ebe5f910b483fef7da8af7266aea12be71f0144c13079c611d547669d176ac"
+        }
+      },
+      "changes": [
+        "renamed __tests__/index.js to __tests__/index.test.js"
+      ]
+    },
+    "mock-names-with-mock-name-call-times-pass-index": {
+      "upstream": "jest",
+      "files": {
+        "__tests__/index.test.js": {
+          "from": "e2e/mock-names/with-mock-name-call-times-pass/__tests__/index.js",
+          "sha256": "b529dc64196585195e71002512596bfd6dc9387cf06576b4905d976d9ff8dec6"
+        },
+        "index.js": {
+          "from": "e2e/mock-names/with-mock-name-call-times-pass/index.js",
+          "sha256": "31ebe5f910b483fef7da8af7266aea12be71f0144c13079c611d547669d176ac"
+        }
+      },
+      "changes": [
+        "renamed __tests__/index.js to __tests__/index.test.js"
+      ]
+    },
+    "mock-names-with-mock-name-index": {
+      "upstream": "jest",
+      "files": {
+        "__tests__/index.test.js": {
+          "from": "e2e/mock-names/with-mock-name/__tests__/index.js",
+          "sha256": "0b7c3286f52df6705969d81d1801372e7d54cfc5e847067c03275772d7daf8fc"
+        },
+        "index.js": {
+          "from": "e2e/mock-names/with-mock-name/index.js",
+          "sha256": "31ebe5f910b483fef7da8af7266aea12be71f0144c13079c611d547669d176ac"
+        }
+      },
+      "changes": [
+        "renamed __tests__/index.js to __tests__/index.test.js"
+      ]
+    },
+    "mock-names-with-mock-name-not-called-fail-index": {
+      "upstream": "jest",
+      "files": {
+        "__tests__/index.test.js": {
+          "from": "e2e/mock-names/with-mock-name-not-called-fail/__tests__/index.js",
+          "sha256": "42be33f0b4b51f88a07ef5d61d99328da06d18cfe8c4afc7c12544a825e0d907"
+        },
+        "index.js": {
+          "from": "e2e/mock-names/with-mock-name-not-called-fail/index.js",
+          "sha256": "31ebe5f910b483fef7da8af7266aea12be71f0144c13079c611d547669d176ac"
+        }
+      },
+      "changes": [
+        "renamed __tests__/index.js to __tests__/index.test.js"
+      ]
+    },
+    "mock-names-with-mock-name-not-called-index": {
+      "upstream": "jest",
+      "files": {
+        "__tests__/index.test.js": {
+          "from": "e2e/mock-names/with-mock-name-not-called/__tests__/index.js",
+          "sha256": "88a9c93d4c1d17266ea031d1ca20762831a18dbf0a541ab7c24b401c44b675ba"
+        },
+        "index.js": {
+          "from": "e2e/mock-names/with-mock-name-not-called/index.js",
+          "sha256": "31ebe5f910b483fef7da8af7266aea12be71f0144c13079c611d547669d176ac"
+        }
+      },
+      "changes": [
+        "renamed __tests__/index.js to __tests__/index.test.js"
+      ]
+    },
+    "mock-names-with-mock-name-not-called-pass-index": {
+      "upstream": "jest",
+      "files": {
+        "__tests__/index.test.js": {
+          "from": "e2e/mock-names/with-mock-name-not-called-pass/__tests__/index.js",
+          "sha256": "e2d892cc4d2c4f70103b3eca1beed4b620794676b483dcb316ed29c2b2b80eca"
+        },
+        "index.js": {
+          "from": "e2e/mock-names/with-mock-name-not-called-pass/index.js",
+          "sha256": "31ebe5f910b483fef7da8af7266aea12be71f0144c13079c611d547669d176ac"
+        }
+      },
+      "changes": [
+        "renamed __tests__/index.js to __tests__/index.test.js"
+      ]
+    },
+    "mock-names-without-mock-name-index": {
+      "upstream": "jest",
+      "files": {
+        "__tests__/index.test.js": {
+          "from": "e2e/mock-names/without-mock-name/__tests__/index.js",
+          "sha256": "0c9b126f3c588ecc5aa3d78219a70cb4ad703d9592d5844dde5a4cbce3c1abb0"
+        },
+        "index.js": {
+          "from": "e2e/mock-names/without-mock-name/index.js",
+          "sha256": "31ebe5f910b483fef7da8af7266aea12be71f0144c13079c611d547669d176ac"
+        }
+      },
+      "changes": [
+        "renamed __tests__/index.js to __tests__/index.test.js"
+      ]
+    },
+    "mock-names-without-mock-name-not-called-index": {
+      "upstream": "jest",
+      "files": {
+        "__tests__/index.test.js": {
+          "from": "e2e/mock-names/without-mock-name-not-called/__tests__/index.js",
+          "sha256": "5895367cb78e12ab9ef360d858c1e79e34412b8b157aca6a3e4045b29c5c14ad"
+        },
+        "index.js": {
+          "from": "e2e/mock-names/without-mock-name-not-called/index.js",
+          "sha256": "31ebe5f910b483fef7da8af7266aea12be71f0144c13079c611d547669d176ac"
+        }
+      },
+      "changes": [
+        "renamed __tests__/index.js to __tests__/index.test.js"
+      ]
+    },
+    "nested-only.ts": {
+      "upstream": "vitest",
+      "files": {
+        "nested-only.test.ts": {
+          "from": "test/core/test/nested-only.test.ts",
+          "sha256": "85de08b4fc66749b0103a7b9ce1f024924a6ac71649ab95a60a3e038b050910c"
+        }
+      },
+      "changes": [
+        "package.json is {\"type\": \"module\"}, as test/core/package.json declares"
+      ]
+    },
+    "nested-suite.ts": {
+      "upstream": "vitest",
+      "files": {
+        "nested-suite.test.ts": {
+          "from": "test/core/test/nested-suite.test.ts",
+          "sha256": "7361c1030332590bcdd9406d441aa2cbcfc437607e7c20db0eaf8f2d5a772506"
+        },
+        "__snapshots__/nested-suite.test.ts.snap": {
+          "from": "test/core/test/__snapshots__/nested-suite.test.ts.snap",
+          "sha256": "506dabebe8f14c4fe65f38b64141761ac26429c39d5fb040b31498985859ee29"
+        }
+      },
+      "changes": [
+        "package.json is {\"type\": \"module\"}, as test/core/package.json declares"
+      ]
+    },
+    "nested-test-definitions-nestedDescribeInTest": {
+      "upstream": "jest",
+      "files": {
+        "__tests__/nestedDescribeInTest.test.js": {
+          "from": "e2e/nested-test-definitions/__tests__/nestedDescribeInTest.js",
+          "sha256": "77fe3c5641c679c5f5ace419b27feaf7ef9e7e6197f8ed9e828af438d14a3aa1"
+        },
+        "index.js": {
+          "from": "e2e/nested-test-definitions/index.js",
+          "sha256": "099c089e9090d83eb809cd442badb5578692f9a8e1bd72b8deef1bb5f7a9ec0a"
+        }
+      },
+      "changes": [
+        "renamed __tests__/nestedDescribeInTest.js to __tests__/nestedDescribeInTest.test.js",
+        "runs under testEnvironment node; upstream configures jsdom"
+      ]
+    },
+    "nested-test-definitions-nestedHookInTest": {
+      "upstream": "jest",
+      "files": {
+        "__tests__/nestedHookInTest.test.js": {
+          "from": "e2e/nested-test-definitions/__tests__/nestedHookInTest.js",
+          "sha256": "76891b177f46874767dc0a8e390f2293884914a77afbb4a46a48bd5f0c62509f"
+        },
+        "index.js": {
+          "from": "e2e/nested-test-definitions/index.js",
+          "sha256": "099c089e9090d83eb809cd442badb5578692f9a8e1bd72b8deef1bb5f7a9ec0a"
+        }
+      },
+      "changes": [
+        "renamed __tests__/nestedHookInTest.js to __tests__/nestedHookInTest.test.js",
+        "runs under testEnvironment node; upstream configures jsdom"
+      ]
+    },
+    "nested-test-definitions-nestedTestOutsideDescribe": {
+      "upstream": "jest",
+      "files": {
+        "__tests__/nestedTestOutsideDescribe.test.js": {
+          "from": "e2e/nested-test-definitions/__tests__/nestedTestOutsideDescribe.js",
+          "sha256": "b8f0ae57611a8876c06e2976dd7cdf1f9273a92e7574d2a49ff7050ce30c0b5a"
+        },
+        "index.js": {
+          "from": "e2e/nested-test-definitions/index.js",
+          "sha256": "099c089e9090d83eb809cd442badb5578692f9a8e1bd72b8deef1bb5f7a9ec0a"
+        }
+      },
+      "changes": [
+        "renamed __tests__/nestedTestOutsideDescribe.js to __tests__/nestedTestOutsideDescribe.test.js",
+        "runs under testEnvironment node; upstream configures jsdom"
+      ]
+    },
+    "nested-test-definitions-nestedTestWithinDescribe": {
+      "upstream": "jest",
+      "files": {
+        "__tests__/nestedTestWithinDescribe.test.js": {
+          "from": "e2e/nested-test-definitions/__tests__/nestedTestWithinDescribe.js",
+          "sha256": "6b7b62349094b7e68c54219ccd26cc71f5be4cd0e458d3fd3d331c9c9baf2411"
+        },
+        "index.js": {
+          "from": "e2e/nested-test-definitions/index.js",
+          "sha256": "099c089e9090d83eb809cd442badb5578692f9a8e1bd72b8deef1bb5f7a9ec0a"
+        }
+      },
+      "changes": [
+        "renamed __tests__/nestedTestWithinDescribe.js to __tests__/nestedTestWithinDescribe.test.js",
+        "runs under testEnvironment node; upstream configures jsdom"
+      ]
+    },
+    "nested-test.ts": {
+      "upstream": "vitest",
+      "files": {
+        "nested-test.test.ts": {
+          "from": "test/core/test/nested-test.test.ts",
+          "sha256": "2f84acf1e15e663d90f92f2f85a641f3b8cc0bbbd3612194f097a17c5225223d"
+        }
+      },
+      "changes": [
+        "package.json is {\"type\": \"module\"}, as test/core/package.json declares"
+      ]
+    },
+    "only.ts": {
+      "upstream": "vitest",
+      "files": {
+        "only.test.ts": {
+          "from": "test/core/test/only.test.ts",
+          "sha256": "de2d675e7932410db2b71021ea44f553c448b553608b6bcbb8a1afce62dd87bd"
+        }
+      },
+      "changes": [
+        "package.json is {\"type\": \"module\"}, as test/core/package.json declares"
+      ]
+    },
+    "pattern.ts": {
+      "upstream": "vitest",
+      "files": {
+        "pattern.test.ts": {
+          "from": "test/core/test/pattern.test.ts",
+          "sha256": "e43e5773dfad90074acab0536033a1dffcf6c08c8066326bd51b5cf5b6c79be4"
+        }
+      },
+      "changes": [
+        "package.json is {\"type\": \"module\"}, as test/core/package.json declares"
+      ]
+    },
+    "promise-and-callback-promise-and-callback": {
+      "upstream": "jest",
+      "files": {
+        "__tests__/promise-and-callback.test.js": {
+          "from": "e2e/promise-and-callback/__tests__/promise-and-callback.test.js",
+          "sha256": "45d80936526cf8b3a93b2996d607ab146839970d8a95db8a4c8b0c3f46e9d18b"
+        }
+      },
+      "changes": []
+    },
+    "skip.ts": {
+      "upstream": "vitest",
+      "files": {
+        "skip.test.ts": {
+          "from": "test/core/test/skip.test.ts",
+          "sha256": "eed4b47b08ed82eb9d849cb3430bc344938fbb19a4cb5a1bc93727edc4798b32"
+        }
+      },
+      "changes": [
+        "package.json is {\"type\": \"module\"}, as test/core/package.json declares"
+      ]
+    },
+    "snapshot-async.ts": {
+      "upstream": "vitest",
+      "files": {
+        "snapshot-async.test.ts": {
+          "from": "test/core/test/snapshot-async.test.ts",
+          "sha256": "bd395ab2b725fc2fc814deb3df96a9fa08c68efb9871ce73178e9e167ede03ff"
+        }
+      },
+      "changes": [
+        "package.json is {\"type\": \"module\"}, as test/core/package.json declares"
+      ]
+    },
+    "snapshot-crlf-crlf": {
+      "upstream": "jest",
+      "files": {
+        "__tests__/__snapshots__/crlf.test.js.snap": {
+          "from": "e2e/snapshot-crlf/__tests__/__snapshots__/crlf.test.js.snap",
+          "sha256": "75de4fd67dc5e5b1320294201a05bd4fd3fdcfeaed08b9fa4eda273507ef2b7b"
+        },
+        "__tests__/crlf.test.js": {
+          "from": "e2e/snapshot-crlf/__tests__/crlf.test.js",
+          "sha256": "f0b1f1dd2ac8d8301773ea46c3cc9f3403f3e3cefad80551bc2632801646133e"
+        }
+      },
+      "changes": []
+    },
+    "snapshot-custom-serializer.ts": {
+      "upstream": "vitest",
+      "files": {
+        "snapshot-custom-serializer.test.ts": {
+          "from": "test/core/test/snapshot-custom-serializer.test.ts",
+          "sha256": "b23a56dc845382f9cbbdf5dab0db1c992fcad9f8817b55267339156723bd4de0"
+        }
+      },
+      "changes": [
+        "package.json is {\"type\": \"module\"}, as test/core/package.json declares"
+      ]
+    },
+    "snapshot-escape-snapshot": {
+      "upstream": "jest",
+      "files": {
+        "__tests__/snapshot.test.js": {
+          "from": "e2e/snapshot-escape/__tests__/snapshot.test.js",
+          "sha256": "ef925e3eca6cf6fb6239f44aaf8077f9e69c3c529304a4416e6a49f0b844edf7"
+        }
+      },
+      "changes": []
+    },
+    "snapshot-escape-snapshotEscapeRegex": {
+      "upstream": "jest",
+      "files": {
+        "__tests__/snapshotEscapeRegex.test.js": {
+          "from": "e2e/snapshot-escape/__tests__/snapshotEscapeRegex.js",
+          "sha256": "b5e2b73d1dc2a0cad769a61f6f4fb5d970bdf1411aa35e2651125fd3863ab405"
+        }
+      },
+      "changes": [
+        "renamed __tests__/snapshotEscapeRegex.js to __tests__/snapshotEscapeRegex.test.js"
+      ]
+    },
+    "snapshot-escape-snapshotEscapeSubstitution": {
+      "upstream": "jest",
+      "files": {
+        "__tests__/snapshotEscapeSubstitution.test.js": {
+          "from": "e2e/snapshot-escape/__tests__/snapshotEscapeSubstitution.test.js",
+          "sha256": "13cdaabca5bcc3bbcf089f7ace1d1a6a741e63a1237865ee206300f319fae611"
+        }
+      },
+      "changes": []
+    },
+    "snapshot-inline-(parentheses).ts": {
+      "upstream": "vitest",
+      "files": {
+        "snapshot-inline-(parentheses).test.ts": {
+          "from": "test/core/test/snapshot-inline-(parentheses).test.ts",
+          "sha256": "f762ec490089708d19426d0760cc1d165c1c77f56f176f155436e8fe6f8e3e0b"
+        }
+      },
+      "changes": [
+        "package.json is {\"type\": \"module\"}, as test/core/package.json declares"
+      ]
+    },
+    "snapshot-inline.ts": {
+      "upstream": "vitest",
+      "files": {
+        "snapshot-inline.test.ts": {
+          "from": "test/core/test/snapshot-inline.test.ts",
+          "sha256": "83174a29b6a05e7424fb351523cd5ce1d8e2e8955d7cdc7ebfc2e772cacf5987"
+        }
+      },
+      "changes": [
+        "package.json is {\"type\": \"module\"}, as test/core/package.json declares"
+      ]
+    },
+    "snapshot-secondSnapshot": {
+      "upstream": "jest",
+      "files": {
+        "__tests__/secondSnapshot.test.js": {
+          "from": "e2e/snapshot/__tests__/secondSnapshot.test.js",
+          "sha256": "007a056b7e35c839c1d8cfc766949b7fdaa5fe3bfc1ec4d2047260b5c37fee22"
+        }
+      },
+      "changes": []
+    },
+    "snapshot-snapshot": {
+      "upstream": "jest",
+      "files": {
+        "__tests__/snapshot.test.js": {
+          "from": "e2e/snapshot/__tests__/snapshot.test.js",
+          "sha256": "30fc5b3a596eec74654c4c8aa966949b226f88eb2c07284a9a1d0f266d6ba1c5"
+        }
+      },
+      "changes": []
+    },
+    "snapshot-unknown-works": {
+      "upstream": "jest",
+      "files": {
+        "__tests__/__snapshots__/fails.test.js.snap": {
+          "from": "e2e/snapshot-unknown/__tests__/__snapshots__/fails.test.js.snap",
+          "sha256": "74a9f0c7c7bd386dabef6f174191b3b5c6097ca1af7f32b00e4c496914eeedd0"
+        },
+        "__tests__/__snapshots__/fails2.test.js.snap": {
+          "from": "e2e/snapshot-unknown/__tests__/__snapshots__/fails2.test.js.snap",
+          "sha256": "74a9f0c7c7bd386dabef6f174191b3b5c6097ca1af7f32b00e4c496914eeedd0"
+        },
+        "__tests__/__snapshots__/works.test.js.snap": {
+          "from": "e2e/snapshot-unknown/__tests__/__snapshots__/works.test.js.snap",
+          "sha256": "ba5e83475e376dc7985e2c562d34833deb9a253f9eea13ea9a19597efc30e984"
+        },
+        "__tests__/works.test.js": {
+          "from": "e2e/snapshot-unknown/__tests__/works.test.js",
+          "sha256": "1a68a8c8ef7420e741b1b6a4bf3906d7c719aa8ccf22909bed10f392e0b5112c"
+        }
+      },
+      "changes": []
+    },
+    "strict.js": {
+      "upstream": "vitest",
+      "files": {
+        "strict.test.js": {
+          "from": "test/core/test/strict.test.js",
+          "sha256": "63401ad837f9d5a13c229c66cea5a5bd88cd7a5a37262dd250a036ba2d6c36c3"
+        }
+      },
+      "changes": [
+        "package.json is {\"type\": \"module\"}, as test/core/package.json declares"
+      ]
+    },
+    "test-failing-snapshot-all-pass-inlineSnapshot": {
+      "upstream": "jest",
+      "files": {
+        "__tests__/inlineSnapshot.test.js": {
+          "from": "e2e/test-failing-snapshot-all-pass/__tests__/inlineSnapshot.test.js",
+          "sha256": "405d600a405e9b7f92f3818fc4134dba4d6fa80e0000dd1658278c46d5a7796c"
+        }
+      },
+      "changes": []
+    },
+    "test-failing-snapshot-all-pass-snapshot": {
+      "upstream": "jest",
+      "files": {
+        "__tests__/__snapshots__/snapshot.test.js.snap": {
+          "from": "e2e/test-failing-snapshot-all-pass/__tests__/__snapshots__/snapshot.test.js.snap",
+          "sha256": "9901b19a4b044ceaabf6862b3fd6bdce69d99d4a13964ec9b1b852e794818767"
+        },
+        "__tests__/snapshot.test.js": {
+          "from": "e2e/test-failing-snapshot-all-pass/__tests__/snapshot.test.js",
+          "sha256": "a17a281b9dea02ee337195894549c26201d1e05f59925ba8b406942e7267eb4c"
+        }
+      },
+      "changes": []
+    },
+    "test-failing-snapshot-inlineSnapshot": {
+      "upstream": "jest",
+      "files": {
+        "__tests__/inlineSnapshot.test.js": {
+          "from": "e2e/test-failing-snapshot/__tests__/inlineSnapshot.test.js",
+          "sha256": "38cb8c5f6fae78174679d6a14a76d36dccefe7a76f7da7079863eb318a554051"
+        }
+      },
+      "changes": []
+    },
+    "test-failing-snapshot-snapshot": {
+      "upstream": "jest",
+      "files": {
+        "__tests__/__snapshots__/snapshot.test.js.snap": {
+          "from": "e2e/test-failing-snapshot/__tests__/__snapshots__/snapshot.test.js.snap",
+          "sha256": "7f82669be02f8850a3fa0e742b82d39ae7953b6a0ca69ce67f1d933ce3136d75"
+        },
+        "__tests__/snapshot.test.js": {
+          "from": "e2e/test-failing-snapshot/__tests__/snapshot.test.js",
+          "sha256": "97122888c578908be0b1918b4925df3a6fc79be8c0da8eef7866fd16baa8d520"
+        }
+      },
+      "changes": []
+    },
+    "test-failing-statuses": {
+      "upstream": "jest",
+      "files": {
+        "__tests__/statuses.test.js": {
+          "from": "e2e/test-failing/__tests__/statuses.test.js",
+          "sha256": "4ae3fc865ed9291edde25f9a247af819191dcd9e9e2991a2153311715ddcf0f6"
+        }
+      },
+      "changes": []
+    },
+    "test-failing-worksWithOnlyMode": {
+      "upstream": "jest",
+      "files": {
+        "__tests__/worksWithOnlyMode.test.js": {
+          "from": "e2e/test-failing/__tests__/worksWithOnlyMode.test.js",
+          "sha256": "0c1a617985b1079694d5e92b1a6bab6dac0a6086ec1e552e52760f3b5b2034ba"
+        }
+      },
+      "changes": []
+    },
+    "test-failing-worksWithSkipMode": {
+      "upstream": "jest",
+      "files": {
+        "__tests__/worksWithSkipMode.test.js": {
+          "from": "e2e/test-failing/__tests__/worksWithSkipMode.test.js",
+          "sha256": "e628593e881641332ddd2f208c960d671d5b93a1499d6b1a1e4a23fce4c19824"
+        }
+      },
+      "changes": []
+    },
+    "test-todo-only-todo": {
+      "upstream": "jest",
+      "files": {
+        "__tests__/only-todo.test.js": {
+          "from": "e2e/test-todo/__tests__/only-todo.test.js",
+          "sha256": "c8e44440779c3fdc6b170f15072ed665ecd57f05d0ac59491370aac92e3873c7"
+        }
+      },
+      "changes": []
+    },
+    "test-todo-statuses": {
+      "upstream": "jest",
+      "files": {
+        "__tests__/statuses.test.js": {
+          "from": "e2e/test-todo/__tests__/statuses.test.js",
+          "sha256": "78f66e1af0f2f54400d47eacac6896c05966b3ece13664aad2a9be18c2a1b3e3"
+        }
+      },
+      "changes": []
+    },
+    "test-todo-todoMultipleArgs": {
+      "upstream": "jest",
+      "files": {
+        "__tests__/todoMultipleArgs.test.js": {
+          "from": "e2e/test-todo/__tests__/todoMultipleArgs.test.js",
+          "sha256": "ddb06392505facc2f6a6640e7c18184396e099699a180c5530ad68c461bb4b1b"
+        }
+      },
+      "changes": []
+    },
+    "test-todo-todoNoArgs": {
+      "upstream": "jest",
+      "files": {
+        "__tests__/todoNoArgs.test.js": {
+          "from": "e2e/test-todo/__tests__/todoNoArgs.test.js",
+          "sha256": "02be680a85c6ea540f95ad2c7dd9d26761ffc8191478e66be00b753bcc1a9416"
+        }
+      },
+      "changes": []
+    },
+    "test-todo-todoNonString": {
+      "upstream": "jest",
+      "files": {
+        "__tests__/todoNonString.test.js": {
+          "from": "e2e/test-todo/__tests__/todoNonString.test.js",
+          "sha256": "a54a301f57e4e73f7dfb85340d978bb601eb0530e7b0ff6e8b2769d96dc9411b"
+        }
+      },
+      "changes": []
+    },
+    "test-todo-verbose": {
+      "upstream": "jest",
+      "files": {
+        "__tests__/verbose.test.js": {
+          "from": "e2e/test-todo/__tests__/verbose.test.js",
+          "sha256": "56092ae8b5de7bfa4017fdbaa0daa5f3c610f8223c9a60ceb21a68964b4b5b50"
+        }
+      },
+      "changes": []
+    },
+    "unhandled-skip.ts": {
+      "upstream": "vitest",
+      "files": {
+        "unhandled-skip.test.ts": {
+          "from": "test/core/test/unhandled-skip.test.ts",
+          "sha256": "2318264fb310090f0cf70793e661a95e451c6ccca635dc95e8fd455c2f343735"
+        }
+      },
+      "changes": [
+        "package.json is {\"type\": \"module\"}, as test/core/package.json declares"
+      ]
+    }
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "vitest": {
+    "why": "test.todo() with no title: Jest fails the file; Vitest records a todo named 'undefined'.",
+    "verdicts": {
+      "__tests__/todoNoArgs.test.js": {
+        "(file)": [
+          "fail",
+          "pass"
+        ],
+        "undefined": [
+          null,
+          "todo"
+        ]
+      }
+    }
+  },
+  "bun": {
+    "why": "test.todo() with no title: Jest fails the file; Bun accepts it and reports nothing.",
+    "verdicts": {
+      "__tests__/todoNoArgs.test.js": {
+        "(file)": [
+          "fail",
+          "pass"
+        ]
+      }
+    }
+  }
+}

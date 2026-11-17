@@ -1,0 +1,13 @@
+{
+  "bun": {
+    "why": "A describe that holds hooks and only an empty describe: Jest fails the file; Bun accepts it.",
+    "verdicts": {
+      "__tests__/hookInEmptyNestedDescribe.test.js": {
+        "(file)": [
+          "fail",
+          "pass"
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,357 @@
+{
+  "bun": {
+    "why": "Bun 1.4.2 doesn't format .each titles: %s, %p, %j and $name stay as written, in its console output as well as its report. Bun misreads tagged-template .each tables: it runs more rows than written, with undefined values, so an assertion comparing two cells compares undefined with undefined and passes. Here the extra template rows fail (their undefined values reach a.val and an addition). Bun also passes a row that isn't an array to the callback as is, where Vitest spreads it, and gives tests no context object, so ({ expect }) => ... finds no expect.",
+    "verdicts": {
+      "each.test.ts": {
+        "(file)": [
+          "pass",
+          "fail"
+        ],
+        "%s (describe.each 1d) › 0 is a number (describe.each 1d)": [
+          null,
+          "pass"
+        ],
+        "%s (describe.each 1d) › 1 is a number (describe.each 1d)": [
+          null,
+          "pass"
+        ],
+        "%s (describe.each 1d) › 2 is a number (describe.each 1d)": [
+          null,
+          "pass"
+        ],
+        "($a && $b) -> $expected": [
+          null,
+          "pass"
+        ],
+        "($a && $b) -> $expected [2]": [
+          null,
+          "pass"
+        ],
+        "($a && $b) -> $expected [3]": [
+          null,
+          "pass"
+        ],
+        "($a && $b) -> $expected [4]": [
+          null,
+          "pass"
+        ],
+        "($a && $b) -> $expected [5]": [
+          null,
+          "fail"
+        ],
+        "($a && $b) -> $expected [6]": [
+          null,
+          "fail"
+        ],
+        "($a && $b) -> $expected [7]": [
+          null,
+          "fail"
+        ],
+        "($a && $b) -> $expected [8]": [
+          null,
+          "fail"
+        ],
+        "(true && true) -> true": [
+          "pass",
+          null
+        ],
+        "({ val: 1 } && { val: 2 }) -> 3": [
+          "pass",
+          null
+        ],
+        "0 (describe.each 1d) › 0 is a number (describe.each 1d)": [
+          "pass",
+          null
+        ],
+        "1 (describe.each 1d) › 1 is a number (describe.each 1d)": [
+          "pass",
+          null
+        ],
+        "2 (describe.each 1d) › 2 is a number (describe.each 1d)": [
+          "pass",
+          null
+        ],
+        "context with each - concurrent › block › numbered test": [
+          "pass",
+          "fail"
+        ],
+        "context with each - concurrent › block › numbered test [2]": [
+          "pass",
+          "fail"
+        ],
+        "context with each - concurrent › block › numbered test [3]": [
+          "pass",
+          "fail"
+        ],
+        "describe template string add($a, $b) › returns undefined": [
+          null,
+          "fail"
+        ],
+        "describe template string add($a, $b) › returns undefined [10]": [
+          null,
+          "fail"
+        ],
+        "describe template string add($a, $b) › returns undefined [11]": [
+          null,
+          "fail"
+        ],
+        "describe template string add($a, $b) › returns undefined [12]": [
+          null,
+          "fail"
+        ],
+        "describe template string add($a, $b) › returns undefined [13]": [
+          null,
+          "fail"
+        ],
+        "describe template string add($a, $b) › returns undefined [14]": [
+          null,
+          "fail"
+        ],
+        "describe template string add($a, $b) › returns undefined [15]": [
+          null,
+          "fail"
+        ],
+        "describe template string add($a, $b) › returns undefined [16]": [
+          null,
+          "fail"
+        ],
+        "describe template string add($a, $b) › returns undefined [2]": [
+          null,
+          "fail"
+        ],
+        "describe template string add($a, $b) › returns undefined [3]": [
+          null,
+          "fail"
+        ],
+        "describe template string add($a, $b) › returns undefined [4]": [
+          null,
+          "fail"
+        ],
+        "describe template string add($a, $b) › returns undefined [5]": [
+          null,
+          "fail"
+        ],
+        "describe template string add($a, $b) › returns undefined [6]": [
+          null,
+          "fail"
+        ],
+        "describe template string add($a, $b) › returns undefined [7]": [
+          null,
+          "fail"
+        ],
+        "describe template string add($a, $b) › returns undefined [8]": [
+          null,
+          "fail"
+        ],
+        "describe template string add($a, $b) › returns undefined [9]": [
+          null,
+          "fail"
+        ],
+        "describe template string add('a', 'b') › returns ab": [
+          "pass",
+          null
+        ],
+        "describe template string add(1, 1) › returns 2": [
+          "pass",
+          null
+        ],
+        "describe template string add([], 'b') › returns b": [
+          "pass",
+          null
+        ],
+        "describe template string add({ asd: 1 }, 'b') › returns [object Object]b": [
+          "pass",
+          null
+        ],
+        "describe template string add({}, 'b') › returns [object Object]b": [
+          "pass",
+          null
+        ],
+        "not all arguments are array describe.each › null is null › null is null [2]": [
+          "pass",
+          "fail"
+        ],
+        "not all arguments are array test.each › matches results [2]": [
+          "pass",
+          "fail"
+        ],
+        "return a promise like result $": [
+          null,
+          "pass"
+        ],
+        "return a promise like result $ [2]": [
+          null,
+          "pass"
+        ],
+        "return a promise like result 1 [2]": [
+          "pass",
+          null
+        ],
+        "return a promise like result 2": [
+          "pass",
+          null
+        ],
+        "returns $expected when $a is added $b": [
+          null,
+          "fail"
+        ],
+        "returns $expected when $a is added $b [10]": [
+          null,
+          "fail"
+        ],
+        "returns $expected when $a is added $b [11]": [
+          null,
+          "fail"
+        ],
+        "returns $expected when $a is added $b [12]": [
+          null,
+          "fail"
+        ],
+        "returns $expected when $a is added $b [13]": [
+          null,
+          "fail"
+        ],
+        "returns $expected when $a is added $b [14]": [
+          null,
+          "fail"
+        ],
+        "returns $expected when $a is added $b [15]": [
+          null,
+          "fail"
+        ],
+        "returns $expected when $a is added $b [16]": [
+          null,
+          "fail"
+        ],
+        "returns $expected when $a is added $b [2]": [
+          null,
+          "fail"
+        ],
+        "returns $expected when $a is added $b [3]": [
+          null,
+          "fail"
+        ],
+        "returns $expected when $a is added $b [4]": [
+          null,
+          "fail"
+        ],
+        "returns $expected when $a is added $b [5]": [
+          null,
+          "fail"
+        ],
+        "returns $expected when $a is added $b [6]": [
+          null,
+          "fail"
+        ],
+        "returns $expected when $a is added $b [7]": [
+          null,
+          "fail"
+        ],
+        "returns $expected when $a is added $b [8]": [
+          null,
+          "fail"
+        ],
+        "returns $expected when $a is added $b [9]": [
+          null,
+          "fail"
+        ],
+        "returns $expected when $a.val is added $b": [
+          null,
+          "fail"
+        ],
+        "returns $expected when $a.val is added $b [10]": [
+          null,
+          "fail"
+        ],
+        "returns $expected when $a.val is added $b [2]": [
+          null,
+          "fail"
+        ],
+        "returns $expected when $a.val is added $b [3]": [
+          null,
+          "fail"
+        ],
+        "returns $expected when $a.val is added $b [4]": [
+          null,
+          "fail"
+        ],
+        "returns $expected when $a.val is added $b [5]": [
+          null,
+          "fail"
+        ],
+        "returns $expected when $a.val is added $b [6]": [
+          null,
+          "fail"
+        ],
+        "returns $expected when $a.val is added $b [7]": [
+          null,
+          "fail"
+        ],
+        "returns $expected when $a.val is added $b [8]": [
+          null,
+          "fail"
+        ],
+        "returns $expected when $a.val is added $b [9]": [
+          null,
+          "fail"
+        ],
+        "returns '1b' when 1 is added 'b'": [
+          "pass",
+          null
+        ],
+        "returns '2b' when 2 is added 'b'": [
+          "pass",
+          null
+        ],
+        "returns '3b' when 3 is added 'b'": [
+          "pass",
+          null
+        ],
+        "returns '[object Object]b' when { asd: 1 } is added 'b'": [
+          "pass",
+          null
+        ],
+        "returns '[object Object]b' when {} is added 'b'": [
+          "pass",
+          null
+        ],
+        "returns 'ab' when 'a' is added 'b'": [
+          "pass",
+          null
+        ],
+        "returns 'b' when [] is added 'b'": [
+          "pass",
+          null
+        ],
+        "returns 2 when 1 is added 1": [
+          "pass",
+          null
+        ],
+        "the number of the test case is $": [
+          null,
+          "pass"
+        ],
+        "the number of the test case is $ [2]": [
+          null,
+          "pass"
+        ],
+        "the number of the test case is $ [3]": [
+          null,
+          "pass"
+        ],
+        "the number of the test case is 1": [
+          "pass",
+          null
+        ],
+        "the number of the test case is 2": [
+          "pass",
+          null
+        ],
+        "the number of the test case is 3": [
+          "pass",
+          null
+        ]
+      }
+    }
+  }
+}

@@ -13,6 +13,7 @@ opal-runtime.workspace = true
 opal-bundler.workspace = true
 # `opal x` names each package's install folder by a hash of its spec.
 blake3.workspace = true
+opal-test.workspace = true
 clap.workspace = true
 indicatif.workspace = true
 console.workspace = true

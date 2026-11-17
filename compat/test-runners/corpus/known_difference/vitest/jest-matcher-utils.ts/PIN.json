@@ -1,0 +1,17 @@
+{
+  "bun": {
+    "why": "Bun gives custom matchers no this.utils.diff.",
+    "verdicts": {
+      "jest-matcher-utils.test.ts": {
+        "(file)": [
+          "pass",
+          "fail"
+        ],
+        "jest-matcher-utils › diff": [
+          "pass",
+          "fail"
+        ]
+      }
+    }
+  }
+}
