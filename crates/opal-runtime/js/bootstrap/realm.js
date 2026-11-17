@@ -20,6 +20,8 @@
 
   const {
     ArrayPrototypeForEach,
+    ArrayPrototypeIncludes,
+    DateNow,
     ObjectDefineProperty,
     ObjectKeys,
     SafeMap,
@@ -389,9 +391,11 @@
       const kFsStatsFieldsNumber = 18;
       const statValues = new Float64Array(kFsStatsFieldsNumber * 2);
       const bigintStatValues = new BigInt64Array(kFsStatsFieldsNumber * 2);
-      const statFsValues = new Float64Array(7);
-      const bigintStatFsValues = new BigInt64Array(7);
-      ops.fs_setup(statValues, bigintStatValues, statFsValues, bigintStatFsValues, requireBuiltin("buffer").Buffer.prototype);
+      // StatFs's fields (node_file.h's FsStatFsOffset).
+      const statFsValues = new Float64Array(8);
+      const bigintStatFsValues = new BigInt64Array(8);
+      useBuffers();
+      ops.fs_setup(statValues, bigintStatValues, statFsValues, bigintStatFsValues);
       const unsupported = (what) =>
         class {
           constructor() {
@@ -400,6 +404,48 @@
             throw error;
           }
         };
+      const kUsePromises = internalBinding("symbols").fs_use_promises_symbol;
+      // What node_file.cc's FileHandle gives lib/internal/fs/promises.js,
+      // which wraps it: the descriptor, and closing it (a promise) or
+      // giving it up. Its stream methods serve http2 alone.
+      let nextAsyncId = 1;
+      class FileHandle {
+        #fd;
+        #asyncId = nextAsyncId++;
+        constructor(fd) {
+          this.#fd = fd;
+        }
+        get fd() {
+          return this.#fd;
+        }
+        getAsyncId() {
+          return this.#asyncId;
+        }
+        close() {
+          const fd = this.#fd;
+          this.#fd = -1;
+          return ops.fs_close(fd, kUsePromises);
+        }
+        releaseFD() {
+          const fd = this.#fd;
+          this.#fd = -1;
+          return fd;
+        }
+      }
+      // node_dir.cc's DirHandle, around an open directory's id.
+      class DirHandle {
+        #id;
+        constructor(id) {
+          this.#id = id;
+        }
+        read(encoding, bufferSize, req) {
+          return ops.fs_dir_read(this.#id, encoding, bufferSize, req);
+        }
+        close(req) {
+          return ops.fs_dir_close(this.#id, req);
+        }
+      }
+      ops.fs_handles(FileHandle, DirHandle);
       // The request a callback-form call passes the binding. Making one is
       // fine; the binding refuses it once it has checked the arguments.
       class FSReqCallback {
@@ -413,13 +459,20 @@
         bigintStatValues,
         statFsValues,
         bigintStatFsValues,
-        kUsePromises: internalBinding("symbols").fs_use_promises_symbol,
+        kUsePromises,
         FSReqCallback,
-        FileHandle: unsupported("fs.promises"),
+        FileHandle,
+        DirHandle,
         StatWatcher: unsupported("fs.watchFile"),
       };
       for (const name of ObjectKeys(ops)) {
-        if (StringPrototypeStartsWith(name, "fs_") && name !== "fs_setup" && name !== "fs_constants") {
+        if (
+          StringPrototypeStartsWith(name, "fs_") &&
+          !ArrayPrototypeIncludes(
+            ["fs_setup", "fs_constants", "fs_handles", "fs_opendir", "fs_opendir_sync", "fs_dir_read", "fs_dir_close"],
+            name,
+          )
+        ) {
           binding[camelCase(StringPrototypeSlice(name, 3))] = ops[name];
         }
       }
@@ -471,7 +524,9 @@
         setDetachKey() {},
       };
     },
-    // DOMException, from Node's own per-context script for it.
+    // DOMException, from Node's own per-context script for it. There are no
+    // workers to post messages to, so nothing is deserialized, and Opal has
+    // no structuredClone yet.
     messaging: () => {
       const exports = {};
       const perIsolateSymbols = internalBinding("symbols");
@@ -482,13 +537,117 @@
         "perIsolateSymbols",
       ]);
       script(exports, primordials, privateSymbols, perIsolateSymbols);
-      return { DOMException: exports.DOMException };
+      return {
+        DOMException: exports.DOMException,
+        setDeserializerCreateObjectFunction() {},
+        structuredClone() {
+          const error = new Error("Opal does not implement structuredClone yet");
+          error.code = "ERR_OPAL_UNIMPLEMENTED";
+          throw error;
+        },
+      };
     },
-    // Indexed by Node's `enum encoding` (src/node.h).
+    // src/string_decoder.cc's, ported (ops/string_decoder.rs): the decoder's
+    // state is a Buffer of kSize bytes, laid out as the C++ class is.
     string_decoder: () => ({
+      // Indexed by Node's `enum encoding` (src/node.h).
       encodings: ["ascii", "utf8", "base64", "utf16le", "latin1", "hex", "buffer", "base64url"],
+      kIncompleteCharactersStart: 0,
+      kIncompleteCharactersEnd: 4,
+      kMissingBytes: 4,
+      kBufferedBytes: 5,
+      kEncodingField: 6,
+      kNumFields: 7,
+      kSize: 7,
+      decode: ops.string_decoder_decode,
+      flush: ops.string_decoder_flush,
+    }),
+    // fs.opendir's directory handles (node_dir.cc).
+    fs_dir: () => ({
+      opendir: ops.fs_opendir,
+      opendirSync: ops.fs_opendir_sync,
+      DirHandle: internalBinding("fs").DirHandle,
+    }),
+    // src/node_os.cc's, ported with what libuv does for it (ops/os.rs).
+    // userInfo's strings can be Buffers.
+    os: () => ({
+      getHostname: ops.os_hostname,
+      getLoadAvg: ops.os_load_avg,
+      getUptime: ops.os_uptime,
+      getTotalMem: ops.os_total_memory,
+      getFreeMem: ops.os_free_memory,
+      getCPUs: ops.os_cpus,
+      getInterfaceAddresses: ops.os_interface_addresses,
+      getHomeDirectory: ops.os_home_directory,
+      getUserInfo(options, ctx) {
+        useBuffers();
+        return ops.os_user_info(options, ctx);
+      },
+      setPriority: ops.os_set_priority,
+      getPriority: ops.os_get_priority,
+      getAvailableParallelism: ops.os_available_parallelism,
+      getOSInformation: ops.os_information,
+      isBigEndian: new Uint8Array(new Uint16Array([1]).buffer)[0] === 0,
+    }),
+    // src/node_perf.cc's clock and time origin, which performance.now() and
+    // an Event's timeStamp read: the run's start, by the monotonic clock and
+    // the wall clock.
+    performance: () => {
+      const elapsedNs = ops.hrtime() - internals.startNs;
+      const milestones = new Float64Array(8).fill(-1);
+      milestones[0] = (DateNow() - Number(elapsedNs) / 1e6) * 1e3;
+      milestones[1] = Number(internals.startNs);
+      return {
+        constants: {
+          NODE_PERFORMANCE_MILESTONE_TIME_ORIGIN_TIMESTAMP: 0,
+          NODE_PERFORMANCE_MILESTONE_TIME_ORIGIN: 1,
+          NODE_PERFORMANCE_MILESTONE_ENVIRONMENT: 2,
+          NODE_PERFORMANCE_MILESTONE_NODE_START: 3,
+          NODE_PERFORMANCE_MILESTONE_V8_START: 4,
+          NODE_PERFORMANCE_MILESTONE_LOOP_START: 5,
+          NODE_PERFORMANCE_MILESTONE_LOOP_EXIT: 6,
+          NODE_PERFORMANCE_MILESTONE_BOOTSTRAP_COMPLETE: 7,
+        },
+        milestones,
+        now: () => Number(ops.hrtime() - internals.startNs) / 1e6,
+      };
+    },
+    // src/node_credentials.cc's.
+    credentials: () => ({
+      safeGetenv: ops.safe_getenv,
+      getTempDir: ops.temp_dir,
+      implementsPosixCredentials: true,
+      getuid: () => ops.credentials()[0],
+      geteuid: () => ops.credentials()[1],
+      getgid: () => ops.credentials()[2],
+      getegid: () => ops.credentials()[3],
+      getgroups: () => ops.credentials()[4],
+    }),
+    // fs.watch needs the event loop to watch files, which it doesn't yet.
+    fs_event_wrap: () => ({
+      FSEvent: class FSEvent {
+        constructor() {
+          throw watchUnimplemented();
+        }
+      },
     }),
   };
+
+  // Node's setBufferPrototype, which its bootstrap calls: done here by the
+  // first binding whose natives make Buffers, so that a script that makes
+  // none doesn't load node:buffer.
+  let buffersUsed = false;
+  function useBuffers() {
+    if (buffersUsed) return;
+    buffersUsed = true;
+    ops.set_buffer_prototype(requireBuiltin("buffer").Buffer.prototype);
+  }
+
+  function watchUnimplemented() {
+    const error = new Error("Opal does not implement fs.watch yet");
+    error.code = "ERR_OPAL_UNIMPLEMENTED";
+    return error;
+  }
 
   const bindings = new SafeMap();
   function internalBinding(name) {
@@ -524,6 +683,14 @@
     module.loaded = true;
     // What Node's startup does with a module once it exists (pre_execution).
     if (id === "internal/util/debuglog") module.exports.initializeDebugEnv(proc.env.NODE_DEBUG);
+    // Linux's recursive fs.watch watches each file with fs.watch and ignores
+    // what that throws, so without fs.watch it would silently watch nothing.
+    if (id === "internal/fs/recursive_watch") {
+      const { kFSWatchStart } = requireBuiltin("internal/fs/watchers");
+      module.exports.FSWatcher.prototype[kFSWatchStart] = function () {
+        throw watchUnimplemented();
+      };
+    }
     return module.exports;
   }
 

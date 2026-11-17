@@ -1,0 +1,8873 @@
+{
+ "date": "2026-10-26T09:35:41",
+ "node": "v24.19.0",
+ "opal": "opal 0.4.1",
+ "selection": [
+  "test-abort*.js",
+  "test-assert*.js",
+  "test-async-local-storage*.js",
+  "test-buffer-*.js",
+  "test-console-*.js",
+  "test-event-emitter-*.js",
+  "test-event-target*.js",
+  "test-eventtarget*.js",
+  "test-events-*.js",
+  "test-fs-*.js",
+  "test-module-*.js",
+  "test-next-tick*.js",
+  "test-os*.js",
+  "test-path*.js",
+  "test-process-*.js",
+  "test-require-*.js",
+  "test-stream*.js",
+  "test-string-decoder*.js",
+  "test-timers*.js",
+  "test-util-format*.js",
+  "test-util-inspect*.js",
+  "test-util-types*.js",
+  "test-util.js",
+  "test-whatwg-events*.js"
+ ],
+ "common_edits": [
+  "common/index.js: known global structuredClone -> globalThis.structuredClone",
+  "common/index.js: known global fetch -> globalThis.fetch",
+  "common/assertSnapshot.js: require('url') -> the stand-in",
+  "common/benchmark.js: require('child_process') -> the stand-in",
+  "common/child_process.js: require('child_process') -> the stand-in",
+  "common/crypto.js: require('child_process') -> the stand-in",
+  "common/debugger.js: require('child_process') -> the stand-in",
+  "common/dns.js: require('net') -> the stand-in",
+  "common/fixtures.js: require('url') -> the stand-in",
+  "common/index.js: require('child_process') -> the stand-in",
+  "common/index.js: require('net') -> the stand-in",
+  "common/index.js: require('worker_threads') -> the stand-in",
+  "common/inspector-helper.js: require('child_process') -> the stand-in",
+  "common/inspector-helper.js: require('url') -> the stand-in",
+  "common/net.js: require('net') -> the stand-in",
+  "common/proxy-server.js: require('child_process') -> the stand-in",
+  "common/proxy-server.js: require('net') -> the stand-in",
+  "common/report.js: require('net') -> the stand-in",
+  "common/require-as.js: require('child_process') -> the stand-in",
+  "common/require-as.js: require('worker_threads') -> the stand-in",
+  "common/snapshot.js: require('child_process') -> the stand-in",
+  "common/tls.js: require('net') -> the stand-in",
+  "common/tmpdir.js: require('child_process') -> the stand-in",
+  "common/tmpdir.js: require('url') -> the stand-in",
+  "common/tmpdir.js: require('worker_threads') -> the stand-in",
+  "common/v8-max-heap-size-option.js: require('child_process') -> the stand-in",
+  "common/watch.js: require('child_process') -> the stand-in",
+  "common/wpt.js: require('worker_threads') -> the stand-in"
+ ],
+ "results": {
+  "test-abort-controller-any-timeout.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:test yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-abortcontroller-internal.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:test yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-abortcontroller.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:test yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-aborted-util.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:test yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-abortsignal-cloneable.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:test yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-assert-async.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-assert-calltracker-calls.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "(node:3757824) [DEP0173] DeprecationWarning: assert.CallTracker is deprecated.",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": "(node:3757756) [DEP0173] DeprecationWarning: assert.CallTracker is deprecated."
+   }
+  },
+  "test-assert-calltracker-getCalls.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:test yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": "(node:3757782) [DEP0173] DeprecationWarning: assert.CallTracker is deprecated."
+   }
+  },
+  "test-assert-calltracker-report.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "(node:3757853) [DEP0173] DeprecationWarning: assert.CallTracker is deprecated.",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": "(node:3757830) [DEP0173] DeprecationWarning: assert.CallTracker is deprecated."
+   }
+  },
+  "test-assert-calltracker-verify.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "(node:3757860) [DEP0173] DeprecationWarning: assert.CallTracker is deprecated.",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": "(node:3757837) [DEP0173] DeprecationWarning: assert.CallTracker is deprecated."
+   }
+  },
+  "test-assert-checktag.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:test yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-assert-class-destructuring.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:test yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-assert-class.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:test yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-assert-deep-with-error.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:test yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-assert-deep.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:test yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-assert-esm-cjs-message-verify.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:test yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-assert-fail-deprecation.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:test yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-assert-fail.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:test yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-assert-first-line.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:test yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-assert-if-error.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:test yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-assert-myers-diff.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Cannot find module 'internal/assert/myers_diff'",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-assert-partial-deep-equal.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:vm yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-assert-typedarray-deepequal.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:test yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-assert.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:test yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-async-local-storage-bind.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-async-local-storage-contexts.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:vm yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-async-local-storage-deep-stack.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-async-local-storage-enter-with.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-async-local-storage-exit-does-not-leak.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-async-local-storage-http-agent.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:http yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-async-local-storage-http-multiclients.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:http yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-async-local-storage-http-parser-leak.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Cannot find module '_http_common'",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-async-local-storage-isolation.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-async-local-storage-snapshot.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-async-local-storage-weak-asyncwrap-leak.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:zlib yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": "(node:3758109) ExperimentalWarning: v8.queryObjects() is an experimental feature and might change at any time"
+   }
+  },
+  "test-buffer-alloc-unsafe-is-initialized-with-zero-fill-flag.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-buffer-alloc-unsafe-is-uninitialized.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-buffer-alloc.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:vm yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": "(node:3758131) [DEP0005] DeprecationWarning: Buffer() is deprecated due to security and usability issues. Please use the Buffer.alloc(), Buffer.allocUnsafe(), or Buffer.from() methods instead."
+   }
+  },
+  "test-buffer-arraybuffer.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "(node:3758166) [DEP0005] DeprecationWarning: Buffer() is deprecated due to security and usability issues. Please use the Buffer.alloc(), Buffer.allocUnsafe(), or Buffer.from() methods instead.",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": "(node:3758139) [DEP0005] DeprecationWarning: Buffer() is deprecated due to security and usability issues. Please use the Buffer.alloc(), Buffer.allocUnsafe(), or Buffer.from() methods instead."
+   }
+  },
+  "test-buffer-ascii.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-buffer-backing-arraybuffer.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Cannot find module 'internal/test/binding'",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": "(node:3758197) internal/test/binding: These APIs are for internal testing only. Do not use them."
+   }
+  },
+  "test-buffer-badhex.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-buffer-bigint64.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-buffer-bytelength.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:vm yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": "(node:3758181) [DEP0005] DeprecationWarning: Buffer() is deprecated due to security and usability issues. Please use the Buffer.alloc(), Buffer.allocUnsafe(), or Buffer.from() methods instead."
+   }
+  },
+  "test-buffer-compare-offset.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-buffer-compare.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-buffer-concat.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-buffer-constants.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-buffer-constructor-deprecation-error.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "(node:3758276) [DEP0005] DeprecationWarning: Buffer() is deprecated due to security and usability issues. Please use the Buffer.alloc(), Buffer.allocUnsafe(), or Buffer.from() methods instead.",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": "(node:3758234) [DEP0005] DeprecationWarning: Buffer() is deprecated due to security and usability issues. Please use the Buffer.alloc(), Buffer.allocUnsafe(), or Buffer.from() methods instead."
+   }
+  },
+  "test-buffer-constructor-node-modules-paths.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:child_process yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-buffer-constructor-node-modules.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: child_process.spawnSync: node:child_process is not in Opal yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-buffer-constructor-outside-node-modules.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:vm yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-buffer-copy.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-buffer-equals.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-buffer-failed-alloc-typed-arrays.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "(node:3758338) [DEP0005] DeprecationWarning: Buffer() is deprecated due to security and usability issues. Please use the Buffer.alloc(), Buffer.allocUnsafe(), or Buffer.from() methods instead.",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": "(node:3758294) [DEP0005] DeprecationWarning: Buffer() is deprecated due to security and usability issues. Please use the Buffer.alloc(), Buffer.allocUnsafe(), or Buffer.from() methods instead."
+   }
+  },
+  "test-buffer-fakes.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-buffer-fill.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Cannot find module 'internal/errors'",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": "(node:3758393) internal/test/binding: These APIs are for internal testing only. Do not use them."
+   }
+  },
+  "test-buffer-from.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:vm yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-buffer-generic-methods.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-buffer-includes.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-buffer-indexof.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-buffer-inheritance.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-buffer-inspect.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "(node:3758480) [DEP0030] DeprecationWarning: SlowBuffer() is deprecated. Please use Buffer.allocUnsafeSlow()",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": "(node:3758436) [DEP0030] DeprecationWarning: SlowBuffer() is deprecated. Please use Buffer.allocUnsafeSlow()"
+   }
+  },
+  "test-buffer-isascii.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "TypeError: TextEncoder is not a constructor",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-buffer-isencoding.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-buffer-isutf8-isascii-fast.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "SyntaxError: Unexpected token '%'",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-buffer-isutf8.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "TypeError: TextEncoder is not a constructor",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-buffer-iterator.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-buffer-new.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "(node:3758535) [DEP0005] DeprecationWarning: Buffer() is deprecated due to security and usability issues. Please use the Buffer.alloc(), Buffer.allocUnsafe(), or Buffer.from() methods instead.",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": "(node:3758496) [DEP0005] DeprecationWarning: Buffer() is deprecated due to security and usability issues. Please use the Buffer.alloc(), Buffer.allocUnsafe(), or Buffer.from() methods instead."
+   }
+  },
+  "test-buffer-no-negative-allocation.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "(node:3758536) [DEP0005] DeprecationWarning: Buffer() is deprecated due to security and usability issues. Please use the Buffer.alloc(), Buffer.allocUnsafe(), or Buffer.from() methods instead.",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": "(node:3758497) [DEP0005] DeprecationWarning: Buffer() is deprecated due to security and usability issues. Please use the Buffer.alloc(), Buffer.allocUnsafe(), or Buffer.from() methods instead."
+   }
+  },
+  "test-buffer-nopendingdep-map.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-buffer-of-no-deprecation.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-buffer-over-max-length.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "(node:3758590) [DEP0005] DeprecationWarning: Buffer() is deprecated due to security and usability issues. Please use the Buffer.alloc(), Buffer.allocUnsafe(), or Buffer.from() methods instead.",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": "(node:3758547) [DEP0005] DeprecationWarning: Buffer() is deprecated due to security and usability issues. Please use the Buffer.alloc(), Buffer.allocUnsafe(), or Buffer.from() methods instead."
+   }
+  },
+  "test-buffer-parent-property.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "(node:3758598) [DEP0005] DeprecationWarning: Buffer() is deprecated due to security and usability issues. Please use the Buffer.alloc(), Buffer.allocUnsafe(), or Buffer.from() methods instead.",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": "(node:3758565) [DEP0005] DeprecationWarning: Buffer() is deprecated due to security and usability issues. Please use the Buffer.alloc(), Buffer.allocUnsafe(), or Buffer.from() methods instead."
+   }
+  },
+  "test-buffer-pending-deprecation.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "(node:3758631) [DEP0005] DeprecationWarning: Buffer() is deprecated due to security and usability issues. Please use the Buffer.alloc(), Buffer.allocUnsafe(), or Buffer.from() methods instead.",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-buffer-pool-untransferable.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:worker_threads yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-buffer-prototype-inspect.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-buffer-read.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-buffer-readdouble.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-buffer-readfloat.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-buffer-readint.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-buffer-readuint.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-buffer-resizable.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:test yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-buffer-safe-unsafe.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "(node:3758703) [DEP0005] DeprecationWarning: Buffer() is deprecated due to security and usability issues. Please use the Buffer.alloc(), Buffer.allocUnsafe(), or Buffer.from() methods instead.",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": "(node:3758658) [DEP0005] DeprecationWarning: Buffer() is deprecated due to security and usability issues. Please use the Buffer.alloc(), Buffer.allocUnsafe(), or Buffer.from() methods instead."
+   }
+  },
+  "test-buffer-set-inspect-max-bytes.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-buffer-sharedarraybuffer.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-buffer-slice.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "(node:3758743) [DEP0005] DeprecationWarning: Buffer() is deprecated due to security and usability issues. Please use the Buffer.alloc(), Buffer.allocUnsafe(), or Buffer.from() methods instead.",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": "(node:3758704) [DEP0005] DeprecationWarning: Buffer() is deprecated due to security and usability issues. Please use the Buffer.alloc(), Buffer.allocUnsafe(), or Buffer.from() methods instead."
+   }
+  },
+  "test-buffer-slow.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "(node:3758753) [DEP0030] DeprecationWarning: SlowBuffer() is deprecated. Please use Buffer.allocUnsafeSlow()",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": "(node:3758715) [DEP0030] DeprecationWarning: SlowBuffer() is deprecated. Please use Buffer.allocUnsafeSlow()"
+   }
+  },
+  "test-buffer-swap-fast.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "SyntaxError: Unexpected token '%'",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-buffer-swap.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-buffer-tojson.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-buffer-tostring-4gb.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-buffer-tostring-range.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-buffer-tostring-rangeerror.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "(node:3761098) [DEP0005] DeprecationWarning: Buffer() is deprecated due to security and usability issues. Please use the Buffer.alloc(), Buffer.allocUnsafe(), or Buffer.from() methods instead.",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": "(node:3758757) [DEP0005] DeprecationWarning: Buffer() is deprecated due to security and usability issues. Please use the Buffer.alloc(), Buffer.allocUnsafe(), or Buffer.from() methods instead."
+   }
+  },
+  "test-buffer-tostring.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-buffer-write-fast.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Cannot find module 'internal/test/binding'",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-buffer-write.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-buffer-writedouble.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-buffer-writefloat.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-buffer-writeint.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-buffer-writeuint.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-buffer-zero-fill-cli.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "(node:3758895) [DEP0030] DeprecationWarning: SlowBuffer() is deprecated. Please use Buffer.allocUnsafeSlow()",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": "(node:3758862) [DEP0030] DeprecationWarning: SlowBuffer() is deprecated. Please use Buffer.allocUnsafeSlow()"
+   }
+  },
+  "test-buffer-zero-fill-reset.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-buffer-zero-fill.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "(node:3758882) [DEP0005] DeprecationWarning: Buffer() is deprecated due to security and usability issues. Please use the Buffer.alloc(), Buffer.allocUnsafe(), or Buffer.from() methods instead.",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": "(node:3758855) [DEP0005] DeprecationWarning: Buffer() is deprecated due to security and usability issues. Please use the Buffer.alloc(), Buffer.allocUnsafe(), or Buffer.from() methods instead."
+   }
+  },
+  "test-console-assign-undefined.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-console-async-write-error.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "TypeError: Console is not a constructor",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-console-clear.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "TypeError: Cannot set property isTTY of #<WriteStream> which has only a getter",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-console-count.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-console-diagnostics-channels.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:diagnostics_channel yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": "string { key: /value/, added: true } [ 1, 2, 3 ]"
+   }
+  },
+  "test-console-formatTime.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Cannot find module 'internal/util/debuglog'",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-console-group.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "TypeError: Console is not a constructor",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": "More of level 3"
+   }
+  },
+  "test-console-instance.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-console-issue-43095.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-console-log-stdio-broken-dest.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "TypeError: Console is not a constructor",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-console-log-throw-primitive.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "TypeError: Console is not a constructor",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-console-methods.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "TypeError: Console is not a constructor",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-console-no-swallow-stack-overflow.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-console-not-call-toString.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-console-self-assign.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-console-stdio-setters.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "fhqwhgads",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-console-sync-write-error.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "TypeError: Console is not a constructor",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-console-table.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "TypeError: Console is not a constructor",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-console-tty-colors-per-stream.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "TypeError: Console is not a constructor",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-console-tty-colors.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "TypeError: Console is not a constructor",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-console-with-frozen-intrinsics.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "foo",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": "foo"
+   }
+  },
+  "test-event-emitter-add-listeners.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-event-emitter-check-listener-leaks.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "(node:3759106) MaxListenersExceededWarning: Possible EventEmitter memory leak detected. 11 default listeners added to [EventEmitter]. MaxListeners is 10. Use emitter.setMaxListeners() to increase limi",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": "(node:3759062) MaxListenersExceededWarning: Possible EventEmitter memory leak detected. 11 default listeners added to [EventEmitter]. MaxListeners is 10. Use emitter.setMaxListeners() to increase limi"
+   }
+  },
+  "test-event-emitter-emit-context.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-event-emitter-error-monitor.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-event-emitter-errors.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-event-emitter-get-max-listeners.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-event-emitter-invalid-listener.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-event-emitter-listener-count.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-event-emitter-listeners-side-effects.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-event-emitter-listeners.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-event-emitter-max-listeners-warning-for-null.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "(node:3759198) MaxListenersExceededWarning: Possible EventEmitter memory leak detected. 2 null listeners added to [EventEmitter]. MaxListeners is 1. Use emitter.setMaxListeners() to increase limit",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-event-emitter-max-listeners-warning-for-symbol.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "(node:3759202) MaxListenersExceededWarning: Possible EventEmitter memory leak detected. 2 Symbol(symbol) listeners added to [EventEmitter]. MaxListeners is 1. Use emitter.setMaxListeners() to increase",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-event-emitter-max-listeners-warning.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "(node:3759203) MaxListenersExceededWarning: Possible EventEmitter memory leak detected. 2 event-type listeners added to [FakeInput]. MaxListeners is 1. Use emitter.setMaxListeners() to increase limit",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-event-emitter-max-listeners.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-event-emitter-method-names.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-event-emitter-modify-in-emit.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-event-emitter-no-error-provided-to-error-event.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:domain yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-event-emitter-num-args.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-event-emitter-once.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-event-emitter-prepend.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-event-emitter-remove-all-listeners.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-event-emitter-remove-listeners.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-event-emitter-set-max-listeners-side-effects.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-event-emitter-special-event-names.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-event-emitter-subclass.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-event-emitter-symbols.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-event-target.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-events-customevent.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Cannot find module 'internal/event_target'",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-events-getmaxlisteners.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-events-list.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-events-listener-count-with-listener.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-events-on-async-iterator.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Cannot find module 'internal/event_target'",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-events-once.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-events-static-geteventlisteners.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Cannot find module 'internal/event_target'",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-events-uncaught-exception-stack.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-eventtarget-brandcheck.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Cannot find module 'internal/event_target'",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-eventtarget-custom-inspect-does-not-throw.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-eventtarget-memoryleakwarning.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Cannot find module 'internal/event_target'",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-eventtarget-once-twice.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-eventtarget.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Cannot find module 'internal/event_target'",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-access.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Cannot find module 'internal/test/binding'",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": "(node:3759451) internal/test/binding: These APIs are for internal testing only. Do not use them."
+   }
+  },
+  "test-fs-append-file-flush.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:test yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-append-file-sync.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-append-file.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-assert-encoding-error.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-buffer.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-buffertype-writesync.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-chmod-mask.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-chmod.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-chown-negative-one.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-chown-type-check.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-close-errors.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-close.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-constants.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": "(node:3759580) [DEP0176] DeprecationWarning: fs.F_OK is deprecated, use fs.constants.F_OK instead"
+   }
+  },
+  "test-fs-copyfile-respect-permissions.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-copyfile.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Cannot find module 'internal/test/binding'",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": "(node:3759619) internal/test/binding: These APIs are for internal testing only. Do not use them."
+   }
+  },
+  "test-fs-cp-sync-dereference.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement this yet: it needs node:internal/fs/cp/cp, which Opal doesn't have",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-empty-readStream.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-error-messages.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Cannot find module 'internal/test/binding'",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": "(node:3759662) internal/test/binding: These APIs are for internal testing only. Do not use them."
+   }
+  },
+  "test-fs-exists.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "ReferenceError: URL is not defined",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": "(node:3759641) [DEP0187] DeprecationWarning: Passing invalid argument types to fs.existsSync is deprecated"
+   }
+  },
+  "test-fs-existssync-false.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-existssync-memleak-longpath.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Cannot find module 'internal/test/binding'",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": "(node:3759721) internal/test/binding: These APIs are for internal testing only. Do not use them."
+   }
+  },
+  "test-fs-fchmod.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-fchown-negative-one.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-fchown.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-filehandle-use-after-close.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-filehandle.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Cannot find module 'internal/test/binding'",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-fmap.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-fsync.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-internal-assertencoding.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-lchmod.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-lchown-negative-one.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-lchown.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-link.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-long-path.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-make-callback.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-makeStatsCallback.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-mkdir-mode-mask.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-mkdir-recursive-eaccess.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:child_process yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-mkdir-rmdir.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-mkdir.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:worker_threads yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-mkdtemp-prefix-check.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-mkdtemp.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: url.pathToFileURL: node:url is not in Opal yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": "(node:3759915) Warning: mkdtemp() templates ending with X are not portable. For details see: https://nodejs.org/api/fs.html"
+   }
+  },
+  "test-fs-mkdtempDisposableSync.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:worker_threads yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-negative-zero.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal implements only the synchronous fs functions yet, not fs.watchFile",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-non-number-arguments-throw.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-null-bytes.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "ReferenceError: URL is not defined",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-open-flags.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Cannot find module 'internal/fs/utils'",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-open-mode-mask.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-open-no-close.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-open-numeric-flags.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-open.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-opendir.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-operations-with-surrogate-pairs.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:test yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-options-immutable.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement fs.watch yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-promises-exists.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-promises-file-handle-aggregate-errors.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Cannot find module 'internal/fs/promises'",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-promises-file-handle-append-file.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-promises-file-handle-chmod.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-promises-file-handle-close-errors.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Cannot find module 'internal/fs/promises'",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-promises-file-handle-close.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "TypeError: globalThis.gc is not a function",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-promises-file-handle-dispose.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-promises-file-handle-op-errors.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Cannot find module 'internal/fs/promises'",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-promises-file-handle-read-worker.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:worker_threads yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-promises-file-handle-read.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-promises-file-handle-readFile.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-promises-file-handle-stat.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-promises-file-handle-stream.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:stream/consumers yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-promises-file-handle-sync.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-promises-file-handle-truncate.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-promises-file-handle-write.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-promises-file-handle-writeFile.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-promises-mkdtempDisposable.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:worker_threads yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-promises-readfile-buffer-option.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Cannot find module 'internal/test/binding'",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": "(node:3760333) internal/test/binding: These APIs are for internal testing only. Do not use them."
+   }
+  },
+  "test-fs-promises-readfile-empty.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-promises-readfile-with-fd.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-promises-readfile.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Cannot find module 'internal/test/binding'",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": "(node:3760378) internal/test/binding: These APIs are for internal testing only. Do not use them."
+   }
+  },
+  "test-fs-promises-statfs-validate-path.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-promises-watch-iterator.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement fs.watch yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-promises-watch.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement fs.watch yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-promises-write-optional-params.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-promises-writefile-typedarray.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-promises-writefile-with-fd.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-promises-writefile.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-promises.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-promisified.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-read-empty-buffer.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-read-file-assert-encoding.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-read-file-sync-hostname.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-read-file-sync.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-read-offset-null.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-read-optional-params.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-read-promises-optional-params.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-read-stream-autoClose.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-read-stream-concurrent-reads.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-read-stream-double-close.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-read-stream-encoding.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-read-stream-err.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-read-stream-fd-leak.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-read-stream-fd.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-read-stream-file-handle.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-read-stream-inherit.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-read-stream-patch-open.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "(node:3760701) [DEP0135] DeprecationWarning: ReadStream.prototype.open() is deprecated",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": "(node:3760662) [DEP0135] DeprecationWarning: ReadStream.prototype.open() is deprecated"
+   }
+  },
+  "test-fs-read-stream-pos.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-read-stream-resume.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-read-stream-throw-type-error.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-read-stream.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:child_process yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-read-type.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-read-zero-length.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-read.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-readSync-optional-params.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-readdir-buffer.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-readdir-pipe.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-readdir-recursive.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:test yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-readdir-stack-overflow.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-readdir-types-symlinks.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-readdir-types.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Cannot find module 'internal/test/binding'",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": "(node:3760833) internal/test/binding: These APIs are for internal testing only. Do not use them."
+   }
+  },
+  "test-fs-readdir-ucs2.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-readdir.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-readfile-buffer-option.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Cannot find module 'internal/test/binding'",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": "(node:3760872) internal/test/binding: These APIs are for internal testing only. Do not use them."
+   }
+  },
+  "test-fs-readfile-empty.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-readfile-eof.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:child_process yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-readfile-error.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:child_process yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-readfile-fd.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-readfile-flags.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-readfile-pipe-large.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:child_process yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-readfile-pipe.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:child_process yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-readfile-unlink.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-readfile-zero-byte-liar.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-readfile.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-readfilesync-enoent.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-readfilesync-pipe-large.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:child_process yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-readlink-type-check.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-readv-promises.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-readv-promisify.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-readv-sync.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-readv.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-ready-event-stream.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-realpath-buffer-encoding.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-realpath-native.js": {
+   "status": "node-fails",
+   "node": {
+    "status": "fail",
+    "code": 1,
+    "error": "Error: ENOENT: no such file or directory, realpath './test/parallel/test-fs-realpath-native.js'"
+   }
+  },
+  "test-fs-realpath-on-substed-drive.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-realpath-pipe.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:child_process yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-realpath.js": {
+   "status": "node-fails",
+   "node": {
+    "status": "fail",
+    "code": 1,
+    "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:"
+   }
+  },
+  "test-fs-rename-type-check.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-rm.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:url yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": "hint: Using 'master' as the name for the initial branch. This default branch name"
+   }
+  },
+  "test-fs-rmSync-special-char.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-rmdir-recursive-sync-warns-not-found.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "(node:3761260) [DEP0147] DeprecationWarning: In future versions of Node.js, fs.rmdir(path, { recursive: true }) will be removed. Use fs.rm(path, { recursive: true }) instead",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": "(node:3761226) [DEP0147] DeprecationWarning: In future versions of Node.js, fs.rmdir(path, { recursive: true }) will be removed. Use fs.rm(path, { recursive: true }) instead"
+   }
+  },
+  "test-fs-rmdir-recursive-sync-warns-on-file.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "(node:3761263) [DEP0147] DeprecationWarning: In future versions of Node.js, fs.rmdir(path, { recursive: true }) will be removed. Use fs.rm(path, { recursive: true }) instead",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": "(node:3761229) [DEP0147] DeprecationWarning: In future versions of Node.js, fs.rmdir(path, { recursive: true }) will be removed. Use fs.rm(path, { recursive: true }) instead"
+   }
+  },
+  "test-fs-rmdir-recursive-throws-not-found.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "(node:3761292) [DEP0147] DeprecationWarning: In future versions of Node.js, fs.rmdir(path, { recursive: true }) will be removed. Use fs.rm(path, { recursive: true }) instead",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": "(node:3761251) [DEP0147] DeprecationWarning: In future versions of Node.js, fs.rmdir(path, { recursive: true }) will be removed. Use fs.rm(path, { recursive: true }) instead"
+   }
+  },
+  "test-fs-rmdir-recursive-throws-on-file.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "(node:3761306) [DEP0147] DeprecationWarning: In future versions of Node.js, fs.rmdir(path, { recursive: true }) will be removed. Use fs.rm(path, { recursive: true }) instead",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": "(node:3761262) [DEP0147] DeprecationWarning: In future versions of Node.js, fs.rmdir(path, { recursive: true }) will be removed. Use fs.rm(path, { recursive: true }) instead"
+   }
+  },
+  "test-fs-rmdir-recursive-warns-not-found.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "(node:3761316) [DEP0147] DeprecationWarning: In future versions of Node.js, fs.rmdir(path, { recursive: true }) will be removed. Use fs.rm(path, { recursive: true }) instead",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": "(node:3761269) [DEP0147] DeprecationWarning: In future versions of Node.js, fs.rmdir(path, { recursive: true }) will be removed. Use fs.rm(path, { recursive: true }) instead"
+   }
+  },
+  "test-fs-rmdir-recursive-warns-on-file.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "(node:3761323) [DEP0147] DeprecationWarning: In future versions of Node.js, fs.rmdir(path, { recursive: true }) will be removed. Use fs.rm(path, { recursive: true }) instead",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": "(node:3761283) [DEP0147] DeprecationWarning: In future versions of Node.js, fs.rmdir(path, { recursive: true }) will be removed. Use fs.rm(path, { recursive: true }) instead"
+   }
+  },
+  "test-fs-rmdir-recursive.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Cannot find module 'internal/fs/utils'",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": "(node:3761317) [DEP0147] DeprecationWarning: In future versions of Node.js, fs.rmdir(path, { recursive: true }) will be removed. Use fs.rm(path, { recursive: true }) instead"
+   }
+  },
+  "test-fs-rmdir-type-check.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-sir-writes-alot.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-stat-abort-test.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:test yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-stat-bigint.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-stat.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "(node:3761394) [DEP0180] DeprecationWarning: fs.Stats constructor is deprecated.",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": "(node:3761361) [DEP0180] DeprecationWarning: fs.Stats constructor is deprecated."
+   }
+  },
+  "test-fs-statfs.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-stream-construct-compat-error-read.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-stream-construct-compat-error-write.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-stream-construct-compat-graceful-fs.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-stream-construct-compat-old-node.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-stream-destroy-emit-error.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-stream-double-close.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-stream-fs-options.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement this yet: it needs node:internal/streams/fast-utf8-stream, which Opal doesn't have",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-stream-options.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-symlink-buffer-path.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-symlink-dir-junction-relative.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-symlink-dir-junction.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-symlink-dir.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-symlink-longpath.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-symlink.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-sync-fd-leak.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Cannot find module 'internal/test/binding'",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": "(node:3761578) internal/test/binding: These APIs are for internal testing only. Do not use them."
+   }
+  },
+  "test-fs-syncwritestream.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:child_process yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-timestamp-parsing-error.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-truncate-clear-file-zero.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-truncate-sync.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-truncate.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-unlink-type-check.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-util-validateoffsetlength.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Cannot find module 'internal/fs/utils'",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-utils-get-dirents.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Cannot find module 'internal/fs/utils'",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": "(node:3761662) internal/test/binding: These APIs are for internal testing only. Do not use them."
+   }
+  },
+  "test-fs-utimes-y2K38.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:child_process yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-utimes.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:url yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-watch-abort-signal.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement fs.watch yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-watch-close-when-destroyed.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement fs.watch yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-watch-encoding.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement fs.watch yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-watch-enoent.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Cannot find module 'internal/test/binding'",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": "(node:3761735) internal/test/binding: These APIs are for internal testing only. Do not use them."
+   }
+  },
+  "test-fs-watch-file-enoent-after-deletion.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal implements only the synchronous fs functions yet, not fs.watchFile",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-watch-ignore-function.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement fs.watch yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-watch-ignore-glob.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement fs.watch yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-watch-ignore-invalid.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-watch-ignore-mixed.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement fs.watch yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-watch-ignore-recursive-glob-subdirectories.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement this yet: it needs node:internal/deps/minimatch/index, which Opal doesn't have",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-watch-ignore-recursive-glob.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement this yet: it needs node:internal/deps/minimatch/index, which Opal doesn't have",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-watch-ignore-recursive-mixed.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement this yet: it needs node:internal/deps/minimatch/index, which Opal doesn't have",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-watch-ignore-recursive-regexp.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement fs.watch yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-watch-ignore-regexp.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement fs.watch yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-watch-recursive-add-file-to-existing-subfolder.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement fs.watch yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-watch-recursive-add-file-to-new-folder.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement fs.watch yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-watch-recursive-add-file-with-url.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:url yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-watch-recursive-add-file.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement fs.watch yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-watch-recursive-add-folder.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement fs.watch yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-watch-recursive-assert-leaks.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement fs.watch yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-watch-recursive-delete-race.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Cannot find module 'internal/fs/watchers'",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-watch-recursive-delete.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement fs.watch yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-watch-recursive-linux-parallel-remove.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:child_process yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-watch-recursive-prefix-sibling.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement fs.watch yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-watch-recursive-promise.js": {
+   "status": "fail",
+   "code": 7,
+   "error": "Error: Opal does not implement fs.watch yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-watch-recursive-symlink.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement fs.watch yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-watch-recursive-sync-write.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement fs.watch yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-watch-recursive-update-file.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement fs.watch yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-watch-recursive-validate.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-watch-recursive-watch-file.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement fs.watch yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-watch-ref-unref.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement fs.watch yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-watch-stop-async.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal implements only the synchronous fs functions yet, not fs.watchFile",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-watch-stop-sync.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal implements only the synchronous fs functions yet, not fs.watchFile",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-watch.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement fs.watch yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-watchfile-bigint.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Cannot find module 'internal/fs/utils'",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-watchfile-ref-unref.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal implements only the synchronous fs functions yet, not fs.watchFile",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-watchfile.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal implements only the synchronous fs functions yet, not fs.watchFile",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": "(node:3762031) [DEP0180] DeprecationWarning: fs.Stats constructor is deprecated."
+   }
+  },
+  "test-fs-whatwg-url.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:worker_threads yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-write-buffer-large.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-write-buffer.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-write-file-buffer.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-write-file-flush.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:test yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-write-file-invalid-path.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-write-file-sync.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:worker_threads yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-write-file-typedarrays.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-write-file.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-write-negativeoffset.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-write-no-fd.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-write-optional-params.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-write-reuse-callback.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "TypeError: globalThis.gc is not a function",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-write-sigxfsz.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:child_process yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-write-stream-autoclose-option.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-write-stream-change-open.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-write-stream-close-without-callback.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-write-stream-double-close.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-write-stream-encoding.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-write-stream-end.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-write-stream-err.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "first write",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": "first write"
+   }
+  },
+  "test-fs-write-stream-file-handle-2.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-write-stream-file-handle.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-write-stream-flush.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:test yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-write-stream-fs.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-write-stream-patch-open.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:child_process yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": "(node:3762376) [DEP0135] DeprecationWarning: WriteStream.prototype.open() is deprecated"
+   }
+  },
+  "test-fs-write-stream-throw-type-error.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-write-stream.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-write-sync-optional-params.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-write-sync.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-write.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "AssertionError [ERR_ASSERTION]: Expected \"actual\" to be strictly unequal to:",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-writefile-with-fd.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-writestream-open-write.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-writesync-crash.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-writev-promises.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-writev-sync.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-fs-writev.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-module-builtin.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-module-cache.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Cannot find module '/tmp/opal-node-tests-3i_l9clk/opal/test/.tmp.test-module-cache.js/test-module-cache.json'",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-module-children.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:sys yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-module-circular-dependency-warning.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": "(node:3762526) Warning: Accessing non-existent property 'missingPropB' of module exports inside circular dependency"
+   }
+  },
+  "test-module-circular-symlinks.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": "(node:3762533) Warning: Accessing non-existent property 'b' of module exports inside circular dependency"
+   }
+  },
+  "test-module-create-require-multibyte.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: url.pathToFileURL: node:url is not in Opal yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-module-create-require.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: url.pathToFileURL: node:url is not in Opal yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-module-globalpaths-nodepath.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "TypeError: mod._initPaths is not a function",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-module-isBuiltin.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-module-loading-deprecated.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "(node:3762620) [DEP0128] DeprecationWarning: Invalid 'main' field in '/tmp/opal-node-tests-3i_l9clk/opal/test/fixtures/packages/missing-main/package.json' of 'doesnotexist.js'. Please either fix that ",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": "(node:3762582) [DEP0128] DeprecationWarning: Invalid 'main' field in '/tmp/opal-node-tests-3i_l9clk/node/test/fixtures/packages/missing-main/package.json' of 'doesnotexist.js'. Please either fix that "
+   }
+  },
+  "test-module-loading-error.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:child_process yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-module-loading-globalpaths.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:child_process yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": "Error: Cannot find module 'foo'"
+   }
+  },
+  "test-module-main-extension-lookup.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:child_process yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-module-main-fail.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:child_process yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-module-main-preserve-symlinks-fail.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:child_process yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": "Error: Cannot find module '/tmp/opal-node-tests-3i_l9clk/node/test/parallel/iDoNotExist'"
+   }
+  },
+  "test-module-multi-extensions.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Cannot find module '/tmp/opal-node-tests-3i_l9clk/opal/test/.tmp.test-module-multi-extensions.js/test-extensions'",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-module-nodemodulepaths.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-module-parent-deprecation.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": "(node:3762717) [DEP0144] DeprecationWarning: module.parent is deprecated due to accuracy issues. Please use require.main to find program entry point instead."
+   }
+  },
+  "test-module-parent-setter-deprecation.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": "(node:3762724) [DEP0144] DeprecationWarning: module.parent is deprecated due to accuracy issues. Please use require.main to find program entry point instead."
+   }
+  },
+  "test-module-prototype-mutation.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:diagnostics_channel yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": "(node:3762705) [DEP0151] DeprecationWarning: Package /home/saint/.cache/opal-node-tests/node-v24.19.0/test/fixtures/es-module-specifiers/node_modules/implicit-main-type-module/ has a \"main\" field set "
+   }
+  },
+  "test-module-readonly.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-module-relative-lookup.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "TypeError: _module._resolveLookupPaths is not a function",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-module-run-main-monkey-patch.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:child_process yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-module-setsourcemapssupport.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "AssertionError [ERR_ASSERTION]: The input did not match the regular expression /ERR_INVALID_ARG_TYPE/. Input:",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-module-stat.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "TypeError: Module._stat is not a function",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-module-strip-types.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": "(node:3762814) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time"
+   }
+  },
+  "test-module-subpath-import-long-path.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-module-symlinked-peer-modules.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Cannot find module 'moduleB'",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-module-version.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-module-wrap.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:child_process yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-module-wrapper.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:child_process yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-next-tick-doesnt-hang.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-next-tick-domain.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:domain yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-next-tick-errors.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-next-tick-fixed-queue-regression.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-next-tick-intentional-starvation.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-next-tick-ordering.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-next-tick-ordering2.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-next-tick-when-exiting.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-next-tick.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-os-checked-function.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Cannot find module 'internal/test/binding'",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": "(node:3763028) internal/test/binding: These APIs are for internal testing only. Do not use them."
+   }
+  },
+  "test-os-constants-signals.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:test yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-os-eol.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-os-fast.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Cannot find module 'internal/test/binding'",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-os-homedir-no-envvar.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:child_process yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-os-process-priority.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-os-userinfo-handles-getter-errors.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:child_process yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-os.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-path-basename.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-path-dirname.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-path-extname.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-path-glob.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement this yet: it needs node:internal/fs/glob, which Opal doesn't have",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-path-isabsolute.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-path-join.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-path-makelong.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-path-normalize.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-path-parse-format.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-path-posix-exists.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-path-posix-relative-on-windows.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-path-relative.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-path-resolve.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:child_process yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-path-win32-exists.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-path-win32-normalize-device-names.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-path-zero-length-strings.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-path.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-process-abort.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:worker_threads yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-process-argv-0.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:child_process yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-process-available-memory.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "TypeError: process.availableMemory is not a function",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-process-beforeexit-throw-exit.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:worker_threads yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": "/tmp/opal-node-tests-3i_l9clk/node/test/parallel/test-process-beforeexit-throw-exit.js:15"
+   }
+  },
+  "test-process-beforeexit.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:net yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-process-binding-internalbinding-allowlist.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "TypeError: process.binding is not a function",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-process-binding-util.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "TypeError: process.binding is not a function",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-process-binding.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Cannot find module 'internal/test/binding'",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": "(node:3763338) internal/test/binding: These APIs are for internal testing only. Do not use them."
+   }
+  },
+  "test-process-chdir-errormessage.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:worker_threads yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-process-chdir.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:worker_threads yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-process-config.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "AssertionError [ERR_ASSERTION]: Missing expected exception (TypeError).",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-process-constants-noatime.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-process-constrained-memory.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "TypeError: process.constrainedMemory is not a function",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-process-cpuUsage.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "TypeError: process.cpuUsage is not a function",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-process-default.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-process-dlopen-error-message-crash.js": {
+   "status": "node-fails",
+   "node": {
+    "status": "fail",
+    "code": 1,
+    "error": "Error: ENOENT: no such file or directory, access 'test/addons/not-a-binding'"
+   }
+  },
+  "test-process-dlopen-undefined-exports.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-process-domain-segfault.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-process-emit.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-process-emitwarning.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: invalid toString",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-process-env-allowed-flags-are-documented.js": {
+   "status": "node-fails",
+   "node": {
+    "status": "fail",
+    "code": 1,
+    "error": "Error: ENOENT: no such file or directory, open '/tmp/opal-node-tests-3i_l9clk/node/doc/api/cli.md'"
+   }
+  },
+  "test-process-env-allowed-flags.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "TypeError: Cannot read properties of undefined (reading 'has')",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-process-env-delete.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-process-env-deprecation.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": "(node:3763474) [DEP0104] DeprecationWarning: Assigning any value other than a string, number, or boolean to a process.env property is deprecated. Please make sure to convert the value to a string befo"
+   }
+  },
+  "test-process-env-ignore-getter-setter.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "AssertionError [ERR_ASSERTION]: Missing expected exception (TypeError).",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-process-env-sideeffects.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-process-env-symbols.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "AssertionError [ERR_ASSERTION]: Missing expected exception (TypeError).",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-process-env-tz.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:worker_threads yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-process-env-windows-error-reset.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-process-env.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:child_process yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-process-euid-egid.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:worker_threads yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-process-exception-capture-errors.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-process-exception-capture-should-abort-on-uncaught-setflagsfromstring.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:v8 yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-process-exception-capture-should-abort-on-uncaught.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "TypeError: process.hasUncaughtExceptionCaptureCallback is not a function",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-process-exception-capture.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "TypeError: process.hasUncaughtExceptionCaptureCallback is not a function",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-process-exec-argv.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:child_process yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-process-execpath.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:child_process yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-process-execve-abort.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:child_process yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-process-execve-no-args.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:worker_threads yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-process-execve-on-exit.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:worker_threads yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-process-execve-permission-fail.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:worker_threads yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": "(node:3763701) ExperimentalWarning: process.execve is an experimental feature and might change at any time"
+   }
+  },
+  "test-process-execve-permission-granted.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:worker_threads yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-process-execve-socket.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:net yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-process-execve-validation.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:worker_threads yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": "(node:3763709) ExperimentalWarning: process.execve is an experimental feature and might change at any time"
+   }
+  },
+  "test-process-execve-worker-threads.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:worker_threads yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": "(node:3763723) ExperimentalWarning: process.execve is an experimental feature and might change at any time"
+   }
+  },
+  "test-process-execve.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:worker_threads yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-process-exit-code-validation.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:child_process yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-process-exit-code.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "TypeError: require(...).debuglog is not a function",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-process-exit-from-before-exit.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-process-exit-handler.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:worker_threads yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-process-exit-recursive.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-process-exit.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-process-external-stdio-close-spawn.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:child_process yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-process-external-stdio-close.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:child_process yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-process-features.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-process-getactivehandles.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:net yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-process-getactiverequests.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "TypeError: process._getActiveRequests is not a function",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-process-getactiveresources-track-active-handles.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:net yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-process-getactiveresources-track-active-requests.js": {
+   "status": "node-fails",
+   "node": {
+    "status": "fail",
+    "code": 1,
+    "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:"
+   }
+  },
+  "test-process-getactiveresources-track-interval-lifetime.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "TypeError: process.getActiveResourcesInfo is not a function",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-process-getactiveresources-track-multiple-timers.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "TypeError: process.getActiveResourcesInfo is not a function",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-process-getactiveresources-track-timer-lifetime.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "TypeError: process.getActiveResourcesInfo is not a function",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-process-getactiveresources.js": {
+   "status": "node-fails",
+   "node": {
+    "status": "fail",
+    "code": 1,
+    "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:"
+   }
+  },
+  "test-process-getgroups.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:child_process yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-process-hrtime-bigint.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Cannot find module 'internal/test/binding'",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-process-hrtime.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Cannot find module 'internal/test/binding'",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-process-initgroups.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:worker_threads yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-process-kill-null.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:child_process yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-process-kill-pid.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-process-load-env-file.js": {
+   "status": "node-fails",
+   "node": {
+    "status": "fail",
+    "code": 1,
+    "error": ""
+   }
+  },
+  "test-process-next-tick.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-process-no-deprecation.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "(node:3764204) DeprecationWarning: Something else is deprecated.",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-process-ppid.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:child_process yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-process-prototype.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-process-raw-debug.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:child_process yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-process-really-exit.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:child_process yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-process-redirect-warnings-env.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:child_process yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-process-redirect-warnings.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:child_process yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-process-ref-unref.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:test yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-process-release.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-process-remove-all-signal-listeners.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:child_process yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-process-setgroups.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:worker_threads yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-process-setsourcemapsenabled.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "AssertionError [ERR_ASSERTION]: The input did not match the regular expression /ERR_INVALID_ARG_TYPE/. Input:",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-process-threadCpuUsage-main-thread.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "TypeError: process.threadCpuUsage is not a function",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-process-threadCpuUsage-worker-threads.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-process-title-cli.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-process-uid-gid.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:worker_threads yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-process-umask-mask.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:worker_threads yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-process-umask.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:worker_threads yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-process-uncaught-exception-monitor.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:child_process yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-process-uptime.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "0.029266422",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": "0.145719489"
+   }
+  },
+  "test-process-versions.js": {
+   "status": "node-fails",
+   "node": {
+    "status": "fail",
+    "code": 1,
+    "error": "Error: Cannot find module '../../deps/acorn/acorn/package.json'"
+   }
+  },
+  "test-process-warning.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "(node:3764503) Warning: test",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": "(node:3764462) Warning: test"
+   }
+  },
+  "test-require-cache.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "AssertionError [ERR_ASSERTION]: Expected \"actual\" to be reference-equal to \"expected\":",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-require-delete-array-iterator.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: url.pathToFileURL: node:url is not in Opal yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-require-dot.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "TypeError: m._initPaths is not a function",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-require-empty-main.js": {
+   "status": "node-fails",
+   "node": {
+    "status": "fail",
+    "code": 1,
+    "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:"
+   }
+  },
+  "test-require-enoent-dir.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-require-exceptions.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-require-extension-over-directory.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-require-extensions-main.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-require-extensions-same-filename-as-dir-trailing-slash.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-require-extensions-same-filename-as-dir.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-require-invalid-main-no-exports.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:child_process yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-require-invalid-package.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-require-json.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-require-long-path.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-require-mjs.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "AssertionError [ERR_ASSERTION]: Missing expected exception.",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-require-node-prefix.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "AssertionError [ERR_ASSERTION]: Expected \"actual\" to be reference-equal to \"expected\":",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-require-nul.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-require-process.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-require-resolve-invalid-paths.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-require-resolve-opts-paths-relative.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:worker_threads yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-require-resolve.js": {
+   "status": "node-fails",
+   "node": {
+    "status": "fail",
+    "code": 1,
+    "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:"
+   }
+  },
+  "test-require-symlink.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:worker_threads yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-require-unicode.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-add-abort-signal.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Cannot find module 'internal/streams/add-abort-signal'",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-aliases-legacy.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Cannot find module '_stream_readable'",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-auto-destroy.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-await-drain-writers-in-synchronously-recursion-write.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-backpressure.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-base-prototype-accessors-enumerability.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Cannot find module 'internal/test/binding'",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": "(node:3764876) internal/test/binding: These APIs are for internal testing only. Do not use them."
+   }
+  },
+  "test-stream-base-typechecking.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:net yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-big-packet.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-big-push.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-catch-rejections.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-compose.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: internal/blob.isBlob is not implemented by Opal yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-construct.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-consumers.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:stream/consumers yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-decoder-objectmode.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-destroy-event-order.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-destroy.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:http yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-drop-take.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-duplex-destroy.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-duplex-end.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-duplex-from.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:stream/web yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-duplex-props.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-duplex-readable-end.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-duplex-readable-writable.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-duplex-writable-finished.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-duplex.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:stream/web yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-duplexpair.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-end-of-streams.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-end-paused.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-err-multiple-callback-construction.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-error-once.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-event-names.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-events-prepend.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-filter.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-finished.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:http yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-flatMap.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-forEach.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-inheritance.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-ispaused.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-map.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-objectmode-undefined.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-once-readable-pipe.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-passthrough-drain.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-pipe-after-end.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-pipe-await-drain-manual-resume.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-pipe-await-drain-push-while-write.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-pipe-await-drain.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-pipe-cleanup-pause.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-pipe-cleanup.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-pipe-deadlock.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-pipe-error-handling.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-pipe-error-unhandled.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-pipe-event.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-pipe-flow-after-unpipe.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-pipe-flow.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-pipe-manual-resume.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-pipe-multiple-pipes.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-pipe-needDrain.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-pipe-objectmode-to-non-objectmode.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-pipe-same-destination-twice.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-pipe-unpipe-streams.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-pipe-without-listenerCount.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-pipeline-async-iterator.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-pipeline-duplex.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-pipeline-http2.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-pipeline-listeners.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-pipeline-process.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:child_process yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-pipeline-queued-end-in-destroy.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-pipeline-uncaught.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-pipeline-with-empty-string.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-pipeline.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:http yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-preprocess.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:readline yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-promises.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-push-order.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-push-strings.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-readable-aborted.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-readable-add-chunk-during-data.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-readable-async-iter-half-open-duplex.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-readable-async-iterators.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:http yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-readable-compose.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-readable-constructor-set-methods.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-readable-data.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-readable-default-encoding.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-readable-destroy.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-readable-didRead.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-readable-dispose.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-readable-emit-readable-short-stream.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-readable-emittedReadable.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-readable-end-destroyed.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-readable-ended.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-readable-error-end.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-readable-event.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-readable-flow-recursion.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-readable-from-web-termination.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement this yet: it needs node:internal/webstreams/adapters, which Opal doesn't have",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-readable-hwm-0-async.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-readable-hwm-0-no-flow-data.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-readable-hwm-0.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-readable-infinite-read.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-readable-invalid-chunk.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-readable-needReadable.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-readable-next-no-null.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-readable-no-unneeded-readable.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-readable-object-multi-push-async.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-readable-pause-and-resume.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-readable-readable-then-resume.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-readable-readable.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-readable-reading-readingMore.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-readable-resume-hwm.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-readable-resumeScheduled.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-readable-setEncoding-existing-buffers.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-readable-setEncoding-null.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-readable-strategy-option.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "ReferenceError: ByteLengthQueuingStrategy is not defined",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-readable-to-web-byob.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-readable-to-web-termination-byob.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement this yet: it needs node:internal/webstreams/adapters, which Opal doesn't have",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-readable-to-web-termination.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement this yet: it needs node:internal/webstreams/adapters, which Opal doesn't have",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-readable-unpipe-resume.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-readable-unshift.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-readable-with-unimplemented-_read.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-readableListening-state.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-reduce.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-set-default-hwm.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-toArray.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-toWeb-allows-server-response.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:http yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-transform-callback-twice.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-transform-constructor-set-methods.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-transform-destroy.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-transform-final-sync.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-transform-final.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-transform-flush-data.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-transform-hwm0.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-transform-objectmode-falsey-value.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-transform-split-highwatermark.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-transform-split-objectmode.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-typedarray.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-uint8array.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-unpipe-event.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-unshift-empty-chunk.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-unshift-read-race.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "0: asdfasdfas",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": "0: asdfasdfas"
+   }
+  },
+  "test-stream-wrap-drain.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Cannot find module 'internal/js_stream_socket'",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": "(node:3766044) internal/test/binding: These APIs are for internal testing only. Do not use them."
+   }
+  },
+  "test-stream-wrap-encoding.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Cannot find module 'internal/js_stream_socket'",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-wrap.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Cannot find module 'internal/test/binding'",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": "(node:3766070) internal/test/binding: These APIs are for internal testing only. Do not use them."
+   }
+  },
+  "test-stream-writable-aborted.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-writable-change-default-encoding.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-writable-clear-buffer.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-writable-constructor-set-methods.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-writable-decoded-encoding.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-writable-destroy.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-writable-end-cb-error.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-writable-end-cb-uncaught.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-writable-end-multiple.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-writable-ended-state.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-writable-final-async.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-writable-final-destroy.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-writable-final-throw.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-writable-finish-destroyed.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-writable-finished-state.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-writable-finished.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-writable-invalid-chunk.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-writable-needdrain-state.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-writable-null.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-writable-properties.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-writable-samecb-singletick.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "TypeError: Console is not a constructor",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-writable-writable.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-writable-write-cb-error.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-writable-write-cb-twice.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-writable-write-error.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-writable-write-writev-finish.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-writableState-ending.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-writableState-uncorked-bufferedRequestCount.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-write-destroy.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-write-drain.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-write-final.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream-writev.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream2-base64-single-char-read-end.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream2-basic.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream2-compatibility.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream2-decode-partial.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream2-finish-pipe-error.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream2-finish-pipe.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream2-httpclient-response-end.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:http yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream2-large-read-stall.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "push #1",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": "push #1"
+   }
+  },
+  "test-stream2-objects.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream2-pipe-error-handling.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream2-pipe-error-once-listener.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "error thrown even with listener",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": "error thrown even with listener"
+   }
+  },
+  "test-stream2-push.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "readStart",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": "readStart"
+   }
+  },
+  "test-stream2-read-correct-num-bytes-in-utf8.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream2-read-sync-stack.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "readable 262144",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": "readable 262144"
+   }
+  },
+  "test-stream2-readable-empty-buffer-no-eof.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream2-readable-legacy-drain.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream2-readable-non-empty-end.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "br=54 len=55",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": "br=54 len=55"
+   }
+  },
+  "test-stream2-readable-wrap-destroy.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream2-readable-wrap-empty.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream2-readable-wrap-error.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream2-readable-wrap-proxy-methods.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream2-readable-wrap.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream2-set-encoding.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream2-transform.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream2-unpipe-drain.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream2-unpipe-leak.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "ReadableState {",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": "ReadableState {"
+   }
+  },
+  "test-stream2-writable.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream3-cork-end.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream3-cork-uncork.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-stream3-pause-then-read.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "read 100",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": "read 100"
+   }
+  },
+  "test-stream3-pipeline-async-iterator.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-streams-highwatermark.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-string-decoder-end.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-string-decoder-fuzz.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-string-decoder.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-timers-api-refs.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-timers-args.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-timers-clear-null-does-not-throw-error.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-timers-clear-object-does-not-throw-error.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-timers-clear-timeout-interval-equivalent.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-timers-clearImmediate-als.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-timers-clearImmediate.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-timers-destroyed.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-timers-dispose.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-timers-fast-calls.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Cannot find module 'internal/test/binding'",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-timers-immediate-promisified.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Cannot find module 'internal/event_target'",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-timers-immediate-queue-throw.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:domain yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-timers-immediate-queue.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-timers-immediate-unref-nested-once.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-timers-immediate-unref-simple.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:worker_threads yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-timers-immediate-unref.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-timers-immediate.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-timers-interval-promisified.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Cannot find module 'internal/event_target'",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-timers-interval-throw.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-timers-invalid-clear.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-timers-linked-list.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Cannot find module 'internal/linkedlist'",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-timers-max-duration-warning.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "(node:3766856) TimeoutOverflowWarning: 2147483648 does not fit into a 32-bit signed integer.",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": "(node:3766808) TimeoutOverflowWarning: 2147483648 does not fit into a 32-bit signed integer."
+   }
+  },
+  "test-timers-nan-duration-emit-once-per-process.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "(node:3766855) TimeoutNaNWarning: NaN is not a number.",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": "(node:3766809) TimeoutNaNWarning: NaN is not a number."
+   }
+  },
+  "test-timers-nan-duration-warning-promises.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "(node:3766859) TimeoutNaNWarning: NaN is not a number.",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": "(node:3766826) TimeoutNaNWarning: NaN is not a number."
+   }
+  },
+  "test-timers-nan-duration-warning.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:child_process yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-timers-negative-duration-warning-emit-once-per-process.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "(node:3766897) TimeoutNegativeWarning: -1 is a negative number.",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": "(node:3766860) TimeoutNegativeWarning: -1 is a negative number."
+   }
+  },
+  "test-timers-negative-duration-warning.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:child_process yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-timers-nested.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Cannot find module 'internal/util'",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-timers-next-tick.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Cannot find module 'internal/util'",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-timers-non-integer-delay.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-timers-not-emit-duration-zero.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-timers-now.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Cannot find module 'internal/test/binding'",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-timers-ordering.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Cannot find module 'internal/test/binding'",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": "(node:3767010) internal/test/binding: These APIs are for internal testing only. Do not use them."
+   }
+  },
+  "test-timers-process-tampering.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-timers-promises-scheduler.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-timers-promises.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:test yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-timers-refresh-in-callback.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-timers-refresh.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Cannot find module 'internal/timers'",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-timers-reset-process-domain-on-throw.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:domain yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-timers-same-timeout-wrong-list-deleted.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-timers-setimmediate-infinite-loop.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-timers-socket-timeout-removes-other-socket-unref-timer.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:net yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-timers-this.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-timers-throw-when-cb-not-function.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-timers-timeout-promisified.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Cannot find module 'internal/event_target'",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-timers-timeout-to-interval.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-timers-timeout-with-non-integer.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-timers-to-primitive.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-timers-uncaught-exception.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-timers-unenroll-unref-interval.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-timers-unref-throw-then-ref.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-timers-unref.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-timers-unrefd-interval-still-fires.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-timers-unrefed-in-beforeexit.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-timers-unrefed-in-callback.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:net yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-timers-user-call.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-timers-zero-timeout.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-timers.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "(node:3767255) TimeoutNaNWarning: NaN is not a number.",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": "(node:3767214) TimeoutNaNWarning: NaN is not a number."
+   }
+  },
+  "test-util-format.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-util-inspect-getters-accessing-this.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-util-inspect-long-running.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-util-inspect-namespace.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:vm yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": "(node:3767261) ExperimentalWarning: VM Modules is an experimental feature and might change at any time"
+   }
+  },
+  "test-util-inspect-proxy.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Cannot find module 'internal/test/binding'",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": "(node:3767262) internal/test/binding: These APIs are for internal testing only. Do not use them."
+   }
+  },
+  "test-util-inspect.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Cannot find module 'internal/test/binding'",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": "(node:3767292) internal/test/binding: These APIs are for internal testing only. Do not use them."
+   }
+  },
+  "test-util-types-exists.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-util-types.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Opal does not implement the built-in module node:vm yet",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": "(node:3767318) internal/test/binding: These APIs are for internal testing only. Do not use them."
+   }
+  },
+  "test-util.js": {
+   "status": "fail",
+   "code": 1,
+   "error": "Error: Cannot find module 'internal/errors'",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": "(node:3767333) [DEP0044] DeprecationWarning: The `util.isArray` API is deprecated. Please use `Array.isArray()` instead."
+   }
+  },
+  "test-whatwg-events-add-event-listener-options-passive.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "(node:3767340) AddEventListenerArgumentTypeWarning: addEventListener called with null which has no effect.",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": "(node:3767306) AddEventListenerArgumentTypeWarning: addEventListener called with null which has no effect."
+   }
+  },
+  "test-whatwg-events-add-event-listener-options-signal.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-whatwg-events-customevent.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-whatwg-events-event-constructors.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  },
+  "test-whatwg-events-eventtarget-this-of-listener.js": {
+   "status": "pass",
+   "code": 0,
+   "error": "",
+   "node": {
+    "status": "pass",
+    "code": 0,
+    "error": ""
+   }
+  }
+ }
+}

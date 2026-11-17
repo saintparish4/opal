@@ -50,22 +50,30 @@ TIMEOUT = 60
 # The areas the runtime implements, by the test-file names Node gives them.
 # A file outside these is about something Opal doesn't claim yet.
 SELECTION = [
+    "test-abort*.js",
     "test-assert*.js",
+    "test-async-local-storage*.js",
     "test-buffer-*.js",
     "test-console-*.js",
     "test-event-emitter-*.js",
+    "test-event-target*.js",
+    "test-eventtarget*.js",
     "test-events-*.js",
     "test-fs-*.js",
     "test-module-*.js",
     "test-next-tick*.js",
+    "test-os*.js",
     "test-path*.js",
     "test-process-*.js",
     "test-require-*.js",
+    "test-stream*.js",
+    "test-string-decoder*.js",
     "test-timers*.js",
     "test-util-format*.js",
     "test-util-inspect*.js",
     "test-util-types*.js",
     "test-util.js",
+    "test-whatwg-events*.js",
 ]
 
 # Modules test/common requires as it loads that Opal doesn't have, and what
