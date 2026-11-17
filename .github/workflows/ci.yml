@@ -30,24 +30,44 @@ jobs:
 
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
+        with:
+          save-if: ${{ github.ref == 'refs/heads/master' }}
       - name: V8's static library
         uses: ./.github/actions/rusty-v8
-
-      - name: Format
-        run: cargo fmt --all -- --check
 
       # --all-features so `fixtures` is on explicitly. Both integration suites
       # need it, and today it is enabled implicitly by the dev-dependencies —
       # a manifest edit could drop the module out of the build without a
-      # single test disappearing from the report.
-      - name: Lint
-        run: cargo clippy --workspace --all-targets --all-features -- -D warnings
-
+      # single test disappearing from the report. The build with default
+      # features is the `cargo build -p opal-cli` of the bundle checksums
+      # jobs, on both systems.
       - name: Test
         run: cargo test --workspace --all-features --verbose
 
-      - name: Build
-        run: cargo build --workspace --verbose
+  # Its own job, on both systems, because clippy and the tests share no
+  # compiled output: in one job the workspace was compiled twice in a row.
+  lint:
+    name: Lint (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Install Rust toolchain
+        run: rustup show
+      - name: Format
+        run: cargo fmt --all -- --check
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          save-if: ${{ github.ref == 'refs/heads/master' }}
+      - name: V8's static library
+        uses: ./.github/actions/rusty-v8
+      - name: Lint
+        run: cargo clippy --workspace --all-targets --all-features -- -D warnings
 
   # `testing_strategy.md` §5 requires these gated separately: an install
   # failure is a registry/resolution bug and a run failure is a
@@ -64,6 +84,8 @@ jobs:
         run: rustup show
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
+        with:
+          save-if: ${{ github.ref == 'refs/heads/master' }}
       - name: V8's static library
         uses: ./.github/actions/rusty-v8
       - name: Install
@@ -79,6 +101,8 @@ jobs:
         run: rustup show
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
+        with:
+          save-if: ${{ github.ref == 'refs/heads/master' }}
       - name: V8's static library
         uses: ./.github/actions/rusty-v8
       # The installed tree has to run, not merely exist, so this job needs a
@@ -104,6 +128,8 @@ jobs:
         run: rustup show
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
+        with:
+          save-if: ${{ github.ref == 'refs/heads/master' }}
       - name: V8's static library
         uses: ./.github/actions/rusty-v8
       - name: Install Node
@@ -127,6 +153,8 @@ jobs:
         run: rustup show
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
+        with:
+          save-if: ${{ github.ref == 'refs/heads/master' }}
       - name: V8's static library
         uses: ./.github/actions/rusty-v8
       - name: Install Node
@@ -156,6 +184,8 @@ jobs:
         run: rustup show
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
+        with:
+          save-if: ${{ github.ref == 'refs/heads/master' }}
       - name: V8's static library
         uses: ./.github/actions/rusty-v8
       - name: Install Node
@@ -181,6 +211,8 @@ jobs:
         run: rustup show
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
+        with:
+          save-if: ${{ github.ref == 'refs/heads/master' }}
       - name: V8's static library
         uses: ./.github/actions/rusty-v8
       - name: Install Node
@@ -208,6 +240,8 @@ jobs:
         run: rustup show
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
+        with:
+          save-if: ${{ github.ref == 'refs/heads/master' }}
       - name: V8's static library
         uses: ./.github/actions/rusty-v8
       - name: Install Node
@@ -235,6 +269,8 @@ jobs:
         run: rustup show
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
+        with:
+          save-if: ${{ github.ref == 'refs/heads/master' }}
       - name: V8's static library
         uses: ./.github/actions/rusty-v8
       - name: Build opal
@@ -272,14 +308,13 @@ jobs:
         uses: actions/checkout@v7
       - name: Install Rust toolchain
         run: rustup show
-      - name: Cache cargo
-        uses: Swatinem/rust-cache@v2
-      - name: V8's static library
-        uses: ./.github/actions/rusty-v8
       # Pinned for the same reason: a new cargo-deny release must not be able
-      # to fail a pull request that didn't touch a dependency.
+      # to fail a pull request that didn't touch a dependency. Its released
+      # binary, since compiling it took longer than everything it checks.
       - name: Install cargo-deny
-        run: cargo install --locked cargo-deny@0.20.2
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-deny@0.20.2
       - name: Check
         run: cargo deny --locked check bans licenses sources
 
@@ -299,6 +334,8 @@ jobs:
         run: rustup show
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
+        with:
+          save-if: ${{ github.ref == 'refs/heads/master' }}
       - name: V8's static library
         uses: ./.github/actions/rusty-v8
       - name: Install strace
@@ -332,6 +369,8 @@ jobs:
         run: rustup show
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
+        with:
+          save-if: ${{ github.ref == 'refs/heads/master' }}
       - name: V8's static library
         uses: ./.github/actions/rusty-v8
       - name: Run
