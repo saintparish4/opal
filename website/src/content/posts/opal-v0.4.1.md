@@ -6,12 +6,9 @@ release: "https://github.com/saintparish4/opal/releases/tag/v0.4.1"
 lede: "A faster `opal add` over old metadata, release notes taken from the changelog, and new checks that what Opal installs builds and runs. No `opal.lock` format change."
 summary: "`opal add` over day-old metadata drops from 3.0s to 0.56s on a Next.js app, `opal --revision` names the commit a build came from, and seven framework starters are installed, built, and served by Opal every night."
 commands:
-  - title: "To install Opal"
+  - title: "To install Opal v0.4.1"
     id: post-install
-    command: "curl -fsSL https://opalx.dev/install.sh | bash"
-  - title: "To upgrade Opal"
-    id: post-upgrade
-    command: "opal upgrade"
+    command: "curl -fsSL https://raw.githubusercontent.com/saintparish4/opal/master/install.sh | OPAL_VERSION=v0.4.1 bash"
 ---
 
 ## What's new {#added}
