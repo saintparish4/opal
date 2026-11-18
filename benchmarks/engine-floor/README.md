@@ -66,7 +66,7 @@ size, so the timings include a harness. It is not the start of opal's
 ```sh
 cd benchmarks/engine-floor
 cargo build --release              # its own workspace; deno_core never enters opal's Cargo.lock
-(cd runners && opal install)
+(cd runners && cp package.fixture.json package.json && opal install)
 python3 run.py                     # about 15 minutes; writes results/engine-floor-*.json
 python3 run.py --quick             # one round, to check every command runs
 ```

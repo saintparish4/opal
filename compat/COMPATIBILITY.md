@@ -190,8 +190,9 @@ To regenerate a scaffold:
 
 1. Run the command in its `SCAFFOLD` file, in an empty folder, with no TTY.
 2. Delete `node_modules`, any lockfile, and `.git` if the scaffolder made them.
-3. Replace `frameworks/<name>/` with the result.
-4. Update the date and versions in `SCAFFOLD`.
+3. Rename its `package.json` to `package.fixture.json`. Under its own name GitHub reads it as one of this repository's projects and raises a security alert for every pinned dependency in it; `frameworks.py` gives the copy it runs the name back.
+4. Replace `frameworks/<name>/` with the result.
+5. Update the date and versions in `SCAFFOLD`.
 
 A new scaffold is a new matrix: add a new dated table and keep the old one.
 

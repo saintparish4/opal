@@ -125,7 +125,7 @@ def prepare():
         if not shutil.which(tool):
             sys.exit(f"missing {tool} on PATH")
     if not (BIN / "jest").exists():
-        sys.exit("run `opal install` in runners/ first")
+        sys.exit("run `cp package.fixture.json package.json && opal install` in runners/ first")
 
 
 def environment():

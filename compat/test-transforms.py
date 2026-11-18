@@ -58,7 +58,7 @@ type-check kept from the runs before must not outlive what it depended on.
                      file, as ts-jest does under isolatedModules, can't see
                      of other files. KNOWN pins it, test by test, with why.
 
-The pinned packages are in compat/test-transforms/ (`opal install` there).
+The pinned packages are in compat/test-transforms/ (`cp package.fixture.json package.json && opal install` there).
 A difference prints both sides and the run exits non-zero; --keep keeps the
 projects.
 """
@@ -659,7 +659,7 @@ def main():
     args = parser.parse_args()
     args.opal = args.opal.resolve()
     if not JEST.exists():
-        sys.exit("needs `opal install` in compat/test-transforms")
+        sys.exit("needs `cp package.fixture.json package.json && opal install` in compat/test-transforms")
     names = args.projects or list(PROJECTS)
     scratch = Path(tempfile.mkdtemp(prefix="opal-test-transforms-"))
     env = {k: v for k, v in os.environ.items() if k not in ("FORCE_COLOR", "NO_COLOR", "TS_JEST_LOG")}

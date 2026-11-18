@@ -304,6 +304,10 @@ def check_framework(name, config, opal, work, base_env, timeouts, runner):
     logs.mkdir(parents=True)
     shutil.copytree(HERE / "frameworks" / name, project,
                     ignore=shutil.ignore_patterns(*NOT_COPIED))
+    # The scaffold's manifest is committed as package.fixture.json: under its
+    # own name GitHub reads it as a project of this repository's and raises
+    # a security alert for every pinned dependency in it.
+    (project / "package.fixture.json").rename(project / "package.json")
     env = {**base_env, "OPAL_CACHE_DIR": str(framework_dir / "cache")}
     result = {"framework": name, "scaffold": scaffold_line(name)}
 

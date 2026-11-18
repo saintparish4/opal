@@ -26,7 +26,7 @@ Before timing, each command runs once and has to pass every test, so a
 runner that ran nothing can't win.
 
 Needs hyperfine, bun and node on PATH, the oracle's pinned Jest and Vitest
-(`opal install` in compat/test-runners/runners) and a release build of opal.
+(`cp package.fixture.json package.json && opal install` in compat/test-runners/runners) and a release build of opal.
 """
 
 import json
@@ -214,7 +214,7 @@ def main():
         if not shutil.which(tool):
             sys.exit(f"missing {tool} on PATH")
     if not OPAL.exists() or not (BIN / "jest").exists():
-        sys.exit("needs `cargo build --release` and `opal install` in compat/test-runners/runners")
+        sys.exit("needs `cargo build --release` and `cp package.fixture.json package.json && opal install` in compat/test-runners/runners")
     env = environment()
     out = {"environment": env, "sizes": {}}
     for size in sizes:

@@ -1,0 +1,3 @@
+# Written by `cp package.fixture.json package.json` before `opal install`.
+/package.json
+/node_modules

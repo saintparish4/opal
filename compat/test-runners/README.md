@@ -15,7 +15,7 @@
 ## Running it
 
 ```sh
-(cd compat/test-runners/runners && opal install)   # jest 30.5.2, vitest 4.1.12, @babel/parser, pinned
+(cd compat/test-runners/runners && cp package.fixture.json package.json && opal install)   # jest 30.5.2, vitest 4.1.12, @babel/parser, pinned
 python3 compat/test-runners.py                      # about two minutes; needs node and bun on PATH
 python3 compat/test-runners.py --opal target/release/opal
 python3 compat/test-runners.py jest/each-success vitest/hooks.ts --no-mutants

@@ -66,7 +66,7 @@ agrees. A TODO is a failure until a person replaces it with the reason.
 opal is run as `opal test --json --outputFile=<file>` in a folder holding the
 corpus, and must write Jest's --json report (the format vitest's json
 reporter also writes). Needs node and bun on PATH, and the pinned reference
-runners installed with `opal install` in compat/test-runners/runners/.
+runners installed with `cp package.fixture.json package.json && opal install` in compat/test-runners/runners/.
 The run's record goes to compat/results/ as JSON: what ran, each fixture's
 outcome and the planted failures. The pins already hold every difference;
 --full adds every runner's verdict for every test, with failure messages,
@@ -636,7 +636,7 @@ def main():
 
     if not NODE_MODULES.exists():
         sys.exit("test-runners: the reference runners aren't installed; "
-                 "run `opal install` in compat/test-runners/runners")
+                 "run `cp package.fixture.json package.json && opal install` in compat/test-runners/runners")
     opal = str(Path(args.opal).resolve()) if args.opal else None
     ran = [r for r in (args.runners.split(",") if args.runners else RUNNERS)
            if r != "opal" or opal]
