@@ -44,6 +44,15 @@ Opal is pre-1.0, so a release can change behaviour you depend on. Anything that 
 - `opal run` of a TypeScript file nested deeper than the main thread's stack holds (20,000 chained `?:`, say) no longer aborts with a stack overflow: its types are stripped on a stack sized to the file. Nesting deeper than V8 compiles then fails with V8's `RangeError`, as the same file does as JavaScript, under Node too.
 - `opal graph` resolves `pkg/sub`, in a package with no `package.json`, to the subpath; it gave the package's index. A relative specifier ending in `/`, or `.` or `..`, now resolves to a directory only, as in Node and TypeScript; `import "."` could pick a sibling `src.ts` over `src/index.ts`. Graphs cached by earlier versions are resolved again once.
 
+## [0.4.2] (2026-11-23)
+
+### Security
+
+- `opal install` no longer accepts a dependency whose name is a path. A `package.json` or `opal.lock` naming a dependency `../../x` made Opal delete that directory and write a package there. Names are now checked in the resolver, the lockfile parser and the linker, and the install fails with the name.
+- A package's `bin` entry can no longer point outside the package. Such an entry is skipped.
+
+Affected: every release up to 0.4.1. Upgrade with `opal upgrade`.
+
 ## [0.4.1] (2026-10-15)
 
 A faster `opal add` over old metadata, release notes taken from this changelog, and new checks that what Opal installs builds and runs. No `opal.lock` format change.

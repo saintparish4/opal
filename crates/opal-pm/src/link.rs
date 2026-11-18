@@ -30,6 +30,7 @@ use opal_core::hash::ContentHash;
 use opal_core::path::NormalizedPath;
 
 use crate::manifest::Manifest;
+use crate::name::is_package_name;
 use crate::package::{PackageError, PackageIndex};
 use crate::parallel;
 use crate::platform::Platform;
@@ -62,6 +63,8 @@ pub enum LinkError {
     Package(#[from] PackageError),
     #[error("{id} is in the layout but its contents were never fetched")]
     NotFetched { id: PackageId },
+    #[error("{path} is not a package directory under node_modules; nothing was changed")]
+    OutsideNodeModules { path: String },
 }
 
 impl LinkError {
@@ -294,6 +297,43 @@ fn strip_last_package(path: &NormalizedPath) -> Option<NormalizedPath> {
     Some(NormalizedPath::new(&text[..index]))
 }
 
+/// Holds a layout path to the one shape a package directory has:
+/// `node_modules/<name>`, repeated once per level of nesting.
+///
+/// The resolver and the lockfile parser refuse a bad name long before this.
+/// This is the check that doesn't depend on them: `reconcile` is where
+/// directories are removed, and it should be unable to remove one outside
+/// `node_modules` whatever it is handed.
+fn ensure_package_directory(path: &NormalizedPath) -> Result<(), LinkError> {
+    let outside = || LinkError::OutsideNodeModules {
+        path: path.as_str().to_string(),
+    };
+    if path.is_absolute() {
+        return Err(outside());
+    }
+    let mut segments = path.segments();
+    let mut levels = 0;
+    while let Some(segment) = segments.next() {
+        if segment != NODE_MODULES {
+            return Err(outside());
+        }
+        let first = segments.next().ok_or_else(outside)?;
+        let name = if first.starts_with('@') {
+            format!("{first}/{}", segments.next().ok_or_else(outside)?)
+        } else {
+            first.to_string()
+        };
+        if !is_package_name(&name) {
+            return Err(outside());
+        }
+        levels += 1;
+    }
+    if levels == 0 {
+        return Err(outside());
+    }
+    Ok(())
+}
+
 /// Diffs the planned tree against what is on disk and applies the difference.
 pub fn reconcile(
     project_root: &Path,
@@ -301,6 +341,11 @@ pub fn reconcile(
     fetched: &Fetched,
     cas: &Cas,
 ) -> Result<LinkReport, LinkError> {
+    // Before the first read of the disk: every path below is deleted,
+    // created, or written into, so none of them may lead out of node_modules.
+    for path in layout.keys() {
+        ensure_package_directory(path)?;
+    }
     let mut report = LinkReport::default();
     let actual = scan(project_root)?;
 
@@ -579,10 +624,21 @@ fn write_bin_directories(
 
             for (command, target) in &manifest.bin {
                 // A command name is a filename, never a path.
-                if command.contains('/') || command.contains('\\') {
+                if command.is_empty()
+                    || command.starts_with('.')
+                    || command.contains('/')
+                    || command.contains('\\')
+                {
                     continue;
                 }
                 let relative_target = NormalizedPath::new(target);
+                // A bin target is a file of its own package. One that climbs
+                // out would be made executable and linked from `.bin`, and
+                // making a file executable rewrites it.
+                if relative_target.is_absolute() || relative_target.segments().next() == Some("..")
+                {
+                    continue;
+                }
                 let absolute_target = project_root
                     .join(path.as_str())
                     .join(relative_target.as_str());
@@ -1156,5 +1212,74 @@ mod tests {
                 "node_modules/a/node_modules/b".to_string(),
             ]
         );
+    }
+
+    #[test]
+    fn test_a_package_directory_is_node_modules_then_a_name_at_every_level() {
+        for path in [
+            "node_modules/a",
+            "./node_modules/a",
+            "node_modules/@scope/a",
+            "node_modules/a/node_modules/b",
+            "node_modules/@scope/a/node_modules/@other/b",
+        ] {
+            assert!(
+                ensure_package_directory(&NormalizedPath::new(path)).is_ok(),
+                "{path}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_a_path_that_leaves_node_modules_is_not_a_package_directory() {
+        for path in [
+            ".",
+            "node_modules",
+            "../victim",
+            "node_modules/../../victim",
+            "/tmp/victim",
+            "node_modules/.bin",
+            "node_modules/@scope",
+            "node_modules/a/lib",
+            "node_modules/a/node_modules",
+            "node_modules/a/node_modules/../../../victim",
+            "src/node_modules/a",
+        ] {
+            let error = ensure_package_directory(&NormalizedPath::new(path))
+                .expect_err(&format!("{path} must be refused"));
+            assert!(
+                matches!(error, LinkError::OutsideNodeModules { .. }),
+                "{path}: {error}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_reconcile_refuses_a_layout_outside_node_modules_before_touching_the_disk() {
+        let directory = tempfile::tempdir().expect("temp dir");
+        let project = directory.path().join("project");
+        let victim = directory.path().join("victim");
+        std::fs::create_dir_all(&project).expect("project");
+        std::fs::create_dir_all(&victim).expect("victim");
+        std::fs::write(victim.join("keep.txt"), "precious").expect("keep");
+        let cas = Cas::open(directory.path().join("cas")).expect("cas");
+
+        let mut layout = Layout::new();
+        layout.insert(
+            NormalizedPath::new("./node_modules/../../victim"),
+            PackageId::new("a", Version::new(1, 0, 0)),
+        );
+        let error = reconcile(&project, &layout, &Fetched::new(), &cas)
+            .expect_err("a layout outside node_modules must be refused");
+
+        assert!(
+            matches!(error, LinkError::OutsideNodeModules { .. }),
+            "{error}"
+        );
+        assert_eq!(
+            std::fs::read_to_string(victim.join("keep.txt")).expect("keep"),
+            "precious"
+        );
+        assert!(!project.join("node_modules").exists());
     }
 }

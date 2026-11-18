@@ -27,6 +27,7 @@ use std::sync::Arc;
 
 use crate::integrity::Integrity;
 use crate::manifest::{DependencyClass, Manifest, Spec};
+use crate::name::is_package_name;
 use crate::parallel;
 use crate::progress::{Progress, Silent};
 use crate::registry::{Packument, Registry, RegistryError, VersionMetadata};
@@ -46,6 +47,10 @@ pub enum ResolveError {
         "{name}@{spec} is not a supported dependency specifier (v1 resolves the public registry only)"
     )]
     UnsupportedSpec { name: String, spec: String },
+    #[error(
+        "{name:?} is not a package name, so it can't be a dependency (a name becomes a directory in node_modules)"
+    )]
+    InvalidName { name: String },
 }
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
@@ -431,18 +436,33 @@ struct Request {
 }
 
 impl Request {
-    fn new(parent: Option<PackageId>, name: String, spec: Spec, optional: bool) -> Self {
+    /// Refuses a name that isn't one. `name` becomes a directory in
+    /// `node_modules` and `package` a path on the registry, and both come from
+    /// a manifest somebody else wrote
+    fn new(
+        parent: Option<PackageId>,
+        name: String,
+        spec: Spec,
+        optional: bool,
+    ) -> Result<Self, ResolveError> {
         let package = match &spec {
             Spec::Alias { package, .. } => package.clone(),
             _ => name.clone(),
         };
-        Self {
+        for candidate in [&name, &package] {
+            if !is_package_name(candidate) {
+                return Err(ResolveError::InvalidName {
+                    name: candidate.clone(),
+                });
+            }
+        }
+        Ok(Self {
             parent,
             name,
             package,
             spec,
             optional,
-        }
+        })
     }
 }
 
@@ -483,7 +503,7 @@ impl<'a> Resolver<'a> {
                 requirement.name.clone(),
                 requirement.spec.clone(),
                 requirement.class.tolerates_absence(),
-            );
+            )?;
             requirements.push(RequirementRecord {
                 class: requirement.class,
                 name: requirement.name.clone(),
@@ -557,7 +577,7 @@ impl<'a> Resolver<'a> {
                         requirement.name,
                         requirement.spec,
                         requirement.class.tolerates_absence(),
-                    ));
+                    )?);
                 }
             }
         }

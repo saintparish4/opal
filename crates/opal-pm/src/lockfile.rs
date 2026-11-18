@@ -41,6 +41,7 @@ use opal_core::fault::FaultPoint;
 
 use crate::integrity::Integrity;
 use crate::manifest::DependencyClass;
+use crate::name::is_package_name;
 use crate::resolve::{PackageId, RequirementRecord, Resolution, ResolvedEdge, ResolvedPackage};
 use crate::semver::Version;
 
@@ -271,11 +272,14 @@ pub fn parse(path: &Path, text: &str) -> Result<Resolution, LockfileError> {
                             .map_err(|error| malformed(number, &error.to_string()))?,
                     ),
                 };
+                let package = unaliased(name, package);
+                package_name(name).map_err(|message| malformed(number, &message))?;
+                package_name(&package).map_err(|message| malformed(number, &message))?;
                 resolution.requirements.push(RequirementRecord {
                     class: parse_class(class)
                         .ok_or_else(|| malformed(number, "unknown dependency class"))?,
                     name: name.to_string(),
-                    package: unaliased(name, package),
+                    package,
                     spec: spec.to_string(),
                     version,
                 });
@@ -292,6 +296,7 @@ pub fn parse(path: &Path, text: &str) -> Result<Resolution, LockfileError> {
                     .map_err(|error| malformed(number, &error.to_string()))?;
                 let integrity = Integrity::parse(integrity)
                     .map_err(|error| malformed(number, &error.to_string()))?;
+                package_name(name).map_err(|message| malformed(number, &message))?;
                 let id = PackageId::new(name, version);
                 resolution.packages.insert(
                     id.clone(),
@@ -326,9 +331,13 @@ pub fn parse(path: &Path, text: &str) -> Result<Resolution, LockfileError> {
                     Version::parse(version)
                         .map_err(|error| malformed(number, &error.to_string()))?,
                 );
+                let dep_package = unaliased(dep_name, dep_package);
+                package_name(name).map_err(|message| malformed(number, &message))?;
+                package_name(dep_name).map_err(|message| malformed(number, &message))?;
+                package_name(&dep_package).map_err(|message| malformed(number, &message))?;
                 let edge = ResolvedEdge {
                     name: dep_name.to_string(),
-                    package: unaliased(dep_name, dep_package),
+                    package: dep_package,
                     spec: spec.to_string(),
                     version: Version::parse(dep_version)
                         .map_err(|error| malformed(number, &error.to_string()))?,
@@ -417,6 +426,16 @@ fn render_list(items: &[String]) -> String {
         EMPTY.to_string()
     } else {
         items.join(",")
+    }
+}
+
+/// A lockfile is a file in a repository: whoever wrote it chose every name
+/// in it, and each one becomes a directory in `node_modules`.
+fn package_name(name: &str) -> Result<(), String> {
+    if is_package_name(name) {
+        Ok(())
+    } else {
+        Err(format!("{name:?} is not a package name"))
     }
 }
 

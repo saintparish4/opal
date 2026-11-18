@@ -9,6 +9,7 @@ pub mod link;
 pub mod lockfile;
 pub mod locks;
 pub mod manifest;
+pub mod name;
 pub mod package;
 pub mod packuments;
 pub mod parallel;
