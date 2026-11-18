@@ -28,6 +28,9 @@ allow = [
     "CDLA-Permissive-2.0",
     # A public-domain dedication (notify, opal test's file watcher): no terms.
     "CC0-1.0",
+    # Permissive, with no terms a binary has to carry (foldhash, which newer
+    # serde_json releases depend on).
+    "Zlib",
 ]
 
 [bans]
