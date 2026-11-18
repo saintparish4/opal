@@ -4,31 +4,26 @@ updates:
   - package-ecosystem: cargo
     directory: "/"
     schedule:
-      interval: weekly
+      interval: monthly
     commit-message:
       prefix: chore
+    # The oxc crates share one version and only build together, and a new
+    # parser can read the same source differently, which is a
+    # MEMO_FORMAT_VERSION question. They are bumped by hand, as a task.
+    # This stops version updates only; a security advisory still opens a
+    # pull request.
+    ignore:
+      - dependency-name: "oxc_*"
     groups:
-      # The oxc crates share one version and only build together. A new parser
-      # can also read the same source differently, which is a
-      # MEMO_FORMAT_VERSION question, so it stays out of the routine group.
-      oxc:
-        patterns: ["oxc_*"]
       # Patch only: Dependabot calls 0.11 -> 0.12 a minor update, and for a
       # 0.x crate that one is breaking.
-      #
-      # The exclusion is what keeps the oxc group alive. A crate that matches
-      # two groups goes to the one Dependabot ranks more specific, and it ranks
-      # `update-types` above `patterns`: without it this group claims the oxc
-      # crates, drops their minor bumps as not-a-patch, and each one gets its
-      # own pull request that can't build.
       patch:
         update-types: [patch]
-        exclude-patterns: ["oxc_*"]
 
   - package-ecosystem: github-actions
     directory: "/"
     schedule:
-      interval: weekly
+      interval: monthly
     commit-message:
       prefix: chore
     groups:
