@@ -6,7 +6,7 @@
         "--version"
       ],
       "syscalls": 74,
-      "minor_faults": 365
+      "minor_faults": 459
     },
     "run noop": {
       "args": [
@@ -14,7 +14,7 @@
         "noop"
       ],
       "syscalls": 158,
-      "minor_faults": 450
+      "minor_faults": 544
     },
     "run noop2 (pre-script, spawned)": {
       "args": [
@@ -22,7 +22,7 @@
         "noop2"
       ],
       "syscalls": 260,
-      "minor_faults": 534
+      "minor_faults": 634
     },
     "run hello.js": {
       "args": [
