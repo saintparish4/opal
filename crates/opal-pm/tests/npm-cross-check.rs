@@ -96,6 +96,10 @@ fn npm_resolve(manifest: &Value, peers: Peers) -> NpmTree {
             "--prefer-online",
             "--no-audit",
             "--no-fund",
+            // npm 12 refuses to fetch a tarball by URL unless told to, and
+            // with --package-lock-only it fetches one that way to read a
+            // package's bundled dependencies. Older npms ignore the flag.
+            "--allow-remote=all",
         ]);
     if peers == Peers::Recorded {
         npm.arg("--legacy-peer-deps");
@@ -518,21 +522,31 @@ fn test_known_difference_on_a_real_app_is_reuse_and_bundled_dependencies_only() 
         comparison.failures.join("\n  ")
     );
 
-    // Reuse: `next` pins an exact postcss, and opal gives the same copy to
-    // `@tailwindcss/postcss`, whose range it satisfies. npm reaches
-    // `@tailwindcss/postcss` first, places the newest postcss for it, and
-    // nests the pinned one under `next`.
-    assert_eq!(
-        Comparison::names(&comparison.only_npm),
-        BTreeSet::from(["postcss"]),
+    // A subset, not an equality: the difference exists only while the newest
+    // postcss is not the one `next` pins, and that is the registry's to
+    // decide. In November 2026 the two met and this check, written as an
+    // equality, failed every pull request without a line of opal changing.
+    // What it must never see is npm installing anything else opal doesn't.
+    let only_npm = Comparison::names(&comparison.only_npm);
+    assert!(
+        only_npm.is_subset(&BTreeSet::from(["postcss"])),
         "only npm installs: {:?}",
         comparison.only_npm
     );
     // bundleDependencies: `@tailwindcss/oxide-wasm32-wasi` ships these inside
-    // its tarball, so npm resolves nothing for them.
-    assert_eq!(
-        Comparison::names(&comparison.only_opal),
-        BTreeSet::from(["@emnapi/core", "@emnapi/wasi-threads"]),
+    // its tarball, so npm resolves nothing for them. A subset for the same
+    // reason as above: one of them is missing from this set whenever another
+    // package in the tree also depends on it, and the registry decides that.
+    let only_opal = Comparison::names(&comparison.only_opal);
+    assert!(
+        only_opal.is_subset(&BTreeSet::from([
+            "@emnapi/core",
+            "@emnapi/runtime",
+            "@emnapi/wasi-threads",
+            "@napi-rs/wasm-runtime",
+            "@tybys/wasm-util",
+            "tslib",
+        ])),
         "only opal installs: {:?}",
         comparison.only_opal
     );
