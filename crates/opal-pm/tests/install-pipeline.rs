@@ -1605,3 +1605,225 @@ fn test_an_extra_project_root_marks_without_being_recorded() {
         "an --project root is marked, not recorded"
     );
 }
+
+/// A file beside the project, which a dependency named `../../victim` would
+/// land on: `project/node_modules/../../victim`.
+fn plant_victim(sandbox: &Sandbox) -> PathBuf {
+    let victim = sandbox
+        .project
+        .parent()
+        .expect("the project has a parent")
+        .join("victim");
+    std::fs::create_dir_all(&victim).expect("victim");
+    std::fs::write(victim.join("keep.txt"), "precious").expect("keep");
+    victim
+}
+
+fn assert_untouched(victim: &Path) {
+    assert_eq!(
+        std::fs::read_to_string(victim.join("keep.txt")).expect("keep.txt is still there"),
+        "precious"
+    );
+    assert!(!victim.join(".opal-package").exists());
+}
+
+/// An install that fails may leave an empty `node_modules` behind; what it
+/// may not leave is a package in it.
+fn assert_no_package_was_placed(sandbox: &Sandbox) {
+    let Ok(entries) = std::fs::read_dir(sandbox.path("node_modules")) else {
+        return;
+    };
+    let placed: Vec<_> = entries
+        .map(|entry| entry.expect("entry").file_name())
+        .filter(|name| !name.to_string_lossy().starts_with('.'))
+        .collect();
+    assert!(placed.is_empty(), "packages were placed: {placed:?}");
+}
+
+#[test]
+fn test_a_dependency_named_as_a_path_is_refused_and_nothing_outside_is_touched() {
+    let mut sandbox = Sandbox::new();
+    sandbox.registry.publish(Package::new("a", "1.0.0"));
+    let victim = plant_victim(&sandbox);
+    // The alias is what makes this resolvable: the registry is asked for `a`,
+    // and only the directory is named `../../victim`.
+    sandbox.project(serde_json::json!({
+        "dependencies": { "../../victim": "npm:a@^1.0.0" }
+    }));
+
+    let error = sandbox.install().expect_err("install must fail");
+
+    assert!(
+        matches!(
+            &error,
+            InstallError::Resolve(opal_pm::resolve::ResolveError::InvalidName { name })
+                if name == "../../victim"
+        ),
+        "unexpected error: {error}"
+    );
+    assert_untouched(&victim);
+    assert_no_package_was_placed(&sandbox);
+    assert!(!lockfile::path_in(&sandbox.project).exists());
+}
+
+#[test]
+fn test_an_alias_to_a_path_is_refused() {
+    let sandbox = Sandbox::new();
+    sandbox.project(serde_json::json!({
+        "dependencies": { "a": "npm:../../victim@^1.0.0" }
+    }));
+
+    let error = sandbox.install().expect_err("install must fail");
+
+    assert!(
+        matches!(
+            &error,
+            InstallError::Resolve(
+                opal_pm::resolve::ResolveError::InvalidName { .. }
+                    | opal_pm::resolve::ResolveError::UnsupportedSpec { .. }
+            )
+        ),
+        "unexpected error: {error}"
+    );
+}
+
+#[test]
+fn test_a_published_package_depending_on_a_path_is_refused() {
+    let mut sandbox = Sandbox::new();
+    sandbox.registry.publish(Package::new("a", "1.0.0"));
+    sandbox
+        .registry
+        .publish(Package::new("evil", "1.0.0").alias("../../victim", "a", "^1.0.0"));
+    let victim = plant_victim(&sandbox);
+    sandbox.project(serde_json::json!({ "dependencies": { "evil": "^1.0.0" } }));
+
+    let error = sandbox.install().expect_err("install must fail");
+
+    assert!(
+        matches!(
+            &error,
+            InstallError::Resolve(opal_pm::resolve::ResolveError::InvalidName { .. })
+        ),
+        "unexpected error: {error}"
+    );
+    assert_untouched(&victim);
+    assert_no_package_was_placed(&sandbox);
+}
+
+#[test]
+fn test_a_lockfile_naming_a_path_is_refused_and_nothing_outside_is_touched() {
+    let mut sandbox = Sandbox::new();
+    sandbox.registry.publish(Package::new("a", "1.0.0"));
+    sandbox.project(serde_json::json!({ "dependencies": { "a": "^1.0.0" } }));
+    sandbox.install().expect("install");
+    let victim = plant_victim(&sandbox);
+
+    // What a hostile pull request would do: leave package.json alone and
+    // rename the directory in the lockfile.
+    let honest = sandbox.lockfile();
+    let hostile = honest.replace("require dependency a ", "require dependency ../../victim ");
+    assert_ne!(
+        honest, hostile,
+        "the lockfile has no line to rewrite:\n{honest}"
+    );
+    std::fs::write(lockfile::path_in(&sandbox.project), hostile).expect("write lockfile");
+    std::fs::remove_dir_all(sandbox.path("node_modules")).expect("remove node_modules");
+
+    for options in [
+        InstallOptions::default(),
+        InstallOptions {
+            frozen_lockfile: true,
+            ..InstallOptions::default()
+        },
+    ] {
+        let error = sandbox
+            .install_with(&options)
+            .expect_err("install must fail");
+        assert!(
+            matches!(&error, InstallError::Lockfile(_)),
+            "unexpected error: {error}"
+        );
+        assert!(
+            error.to_string().contains("is not a package name"),
+            "{error}"
+        );
+        assert_untouched(&victim);
+    }
+}
+
+#[test]
+fn test_a_bin_target_outside_its_package_is_not_linked_or_changed() {
+    let mut sandbox = Sandbox::new();
+    // project/node_modules/tool/../../../outside.sh
+    sandbox
+        .registry
+        .publish(Package::new("tool", "1.0.0").bin("tool", "../../../outside.sh"));
+    let outside = sandbox
+        .project
+        .parent()
+        .expect("the project has a parent")
+        .join("outside.sh");
+    std::fs::write(&outside, "echo mine\n").expect("outside");
+    sandbox.project(serde_json::json!({ "dependencies": { "tool": "^1.0.0" } }));
+
+    let report = sandbox.install().expect("install");
+
+    assert_eq!(report.link.bins, 0);
+    assert!(!sandbox.path("node_modules/.bin/tool").exists());
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt as _;
+        let mode = std::fs::metadata(&outside)
+            .expect("metadata")
+            .permissions()
+            .mode();
+        assert_eq!(
+            mode & 0o111,
+            0,
+            "a file outside the package was made executable"
+        );
+    }
+}
+
+#[test]
+fn test_a_bin_named_as_a_path_is_not_linked() {
+    let mut sandbox = Sandbox::new();
+    sandbox.registry.publish(
+        Package::new("tool", "1.0.0")
+            .executable("cli.js", "#!/usr/bin/env node\n")
+            .bin("../../escaped", "./cli.js")
+            .bin("..", "./cli.js")
+            .bin("good", "./cli.js"),
+    );
+    sandbox.project(serde_json::json!({ "dependencies": { "tool": "^1.0.0" } }));
+
+    let report = sandbox.install().expect("install");
+
+    assert_eq!(report.link.bins, 1);
+    assert!(sandbox.path("node_modules/.bin/good").exists());
+    assert!(!sandbox.path("escaped").exists());
+}
+
+#[test]
+fn test_a_bin_target_shipped_without_the_executable_bit_is_made_executable() {
+    let mut sandbox = Sandbox::new();
+    sandbox.registry.publish(
+        Package::new("tool", "1.0.0")
+            .file("cli.js", "#!/usr/bin/env node\nconsole.log('hi');\n")
+            .bin("tool", "./cli.js"),
+    );
+    sandbox.project(serde_json::json!({ "dependencies": { "tool": "^1.0.0" } }));
+
+    let report = sandbox.install().expect("install");
+
+    assert_eq!(report.link.bins, 1);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt as _;
+        let mode = std::fs::metadata(sandbox.path("node_modules/tool/cli.js"))
+            .expect("metadata")
+            .permissions()
+            .mode();
+        assert!(mode & 0o111 != 0, "a bin target must be executable");
+    }
+}

@@ -23,6 +23,7 @@ use serde::de::{Deserialize, Deserializer, MapAccess, Visitor};
 use serde_json::value::RawValue;
 
 use crate::manifest::Spec;
+use crate::name::is_package_name;
 use crate::semver::Version;
 
 #[derive(Debug, thiserror::Error)]
@@ -132,31 +133,6 @@ impl AddRequest {
             name: name.to_string(),
             spec: spec.map(str::to_string),
         })
-    }
-}
-
-/// npm's own rule: a name is what survives `encodeURIComponent` unchanged,
-/// optionally behind one `@scope/`.
-///
-/// That is also what keeps a path (`./lib`), a URL, and `github:user/repo`
-/// from being read as a package: each has a `/` or a `:` where a name cannot.
-fn is_package_name(name: &str) -> bool {
-    fn part(text: &str) -> bool {
-        !text.is_empty()
-            && !text.starts_with('.')
-            && text.bytes().all(|byte| {
-                byte.is_ascii_alphanumeric()
-                    || matches!(
-                        byte,
-                        b'-' | b'_' | b'.' | b'!' | b'~' | b'*' | b'\'' | b'(' | b')'
-                    )
-            })
-    }
-    match name.strip_prefix('@') {
-        Some(scoped) => scoped
-            .split_once('/')
-            .is_some_and(|(scope, package)| part(scope) && part(package)),
-        None => part(name),
     }
 }
 
