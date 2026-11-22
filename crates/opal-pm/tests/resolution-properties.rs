@@ -91,6 +91,15 @@ impl Registry for Universe {
     fn tarball(&self, url: &str) -> Result<Vec<u8>, RegistryError> {
         unreachable!("resolution downloaded {url}, which it must never do");
     }
+
+    fn verify_tarball_url(
+        &self,
+        _name: &str,
+        _version: &Version,
+        url: &str,
+    ) -> Result<(), RegistryError> {
+        unreachable!("resolution asked about {url}, which only a download does");
+    }
 }
 
 impl Universe {

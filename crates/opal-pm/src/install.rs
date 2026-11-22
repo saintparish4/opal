@@ -673,6 +673,11 @@ fn fetch_all(
         parallel::REQUESTS.min(wanted.len()),
         Batch::default,
         |(id, package), batch: &mut Batch| {
+            // Before the store is asked, so whether a lockfile is accepted
+            // never depends on what this machine has downloaded before. The
+            // store is keyed by integrity alone, and a hostile line can name
+            // the integrity of another package already in it.
+            registry.verify_tarball_url(&id.name, &id.version, &package.tarball)?;
             let stored = store.lookup(&package.integrity)?;
             let from_store = stored.is_some();
             let index_hash = match stored {

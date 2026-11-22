@@ -72,6 +72,17 @@ pub enum RegistryError {
     Insecure { url: String },
     #[error("{url}: the response is larger than {limit} bytes, the most opal accepts")]
     TooLarge { url: String, limit: u64 },
+    /// `package` is `name@version`, one string, which keeps this error, and
+    /// every error that carries it, small.
+    #[error(
+        "{package} is to be downloaded from {url}, but the registry keeps it at {expected}; \
+         if opal.lock was written against another registry, delete it and install again"
+    )]
+    UnexpectedTarball {
+        package: String,
+        url: String,
+        expected: String,
+    },
 }
 
 /// Hears a response body arrive, for a caller that wants to show it arriving.
@@ -409,6 +420,23 @@ pub trait Registry: Sync {
 
     fn tarball(&self, url: &str) -> Result<Vec<u8>, RegistryError>;
 
+    /// Refuses `url` unless it is where this registry keeps `name@version`.
+    ///
+    /// A tarball's URL and the integrity it is checked against travel
+    /// together, and both can come from `opal.lock`, a file a pull request can
+    /// change. Checking the bytes against an integrity the same line supplied
+    /// proves nothing about which package they are. Holding the URL to the
+    /// registry does: there, `name@version` has one set of bytes, and the
+    /// integrity becomes a check on them again.
+    ///
+    /// No default, so a new registry has to decide what its tarballs' URLs are.
+    fn verify_tarball_url(
+        &self,
+        name: &str,
+        version: &Version,
+        url: &str,
+    ) -> Result<(), RegistryError>;
+
     /// [`Registry::tarball`], reporting the download to `observer` as it
     /// happens. A registry with no wire to watch reports nothing.
     fn tarball_observed(
@@ -522,6 +550,13 @@ impl NpmRegistry {
 
     pub fn base(&self) -> &str {
         &self.base
+    }
+
+    /// Where npm's registry keeps a version's tarball, and so where every
+    /// registry that copies its layout does: `<base>/@scope/name/-/name-1.0.0.tgz`.
+    pub fn canonical_tarball_url(&self, name: &str, version: &Version) -> String {
+        let unscoped = name.rsplit('/').next().unwrap_or(name);
+        format!("{}/{name}/-/{unscoped}-{version}.tgz", self.base)
     }
 
     fn packument_url(&self, name: &str) -> String {
@@ -699,6 +734,40 @@ impl Registry for NpmRegistry {
 
     fn tarball(&self, url: &str) -> Result<Vec<u8>, RegistryError> {
         self.fetch_tarball(url, None)
+    }
+
+    fn verify_tarball_url(
+        &self,
+        name: &str,
+        version: &Version,
+        url: &str,
+    ) -> Result<(), RegistryError> {
+        let expected = self.canonical_tarball_url(name, version);
+        if url == expected {
+            return Ok(());
+        }
+        // A few old versions are kept under another file name: express
+        // 3.0.0-rc3 is `express-3.0.0rc3.tgz`, and its package.json says
+        // `3.0.0rc3`, the version it was published as (33 of 21,491 versions
+        // across 40 popular packages, measured 2026-11-22). For those the
+        // registry's own record
+        // is the authority. A published version's record never changes, so a
+        // cached copy of any age answers, and only one that predates the
+        // version sends this to the registry.
+        let listed =
+            |packument: Arc<Packument>| packument.version(version).map(|metadata| metadata.tarball);
+        let mut found = listed(self.settled_packument(name)?);
+        if found.is_none() {
+            found = listed(self.packument(name)?);
+        }
+        if found.as_deref() == Some(url) {
+            return Ok(());
+        }
+        Err(RegistryError::UnexpectedTarball {
+            package: format!("{name}@{version}"),
+            url: url.to_string(),
+            expected,
+        })
     }
 
     fn tarball_observed(
@@ -1112,6 +1181,20 @@ mod tests {
         assert_eq!(
             file.packument_url("@scope/pkg"),
             "file:///tmp/fixture/@scope/pkg.json"
+        );
+    }
+
+    #[test]
+    fn test_canonical_tarball_url_shapes() {
+        let registry = NpmRegistry::new("https://registry.npmjs.org/");
+        assert_eq!(
+            registry.canonical_tarball_url("is-number", &Version::new(7, 0, 0)),
+            "https://registry.npmjs.org/is-number/-/is-number-7.0.0.tgz"
+        );
+        // The scope stays in the directory, unescaped, and leaves the file name.
+        assert_eq!(
+            registry.canonical_tarball_url("@types/node", &Version::parse("24.0.0-rc.1").unwrap()),
+            "https://registry.npmjs.org/@types/node/-/node-24.0.0-rc.1.tgz"
         );
     }
 

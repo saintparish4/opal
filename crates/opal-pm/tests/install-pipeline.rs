@@ -507,7 +507,7 @@ fn test_a_tampered_tarball_is_refused() {
         .trim_start_matches("file://")
         .to_string();
     std::fs::write(
-        Path::new(&tarball).join("tarballs").join("a-1.0.0.tgz"),
+        Path::new(&tarball).join("a/-/a-1.0.0.tgz"),
         b"not a tarball",
     )
     .expect("tamper");
@@ -1826,6 +1826,143 @@ fn test_a_bin_target_shipped_without_the_executable_bit_is_made_executable() {
             .mode();
         assert!(mode & 0o111 != 0, "a bin target must be executable");
     }
+}
+
+/// The `dist` a fixture registry published for `name@version`: (tarball URL,
+/// integrity).
+fn published_dist(registry: &FixtureRegistry, name: &str, version: &str) -> (String, String) {
+    let directory = registry.url().trim_start_matches("file://").to_string();
+    let packument: serde_json::Value = serde_json::from_slice(
+        &std::fs::read(Path::new(&directory).join(format!("{name}.json"))).expect("packument"),
+    )
+    .expect("packument JSON");
+    let dist = &packument["versions"][version]["dist"];
+    (
+        dist["tarball"].as_str().expect("tarball").to_string(),
+        dist["integrity"].as_str().expect("integrity").to_string(),
+    )
+}
+
+/// Replaces the `pkg` line for `name@version` with one naming `url` and
+/// `integrity`, as a hostile pull request would, leaving package.json alone.
+fn rewrite_pkg_line(sandbox: &Sandbox, name: &str, version: &str, integrity: &str, url: &str) {
+    let honest = sandbox.lockfile();
+    let prefix = format!("pkg {name} {version} ");
+    let hostile: String = honest
+        .lines()
+        .map(|line| {
+            if line.starts_with(&prefix) {
+                format!("{prefix}{integrity} - - {url}\n")
+            } else {
+                format!("{line}\n")
+            }
+        })
+        .collect();
+    assert_ne!(honest, hostile, "no line to rewrite:\n{honest}");
+    std::fs::write(lockfile::path_in(&sandbox.project), hostile).expect("write lockfile");
+}
+
+fn both_modes() -> [InstallOptions; 2] {
+    [
+        InstallOptions::default(),
+        InstallOptions {
+            frozen_lockfile: true,
+            ..InstallOptions::default()
+        },
+    ]
+}
+
+#[test]
+fn test_a_lockfile_tarball_from_anywhere_but_the_registry_is_refused() {
+    let mut sandbox = Sandbox::new();
+    sandbox.registry.publish(Package::new("a", "1.0.0"));
+    sandbox.project(serde_json::json!({ "dependencies": { "a": "^1.0.0" } }));
+    sandbox.install().expect("install");
+
+    // The attacker's own bytes, under the same name, with a matching integrity.
+    let mut attacker = FixtureRegistry::new(sandbox.project.parent().unwrap().join("attacker"));
+    attacker.publish(Package::new("a", "1.0.0").file("index.js", "module.exports = 'planted';\n"));
+    let (planted, integrity) = published_dist(&attacker, "a", "1.0.0");
+    assert!(planted.starts_with("file://"), "{planted}");
+
+    for url in [
+        planted.as_str(),
+        "http://attacker.invalid/a/-/a-1.0.0.tgz",
+        "https://attacker.invalid/a/-/a-1.0.0.tgz",
+    ] {
+        rewrite_pkg_line(&sandbox, "a", "1.0.0", &integrity, url);
+        for options in both_modes() {
+            let _ = std::fs::remove_dir_all(sandbox.path("node_modules"));
+            let error = sandbox
+                .install_with(&options)
+                .expect_err("install must fail");
+            assert!(
+                matches!(
+                    &error,
+                    InstallError::Registry(RegistryError::UnexpectedTarball { url: refused, .. })
+                        if refused == url
+                ),
+                "{url}: unexpected error: {error}"
+            );
+            assert!(!sandbox.installed("node_modules/a"), "{url}");
+        }
+    }
+}
+
+#[test]
+fn test_a_lockfile_naming_another_packages_tarball_is_refused_even_when_it_is_stored() {
+    let mut sandbox = Sandbox::new();
+    sandbox
+        .registry
+        .publish(Package::new("a", "1.0.0"))
+        .publish(Package::new("b", "1.0.0").file("index.js", "module.exports = 'b';\n"));
+    sandbox.project(serde_json::json!({
+        "dependencies": { "a": "^1.0.0", "b": "^1.0.0" }
+    }));
+    sandbox.install().expect("install");
+
+    // b's real URL and integrity, on the registry, with b's bytes already in
+    // the store: a store hit would link b's contents as `a` with no download.
+    let (url, integrity) = published_dist(&sandbox.registry, "b", "1.0.0");
+    rewrite_pkg_line(&sandbox, "a", "1.0.0", &integrity, &url);
+
+    for options in both_modes() {
+        std::fs::remove_dir_all(sandbox.path("node_modules")).expect("remove node_modules");
+        let error = sandbox
+            .install_with(&options)
+            .expect_err("install must fail");
+        assert!(
+            matches!(
+                &error,
+                InstallError::Registry(RegistryError::UnexpectedTarball { package, .. })
+                    if package == "a@1.0.0"
+            ),
+            "unexpected error: {error}"
+        );
+        assert!(!sandbox.installed("node_modules/a"));
+    }
+}
+
+#[test]
+fn test_a_version_the_registry_keeps_under_another_file_name_still_installs() {
+    let mut sandbox = Sandbox::new();
+    sandbox
+        .registry
+        .publish(Package::new("old", "3.0.0-rc3").tarball_file("old-3.0.0rc3.tgz"));
+    sandbox.project(serde_json::json!({ "dependencies": { "old": "3.0.0-rc3" } }));
+
+    sandbox.install().expect("install from the registry");
+    assert!(sandbox.lockfile().contains("/old/-/old-3.0.0rc3.tgz"));
+
+    // From the lockfile alone, by a client that has not read the packument yet.
+    std::fs::remove_dir_all(sandbox.path("node_modules")).expect("remove node_modules");
+    sandbox
+        .install_with(&InstallOptions {
+            frozen_lockfile: true,
+            ..InstallOptions::default()
+        })
+        .expect("install from the lockfile");
+    assert!(sandbox.installed("node_modules/old"));
 }
 
 fn install_limited(sandbox: &Sandbox, limits: BodyLimits) -> Result<InstallReport, InstallError> {

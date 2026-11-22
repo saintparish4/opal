@@ -33,6 +33,8 @@ pub struct Package {
     /// Extra files beyond the generated `package.json`, as (path, contents,
     /// executable).
     pub files: Vec<(String, Vec<u8>, bool)>,
+    /// The tarball's file name, when it is not npm's `<name>-<version>.tgz`.
+    pub tarball_file: Option<String>,
 }
 
 impl Package {
@@ -51,6 +53,7 @@ impl Package {
             cpu: Vec::new(),
             deprecated: None,
             files: Vec::new(),
+            tarball_file: None,
         }
     }
 
@@ -114,6 +117,13 @@ impl Package {
 
     pub fn bin(mut self, command: &str, path: &str) -> Self {
         self.bin.insert(command.to_string(), path.to_string());
+        self
+    }
+
+    /// Publishes the tarball under another file name, as the registry keeps a
+    /// few old versions: express 3.0.0-rc3 is `express-3.0.0rc3.tgz`.
+    pub fn tarball_file(mut self, file_name: &str) -> Self {
+        self.tarball_file = Some(file_name.to_string());
         self
     }
 
@@ -215,7 +225,7 @@ pub struct FixtureRegistry {
 impl FixtureRegistry {
     pub fn new(directory: impl Into<PathBuf>) -> Self {
         let directory = directory.into();
-        std::fs::create_dir_all(directory.join("tarballs")).expect("create fixture registry");
+        std::fs::create_dir_all(&directory).expect("create fixture registry");
         Self {
             directory,
             published: BTreeMap::new(),
@@ -230,8 +240,16 @@ impl FixtureRegistry {
     pub fn publish(&mut self, mut package: Package) -> &mut Self {
         let tarball = package.tarball();
         let integrity = Integrity::of(Algorithm::Sha512, &tarball);
-        let file_name = format!("{}-{}.tgz", package.name.replace('/', "_"), package.version);
-        let path = self.directory.join("tarballs").join(file_name);
+        // Where npm keeps it, `<name>/-/<unscoped>-<version>.tgz`, so a fixture
+        // install takes the same path through `verify_tarball_url` as a real one.
+        let unscoped = package.name.rsplit('/').next().unwrap_or(&package.name);
+        let file_name = package
+            .tarball_file
+            .clone()
+            .unwrap_or_else(|| format!("{unscoped}-{}.tgz", package.version));
+        let directory = self.directory.join(&package.name).join("-");
+        std::fs::create_dir_all(&directory).expect("create tarball directory");
+        let path = directory.join(file_name);
         std::fs::write(&path, &tarball).expect("write tarball");
 
         // The packument needs only the manifest from here on. Keeping the

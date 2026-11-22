@@ -231,7 +231,7 @@ impl Workload {
                 "dependencies": dependencies,
             }),
             packument_bytes: bytes_in(&root),
-            tarball_bytes: bytes_in(&root.join("tarballs")),
+            tarball_bytes: tarball_bytes_in(&root),
             registry_url: registry.url(),
             _directory: directory,
         }
@@ -423,6 +423,27 @@ fn payload(shape: &Shape, index: usize, file: usize, bytes: usize) -> String {
         }
     }
     String::from_utf8(text).expect("ASCII")
+}
+
+/// Every `.tgz` under `directory`, at any depth: the fixture registry keeps
+/// each tarball beside its package, at `<name>/-/<file>`, as npm's does.
+fn tarball_bytes_in(directory: &Path) -> u64 {
+    let Ok(entries) = std::fs::read_dir(directory) else {
+        return 0;
+    };
+    entries
+        .filter_map(Result::ok)
+        .map(|entry| {
+            let path = entry.path();
+            if path.is_dir() {
+                tarball_bytes_in(&path)
+            } else if path.extension().is_some_and(|extension| extension == "tgz") {
+                entry.metadata().map_or(0, |metadata| metadata.len())
+            } else {
+                0
+            }
+        })
+        .sum()
 }
 
 fn bytes_in(directory: &Path) -> u64 {
