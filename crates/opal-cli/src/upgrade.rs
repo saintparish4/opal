@@ -13,9 +13,11 @@
 //!   over a running executable is fine on macOS and Linux: the running process
 //!   keeps the old inode.
 //!
-//! GitHub Releases are the only source of binaries. `OPAL_INTERNAL_RELEASES_URL`
-//! points this at a stand-in (a `file://` directory in the tests), the way
-//! `OPAL_INTERNAL_FAULT_INJECT` drives the crash suite.
+//! GitHub Releases are the only source of binaries. In a debug build,
+//! `OPAL_INTERNAL_RELEASES_URL` points this at a stand-in (a `file://`
+//! directory in the tests). A release build ignores it: the stand-in would
+//! supply the `SHA256SUMS` its own binary is checked against, so whatever can
+//! set a variable in the environment would choose what replaces this binary.
 
 use std::io::{self, Read, Write};
 use std::path::{Path, PathBuf};
@@ -58,9 +60,17 @@ impl Releases {
         }
     }
 
+    /// GitHub, unless this is a debug build and [`RELEASES_ENV`] names a
+    /// stand-in.
     pub fn from_env() -> Self {
-        match std::env::var(RELEASES_ENV) {
-            Ok(base) if !base.is_empty() => Self::at(&base),
+        Self::choose(std::env::var(RELEASES_ENV).ok(), cfg!(debug_assertions))
+    }
+
+    /// [`Self::from_env`]'s decision, apart from the environment and the build
+    /// profile, so both answers can be tested in either profile.
+    fn choose(stand_in: Option<String>, honoured: bool) -> Self {
+        match stand_in {
+            Some(base) if honoured && !base.is_empty() => Self::at(&base),
             _ => Self::github(),
         }
     }
@@ -457,6 +467,24 @@ mod tests {
 
     fn version(text: &str) -> Version {
         Version::parse(text).expect("version")
+    }
+
+    #[test]
+    fn test_a_release_build_reads_releases_from_github_whatever_the_environment() {
+        let stand_in = Some("file:///tmp/releases".to_string());
+        let github = Releases::github();
+
+        let release = Releases::choose(stand_in.clone(), false);
+        assert_eq!(release.latest, github.latest);
+        assert_eq!(release.download, github.download);
+
+        let debug = Releases::choose(stand_in, true);
+        assert_eq!(debug.latest, "file:///tmp/releases/latest");
+        assert_eq!(debug.download, "file:///tmp/releases/download");
+        assert_eq!(
+            Releases::choose(Some(String::new()), true).latest,
+            github.latest
+        );
     }
 
     #[test]
