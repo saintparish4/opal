@@ -202,3 +202,42 @@ jobs:
         with:
           name: install-benchmark-scaling
           path: bench/*.json
+
+  # The runtime's native calls against JavaScript that frees the memory they
+  # are using, under AddressSanitizer, where a use-after-free is a report and
+  # not a wrong answer at random. The scripts are opal-cli's
+  # tests/memory-safety/, which the ordinary suite also runs. ASan intercepts
+  # readv/writev and the rest, so a syscall into freed memory is caught too.
+  # The nightly is pinned: -Zsanitizer is unstable, and a new nightly breaking
+  # the build should be a commit that moves this date, not a red night.
+  address-sanitizer:
+    name: AddressSanitizer (runtime)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      NIGHTLY: nightly-2026-10-01
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install the pinned nightly
+        run: rustup toolchain install "$NIGHTLY" --profile minimal
+      # --target keeps the sanitizer off the build scripts, which run on the
+      # host: one of them runs V8 to make the startup snapshot.
+      - name: Build opal with AddressSanitizer
+        env:
+          RUSTFLAGS: -Zsanitizer=address
+        run: cargo "+$NIGHTLY" build -p opal-cli --target x86_64-unknown-linux-gnu --target-dir target-asan
+      - name: Run the memory-safety scripts
+        env:
+          # V8 keeps its heap until exit; a leak report would be noise.
+          ASAN_OPTIONS: detect_leaks=0:halt_on_error=1
+        run: |
+          set -euo pipefail
+          opal="$PWD/target-asan/x86_64-unknown-linux-gnu/debug/opal"
+          for script in crates/opal-cli/tests/memory-safety/*.js; do
+            echo "== $script"
+            work="$(mktemp -d)"
+            (cd "$work" && "$opal" run "$GITHUB_WORKSPACE/$script")
+          done

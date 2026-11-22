@@ -89,7 +89,10 @@ pub(super) fn new_buffer<'s>(
 }
 
 /// The bytes a typed array, DataView or ArrayBuffer views. Valid until
-/// JavaScript runs again, which no op here lets happen while it holds them.
+/// JavaScript runs again: a `valueOf` that detaches, transfers or shrinks the
+/// buffer frees the memory under the slice. No op here lets that happen while
+/// it holds one, because each reads its other arguments with [`integer`] and
+/// [`uint32`], which never call into JavaScript.
 pub(super) fn bytes<'a>(
     scope: &mut v8::PinScope,
     value: v8::Local<v8::Value>,
@@ -110,6 +113,28 @@ pub(super) fn bytes<'a>(
     // SAFETY: the backing store holds byte_offset + byte_length bytes, and
     // stays put while the view is alive and no JavaScript runs.
     Some(unsafe { std::slice::from_raw_parts_mut(data.as_ptr().cast::<u8>().add(offset), length) })
+}
+
+/// A number argument, read without running JavaScript.
+///
+/// A primitive's conversion to an integer runs no code. An object's calls its
+/// `valueOf`, which could free the memory of a buffer some slice still points
+/// into, so an object reads as no number at all. lib/buffer.js converts each
+/// of these arguments to a number before calling, so only a caller's bug
+/// passes one.
+fn integer(scope: &mut v8::PinScope, value: v8::Local<v8::Value>) -> Option<i64> {
+    if value.is_object() {
+        return None;
+    }
+    value.integer_value(scope)
+}
+
+/// [`integer`], for an argument read as a `uint32`.
+fn uint32(scope: &mut v8::PinScope, value: v8::Local<v8::Value>) -> Option<u32> {
+    if value.is_object() {
+        return None;
+    }
+    value.uint32_value(scope)
 }
 
 fn view_bytes<'a>(scope: &mut v8::PinScope, args: &Args, index: i32) -> Option<&'a mut [u8]> {
@@ -426,7 +451,7 @@ fn slice_bounds(
             if value.is_undefined() {
                 return Some(default);
             }
-            let n = value.integer_value(scope)?;
+            let n = integer(scope, value)?;
             Some(if n < 0 {
                 0
             } else {
@@ -476,10 +501,10 @@ pub fn buffer_write(scope: &mut v8::PinScope, args: Args, mut rv: Ret) {
         return type_error(scope, "argument must be a string");
     };
     let len = data.len();
-    let offset = (args.get(2).integer_value(scope).unwrap_or(0).max(0) as usize).min(len);
+    let offset = (integer(scope, args.get(2)).unwrap_or(0).max(0) as usize).min(len);
     let max = match args.get(3) {
         value if value.is_undefined() => len - offset,
-        value => (value.integer_value(scope).unwrap_or(0).max(0) as usize).min(len - offset),
+        value => (integer(scope, value).unwrap_or(0).max(0) as usize).min(len - offset),
     };
     let encoding = Encoding::from_value(scope, args.get(4));
     let written = write_into(scope, &mut data[offset..offset + max], text, encoding);
@@ -533,7 +558,7 @@ pub fn buffer_compare_offset(scope: &mut v8::PinScope, args: Args, mut rv: Ret) 
         if value.is_undefined() {
             return default;
         }
-        value.integer_value(scope).unwrap_or(0).max(0) as usize
+        integer(scope, value).unwrap_or(0).max(0) as usize
     };
     let target_start = arg(scope, 2, 0);
     let source_start = arg(scope, 3, 0);
@@ -559,9 +584,9 @@ pub fn buffer_copy(scope: &mut v8::PinScope, args: Args, mut rv: Ret) {
     else {
         return;
     };
-    let target_start = args.get(2).integer_value(scope).unwrap_or(0).max(0) as usize;
-    let source_start = args.get(3).integer_value(scope).unwrap_or(0).max(0) as usize;
-    let count = args.get(4).integer_value(scope).unwrap_or(0).max(0) as usize;
+    let target_start = integer(scope, args.get(2)).unwrap_or(0).max(0) as usize;
+    let source_start = integer(scope, args.get(3)).unwrap_or(0).max(0) as usize;
+    let count = integer(scope, args.get(4)).unwrap_or(0).max(0) as usize;
     let count = count
         .min(source.len().saturating_sub(source_start))
         .min(target.len().saturating_sub(target_start));
@@ -584,8 +609,8 @@ pub fn buffer_fill(scope: &mut v8::PinScope, args: Args, mut rv: Ret) {
     let Some(data) = view_bytes(scope, &args, 0) else {
         return;
     };
-    let start = args.get(2).integer_value(scope).unwrap_or(0).max(0) as usize;
-    let end = args.get(3).integer_value(scope).unwrap_or(0).max(0) as usize;
+    let start = integer(scope, args.get(2)).unwrap_or(0).max(0) as usize;
+    let end = integer(scope, args.get(3)).unwrap_or(0).max(0) as usize;
     if start > end || end > data.len() {
         return rv.set_int32(-2);
     }
@@ -724,7 +749,7 @@ pub fn buffer_index_of_string(scope: &mut v8::PinScope, args: Args, mut rv: Ret)
     let Ok(needle) = v8::Local::<v8::String>::try_from(args.get(1)) else {
         return type_error(scope, "needle must be a string");
     };
-    let offset = args.get(2).integer_value(scope).unwrap_or(0);
+    let offset = integer(scope, args.get(2)).unwrap_or(0);
     let encoding = Encoding::from_value(scope, args.get(3));
     let forward = args.get(4).boolean_value(scope);
     let needle = encode(scope, needle, encoding);
@@ -738,7 +763,7 @@ pub fn buffer_index_of_buffer(scope: &mut v8::PinScope, args: Args, mut rv: Ret)
         return;
     };
     let needle = needle.to_vec();
-    let offset = args.get(2).integer_value(scope).unwrap_or(0);
+    let offset = integer(scope, args.get(2)).unwrap_or(0);
     let encoding = Encoding::from_value(scope, args.get(3));
     let forward = args.get(4).boolean_value(scope);
     rv.set_double(index_of_bytes(haystack, &needle, offset, encoding, forward));
@@ -749,8 +774,8 @@ pub fn buffer_index_of_number(scope: &mut v8::PinScope, args: Args, mut rv: Ret)
     let Some(haystack) = view_bytes(scope, &args, 0) else {
         return;
     };
-    let needle = args.get(1).uint32_value(scope).unwrap_or(0) as u8;
-    let offset = args.get(2).integer_value(scope).unwrap_or(0);
+    let needle = uint32(scope, args.get(1)).unwrap_or(0) as u8;
+    let offset = integer(scope, args.get(2)).unwrap_or(0);
     let forward = args.get(3).boolean_value(scope);
     let start = index_of_offset(haystack.len(), offset, 1, forward);
     if start <= -1 || haystack.is_empty() {
