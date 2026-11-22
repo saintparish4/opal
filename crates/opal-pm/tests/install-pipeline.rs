@@ -2132,3 +2132,106 @@ fn test_install_does_not_follow_a_symlinked_nested_node_modules() {
         "precious\n"
     );
 }
+
+/// Changes a file the way a person or a tool editing `node_modules` does it
+/// as root, or after a `chmod`: in place, through the hardlink into the store.
+fn edit_in_place(path: &Path, contents: &str) {
+    use std::os::unix::fs::PermissionsExt as _;
+    std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o644)).expect("chmod");
+    std::fs::write(path, contents).expect("edit");
+}
+
+#[test]
+fn test_a_store_file_changed_through_a_project_is_downloaded_again_not_spread() {
+    let mut sandbox = Sandbox::new();
+    sandbox.registry.publish(
+        Package::new("a", "1.0.0")
+            .file("index.js", "module.exports = 'a';\n")
+            .file("lib.js", "module.exports = 'lib';\n"),
+    );
+    sandbox.project(serde_json::json!({ "dependencies": { "a": "^1.0.0" } }));
+    let first = sandbox.install().expect("first project");
+    assert!(
+        first.link.files_linked > 0,
+        "the store must be hardlinked for this test"
+    );
+    edit_in_place(
+        &sandbox.path("node_modules/a/index.js"),
+        "module.exports = 'changed';\n",
+    );
+
+    // A second project installs the same package from the same store.
+    let second = sandbox.project.parent().unwrap().join("second");
+    write_project(
+        &second,
+        serde_json::json!({ "dependencies": { "a": "^1.0.0" } }),
+    );
+    let report = sandbox
+        .install_at(&second, &InstallOptions::default())
+        .expect("second project");
+
+    assert_eq!(
+        report.repaired,
+        vec![opal_pm::resolve::PackageId::new(
+            "a",
+            opal_pm::semver::Version::new(1, 0, 0)
+        )]
+    );
+    assert_eq!(report.fetched, 1, "downloaded again");
+    assert_eq!(
+        std::fs::read_to_string(second.join("node_modules/a/index.js")).expect("index.js"),
+        "module.exports = 'a';\n"
+    );
+    // The first project's edit is its own; it is not undone behind its back.
+    assert_eq!(
+        std::fs::read_to_string(sandbox.path("node_modules/a/index.js")).expect("index.js"),
+        "module.exports = 'changed';\n"
+    );
+
+    // Whole again: a third install takes it from the store without a download.
+    let third = sandbox.project.parent().unwrap().join("third");
+    write_project(
+        &third,
+        serde_json::json!({ "dependencies": { "a": "^1.0.0" } }),
+    );
+    let report = sandbox
+        .install_at(&third, &InstallOptions::default())
+        .expect("third project");
+    assert!(report.repaired.is_empty());
+    assert_eq!((report.fetched, report.already_stored), (0, 1));
+}
+
+#[test]
+fn test_a_store_file_that_went_missing_is_downloaded_again() {
+    let mut sandbox = Sandbox::new();
+    sandbox
+        .registry
+        .publish(Package::new("a", "1.0.0").file("lib.js", "module.exports = 'lib';\n"));
+    sandbox.project(serde_json::json!({ "dependencies": { "a": "^1.0.0" } }));
+    sandbox.install().expect("install");
+    let index_hash = sandbox
+        .store
+        .lookup(&{
+            let lockfile = sandbox.lockfile();
+            let line = lockfile
+                .lines()
+                .find(|line| line.starts_with("pkg a "))
+                .expect("pkg line");
+            opal_pm::integrity::Integrity::parse(line.split(' ').nth(3).expect("integrity"))
+                .expect("integrity")
+        })
+        .expect("lookup")
+        .expect("stored");
+    let index = sandbox.store.read_index(&index_hash).expect("index");
+    let lib = &index.file("lib.js").expect("lib.js").hash;
+    std::fs::remove_file(sandbox.store.cas().object_path(lib)).expect("remove object");
+    std::fs::remove_dir_all(sandbox.path("node_modules")).expect("remove node_modules");
+
+    let report = sandbox.install().expect("reinstall");
+
+    assert_eq!(report.repaired.len(), 1);
+    assert_eq!(
+        std::fs::read_to_string(sandbox.path("node_modules/a/lib.js")).expect("lib.js"),
+        "module.exports = 'lib';\n"
+    );
+}

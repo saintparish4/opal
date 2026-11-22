@@ -593,6 +593,17 @@ fn install_command(
     // Warnings go last, after the result, so they are the last thing on screen
     // rather than buried above it.
     let warning = paint_stderr.yellow("warning:");
+    // Something changed files in the shared store, most likely by writing to
+    // a file under some project's node_modules. Worth knowing, because that
+    // project still has the changed files.
+    if !report.repaired.is_empty() {
+        let names: Vec<String> = report.repaired.iter().map(ToString::to_string).collect();
+        eprintln!(
+            "{warning} the store's copy of {} had changed since it was stored, so it was downloaded again; \
+             a project that was installed with it before still has the changed files",
+            names.join(", ")
+        );
+    }
     for (id, message) in &report.deprecated {
         eprintln!("{warning} {id} is deprecated: {message}");
     }
