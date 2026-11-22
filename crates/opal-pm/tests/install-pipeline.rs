@@ -20,7 +20,7 @@ use opal_pm::package::PackageStore;
 use opal_pm::platform::Platform;
 use opal_pm::progress::{Silent, Stage};
 use opal_pm::projects::ProjectIndex;
-use opal_pm::registry::NpmRegistry;
+use opal_pm::registry::{BodyLimits, NpmRegistry, RegistryError};
 
 struct Sandbox {
     _directory: tempfile::TempDir,
@@ -1826,4 +1826,84 @@ fn test_a_bin_target_shipped_without_the_executable_bit_is_made_executable() {
             .mode();
         assert!(mode & 0o111 != 0, "a bin target must be executable");
     }
+}
+
+fn install_limited(sandbox: &Sandbox, limits: BodyLimits) -> Result<InstallReport, InstallError> {
+    install::install(
+        &sandbox.project,
+        &NpmRegistry::new(sandbox.registry.url()).with_body_limits(limits),
+        &sandbox.store,
+        &sandbox.projects,
+        &InstallOptions::default(),
+        &Silent,
+    )
+}
+
+#[test]
+fn test_a_tarball_past_the_size_limit_is_refused() {
+    let mut sandbox = Sandbox::new();
+    // Bytes gzip cannot shrink, so the tarball is larger than its limit.
+    let mut state = 0x9e37_79b9_7f4a_7c15_u64;
+    let noise: Vec<u8> = (0..64 * 1024)
+        .map(|_| {
+            state ^= state << 13;
+            state ^= state >> 7;
+            state ^= state << 17;
+            state as u8
+        })
+        .collect();
+    let mut package = Package::new("big", "1.0.0");
+    package.files.push(("noise.bin".to_string(), noise, false));
+    sandbox.registry.publish(package);
+    sandbox.project(serde_json::json!({ "dependencies": { "big": "^1.0.0" } }));
+
+    let error = install_limited(
+        &sandbox,
+        BodyLimits {
+            tarball: 32 * 1024,
+            ..BodyLimits::default()
+        },
+    )
+    .expect_err("install must fail");
+
+    assert!(
+        matches!(
+            &error,
+            InstallError::Registry(RegistryError::TooLarge { limit, .. }) if *limit == 32 * 1024
+        ),
+        "unexpected error: {error}"
+    );
+    assert!(!sandbox.installed("node_modules/big"));
+    assert_eq!(
+        install_limited(&sandbox, BodyLimits::default())
+            .expect("the default limit takes it")
+            .fetched,
+        1
+    );
+}
+
+#[test]
+fn test_a_packument_past_the_size_limit_is_refused() {
+    let mut sandbox = Sandbox::new();
+    sandbox.registry.publish(Package::new("a", "1.0.0"));
+    sandbox.project(serde_json::json!({ "dependencies": { "a": "^1.0.0" } }));
+
+    let error = install_limited(
+        &sandbox,
+        BodyLimits {
+            packument: 64,
+            ..BodyLimits::default()
+        },
+    )
+    .expect_err("install must fail");
+
+    assert!(
+        matches!(
+            &error,
+            InstallError::Resolve(opal_pm::resolve::ResolveError::Registry(
+                RegistryError::TooLarge { limit: 64, .. }
+            ))
+        ),
+        "unexpected error: {error}"
+    );
 }

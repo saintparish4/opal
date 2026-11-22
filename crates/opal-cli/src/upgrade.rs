@@ -23,7 +23,9 @@ use std::process::Command;
 
 use flate2::read::GzDecoder;
 use opal_core::atomic::TempFile;
-use opal_pm::registry::{Fetched, RegistryError, Request, Transport};
+use opal_pm::registry::{
+    Fetched, MAX_PACKUMENT_BYTES, MAX_TARBALL_BYTES, RegistryError, Request, Transport,
+};
 use opal_pm::semver::Version;
 use sha2::{Digest, Sha256};
 
@@ -189,10 +191,12 @@ fn parse_version(text: &str) -> Result<Version, UpgradeError> {
 }
 
 fn latest_version(releases: &Releases, transport: &dyn Transport) -> Result<Version, UpgradeError> {
+    // A JSON document of a few kilobytes, held to a packument's ceiling.
     let body = fetch(
         transport,
         &releases.latest,
         Some("application/vnd.github+json"),
+        MAX_PACKUMENT_BYTES,
     )?;
     let tag = serde_json::from_slice::<serde_json::Value>(&body)
         .ok()
@@ -205,12 +209,14 @@ fn fetch(
     transport: &dyn Transport,
     url: &str,
     accept: Option<&str>,
+    limit: u64,
 ) -> Result<Vec<u8>, RegistryError> {
     let request = Request {
         url,
         accept,
         etag: None,
         observer: None,
+        limit,
     };
     match transport.get(&request)? {
         Fetched::Fresh(response) => Ok(response.body),
@@ -228,7 +234,7 @@ fn download(
     url: &str,
     target: &Version,
 ) -> Result<Vec<u8>, UpgradeError> {
-    fetch(transport, url, None).map_err(|error| match error {
+    fetch(transport, url, None, MAX_TARBALL_BYTES).map_err(|error| match error {
         RegistryError::Status { status: 404, .. } => UpgradeError::NoSuchRelease(target.clone()),
         other => UpgradeError::Registry(other),
     })
