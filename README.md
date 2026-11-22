@@ -115,7 +115,7 @@ opal x cowsay@1.6.0 hello        # installed once into the cache, then run
 
 `opal run` follows npm's own source (`@npmcli/run-script`): the script runs in the project folder with every `node_modules/.bin` from there up on `PATH`, sees the `npm_package_*` and `npm_lifecycle_*` variables tools read, and ends opal with its own exit code or signal. Where it differs: npm's own settings (`npm_config_cache` and the like) aren't exported, the shell is `/bin/sh` (npm's `script-shell` isn't read), workspaces aren't supported, and flags after the script's name are the script's, where npm would read them as its own.
 
-`opal x` installs a package the first time it's asked for and reuses that install after, so a range or tag (`cowsay`, `cowsay@latest`) is resolved once, not on every run.
+`opal x` installs a package the first time it's asked for and reuses that install after, so a range or tag (`cowsay`, `cowsay@latest`) is resolved once, not on every run. Before that first install it asks, when it is run at a terminal, and only `y` goes ahead, since what it is about to run is code nobody has read and a typo of a popular name is a different package. `opal x --yes cowsay` skips the question; in a script or CI, with no terminal on stdin, there is none, as with `npx`.
 
 `update`, `why`, `outdated`, `audit`, and `publish` aren't implemented yet, so the binary doesn't have them. A command that exists and does nothing is worse than one that doesn't exist.
 

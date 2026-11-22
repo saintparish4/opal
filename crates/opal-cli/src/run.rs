@@ -3,7 +3,7 @@
 //! need no engine, and the npm semantics they follow are documented in
 //! `opal_runtime::scripts` and `opal_runtime::bins`.
 
-use std::io::IsTerminal;
+use std::io::{self, BufRead, IsTerminal, Write};
 use std::os::unix::process::CommandExt;
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitCode};
@@ -50,6 +50,10 @@ pub struct XArgs {
     /// Install from cached registry metadata only; never reach the network.
     #[arg(long)]
     offline: bool,
+    /// Install a package that isn't here yet without asking first. Given
+    /// before the package: `opal x --yes cowsay`.
+    #[arg(short = 'y', long)]
+    yes: bool,
     /// The command or package to run: `tsc`, `cowsay`, `cowsay@1.6.0`,
     /// `@scope/tool@^2`.
     package: String,
@@ -190,6 +194,17 @@ fn installed(args: &XArgs, paint: Paint) -> Result<(PathBuf, Vec<PathBuf>), Fail
     let (name, _) = bins::split_spec(&args.package);
     let done = dir.join(".opal-x-installed");
     if !done.exists() {
+        let interactive = io::stdin().is_terminal();
+        if !may_install(
+            &args.package,
+            registry.base(),
+            args.yes,
+            interactive,
+            &mut io::stdin().lock(),
+            &mut io::stderr(),
+        )? {
+            return Err(format!("{} was not installed, and nothing was run", args.package).into());
+        }
         std::fs::create_dir_all(&dir)?;
         std::fs::write(dir.join("package.json"), "{ \"private\": true }\n")?;
         eprintln!("{}", paint.dim(format!("installing {}", args.package)));
@@ -218,6 +233,37 @@ fn installed(args: &XArgs, paint: Paint) -> Result<(PathBuf, Vec<PathBuf>), Fail
     Ok((bin_dir.join(command), vec![bin_dir]))
 }
 
+/// Whether to install `spec` in order to run it.
+///
+/// npx's rule: ask when someone is there to answer (stdin is a terminal) and
+/// they didn't pass `--yes`; without a terminal, in a script or CI, the
+/// command line is the answer. Unlike npx, an empty answer is no. What is
+/// about to run is code nobody here has read, and a typo of a popular
+/// package's name would otherwise be one Enter away from running.
+fn may_install(
+    spec: &str,
+    registry: &str,
+    yes: bool,
+    interactive: bool,
+    input: &mut impl BufRead,
+    prompt: &mut impl Write,
+) -> io::Result<bool> {
+    if yes || !interactive {
+        return Ok(true);
+    }
+    write!(
+        prompt,
+        "{spec} is not installed. Download it from {registry} and run it? [y/N] "
+    )?;
+    prompt.flush()?;
+    let mut answer = String::new();
+    input.read_line(&mut answer)?;
+    Ok(matches!(
+        answer.trim().to_ascii_lowercase().as_str(),
+        "y" | "yes"
+    ))
+}
+
 fn context(
     project: PathBuf,
     init_cwd: PathBuf,
@@ -232,5 +278,50 @@ fn context(
         command,
         extra_bins,
         color: std::io::stdout().is_terminal(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn ask(yes: bool, interactive: bool, typed: &str) -> (bool, String) {
+        let mut prompt = Vec::new();
+        let answer = may_install(
+            "cowsay",
+            "https://registry.npmjs.org",
+            yes,
+            interactive,
+            &mut typed.as_bytes(),
+            &mut prompt,
+        )
+        .expect("ask");
+        (answer, String::from_utf8(prompt).expect("UTF-8"))
+    }
+
+    #[test]
+    fn test_a_terminal_is_asked_and_only_yes_installs() {
+        for (typed, expected) in [
+            ("y\n", true),
+            ("YES\n", true),
+            (" yes \n", true),
+            ("\n", false),
+            ("n\n", false),
+            ("cowsya\n", false),
+            ("", false),
+        ] {
+            let (answer, prompt) = ask(false, true, typed);
+            assert_eq!(answer, expected, "{typed:?}");
+            assert_eq!(
+                prompt,
+                "cowsay is not installed. Download it from https://registry.npmjs.org and run it? [y/N] "
+            );
+        }
+    }
+
+    #[test]
+    fn test_yes_or_no_terminal_installs_without_asking() {
+        assert_eq!(ask(true, true, ""), (true, String::new()));
+        assert_eq!(ask(false, false, ""), (true, String::new()));
     }
 }
