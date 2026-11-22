@@ -2044,3 +2044,91 @@ fn test_a_packument_past_the_size_limit_is_refused() {
         "unexpected error: {error}"
     );
 }
+
+/// A directory beside the project, holding a tree opal installed there: what
+/// `npm link` leaves `node_modules/<name>` pointing at.
+fn linked_project(sandbox: &Sandbox) -> PathBuf {
+    let outside = sandbox.project.parent().unwrap().join("linked-src");
+    let bar = outside.join("node_modules/bar");
+    std::fs::create_dir_all(&bar).expect("outside tree");
+    std::fs::write(bar.join("index.js"), "precious\n").expect("outside file");
+    let hash = "0".repeat(64);
+    std::fs::write(bar.join(".opal-package"), format!("bar 1.0.0 {hash}\n")).expect("marker");
+    outside
+}
+
+#[test]
+fn test_install_does_not_follow_a_symlinked_package_out_of_the_project() {
+    let mut sandbox = Sandbox::new();
+    sandbox.registry.publish(Package::new("a", "1.0.0"));
+    sandbox.project(serde_json::json!({ "dependencies": { "a": "^1.0.0" } }));
+    let outside = linked_project(&sandbox);
+    std::fs::create_dir_all(sandbox.path("node_modules")).expect("node_modules");
+    std::os::unix::fs::symlink(&outside, sandbox.path("node_modules/linked")).expect("link");
+
+    sandbox.install().expect("install");
+
+    // Read through the link, `linked/node_modules/bar` was a stale package of
+    // this project's, and removing it removed the other project's.
+    assert_eq!(
+        std::fs::read_to_string(outside.join("node_modules/bar/index.js")).expect("still there"),
+        "precious\n"
+    );
+    // Not opal's to remove either: nothing in the layout is named `linked`.
+    assert!(
+        std::fs::symlink_metadata(sandbox.path("node_modules/linked"))
+            .expect("link kept")
+            .file_type()
+            .is_symlink()
+    );
+    assert!(sandbox.installed("node_modules/a"));
+}
+
+#[test]
+fn test_install_replaces_a_symlinked_scope_instead_of_writing_through_it() {
+    let mut sandbox = Sandbox::new();
+    sandbox
+        .registry
+        .publish(Package::new("@scope/pkg", "1.0.0"));
+    sandbox.project(serde_json::json!({ "dependencies": { "@scope/pkg": "^1.0.0" } }));
+    let outside = sandbox.project.parent().unwrap().join("scope-src");
+    std::fs::create_dir_all(outside.join("pkg")).expect("outside");
+    std::fs::write(outside.join("pkg/keep.txt"), "precious\n").expect("outside file");
+    std::fs::create_dir_all(sandbox.path("node_modules")).expect("node_modules");
+    std::os::unix::fs::symlink(&outside, sandbox.path("node_modules/@scope")).expect("link");
+
+    sandbox.install().expect("install");
+
+    assert_eq!(
+        std::fs::read_to_string(outside.join("pkg/keep.txt")).expect("still there"),
+        "precious\n"
+    );
+    assert!(!outside.join("pkg/.opal-package").exists());
+    assert!(
+        std::fs::symlink_metadata(sandbox.path("node_modules/@scope"))
+            .expect("scope")
+            .is_dir()
+    );
+    assert!(sandbox.installed("node_modules/@scope/pkg"));
+}
+
+#[test]
+fn test_install_does_not_follow_a_symlinked_nested_node_modules() {
+    let mut sandbox = Sandbox::new();
+    sandbox.registry.publish(Package::new("a", "1.0.0"));
+    sandbox.project(serde_json::json!({ "dependencies": { "a": "^1.0.0" } }));
+    sandbox.install().expect("first install");
+    let outside = linked_project(&sandbox);
+    std::os::unix::fs::symlink(
+        outside.join("node_modules"),
+        sandbox.path("node_modules/a/node_modules"),
+    )
+    .expect("link");
+
+    sandbox.install().expect("second install");
+
+    assert_eq!(
+        std::fs::read_to_string(outside.join("node_modules/bar/index.js")).expect("still there"),
+        "precious\n"
+    );
+}
