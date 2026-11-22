@@ -54,6 +54,14 @@ Installing with npm or Homebrew is planned. Until then, use the install script.
 
 The script picks the binary for your OS and CPU from the [GitHub Release](https://github.com/saintparish4/opal/releases), verifies its SHA256 checksum, and installs it to `~/.opal/bin/opal`. It puts that directory on your `PATH` by adding one line, marked `# added by opal's install.sh`, to `~/.zshrc`, `~/.bashrc`, or `~/.profile`. To uninstall, delete the directory `opal cache path` prints, then `~/.opal` and that line.
 
+The checksum only says the download is whole: it comes from the same release. To check where an archive was built, download it from the release page and verify its build provenance with the [GitHub CLI](https://cli.github.com/) (releases after 0.4.2):
+
+```sh
+gh attestation verify opal-linux-x64.tar.gz --repo saintparish4/opal
+```
+
+It succeeds only for an archive this repository's release workflow built from a tagged commit, and names that commit.
+
 Opal is pre-1.0 beta software, and the lockfile format can change between minor versions. Don't point it at a project you can't reinstall.
 
 ### Upgrade

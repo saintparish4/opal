@@ -188,9 +188,47 @@ jobs:
             ${{ env.BIN_NAME }}-${{ matrix.asset }}.tar.gz.sha256
           if-no-files-found: error
 
+  # Signed build provenance for each archive: a Sigstore certificate, issued
+  # to this workflow run, binding the archive's digest to this repository,
+  # this workflow file, the tag and the commit. SHA256SUMS comes from the same
+  # release as the archives, so it only says the download is whole; the
+  # attestation says where it was built. `gh attestation verify <archive>
+  # --repo saintparish4/opal` checks it, with no key to distribute.
+  #
+  # A job of its own, so the step minting the signing identity never holds the
+  # write token, and the publish job never holds the identity. Tags only: an
+  # attestation is a permanent public record, and a dry run publishes nothing.
+  attest:
+    name: Attest provenance
+    needs: build
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: ${{ env.BIN_NAME }}-*
+          path: dist
+          merge-multiple: true
+
+      - name: Verify checksums
+        run: cd dist && cat *.sha256 | sha256sum --check --strict
+
+      - name: Attest
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: dist/*.tar.gz
+
   release:
     name: Publish release
-    needs: [notes, build]
+    needs: [notes, build, attest]
+    # `attest` is skipped on a dry run, and a job whose need was skipped is
+    # skipped too unless it says otherwise. It still fails if `attest` failed.
+    if: ${{ !failure() && !cancelled() }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -216,6 +254,24 @@ jobs:
       # This is the check install.sh makes, run before anyone can download.
       - name: Verify checksums
         run: cd dist && sha256sum --check --strict SHA256SUMS
+
+      # The check a user makes, made before anyone can download: each archive
+      # about to be published has a provenance attestation from this
+      # repository's release workflow, for this tag.
+      - name: Verify provenance
+        if: github.event_name == 'push'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          for archive in dist/*.tar.gz; do
+            gh attestation verify "$archive" \
+              --repo "$GH_REPO" \
+              --signer-workflow "$GH_REPO/.github/workflows/release.yml" \
+              --source-ref "$GITHUB_REF" \
+              --deny-self-hosted-runners
+          done
 
       # gh rather than an action, so nothing third-party runs with the write
       # token. It uploads to a draft and publishes last, so a release is never
