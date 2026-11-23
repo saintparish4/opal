@@ -7,18 +7,18 @@ import Base from "../layouts/Base.astro";
   ogTitle="Opal"
   ogDescription="An all-in-one JavaScript toolkit built on one module graph. The package manager works today."
 >
-  <a slot="banner" class="banner" href="/blog/opal-v0.4.2/">Opal v0.4.2 is a security release <span>— upgrade from every earlier version →</span></a>
+  <a slot="banner" class="banner" href="/blog/opal-v0.4.3/">Opal v0.4.3 is a security release <span>— upgrade from every earlier version →</span></a>
 
   <main id="main">
     <!-- ───────── hero ───────── -->
     <section class="wrap hero" id="top">
       <div class="hero-copy">
-        <a class="pill" href="https://github.com/saintparish4/opal/releases/tag/v0.4.2"><b>Beta</b> <span>Opal v0.4.2 released →</span></a>
+        <a class="pill" href="https://github.com/saintparish4/opal/releases/tag/v0.4.3"><b>Beta</b> <span>Opal v0.4.3 released →</span></a>
         <h1>Opal is a <em>crash&#8209;safe</em> JavaScript toolkit. One graph.</h1>
         <p class="lede">A package manager today, with a runtime, bundler and test runner planned, in a single binary. Use <a href="#minute"><code>opal install</code></a> in an existing Node.js project: it installs what npm would, from one store shared by every project.</p>
 
         <div id="install">
-          <p class="label">Install Opal v0.4.2</p>
+          <p class="label">Install Opal v0.4.3</p>
           <div class="slab">
             <code id="install-command">curl -fsSL https://opalx.dev/install.sh | bash</code>
             <button class="copy" data-copy="install-command" aria-label="Copy the install command" title="Copy">
@@ -163,20 +163,22 @@ import Base from "../layouts/Base.astro";
     <!-- ───────── latest release ───────── -->
     <section class="wrap block release" id="release">
       <div>
-        <p class="label"><b class="version">v0.4.2</b> Latest release · November 2026</p>
+        <p class="label"><b class="version">v0.4.3</b> Latest release · November 2026</p>
         <h2>A security release. Upgrade from every earlier version.</h2>
-        <p class="lede">v0.4.2 stops <code>opal install</code> accepting a dependency whose name is a path. A <code>package.json</code> or <code>opal.lock</code> naming a dependency <code>../../x</code> made Opal delete that directory and write a package there.</p>
+        <p class="lede">v0.4.3 stops an <code>opal.lock</code> from choosing where a tarball comes from: an edited line could install any bytes as any package, under <code>--frozen-lockfile</code> too. It also checks the shared store before linking from it, downloads over <code>https://</code> only, and signs each release archive's build provenance.</p>
         <div class="actions">
-          <a class="btn" href="/blog/opal-v0.4.2/">Read the release notes →</a>
+          <a class="btn" href="/blog/opal-v0.4.3/">Read the release notes →</a>
           <code class="cli-pill">opal upgrade</code>
         </div>
       </div>
       <div>
         <ul class="notes">
-          <li><a href="/blog/opal-v0.4.2/#security"><span>A dependency named as a path, such as <code>../../x</code>, is refused with its name</span></a></li>
-          <li><a href="/blog/opal-v0.4.2/#security"><span>Names are checked in the resolver, the lockfile parser and the linker</span></a></li>
-          <li><a href="/blog/opal-v0.4.2/#security"><span>A package's <code>bin</code> entry that points outside the package is skipped</span></a></li>
-          <li><a href="/blog/opal-v0.4.2/#security"><span>Affected: every release up to 0.4.1. Upgrade with <code>opal upgrade</code></span></a></li>
+          <li><a href="/blog/opal-v0.4.3/#security"><span>An <code>opal.lock</code> line can no longer choose where a tarball comes from</span></a></li>
+          <li><a href="/blog/opal-v0.4.3/#security"><span>The shared store is checked before a package is linked from it</span></a></li>
+          <li><a href="/blog/opal-v0.4.3/#security"><span>Downloads over <code>https://</code> only, with a ceiling on every response</span></a></li>
+          <li><a href="/blog/opal-v0.4.3/#security"><span><code>opal x</code> asks before installing a package to run it</span></a></li>
+          <li><a href="/blog/opal-v0.4.3/#security"><span>Release archives carry signed build provenance</span></a></li>
+          <li><a href="/blog/opal-v0.4.3/#breaking"><span>Breaking: an <code>http://</code> registry is refused</span></a></li>
         </ul>
         <a class="all-releases" href="/blog/">All releases →</a>
       </div>

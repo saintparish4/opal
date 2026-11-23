@@ -6,12 +6,9 @@ release: "https://github.com/saintparish4/opal/releases/tag/v0.4.2"
 lede: "A security release. `opal install` no longer accepts a dependency whose name is a path, and a package's `bin` entry can no longer point outside the package."
 summary: "A `package.json` or `opal.lock` naming a dependency `../../x` made Opal delete that directory and write a package there. Every release up to 0.4.1 is affected: upgrade with `opal upgrade`."
 commands:
-  - title: "To install Opal"
+  - title: "To install Opal v0.4.2"
     id: post-install
-    command: "curl -fsSL https://opalx.dev/install.sh | bash"
-  - title: "To upgrade Opal"
-    id: post-upgrade
-    command: "opal upgrade"
+    command: "curl -fsSL https://raw.githubusercontent.com/saintparish4/opal/master/install.sh | OPAL_VERSION=v0.4.2 bash"
 ---
 
 ## Security {#security}
