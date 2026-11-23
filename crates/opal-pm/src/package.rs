@@ -293,6 +293,16 @@ impl PackageStore {
 
     pub fn read_index(&self, hash: &ContentHash) -> Result<PackageIndex, PackageError> {
         let bytes = self.cas.read(hash)?;
+        // An index is small and decides every file a project gets, so its
+        // bytes are checked on every read rather than trusted.
+        let actual = ContentHash::of(&bytes);
+        if actual != *hash {
+            return Err(CasError::Corrupt {
+                hash: *hash,
+                actual,
+            }
+            .into());
+        }
         let index: PackageIndex =
             serde_json::from_slice(&bytes).map_err(|source| PackageError::Index {
                 hash: *hash,
@@ -305,6 +315,36 @@ impl PackageStore {
             });
         }
         Ok(index)
+    }
+
+    /// The stored package at `index_hash`, if it is still what was stored.
+    ///
+    /// The store is hardlinked into projects, so what one project's
+    /// `node_modules` changed would otherwise reach every project installed
+    /// after it. Each file is checked with [`Cas::check`]: one `lstat` for an
+    /// untouched file, a re-hash for any other. `None` means part of the
+    /// package is gone or was changed; the changed objects have been removed,
+    /// and ingesting the tarball again makes the package whole.
+    pub fn intact(&self, index_hash: &ContentHash) -> Result<Option<PackageIndex>, PackageError> {
+        let index = match self.read_index(index_hash) {
+            Ok(index) => index,
+            Err(PackageError::Cas(CasError::Corrupt { .. } | CasError::Missing { .. })) => {
+                let _ = std::fs::remove_file(self.cas.object_path(index_hash));
+                return Ok(None);
+            }
+            Err(error) => return Err(error),
+        };
+        let mut whole = true;
+        for file in index.files.values() {
+            match self.cas.check(&file.hash) {
+                Ok(()) => {}
+                // Not a reason to stop: every changed object should be removed
+                // now, not one per install.
+                Err(CasError::Corrupt { .. } | CasError::Missing { .. }) => whole = false,
+                Err(error) => return Err(error.into()),
+            }
+        }
+        Ok(whole.then_some(index))
     }
 
     /// Verifies a tarball, files it into the CAS, and records its index.

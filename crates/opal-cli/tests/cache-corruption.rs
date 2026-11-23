@@ -8,11 +8,16 @@
 //! say nothing about the thing users care about, which is whether the next
 //! install hands them the damage.
 //!
-//! Where today's install trusts a `.opal-package` marker or a package index
-//! and keeps the damage, the test says `known_gap` in its name and asserts
-//! what happens now. That set is the specification for `cache verify
-//! --repair` (`base/release/v051.md`): every `known_gap` here is one it has to
-//! flip. 7 of the 10 tests below are `known_gap`.
+//! Where today's install keeps the damage, the test says `known_gap` in its
+//! name and asserts what happens now; each one is still to be flipped. 1 of
+//! the 10 tests below is `known_gap`.
+//!
+//! Before a stored package is linked, every file of it is checked (one
+//! `lstat` against the seal its object was stored with, a re-hash for any
+//! other) and its index is re-hashed. A package that fails is downloaded
+//! again. A project linked to the damaged inode before keeps it: its files
+//! are its own, and an edit there may have been on purpose. The warning says
+//! so.
 //!
 //! Each attack is made on the real files with the binary under test, against
 //! the fixture registry, so nothing here can drift from what a user's machine
@@ -138,6 +143,17 @@ fn assert_clean(output: &Output) {
     assert!(stdout(output).contains("all objects match their hash keys"));
 }
 
+/// The warning an install prints when the store's copy of `leaf` was damaged
+/// and had to be downloaded again.
+fn assert_repaired(output: &Output) {
+    assert!(output.status.success(), "{}", stderr(output));
+    assert!(
+        stderr(output).contains("the store's copy of leaf@1.0.0 had changed since it was stored"),
+        "{}",
+        stderr(output)
+    );
+}
+
 fn assert_corrupt(output: &Output, object: &Path) {
     let name = object.file_name().unwrap().to_string_lossy();
     assert!(
@@ -153,38 +169,28 @@ fn assert_corrupt(output: &Output, object: &Path) {
 }
 
 #[test]
-fn test_deleted_object_known_gap_verify_reports_clean_and_the_next_project_fails_to_link() {
+fn test_deleted_object_verify_reports_clean_and_install_downloads_it_again() {
     let store = Store::new();
     let first = store.installed("first");
     std::fs::remove_file(store.leaf_object()).expect("delete the object");
 
     // `verify` re-hashes the objects present. Nothing tells it which should
-    // be, since it reads no package index.
+    // be, since it reads no package index. An install does read one.
     assert_clean(&store.verify());
 
     // The first project's file is its own name for the inode, so it is
-    // untouched, and the marker says the package is complete.
+    // untouched; the store's copy is put back.
     let output = store.opal(&first, &["install"]);
-    assert!(output.status.success(), "{}", stderr(&output));
+    assert_repaired(&output);
     assert_eq!(leaf_js(&first), LEAF_JS);
+    assert!(store.leaf_object().is_file());
 
-    // The next project finds `leaf`'s index, so it fetches nothing and then
-    // has no file to link.
-    let second = store.project("second");
-    let output = store.opal(&second, &["install"]);
-    assert!(
-        !output.status.success(),
-        "the second install linked nothing"
-    );
-    assert!(
-        stderr(&output).contains("No such file or directory"),
-        "{}",
-        stderr(&output)
-    );
+    let second = store.installed("second");
+    assert_eq!(leaf_js(&second), LEAF_JS);
 }
 
 #[test]
-fn test_object_truncated_in_place_is_reported_known_gap_and_every_project_keeps_it() {
+fn test_object_truncated_in_place_is_reported_and_only_the_project_that_shares_it_keeps_it() {
     let store = Store::new();
     let first = store.installed("first");
     let object = store.leaf_object();
@@ -198,16 +204,17 @@ fn test_object_truncated_in_place_is_reported_known_gap_and_every_project_keeps_
     assert_corrupt(&store.verify(), &object);
 
     // One inode: the project's copy is the store's, so it is empty too, and
-    // the install that follows trusts the marker.
+    // stays as it is. The store gets a good copy back.
     let output = store.opal(&first, &["install"]);
-    assert!(output.status.success(), "{}", stderr(&output));
+    assert_repaired(&output);
     assert_eq!(leaf_js(&first), "");
     let second = store.installed("second");
-    assert_eq!(leaf_js(&second), "");
+    assert_eq!(leaf_js(&second), LEAF_JS);
+    assert_clean(&store.verify());
 }
 
 #[test]
-fn test_object_replaced_by_rename_is_reported_known_gap_and_the_next_project_links_it() {
+fn test_object_replaced_by_rename_is_reported_and_the_next_project_gets_the_published_file() {
     let store = Store::new();
     let first = store.installed("first");
     let object = store.leaf_object();
@@ -218,20 +225,17 @@ fn test_object_replaced_by_rename_is_reported_known_gap_and_the_next_project_lin
 
     assert_corrupt(&store.verify(), &object);
 
-    // A new inode under the store's name: the first project keeps the old
-    // one, and the next project links the new one without hashing it.
+    // A new inode under the store's name, without the seal: the first
+    // project keeps the old inode, and the new one is re-hashed and refused.
     let output = store.opal(&first, &["install"]);
-    assert!(output.status.success(), "{}", stderr(&output));
+    assert_repaired(&output);
     assert_eq!(leaf_js(&first), LEAF_JS);
     let second = store.installed("second");
-    assert_eq!(
-        leaf_js(&second),
-        "module.exports = 'not what was published';\n"
-    );
+    assert_eq!(leaf_js(&second), LEAF_JS);
 }
 
 #[test]
-fn test_edit_through_a_hardlink_is_reported_known_gap_and_install_keeps_the_edit() {
+fn test_edit_through_a_hardlink_is_reported_and_stays_in_the_project_that_made_it() {
     let store = Store::new();
     let first = store.installed("first");
     let file = first.join("node_modules/leaf/index.js");
@@ -241,14 +245,14 @@ fn test_edit_through_a_hardlink_is_reported_known_gap_and_install_keeps_the_edit
     assert_corrupt(&store.verify(), &store.leaf_object());
 
     let output = store.opal(&first, &["install"]);
-    assert!(output.status.success(), "{}", stderr(&output));
+    assert_repaired(&output);
     assert_eq!(leaf_js(&first), "module.exports = 'edited in place';\n");
     let second = store.installed("second");
-    assert_eq!(leaf_js(&second), "module.exports = 'edited in place';\n");
+    assert_eq!(leaf_js(&second), LEAF_JS);
 }
 
 #[test]
-fn test_object_made_writable_known_gap_verify_reports_clean_and_install_keeps_the_mode() {
+fn test_object_made_writable_verify_reports_clean_and_install_seals_it_again() {
     let store = Store::new();
     let first = store.installed("first");
     let object = store.leaf_object();
@@ -258,11 +262,19 @@ fn test_object_made_writable_known_gap_verify_reports_clean_and_install_keeps_th
     // what stood between a stray write and every project sharing the inode.
     assert_clean(&store.verify());
 
+    // The install's check sees the mode, re-hashes, finds the bytes intact,
+    // and seals the object again; nothing is downloaded.
     let output = store.opal(&first, &["install"]);
     assert!(output.status.success(), "{}", stderr(&output));
+    assert!(
+        !stderr(&output).contains("had changed"),
+        "{}",
+        stderr(&output)
+    );
     let mode = |path: &Path| std::fs::metadata(path).unwrap().permissions().mode() & 0o777;
-    assert_eq!(mode(&object), 0o644);
-    assert_eq!(mode(&first.join("node_modules/leaf/index.js")), 0o644);
+    assert_eq!(mode(&object), 0o444);
+    assert_eq!(mode(&first.join("node_modules/leaf/index.js")), 0o444);
+    assert_eq!(leaf_js(&first), LEAF_JS);
 }
 
 #[test]
@@ -297,7 +309,7 @@ fn test_deleted_marker_is_clean_and_install_rebuilds_the_package() {
 }
 
 #[test]
-fn test_corrupt_package_index_is_reported_known_gap_and_every_install_fails_on_it() {
+fn test_corrupt_package_index_is_reported_and_install_downloads_the_package_again() {
     let store = Store::new();
     let first = store.installed("first");
     let index = store.leaf_index(&first);
@@ -306,23 +318,16 @@ fn test_corrupt_package_index_is_reported_known_gap_and_every_install_fails_on_i
 
     assert_corrupt(&store.verify(), &index);
 
-    // Every install reads the index of every package it plans, linked or
-    // not, so this one is loud rather than trusted. Still a gap: nothing
-    // fetches the package again, so the store stays broken until it is
-    // cleared by hand.
-    let unreadable = format!(
-        "package index {} is unreadable",
-        index.file_name().unwrap().to_string_lossy()
-    );
+    // Every install reads the index of every package it plans, and re-hashes
+    // it, so a bad one is neither trusted nor fatal: the package is fetched
+    // again, which writes the index back.
     let output = store.opal(&first, &["install"]);
-    assert!(!output.status.success(), "the install read a bad index");
-    assert!(stderr(&output).contains(&unreadable), "{}", stderr(&output));
+    assert_repaired(&output);
     assert_eq!(leaf_js(&first), LEAF_JS, "and left the project alone");
+    assert_clean(&store.verify());
 
-    let second = store.project("second");
-    let output = store.opal(&second, &["install"]);
-    assert!(!output.status.success(), "the install read a bad index");
-    assert!(stderr(&output).contains(&unreadable), "{}", stderr(&output));
+    let second = store.installed("second");
+    assert_eq!(leaf_js(&second), LEAF_JS);
 }
 
 #[test]

@@ -242,6 +242,9 @@ pub struct InstallReport {
     /// The project's own lifecycle scripts, which npm runs on every install
     /// of it (`patch-package` and `husky` live here), and opal does not.
     pub project_scripts_not_run: Option<UnrunScripts>,
+    /// Packages the store had, but whose files had changed or gone since they
+    /// were stored, so they were downloaded again.
+    pub repaired: Vec<PackageId>,
 }
 
 /// Lifecycle scripts that exist and were not run.
@@ -628,6 +631,7 @@ struct Batch {
     packages: Vec<(PackageId, FetchedPackage)>,
     downloaded: usize,
     already_stored: usize,
+    repaired: Vec<PackageId>,
 }
 
 /// Ensures the contents of everything the planned tree names are in the store.
@@ -673,23 +677,40 @@ fn fetch_all(
         parallel::REQUESTS.min(wanted.len()),
         Batch::default,
         |(id, package), batch: &mut Batch| {
-            let stored = store.lookup(&package.integrity)?;
-            let from_store = stored.is_some();
-            let index_hash = match stored {
+            // Before the store is asked, so whether a lockfile is accepted
+            // never depends on what this machine has downloaded before. The
+            // store is keyed by integrity alone, and a hostile line can name
+            // the integrity of another package already in it.
+            registry.verify_tarball_url(&id.name, &id.version, &package.tarball)?;
+            // Checked, not trusted: the store is hardlinked into every project
+            // that uses it, so a file changed under one `node_modules` is
+            // changed here. A package that is no longer what was stored is
+            // downloaded again, which puts back what was removed.
+            let stored = match store.lookup(&package.integrity)? {
                 Some(hash) => {
+                    let intact = store.intact(&hash)?;
+                    if intact.is_none() {
+                        batch.repaired.push((*id).clone());
+                    }
+                    intact.map(|index| (hash, index))
+                }
+                None => None,
+            };
+            let from_store = stored.is_some();
+            let (index_hash, index) = match stored {
+                Some(found) => {
                     batch.already_stored += 1;
-                    hash
+                    found
                 }
                 None => {
                     let download = Download { id, progress };
                     let tarball = registry.tarball_observed(&package.tarball, &download)?;
                     let hash = store.ingest(&id.name, &id.version, &package.integrity, &tarball)?;
                     batch.downloaded += 1;
-                    hash
+                    (hash, store.read_index(&hash)?)
                 }
             };
             progress.fetched(id, from_store);
-            let index = store.read_index(&index_hash)?;
             batch
                 .packages
                 .push(((*id).clone(), FetchedPackage { index_hash, index }));
@@ -701,7 +722,10 @@ fn fetch_all(
     for batch in batches {
         report.fetched += batch.downloaded;
         report.already_stored += batch.already_stored;
+        report.repaired.extend(batch.repaired);
         fetched.extend(batch.packages);
     }
+    // Threads finish in any order.
+    report.repaired.sort();
     Ok(fetched)
 }

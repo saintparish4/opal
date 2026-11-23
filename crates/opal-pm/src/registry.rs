@@ -4,6 +4,11 @@
 //! is not a convenience: it lets the entire install pipeline — including the
 //! crash-safety and concurrency suites — run against a fixture registry with no
 //! network and no HTTP server, exercising exactly the code path production uses.
+//!
+//! Nothing else is spoken. Plain `http://` is refused before a connection is
+//! made, and on every redirect, because the bytes that come back decide which
+//! packages an install chooses; and every response stops at a ceiling, because
+//! a server that never stops sending would otherwise fill memory.
 
 use std::collections::hash_map::Entry;
 use std::collections::{BTreeMap, HashMap};
@@ -30,6 +35,15 @@ pub const REGISTRY_ENV: &str = "OPAL_REGISTRY";
 
 const CHUNK_BYTES: usize = 64 * 1024;
 
+/// The most a packument response may be. The largest on the public registry,
+/// measured 2026-11-22, is `renovate`'s: 37 MB abbreviated and 76 MB in full,
+/// which is what a registry that ignores `Accept` sends. This is three times
+/// the full one.
+pub const MAX_PACKUMENT_BYTES: u64 = 256 * 1024 * 1024;
+/// The most a tarball response may be. The largest measured the same day is
+/// `onnxruntime-node` 1.31.1, at 115 MB; this is four times that.
+pub const MAX_TARBALL_BYTES: u64 = 512 * 1024 * 1024;
+
 /// Asks for the install subset of a packument rather than every README of every
 /// version ever published. Roughly half the bytes on a typical package, and the
 /// fields an install actually reads — `dependencies`, `dist`, `bin`, `os`,
@@ -54,6 +68,21 @@ pub enum RegistryError {
     UnknownTag { name: String, tag: String },
     #[error("{0} is not in the local cache, and this install is offline")]
     NotCached(String),
+    #[error("{url}: opal downloads only over https://, or file:// from a registry on this machine")]
+    Insecure { url: String },
+    #[error("{url}: the response is larger than {limit} bytes, the most opal accepts")]
+    TooLarge { url: String, limit: u64 },
+    /// `package` is `name@version`, one string, which keeps this error, and
+    /// every error that carries it, small.
+    #[error(
+        "{package} is to be downloaded from {url}, but the registry keeps it at {expected}; \
+         if opal.lock was written against another registry, delete it and install again"
+    )]
+    UnexpectedTarball {
+        package: String,
+        url: String,
+        expected: String,
+    },
 }
 
 /// Hears a response body arrive, for a caller that wants to show it arriving.
@@ -82,6 +111,9 @@ pub struct Request<'a> {
     /// transport wrapped around another (retries, the benchmark's meter)
     /// passes it down without knowing it exists.
     pub observer: Option<&'a dyn BodyObserver>,
+    /// The most body the response may have. Past it the request fails, having
+    /// held no more than this in memory.
+    pub limit: u64,
 }
 
 #[derive(Clone, Debug)]
@@ -140,7 +172,11 @@ impl HttpTransport {
         // otherwise. With more threads than that asking, every connection
         // past the third would be closed when its request finished and opened
         // again, TLS handshake included, for the next one.
+        //
+        // `https_only` is checked again on every redirect, which is the one
+        // place a URL this client did not choose can still arrive.
         let config = ureq::Agent::config_builder()
+            .https_only(true)
             .timeout_connect(Some(CONNECT_TIMEOUT))
             .timeout_recv_response(Some(RESPONSE_TIMEOUT))
             .max_idle_connections(parallel::REQUESTS)
@@ -154,15 +190,22 @@ impl HttpTransport {
 
 impl Transport for HttpTransport {
     fn get(&self, request: &Request<'_>) -> Result<Fetched, RegistryError> {
-        match request.url.strip_prefix("file://") {
+        if let Some(path) = request.url.strip_prefix("file://") {
             // A local file has no validators and no staleness worth modelling.
-            Some(path) => Ok(Fetched::Fresh(Response {
-                body: read_file(request.url, path, request.observer)?,
+            return Ok(Fetched::Fresh(Response {
+                body: read_file(request, path)?,
                 etag: None,
                 max_age: None,
-            })),
-            None => read_http(&self.agent, request),
+            }));
         }
+        // Refused here rather than left to `https_only`, whose error would
+        // read as a dropped connection and be retried.
+        if !request.url.starts_with("https://") {
+            return Err(RegistryError::Insecure {
+                url: request.url.to_string(),
+            });
+        }
+        read_http(&self.agent, request)
     }
 }
 
@@ -377,6 +420,23 @@ pub trait Registry: Sync {
 
     fn tarball(&self, url: &str) -> Result<Vec<u8>, RegistryError>;
 
+    /// Refuses `url` unless it is where this registry keeps `name@version`.
+    ///
+    /// A tarball's URL and the integrity it is checked against travel
+    /// together, and both can come from `opal.lock`, a file a pull request can
+    /// change. Checking the bytes against an integrity the same line supplied
+    /// proves nothing about which package they are. Holding the URL to the
+    /// registry does: there, `name@version` has one set of bytes, and the
+    /// integrity becomes a check on them again.
+    ///
+    /// No default, so a new registry has to decide what its tarballs' URLs are.
+    fn verify_tarball_url(
+        &self,
+        name: &str,
+        version: &Version,
+        url: &str,
+    ) -> Result<(), RegistryError>;
+
     /// [`Registry::tarball`], reporting the download to `observer` as it
     /// happens. A registry with no wire to watch reports nothing.
     fn tarball_observed(
@@ -413,6 +473,25 @@ pub struct NpmRegistry {
     /// is what a bare `NpmRegistry::new` is for in tests.
     disk: Option<PackumentCache>,
     freshness: Freshness,
+    limits: BodyLimits,
+}
+
+/// The most each kind of response may be. The defaults are the public
+/// registry's sizes with room to grow; a test wanting to reach one does not
+/// have to publish half a gigabyte to get there.
+#[derive(Clone, Copy, Debug)]
+pub struct BodyLimits {
+    pub packument: u64,
+    pub tarball: u64,
+}
+
+impl Default for BodyLimits {
+    fn default() -> Self {
+        Self {
+            packument: MAX_PACKUMENT_BYTES,
+            tarball: MAX_TARBALL_BYTES,
+        }
+    }
 }
 
 /// One name's packument for the rest of this run.
@@ -442,6 +521,7 @@ impl NpmRegistry {
             memory: Mutex::new(HashMap::new()),
             disk: None,
             freshness: Freshness::default(),
+            limits: BodyLimits::default(),
         }
     }
 
@@ -462,8 +542,21 @@ impl NpmRegistry {
         self
     }
 
+    #[must_use]
+    pub fn with_body_limits(mut self, limits: BodyLimits) -> Self {
+        self.limits = limits;
+        self
+    }
+
     pub fn base(&self) -> &str {
         &self.base
+    }
+
+    /// Where npm's registry keeps a version's tarball, and so where every
+    /// registry that copies its layout does: `<base>/@scope/name/-/name-1.0.0.tgz`.
+    pub fn canonical_tarball_url(&self, name: &str, version: &Version) -> String {
+        let unscoped = name.rsplit('/').next().unwrap_or(name);
+        format!("{}/{name}/-/{unscoped}-{version}.tgz", self.base)
     }
 
     fn packument_url(&self, name: &str) -> String {
@@ -550,6 +643,7 @@ impl NpmRegistry {
             accept: Some(ABBREVIATED_PACKUMENT),
             etag: cached.as_ref().and_then(|record| record.etag.as_deref()),
             observer: None,
+            limit: self.limits.packument,
         };
         let fetched = match self.transport.get(&request) {
             Ok(fetched) => fetched,
@@ -642,6 +736,40 @@ impl Registry for NpmRegistry {
         self.fetch_tarball(url, None)
     }
 
+    fn verify_tarball_url(
+        &self,
+        name: &str,
+        version: &Version,
+        url: &str,
+    ) -> Result<(), RegistryError> {
+        let expected = self.canonical_tarball_url(name, version);
+        if url == expected {
+            return Ok(());
+        }
+        // A few old versions are kept under another file name: express
+        // 3.0.0-rc3 is `express-3.0.0rc3.tgz`, and its package.json says
+        // `3.0.0rc3`, the version it was published as (33 of 21,491 versions
+        // across 40 popular packages, measured 2026-11-22). For those the
+        // registry's own record
+        // is the authority. A published version's record never changes, so a
+        // cached copy of any age answers, and only one that predates the
+        // version sends this to the registry.
+        let listed =
+            |packument: Arc<Packument>| packument.version(version).map(|metadata| metadata.tarball);
+        let mut found = listed(self.settled_packument(name)?);
+        if found.is_none() {
+            found = listed(self.packument(name)?);
+        }
+        if found.as_deref() == Some(url) {
+            return Ok(());
+        }
+        Err(RegistryError::UnexpectedTarball {
+            package: format!("{name}@{version}"),
+            url: url.to_string(),
+            expected,
+        })
+    }
+
     fn tarball_observed(
         &self,
         url: &str,
@@ -670,6 +798,7 @@ impl NpmRegistry {
             accept: None,
             etag: None,
             observer,
+            limit: self.limits.tarball,
         })? {
             Fetched::Fresh(response) => Ok(response.body),
             Fetched::NotModified => Err(RegistryError::Transport {
@@ -680,11 +809,8 @@ impl NpmRegistry {
     }
 }
 
-fn read_file(
-    url: &str,
-    path: &str,
-    observer: Option<&dyn BodyObserver>,
-) -> Result<Vec<u8>, RegistryError> {
+fn read_file(request: &Request<'_>, path: &str) -> Result<Vec<u8>, RegistryError> {
+    let url = request.url;
     let file = std::fs::File::open(path).map_err(|source| match source.kind() {
         std::io::ErrorKind::NotFound => RegistryError::Status {
             url: url.to_string(),
@@ -695,10 +821,10 @@ fn read_file(
             message: source.to_string(),
         },
     })?;
-    if let Some(observer) = observer {
+    if let Some(observer) = request.observer {
         observer.started(file.metadata().ok().map(|metadata| metadata.len()));
     }
-    read_chunked(url, file, observer)
+    read_chunked(url, file, request.observer, request.limit)
 }
 
 fn read_http(agent: &ureq::Agent, request: &Request<'_>) -> Result<Fetched, RegistryError> {
@@ -715,6 +841,10 @@ fn read_http(agent: &ureq::Agent, request: &Request<'_>) -> Result<Fetched, Regi
         ureq::Error::StatusCode(status) => RegistryError::Status {
             url: url.to_string(),
             status: *status,
+        },
+        // A redirect to plain http://. The URL is the one redirected to.
+        ureq::Error::RequireHttpsOnly(target) => RegistryError::Insecure {
+            url: target.clone(),
         },
         _ => RegistryError::Transport {
             url: url.to_string(),
@@ -737,12 +867,26 @@ fn read_http(agent: &ureq::Agent, request: &Request<'_>) -> Result<Fetched, Regi
     let max_age = header(&response, "cache-control")
         .as_deref()
         .and_then(max_age_of);
+    let total: Option<u64> =
+        header(&response, "content-length").and_then(|length| length.parse().ok());
+    // Refused before a byte of it is read. A server can also send no length,
+    // or a false one, so `read_chunked` counts as well.
+    if total.is_some_and(|total| total > request.limit) {
+        return Err(RegistryError::TooLarge {
+            url: url.to_string(),
+            limit: request.limit,
+        });
+    }
     if let Some(observer) = request.observer {
-        let total = header(&response, "content-length").and_then(|length| length.parse().ok());
         observer.started(total);
     }
     Ok(Fetched::Fresh(Response {
-        body: read_chunked(url, response.body_mut().as_reader(), request.observer)?,
+        body: read_chunked(
+            url,
+            response.body_mut().as_reader(),
+            request.observer,
+            request.limit,
+        )?,
         etag,
         max_age,
     }))
@@ -778,11 +922,13 @@ fn max_age_of(value: &str) -> Option<Duration> {
         .map(Duration::from_secs)
 }
 
-/// Reads in chunks so the download has an interruptible midpoint.
+/// Reads in chunks so the download has an interruptible midpoint, and stops
+/// before holding more than `limit` bytes.
 fn read_chunked(
     url: &str,
     mut reader: impl Read,
     observer: Option<&dyn BodyObserver>,
+    limit: u64,
 ) -> Result<Vec<u8>, RegistryError> {
     let mut bytes = Vec::new();
     let mut buffer = vec![0u8; CHUNK_BYTES];
@@ -796,6 +942,12 @@ fn read_chunked(
             })?;
         if read == 0 {
             break;
+        }
+        if (bytes.len() + read) as u64 > limit {
+            return Err(RegistryError::TooLarge {
+                url: url.to_string(),
+                limit,
+            });
         }
         bytes.extend_from_slice(&buffer[..read]);
         if let Some(observer) = observer {
@@ -936,6 +1088,7 @@ mod tests {
             accept: None,
             etag: None,
             observer: None,
+            limit: MAX_PACKUMENT_BYTES,
         })
     }
 
@@ -1029,5 +1182,71 @@ mod tests {
             file.packument_url("@scope/pkg"),
             "file:///tmp/fixture/@scope/pkg.json"
         );
+    }
+
+    #[test]
+    fn test_canonical_tarball_url_shapes() {
+        let registry = NpmRegistry::new("https://registry.npmjs.org/");
+        assert_eq!(
+            registry.canonical_tarball_url("is-number", &Version::new(7, 0, 0)),
+            "https://registry.npmjs.org/is-number/-/is-number-7.0.0.tgz"
+        );
+        // The scope stays in the directory, unescaped, and leaves the file name.
+        assert_eq!(
+            registry.canonical_tarball_url("@types/node", &Version::parse("24.0.0-rc.1").unwrap()),
+            "https://registry.npmjs.org/@types/node/-/node-24.0.0-rc.1.tgz"
+        );
+    }
+
+    #[test]
+    fn test_plain_http_is_refused_without_a_connection_and_not_retried() {
+        let transport = HttpTransport::new();
+        for url in [
+            "http://127.0.0.1:9/demo",
+            "http://registry.npmjs.org/demo",
+            "ftp://registry.example/demo",
+            "HTTPS://registry.example/demo",
+        ] {
+            let error = transport
+                .get(&Request {
+                    url,
+                    accept: None,
+                    etag: None,
+                    observer: None,
+                    limit: MAX_PACKUMENT_BYTES,
+                })
+                .expect_err("only https:// and file:// are spoken");
+            assert!(
+                matches!(&error, RegistryError::Insecure { url: refused } if refused == url),
+                "{url}: {error}"
+            );
+            assert!(!is_transient(&error), "asking again gives the same answer");
+        }
+    }
+
+    #[test]
+    fn test_a_body_that_never_ends_stops_at_its_limit() {
+        // `repeat` never returns 0: without a limit this loop never ends.
+        let error = read_chunked("file:///dev/zero", std::io::repeat(0), None, 1024 * 1024)
+            .expect_err("an endless body must be refused");
+        assert!(
+            matches!(error, RegistryError::TooLarge { limit, .. } if limit == 1024 * 1024),
+            "{error}"
+        );
+        assert!(!is_transient(&error));
+    }
+
+    #[test]
+    fn test_a_body_exactly_at_its_limit_is_accepted() {
+        let body = vec![7u8; 3 * CHUNK_BYTES + 5];
+        let limit = body.len() as u64;
+        assert_eq!(
+            read_chunked("file:///x", body.as_slice(), None, limit).expect("at the limit"),
+            body
+        );
+        assert!(matches!(
+            read_chunked("file:///x", body.as_slice(), None, limit - 1),
+            Err(RegistryError::TooLarge { .. })
+        ));
     }
 }

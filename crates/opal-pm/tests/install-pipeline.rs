@@ -20,7 +20,7 @@ use opal_pm::package::PackageStore;
 use opal_pm::platform::Platform;
 use opal_pm::progress::{Silent, Stage};
 use opal_pm::projects::ProjectIndex;
-use opal_pm::registry::NpmRegistry;
+use opal_pm::registry::{BodyLimits, NpmRegistry, RegistryError};
 
 struct Sandbox {
     _directory: tempfile::TempDir,
@@ -507,7 +507,7 @@ fn test_a_tampered_tarball_is_refused() {
         .trim_start_matches("file://")
         .to_string();
     std::fs::write(
-        Path::new(&tarball).join("tarballs").join("a-1.0.0.tgz"),
+        Path::new(&tarball).join("a/-/a-1.0.0.tgz"),
         b"not a tarball",
     )
     .expect("tamper");
@@ -1826,4 +1826,412 @@ fn test_a_bin_target_shipped_without_the_executable_bit_is_made_executable() {
             .mode();
         assert!(mode & 0o111 != 0, "a bin target must be executable");
     }
+}
+
+/// The `dist` a fixture registry published for `name@version`: (tarball URL,
+/// integrity).
+fn published_dist(registry: &FixtureRegistry, name: &str, version: &str) -> (String, String) {
+    let directory = registry.url().trim_start_matches("file://").to_string();
+    let packument: serde_json::Value = serde_json::from_slice(
+        &std::fs::read(Path::new(&directory).join(format!("{name}.json"))).expect("packument"),
+    )
+    .expect("packument JSON");
+    let dist = &packument["versions"][version]["dist"];
+    (
+        dist["tarball"].as_str().expect("tarball").to_string(),
+        dist["integrity"].as_str().expect("integrity").to_string(),
+    )
+}
+
+/// Replaces the `pkg` line for `name@version` with one naming `url` and
+/// `integrity`, as a hostile pull request would, leaving package.json alone.
+fn rewrite_pkg_line(sandbox: &Sandbox, name: &str, version: &str, integrity: &str, url: &str) {
+    let honest = sandbox.lockfile();
+    let prefix = format!("pkg {name} {version} ");
+    let hostile: String = honest
+        .lines()
+        .map(|line| {
+            if line.starts_with(&prefix) {
+                format!("{prefix}{integrity} - - {url}\n")
+            } else {
+                format!("{line}\n")
+            }
+        })
+        .collect();
+    assert_ne!(honest, hostile, "no line to rewrite:\n{honest}");
+    std::fs::write(lockfile::path_in(&sandbox.project), hostile).expect("write lockfile");
+}
+
+fn both_modes() -> [InstallOptions; 2] {
+    [
+        InstallOptions::default(),
+        InstallOptions {
+            frozen_lockfile: true,
+            ..InstallOptions::default()
+        },
+    ]
+}
+
+#[test]
+fn test_a_lockfile_tarball_from_anywhere_but_the_registry_is_refused() {
+    let mut sandbox = Sandbox::new();
+    sandbox.registry.publish(Package::new("a", "1.0.0"));
+    sandbox.project(serde_json::json!({ "dependencies": { "a": "^1.0.0" } }));
+    sandbox.install().expect("install");
+
+    // The attacker's own bytes, under the same name, with a matching integrity.
+    let mut attacker = FixtureRegistry::new(sandbox.project.parent().unwrap().join("attacker"));
+    attacker.publish(Package::new("a", "1.0.0").file("index.js", "module.exports = 'planted';\n"));
+    let (planted, integrity) = published_dist(&attacker, "a", "1.0.0");
+    assert!(planted.starts_with("file://"), "{planted}");
+
+    for url in [
+        planted.as_str(),
+        "http://attacker.invalid/a/-/a-1.0.0.tgz",
+        "https://attacker.invalid/a/-/a-1.0.0.tgz",
+    ] {
+        rewrite_pkg_line(&sandbox, "a", "1.0.0", &integrity, url);
+        for options in both_modes() {
+            let _ = std::fs::remove_dir_all(sandbox.path("node_modules"));
+            let error = sandbox
+                .install_with(&options)
+                .expect_err("install must fail");
+            assert!(
+                matches!(
+                    &error,
+                    InstallError::Registry(RegistryError::UnexpectedTarball { url: refused, .. })
+                        if refused == url
+                ),
+                "{url}: unexpected error: {error}"
+            );
+            assert!(!sandbox.installed("node_modules/a"), "{url}");
+        }
+    }
+}
+
+#[test]
+fn test_a_lockfile_naming_another_packages_tarball_is_refused_even_when_it_is_stored() {
+    let mut sandbox = Sandbox::new();
+    sandbox
+        .registry
+        .publish(Package::new("a", "1.0.0"))
+        .publish(Package::new("b", "1.0.0").file("index.js", "module.exports = 'b';\n"));
+    sandbox.project(serde_json::json!({
+        "dependencies": { "a": "^1.0.0", "b": "^1.0.0" }
+    }));
+    sandbox.install().expect("install");
+
+    // b's real URL and integrity, on the registry, with b's bytes already in
+    // the store: a store hit would link b's contents as `a` with no download.
+    let (url, integrity) = published_dist(&sandbox.registry, "b", "1.0.0");
+    rewrite_pkg_line(&sandbox, "a", "1.0.0", &integrity, &url);
+
+    for options in both_modes() {
+        std::fs::remove_dir_all(sandbox.path("node_modules")).expect("remove node_modules");
+        let error = sandbox
+            .install_with(&options)
+            .expect_err("install must fail");
+        assert!(
+            matches!(
+                &error,
+                InstallError::Registry(RegistryError::UnexpectedTarball { package, .. })
+                    if package == "a@1.0.0"
+            ),
+            "unexpected error: {error}"
+        );
+        assert!(!sandbox.installed("node_modules/a"));
+    }
+}
+
+#[test]
+fn test_a_version_the_registry_keeps_under_another_file_name_still_installs() {
+    let mut sandbox = Sandbox::new();
+    sandbox
+        .registry
+        .publish(Package::new("old", "3.0.0-rc3").tarball_file("old-3.0.0rc3.tgz"));
+    sandbox.project(serde_json::json!({ "dependencies": { "old": "3.0.0-rc3" } }));
+
+    sandbox.install().expect("install from the registry");
+    assert!(sandbox.lockfile().contains("/old/-/old-3.0.0rc3.tgz"));
+
+    // From the lockfile alone, by a client that has not read the packument yet.
+    std::fs::remove_dir_all(sandbox.path("node_modules")).expect("remove node_modules");
+    sandbox
+        .install_with(&InstallOptions {
+            frozen_lockfile: true,
+            ..InstallOptions::default()
+        })
+        .expect("install from the lockfile");
+    assert!(sandbox.installed("node_modules/old"));
+}
+
+fn install_limited(sandbox: &Sandbox, limits: BodyLimits) -> Result<InstallReport, InstallError> {
+    install::install(
+        &sandbox.project,
+        &NpmRegistry::new(sandbox.registry.url()).with_body_limits(limits),
+        &sandbox.store,
+        &sandbox.projects,
+        &InstallOptions::default(),
+        &Silent,
+    )
+}
+
+#[test]
+fn test_a_tarball_past_the_size_limit_is_refused() {
+    let mut sandbox = Sandbox::new();
+    // Bytes gzip cannot shrink, so the tarball is larger than its limit.
+    let mut state = 0x9e37_79b9_7f4a_7c15_u64;
+    let noise: Vec<u8> = (0..64 * 1024)
+        .map(|_| {
+            state ^= state << 13;
+            state ^= state >> 7;
+            state ^= state << 17;
+            state as u8
+        })
+        .collect();
+    let mut package = Package::new("big", "1.0.0");
+    package.files.push(("noise.bin".to_string(), noise, false));
+    sandbox.registry.publish(package);
+    sandbox.project(serde_json::json!({ "dependencies": { "big": "^1.0.0" } }));
+
+    let error = install_limited(
+        &sandbox,
+        BodyLimits {
+            tarball: 32 * 1024,
+            ..BodyLimits::default()
+        },
+    )
+    .expect_err("install must fail");
+
+    assert!(
+        matches!(
+            &error,
+            InstallError::Registry(RegistryError::TooLarge { limit, .. }) if *limit == 32 * 1024
+        ),
+        "unexpected error: {error}"
+    );
+    assert!(!sandbox.installed("node_modules/big"));
+    assert_eq!(
+        install_limited(&sandbox, BodyLimits::default())
+            .expect("the default limit takes it")
+            .fetched,
+        1
+    );
+}
+
+#[test]
+fn test_a_packument_past_the_size_limit_is_refused() {
+    let mut sandbox = Sandbox::new();
+    sandbox.registry.publish(Package::new("a", "1.0.0"));
+    sandbox.project(serde_json::json!({ "dependencies": { "a": "^1.0.0" } }));
+
+    let error = install_limited(
+        &sandbox,
+        BodyLimits {
+            packument: 64,
+            ..BodyLimits::default()
+        },
+    )
+    .expect_err("install must fail");
+
+    assert!(
+        matches!(
+            &error,
+            InstallError::Resolve(opal_pm::resolve::ResolveError::Registry(
+                RegistryError::TooLarge { limit: 64, .. }
+            ))
+        ),
+        "unexpected error: {error}"
+    );
+}
+
+/// A directory beside the project, holding a tree opal installed there: what
+/// `npm link` leaves `node_modules/<name>` pointing at.
+fn linked_project(sandbox: &Sandbox) -> PathBuf {
+    let outside = sandbox.project.parent().unwrap().join("linked-src");
+    let bar = outside.join("node_modules/bar");
+    std::fs::create_dir_all(&bar).expect("outside tree");
+    std::fs::write(bar.join("index.js"), "precious\n").expect("outside file");
+    let hash = "0".repeat(64);
+    std::fs::write(bar.join(".opal-package"), format!("bar 1.0.0 {hash}\n")).expect("marker");
+    outside
+}
+
+#[test]
+fn test_install_does_not_follow_a_symlinked_package_out_of_the_project() {
+    let mut sandbox = Sandbox::new();
+    sandbox.registry.publish(Package::new("a", "1.0.0"));
+    sandbox.project(serde_json::json!({ "dependencies": { "a": "^1.0.0" } }));
+    let outside = linked_project(&sandbox);
+    std::fs::create_dir_all(sandbox.path("node_modules")).expect("node_modules");
+    std::os::unix::fs::symlink(&outside, sandbox.path("node_modules/linked")).expect("link");
+
+    sandbox.install().expect("install");
+
+    // Read through the link, `linked/node_modules/bar` was a stale package of
+    // this project's, and removing it removed the other project's.
+    assert_eq!(
+        std::fs::read_to_string(outside.join("node_modules/bar/index.js")).expect("still there"),
+        "precious\n"
+    );
+    // Not opal's to remove either: nothing in the layout is named `linked`.
+    assert!(
+        std::fs::symlink_metadata(sandbox.path("node_modules/linked"))
+            .expect("link kept")
+            .file_type()
+            .is_symlink()
+    );
+    assert!(sandbox.installed("node_modules/a"));
+}
+
+#[test]
+fn test_install_replaces_a_symlinked_scope_instead_of_writing_through_it() {
+    let mut sandbox = Sandbox::new();
+    sandbox
+        .registry
+        .publish(Package::new("@scope/pkg", "1.0.0"));
+    sandbox.project(serde_json::json!({ "dependencies": { "@scope/pkg": "^1.0.0" } }));
+    let outside = sandbox.project.parent().unwrap().join("scope-src");
+    std::fs::create_dir_all(outside.join("pkg")).expect("outside");
+    std::fs::write(outside.join("pkg/keep.txt"), "precious\n").expect("outside file");
+    std::fs::create_dir_all(sandbox.path("node_modules")).expect("node_modules");
+    std::os::unix::fs::symlink(&outside, sandbox.path("node_modules/@scope")).expect("link");
+
+    sandbox.install().expect("install");
+
+    assert_eq!(
+        std::fs::read_to_string(outside.join("pkg/keep.txt")).expect("still there"),
+        "precious\n"
+    );
+    assert!(!outside.join("pkg/.opal-package").exists());
+    assert!(
+        std::fs::symlink_metadata(sandbox.path("node_modules/@scope"))
+            .expect("scope")
+            .is_dir()
+    );
+    assert!(sandbox.installed("node_modules/@scope/pkg"));
+}
+
+#[test]
+fn test_install_does_not_follow_a_symlinked_nested_node_modules() {
+    let mut sandbox = Sandbox::new();
+    sandbox.registry.publish(Package::new("a", "1.0.0"));
+    sandbox.project(serde_json::json!({ "dependencies": { "a": "^1.0.0" } }));
+    sandbox.install().expect("first install");
+    let outside = linked_project(&sandbox);
+    std::os::unix::fs::symlink(
+        outside.join("node_modules"),
+        sandbox.path("node_modules/a/node_modules"),
+    )
+    .expect("link");
+
+    sandbox.install().expect("second install");
+
+    assert_eq!(
+        std::fs::read_to_string(outside.join("node_modules/bar/index.js")).expect("still there"),
+        "precious\n"
+    );
+}
+
+/// Changes a file the way a person or a tool editing `node_modules` does it
+/// as root, or after a `chmod`: in place, through the hardlink into the store.
+fn edit_in_place(path: &Path, contents: &str) {
+    use std::os::unix::fs::PermissionsExt as _;
+    std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o644)).expect("chmod");
+    std::fs::write(path, contents).expect("edit");
+}
+
+#[test]
+fn test_a_store_file_changed_through_a_project_is_downloaded_again_not_spread() {
+    let mut sandbox = Sandbox::new();
+    sandbox.registry.publish(
+        Package::new("a", "1.0.0")
+            .file("index.js", "module.exports = 'a';\n")
+            .file("lib.js", "module.exports = 'lib';\n"),
+    );
+    sandbox.project(serde_json::json!({ "dependencies": { "a": "^1.0.0" } }));
+    let first = sandbox.install().expect("first project");
+    assert!(
+        first.link.files_linked > 0,
+        "the store must be hardlinked for this test"
+    );
+    edit_in_place(
+        &sandbox.path("node_modules/a/index.js"),
+        "module.exports = 'changed';\n",
+    );
+
+    // A second project installs the same package from the same store.
+    let second = sandbox.project.parent().unwrap().join("second");
+    write_project(
+        &second,
+        serde_json::json!({ "dependencies": { "a": "^1.0.0" } }),
+    );
+    let report = sandbox
+        .install_at(&second, &InstallOptions::default())
+        .expect("second project");
+
+    assert_eq!(
+        report.repaired,
+        vec![opal_pm::resolve::PackageId::new(
+            "a",
+            opal_pm::semver::Version::new(1, 0, 0)
+        )]
+    );
+    assert_eq!(report.fetched, 1, "downloaded again");
+    assert_eq!(
+        std::fs::read_to_string(second.join("node_modules/a/index.js")).expect("index.js"),
+        "module.exports = 'a';\n"
+    );
+    // The first project's edit is its own; it is not undone behind its back.
+    assert_eq!(
+        std::fs::read_to_string(sandbox.path("node_modules/a/index.js")).expect("index.js"),
+        "module.exports = 'changed';\n"
+    );
+
+    // Whole again: a third install takes it from the store without a download.
+    let third = sandbox.project.parent().unwrap().join("third");
+    write_project(
+        &third,
+        serde_json::json!({ "dependencies": { "a": "^1.0.0" } }),
+    );
+    let report = sandbox
+        .install_at(&third, &InstallOptions::default())
+        .expect("third project");
+    assert!(report.repaired.is_empty());
+    assert_eq!((report.fetched, report.already_stored), (0, 1));
+}
+
+#[test]
+fn test_a_store_file_that_went_missing_is_downloaded_again() {
+    let mut sandbox = Sandbox::new();
+    sandbox
+        .registry
+        .publish(Package::new("a", "1.0.0").file("lib.js", "module.exports = 'lib';\n"));
+    sandbox.project(serde_json::json!({ "dependencies": { "a": "^1.0.0" } }));
+    sandbox.install().expect("install");
+    let index_hash = sandbox
+        .store
+        .lookup(&{
+            let lockfile = sandbox.lockfile();
+            let line = lockfile
+                .lines()
+                .find(|line| line.starts_with("pkg a "))
+                .expect("pkg line");
+            opal_pm::integrity::Integrity::parse(line.split(' ').nth(3).expect("integrity"))
+                .expect("integrity")
+        })
+        .expect("lookup")
+        .expect("stored");
+    let index = sandbox.store.read_index(&index_hash).expect("index");
+    let lib = &index.file("lib.js").expect("lib.js").hash;
+    std::fs::remove_file(sandbox.store.cas().object_path(lib)).expect("remove object");
+    std::fs::remove_dir_all(sandbox.path("node_modules")).expect("remove node_modules");
+
+    let report = sandbox.install().expect("reinstall");
+
+    assert_eq!(report.repaired.len(), 1);
+    assert_eq!(
+        std::fs::read_to_string(sandbox.path("node_modules/a/lib.js")).expect("lib.js"),
+        "module.exports = 'lib';\n"
+    );
 }

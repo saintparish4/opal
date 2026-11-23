@@ -463,6 +463,44 @@ fn is_cleared(path: &NormalizedPath, cleared: &BTreeSet<NormalizedPath>) -> bool
         .any(|directory| cleared.contains(&directory))
 }
 
+fn is_symlink(path: &Path) -> bool {
+    std::fs::symlink_metadata(path).is_ok_and(|metadata| metadata.file_type().is_symlink())
+}
+
+/// Removes each symlink between the top-level `node_modules` and the package
+/// directory at `relative`, so what is written next lands in this project.
+///
+/// A symlinked scope (`node_modules/@scope`) or a package's symlinked
+/// `node_modules` leads into another tree, and writing a package through it
+/// deletes and rewrites a directory there. Removing a symlink never touches
+/// what it points at. The package directory itself is left to `materialize`,
+/// whose `remove_dir_all` removes a symlink rather than following it.
+fn unlink_symlinked_ancestors(
+    project_root: &Path,
+    relative: &NormalizedPath,
+) -> Result<(), LinkError> {
+    let segments: Vec<&str> = relative.segments().collect();
+    let mut path = project_root.to_path_buf();
+    for (index, segment) in segments
+        .iter()
+        .enumerate()
+        .take(segments.len().saturating_sub(1))
+    {
+        path.push(segment);
+        if index == 0 || !is_symlink(&path) {
+            continue;
+        }
+        match std::fs::remove_file(&path) {
+            // Another thread placing a package in the same scope got there first.
+            Err(source) if source.kind() != std::io::ErrorKind::NotFound => {
+                return Err(LinkError::io(&path, source));
+            }
+            _ => {}
+        }
+    }
+    Ok(())
+}
+
 /// Writes one package's files, then its marker.
 fn materialize(
     project_root: &Path,
@@ -471,6 +509,7 @@ fn materialize(
     cas: &Cas,
     report: &mut LinkReport,
 ) -> Result<(), LinkError> {
+    unlink_symlinked_ancestors(project_root, relative)?;
     let directory = project_root.join(relative.as_str());
     // Start from nothing: an interrupted previous attempt may have left a
     // partial tree here, and a package is cheap to rebuild.
@@ -702,6 +741,13 @@ fn scan(project_root: &Path) -> Result<BTreeMap<NormalizedPath, Marker>, LinkErr
     let mut queue = vec![project_root.join(NODE_MODULES)];
 
     while let Some(directory) = queue.pop() {
+        // A package's own `node_modules` that is a symlink leads somewhere
+        // else, as `npm link` makes one lead to another project. Only the
+        // project's top-level `node_modules` may be one: that is where the
+        // tree is, wherever the user put it.
+        if directory != project_root.join(NODE_MODULES) && is_symlink(&directory) {
+            continue;
+        }
         let entries = match std::fs::read_dir(&directory) {
             Ok(entries) => entries,
             Err(source) if source.kind() == std::io::ErrorKind::NotFound => continue,
@@ -711,7 +757,14 @@ fn scan(project_root: &Path) -> Result<BTreeMap<NormalizedPath, Marker>, LinkErr
             let entry = entry.map_err(|source| LinkError::io(&directory, source))?;
             let path = entry.path();
             let name = entry.file_name().to_string_lossy().to_string();
-            if !path.is_dir() || name == BIN_DIR {
+            // `file_type` does not follow a symlink. A symlinked package or
+            // scope is not one opal placed, and read as one, whatever it points
+            // at would be this project's to remove.
+            let is_directory = entry
+                .file_type()
+                .map_err(|source| LinkError::io(&path, source))?
+                .is_dir();
+            if !is_directory || name == BIN_DIR {
                 continue;
             }
             // A scope directory holds packages, not a package.

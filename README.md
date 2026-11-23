@@ -54,6 +54,14 @@ Installing with npm or Homebrew is planned. Until then, use the install script.
 
 The script picks the binary for your OS and CPU from the [GitHub Release](https://github.com/saintparish4/opal/releases), verifies its SHA256 checksum, and installs it to `~/.opal/bin/opal`. It puts that directory on your `PATH` by adding one line, marked `# added by opal's install.sh`, to `~/.zshrc`, `~/.bashrc`, or `~/.profile`. To uninstall, delete the directory `opal cache path` prints, then `~/.opal` and that line.
 
+The checksum only says the download is whole: it comes from the same release. To check where an archive was built, download it from the release page and verify its build provenance with the [GitHub CLI](https://cli.github.com/) (releases after 0.4.2):
+
+```sh
+gh attestation verify opal-linux-x64.tar.gz --repo saintparish4/opal
+```
+
+It succeeds only for an archive this repository's release workflow built from a tagged commit, and names that commit.
+
 Opal is pre-1.0 beta software, and the lockfile format can change between minor versions. Don't point it at a project you can't reinstall.
 
 ### Upgrade
@@ -115,7 +123,7 @@ opal x cowsay@1.6.0 hello        # installed once into the cache, then run
 
 `opal run` follows npm's own source (`@npmcli/run-script`): the script runs in the project folder with every `node_modules/.bin` from there up on `PATH`, sees the `npm_package_*` and `npm_lifecycle_*` variables tools read, and ends opal with its own exit code or signal. Where it differs: npm's own settings (`npm_config_cache` and the like) aren't exported, the shell is `/bin/sh` (npm's `script-shell` isn't read), workspaces aren't supported, and flags after the script's name are the script's, where npm would read them as its own.
 
-`opal x` installs a package the first time it's asked for and reuses that install after, so a range or tag (`cowsay`, `cowsay@latest`) is resolved once, not on every run.
+`opal x` installs a package the first time it's asked for and reuses that install after, so a range or tag (`cowsay`, `cowsay@latest`) is resolved once, not on every run. Before that first install it asks, when it is run at a terminal, and only `y` goes ahead, since what it is about to run is code nobody has read and a typo of a popular name is a different package. `opal x --yes cowsay` skips the question; in a script or CI, with no terminal on stdin, there is none, as with `npx`.
 
 `update`, `why`, `outdated`, `audit`, and `publish` aren't implemented yet, so the binary doesn't have them. A command that exists and does nothing is worse than one that doesn't exist.
 

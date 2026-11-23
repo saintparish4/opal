@@ -5,6 +5,11 @@
 //! serves one, through `OPAL_INTERNAL_RELEASES_URL`. The release's "binary" is
 //! a shell script that prints its version, which is all an upgrade checks
 //! before swapping it in.
+//!
+//! Debug builds only: a release build ignores `OPAL_INTERNAL_RELEASES_URL`
+//! (see `upgrade.rs`), so under `cargo test --release` these would reach
+//! GitHub instead of the stand-in.
+#![cfg(debug_assertions)]
 
 use std::fs;
 use std::path::{Path, PathBuf};

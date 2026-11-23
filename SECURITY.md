@@ -31,7 +31,8 @@ Anything that lets a package, a registry, or someone on the network do more than
 - an install that accepts bytes that don't match the registry's `dist.integrity`
 - a package that changes files in the shared cache, and so in every other project that uses them
 - a registry response or a `package.json` that makes `opal.lock` record something other than what was resolved
-- `install.sh` or `opal upgrade` installing a binary that doesn't match its release's `SHA256SUMS`
+- `install.sh` or `opal upgrade` installing a binary that doesn't match its release's `SHA256SUMS`, or `opal upgrade` taking a binary from anywhere but this repository's releases
+- a release archive that `gh attestation verify --repo saintparish4/opal` accepts but this repository's release workflow didn't build
 - a way to tamper with a release, or with this repository's CI
 
 A malicious package is the registry's to remove, not Opal's: [report it to npm](https://docs.npmjs.com/reporting-malware-in-an-npm-package).

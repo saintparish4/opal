@@ -215,3 +215,109 @@ fn run_lists_the_scripts_with_no_name_given() {
         "Scripts in app@1.0.0:\n  build\n    tsc\n  test\n    jest\n"
     );
 }
+
+/// `opal x` with a terminal on stdin, as a person at a shell runs it, and
+/// `answer` typed at it. Returns its output once it has exited.
+fn x_at_a_terminal(
+    cwd: &Path,
+    cache: &Path,
+    registry: &FixtureRegistry,
+    args: &[&str],
+    answer: &str,
+) -> Output {
+    use std::io::Write as _;
+    use std::os::fd::{FromRawFd as _, OwnedFd};
+
+    let (mut controller, terminal) = {
+        let mut controller = 0;
+        let mut terminal = 0;
+        // SAFETY: openpty writes two file descriptors and reads nothing else
+        // when the name, termios and winsize pointers are null.
+        let status = unsafe {
+            libc::openpty(
+                &mut controller,
+                &mut terminal,
+                // Mutable on macOS, const on Linux; a null *mut is both.
+                std::ptr::null_mut(),
+                std::ptr::null_mut(),
+                std::ptr::null_mut(),
+            )
+        };
+        assert_eq!(status, 0, "openpty: {}", std::io::Error::last_os_error());
+        // SAFETY: both descriptors were just opened and are owned by nothing else.
+        unsafe {
+            (
+                std::fs::File::from_raw_fd(controller),
+                OwnedFd::from_raw_fd(terminal),
+            )
+        }
+    };
+    let child = Command::new(OPAL)
+        .current_dir(cwd)
+        .args(["x", "--cache-dir"])
+        .arg(cache)
+        .arg("--registry")
+        .arg(registry.url())
+        .args(args)
+        .stdin(Stdio::from(terminal))
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .expect("run opal x");
+    controller
+        .write_all(answer.as_bytes())
+        .expect("type the answer");
+    let output = child.wait_with_output().expect("wait for opal x");
+    drop(controller);
+    output
+}
+
+#[test]
+fn x_at_a_terminal_asks_before_installing_and_takes_no_for_an_answer() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut registry = FixtureRegistry::new(dir.path().join("registry"));
+    registry.publish(echoing("greeter", "1.0.0", "greet"));
+    let cache = dir.path().join("cache");
+
+    for refusal in ["\n", "n\n"] {
+        let declined = x_at_a_terminal(dir.path(), &cache, &registry, &["greeter"], refusal);
+        assert!(!declined.status.success(), "{refusal:?}");
+        assert!(
+            text(&declined.stderr).contains("greeter is not installed. Download it from"),
+            "{}",
+            text(&declined.stderr)
+        );
+        assert!(
+            text(&declined.stderr).contains("greeter was not installed, and nothing was run"),
+            "{}",
+            text(&declined.stderr)
+        );
+        assert_eq!(text(&declined.stdout), "");
+        assert!(
+            !cache.join("x").exists() || std::fs::read_dir(cache.join("x")).unwrap().count() == 0
+        );
+    }
+
+    let accepted = x_at_a_terminal(dir.path(), &cache, &registry, &["greeter", "hi"], "y\n");
+    assert!(accepted.status.success(), "{}", text(&accepted.stderr));
+    assert_eq!(text(&accepted.stdout), "greet 1.0.0\n[hi]\n");
+
+    // Installed now, so there is nothing to ask.
+    let again = x_at_a_terminal(dir.path(), &cache, &registry, &["greeter"], "");
+    assert!(again.status.success(), "{}", text(&again.stderr));
+    assert!(!text(&again.stderr).contains("Download it"));
+}
+
+#[test]
+fn x_with_yes_at_a_terminal_installs_without_asking() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut registry = FixtureRegistry::new(dir.path().join("registry"));
+    registry.publish(echoing("greeter", "1.0.0", "greet"));
+    let cache = dir.path().join("cache");
+
+    let output = x_at_a_terminal(dir.path(), &cache, &registry, &["--yes", "greeter"], "");
+
+    assert!(output.status.success(), "{}", text(&output.stderr));
+    assert_eq!(text(&output.stdout), "greet 1.0.0\n");
+    assert!(!text(&output.stderr).contains("Download it"));
+}

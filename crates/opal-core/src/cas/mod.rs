@@ -19,12 +19,20 @@
 //! get re-hashed from disk, and only then are renamed into `objects/`. A process
 //! killed at any point in that sequence leaves an orphaned temp file, never a
 //! corrupt object.
+//!
+//! Objects are hardlinked into projects, so an object's inode is also a file
+//! under some `node_modules`, and a write there (as root, or after a `chmod`)
+//! is a write here. Every object is therefore *sealed* when it is stored:
+//! mode `0444` and a fixed modification time. Any write moves the time, and a
+//! `chmod` the mode, so [`Cas::check`] can tell an untouched object from a
+//! touched one with one `lstat`, and re-hashes only the second kind.
 
 pub mod gc;
 
 use std::fs::{self, File};
 use std::io::{self, Read, Write as _};
 use std::path::{Path, PathBuf};
+use std::time::{Duration, SystemTime};
 
 use crate::atomic::{TempFile, write_atomic};
 use crate::fault::{self, FaultPoint};
@@ -32,6 +40,15 @@ use crate::hash::{ContentHash, ContentHasher, HASH_HEX_LEN};
 
 /// Bytes are on disk, the hash is not yet known.
 pub const FAULT_MID_WRITE: FaultPoint = FaultPoint::new("cas-mid-write");
+/// The modification time every object is sealed with: 1985-10-26T08:15:00Z,
+/// the date npm gives every file in the tarballs it packs, so a file under
+/// `node_modules` carries the date it would have under npm.
+pub const SEALED_MTIME_SECS: u64 = 499_162_500;
+
+fn sealed_mtime() -> SystemTime {
+    SystemTime::UNIX_EPOCH + Duration::from_secs(SEALED_MTIME_SECS)
+}
+
 /// Temp file written, fsynced, and hash-verified; the rename has not run.
 pub const FAULT_BEFORE_RENAME: FaultPoint = FaultPoint::new("cas-before-rename");
 
@@ -202,7 +219,7 @@ impl Cas {
             return Ok(hash);
         }
 
-        set_read_only(temp.path()).map_err(|source| CasError::io(temp.path(), source))?;
+        seal(temp.path()).map_err(|source| CasError::io(temp.path(), source))?;
         fault::checkpoint(FAULT_BEFORE_RENAME);
         temp.persist(&target)
             .map_err(|source| CasError::io(&target, source))?;
@@ -252,6 +269,39 @@ impl Cas {
                 hash: *hash,
                 actual,
             })
+        }
+    }
+
+    /// Checks an object before it is used, and removes it if it has changed.
+    ///
+    /// An object still sealed (see the module comment) passes on one `lstat`.
+    /// Any other is re-hashed: if its bytes still match its key it is sealed
+    /// again (an object stored before sealing existed takes this path once),
+    /// and if not it is removed, so the next store of those bytes writes a
+    /// good copy, and [`CasError::Corrupt`] is returned. Removing it leaves
+    /// alone every project that hardlinks it; they keep the changed inode.
+    pub fn check(&self, hash: &ContentHash) -> Result<()> {
+        let path = self.object_path(hash);
+        let metadata = fs::symlink_metadata(&path).map_err(|source| match source.kind() {
+            io::ErrorKind::NotFound => CasError::Missing { hash: *hash },
+            _ => CasError::io(&path, source),
+        })?;
+        if is_sealed(&metadata) {
+            return Ok(());
+        }
+        match self.verify(hash) {
+            Ok(()) => seal(&path).map_err(|source| CasError::io(&path, source)),
+            Err(error @ CasError::Corrupt { .. }) => {
+                match fs::remove_file(&path) {
+                    // Another thread found it first.
+                    Err(source) if source.kind() != io::ErrorKind::NotFound => {
+                        return Err(CasError::io(&path, source));
+                    }
+                    _ => {}
+                }
+                Err(error)
+            }
+            Err(error) => Err(error),
         }
     }
 
@@ -407,6 +457,28 @@ fn read_dir(path: &Path) -> Result<impl Iterator<Item = Result<fs::DirEntry>> + 
     Ok(entries.map(move |entry| entry.map_err(|source| CasError::io(&path, source))))
 }
 
+/// Read-only, with the sealed modification time. The time is set through a
+/// read-only handle, which the owner of a file may always do.
+fn seal(path: &Path) -> io::Result<()> {
+    File::open(path)?.set_modified(sealed_mtime())?;
+    set_read_only(path)
+}
+
+fn is_sealed(metadata: &fs::Metadata) -> bool {
+    if !metadata.file_type().is_file() || metadata.modified().ok() != Some(sealed_mtime()) {
+        return false;
+    }
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt as _;
+        metadata.permissions().mode() & 0o7777 == 0o444
+    }
+    #[cfg(not(unix))]
+    {
+        metadata.permissions().readonly()
+    }
+}
+
 fn set_read_only(path: &Path) -> io::Result<()> {
     #[cfg(unix)]
     {
@@ -490,6 +562,84 @@ mod tests {
         let hash = cas.put(b"").unwrap();
         assert_eq!(cas.read(&hash).unwrap(), Vec::<u8>::new());
         assert!(cas.audit().unwrap().is_clean());
+    }
+
+    /// What a write through a hardlink under `node_modules` does to an object.
+    #[cfg(unix)]
+    fn write_through_a_link(path: &Path, bytes: &[u8]) {
+        use std::os::unix::fs::PermissionsExt as _;
+        fs::set_permissions(path, fs::Permissions::from_mode(0o644)).unwrap();
+        fs::write(path, bytes).unwrap();
+        fs::set_permissions(path, fs::Permissions::from_mode(0o444)).unwrap();
+    }
+
+    #[test]
+    fn test_an_object_is_stored_sealed_and_passes_its_check() {
+        let (_dir, cas) = store();
+        let hash = cas.put(b"sealed").unwrap();
+        let metadata = fs::symlink_metadata(cas.object_path(&hash)).unwrap();
+        assert!(is_sealed(&metadata));
+        assert_eq!(metadata.modified().unwrap(), sealed_mtime());
+        cas.check(&hash).unwrap();
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn test_a_changed_object_fails_its_check_and_is_removed() {
+        let (_dir, cas) = store();
+        let hash = cas.put(b"honest content").unwrap();
+        let path = cas.object_path(&hash);
+        let linked = _dir.path().join("linked");
+        fs::hard_link(&path, &linked).unwrap();
+
+        write_through_a_link(&linked, b"tampered");
+
+        assert!(matches!(cas.check(&hash), Err(CasError::Corrupt { .. })));
+        assert!(!path.exists(), "a corrupt object is removed");
+        // The project's file is its own business; the store's copy comes back
+        // whole the next time those bytes are stored.
+        assert_eq!(fs::read(&linked).unwrap(), b"tampered");
+        assert_eq!(cas.put(b"honest content").unwrap(), hash);
+        cas.check(&hash).unwrap();
+        assert!(matches!(
+            cas.check(&ContentHash::of(b"never stored")),
+            Err(CasError::Missing { .. })
+        ));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn test_a_change_that_restores_the_time_is_still_caught_by_its_mode() {
+        use std::os::unix::fs::PermissionsExt as _;
+        let (_dir, cas) = store();
+        let hash = cas.put(b"honest content").unwrap();
+        let path = cas.object_path(&hash);
+        fs::set_permissions(&path, fs::Permissions::from_mode(0o644)).unwrap();
+        fs::write(&path, b"tampered").unwrap();
+        File::open(&path)
+            .unwrap()
+            .set_modified(sealed_mtime())
+            .unwrap();
+
+        assert!(matches!(cas.check(&hash), Err(CasError::Corrupt { .. })));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn test_an_unsealed_object_with_its_own_bytes_is_sealed_by_its_check() {
+        let (_dir, cas) = store();
+        let hash = cas.put(b"stored before sealing").unwrap();
+        let path = cas.object_path(&hash);
+        // An older opal left the time of the write.
+        File::open(&path)
+            .unwrap()
+            .set_modified(SystemTime::now())
+            .unwrap();
+        assert!(!is_sealed(&fs::symlink_metadata(&path).unwrap()));
+
+        cas.check(&hash).unwrap();
+
+        assert!(is_sealed(&fs::symlink_metadata(&path).unwrap()));
     }
 
     #[test]
