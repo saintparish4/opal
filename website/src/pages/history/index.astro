@@ -88,7 +88,8 @@ import Base from "../../layouts/Base.astro";
           <li><a href="#v0.3.1"><span class="toc-version">0.3.1</span> <span class="toc-date">(2026-09-27)</span> <span class="toc-title">Cleaner terminal output, a new download bar, and <code>opal upgrade</code>.</span></a></li>
           <li><a href="#v0.4.0"><span class="toc-version">0.4.0</span> <span class="toc-date">(2026-10-06)</span> <span class="toc-title">Parallel downloads, <code>opal add</code> and <code>opal remove</code>, and an install that shows what it is doing.</span></a></li>
           <li><a href="#v0.4.1"><span class="toc-version">0.4.1</span> <span class="toc-date">(2026-10-15)</span> <span class="toc-title">A faster <code>opal add</code> over old metadata, release notes taken from this changelog, and new checks that what Opal installs builds and runs.</span></a></li>
-          <li><a href="#v0.4.2"><span class="toc-version">0.4.2</span> <span class="toc-date">(2026-11-23)</span> <span class="toc-title">A security release: a dependency whose name is a path is refused.</span></a></li>
+          <li><a href="#v0.4.2"><span class="toc-version">0.4.2</span> <span class="toc-date">(2026-11-18)</span> <span class="toc-title">A security release: a dependency whose name is a path is refused.</span></a></li>
+          <li><a href="#v0.4.3"><span class="toc-version">0.4.3</span> <span class="toc-date">(2026-11-23)</span> <span class="toc-title">A security release: a lockfile can no longer choose where a tarball comes from.</span></a></li>
         </ol>
       </nav>
       <ol class="chapters">
@@ -316,7 +317,7 @@ import Base from "../../layouts/Base.astro";
         <li class="chapter" id="v0.4.2" data-version="0.4.2">
           <article aria-labelledby="ch-0.4.2">
             <header class="chapter-head">
-              <h2 id="ch-0.4.2"><a href="https://github.com/saintparish4/opal/releases/tag/v0.4.2">0.4.2</a> <span class="chapter-date">(2026-11-23)</span></h2>
+              <h2 id="ch-0.4.2"><a href="https://github.com/saintparish4/opal/releases/tag/v0.4.2">0.4.2</a> <span class="chapter-date">(2026-11-18)</span></h2>
             </header>
             <figure class="plate ornament">
               <svg viewBox="0 0 400 300" role="img" aria-label="An ornament: a cut stone within a laurel wreath tied with a ribbon"><use href="#plate-ornament"/></svg>
@@ -329,6 +330,36 @@ import Base from "../../layouts/Base.astro";
                 <li>A package's <code>bin</code> entry can no longer point outside the package. Such an entry is skipped.</li>
               </ul>
               <p>Affected: every release up to 0.4.1. Upgrade with <code>opal upgrade</code>.</p>
+            </div>
+          </article>
+        </li>
+        <li class="chapter" id="v0.4.3" data-version="0.4.3">
+          <article aria-labelledby="ch-0.4.3">
+            <header class="chapter-head">
+              <h2 id="ch-0.4.3"><a href="https://github.com/saintparish4/opal/releases/tag/v0.4.3">0.4.3</a> <span class="chapter-date">(2026-11-23)</span></h2>
+            </header>
+            <figure class="plate ornament">
+              <svg viewBox="0 0 400 300" role="img" aria-label="An ornament: a cut stone within a laurel wreath tied with a ribbon"><use href="#plate-ornament"/></svg>
+            </figure>
+            <div class="chapter-text">
+              <p class="incipit">A security release. No <code>opal.lock</code> format change.</p>
+              <h3>Security</h3>
+              <ul>
+                <li><strong><code>opal.lock</code> can no longer choose where a tarball comes from.</strong> A lockfile line carries a package's tarball URL and the integrity it is checked against, so an edited line could install any bytes as any package, under <code>--frozen-lockfile</code> too. Each package is now fetched only from where the registry keeps it, <code>&lt;registry&gt;/&lt;name&gt;/-/&lt;name&gt;-&lt;version&gt;.tgz</code> or the URL the registry itself lists for that version, and this is checked before the local store is used.</li>
+                <li><strong>Downloads go over <code>https://</code> only</strong> (or <code>file://</code> from a registry on this machine), redirects included, and a response stops at 256 MiB for a packument and 512 MiB for a tarball instead of being read without end.</li>
+                <li><strong>The shared store is checked before a package is linked from it.</strong> Its files are hardlinked into projects, so a file changed in place under one project's <code>node_modules</code> (as root, or after a <code>chmod</code>) was changed for every project installed after it. Every stored file is now sealed (read-only, with npm's fixed 1985 timestamp, which is what files under <code>node_modules</code> show), so a changed one is found with one <code>stat</code>, and its package is downloaded again with a warning. A store written by an earlier release is re-hashed once, on first use.</li>
+                <li><strong><code>opal install</code> no longer follows a symlink out of <code>node_modules</code>.</strong> With <code>node_modules/&lt;name&gt;</code> linked to another project, as <code>npm link</code> does, packages inside that project were removed as stale; a symlinked scope directory was written through. Symlinks there are now left alone, or replaced when a package belongs at that path.</li>
+                <li><strong><code>opal x</code> asks before installing a package to run it</strong>, when run at a terminal; only <code>y</code> goes ahead. <code>--yes</code> skips the question, and with no terminal on stdin, in a script or CI, there is none, as with <code>npx</code>.</li>
+                <li><strong><code>opal upgrade</code> reads releases from GitHub only.</strong> A release build ignores <code>OPAL_INTERNAL_RELEASES_URL</code>, which let anything able to set an environment variable choose the binary an upgrade installs, with a <code>SHA256SUMS</code> from the same place.</li>
+                <li><strong>The runtime no longer lets JavaScript free memory a native call is using.</strong> A vectored read or write (<code>fs.readv</code>, <code>fs.writev</code> and their sync forms) reads every buffer of its array before using any, then holds each one's memory until the call ends, so an array element that is a getter freeing an earlier buffer can't make <code>readv</code> write into freed memory. That was a heap use-after-free on <code>master</code> before the asynchronous fs rewrite, found under AddressSanitizer, and never in a release; a nightly AddressSanitizer job now runs the attack. <code>Buffer</code>'s native operations take their numeric arguments only from primitives, for the same reason.</li>
+                <li><strong>Release archives carry signed build provenance</strong>, checked with <code>gh attestation verify &lt;archive&gt; --repo saintparish4/opal</code>, and the release workflow verifies it before publishing. Every action in CI is pinned to a commit hash, and a lint step refuses one that isn't.</li>
+              </ul>
+              <h3>Breaking</h3>
+              <ul>
+                <li>A registry configured as <code>http://</code> is refused.</li>
+                <li>An <code>opal.lock</code> written against one registry is refused when installing from another. Delete it and install again.</li>
+              </ul>
+              <p>Affected: 0.4.2 and earlier. Upgrade with <code>opal upgrade</code>.</p>
             </div>
           </article>
         </li>
